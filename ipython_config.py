@@ -296,7 +296,7 @@ c.TerminalInteractiveShell.autocall = 2
 # c.TerminalInteractiveShell.deep_reload = False
 
 # Start logging to the given file in append mode.
-c.TerminalInteractiveShell.logappend = '/epics/xf/23id/ophyd/logs/xf23id1_log.py'
+#c.TerminalInteractiveShell.logappend = '/epics/xf/23id/ophyd/logs/xf23id1_log.py'
 
 #
 # c.TerminalInteractiveShell.xmode = 'Context'
