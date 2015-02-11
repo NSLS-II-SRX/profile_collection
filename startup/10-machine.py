@@ -2,7 +2,7 @@ from ophyd.controls import PVPositioner
 
 # Undulator
 
-ivu11_gap = PVPositioner('SR:C5-ID:G1{IVU21:1-Mtr:2}Inp:Pos',
+ivu1_gap = PVPositioner('SR:C5-ID:G1{IVU21:1-Mtr:2}Inp:Pos',
                         readback='SR:C5-ID:G1{IVU21:1-LEnc}Gap',
                         stop='SR:C5-ID:G1{IVU21:1-Mtrc}Sw:Stp',
                         stop_val=1,
