@@ -2,44 +2,36 @@ from ophyd.controls import PVPositioner
 
 # Undulator
 
-epu1_gap = PVPositioner('XF:23ID-ID{EPU:1-Ax:Gap}Pos-SP',
-                        readback='XF:23ID-ID{EPU:1-Ax:Gap}Pos-I',
-                        stop='SR:C23-ID:G1A{EPU:1-Ax:Gap}-Mtr.STOP',
+ivu11_gap = PVPositioner('SR:C5-ID:G1{IVU21:1-Mtr:2}Inp:Pos',
+                        readback='SR:C5-ID:G1{IVU21:1-LEnc}Gap',
+                        stop='SR:C5-ID:G1{IVU21:1-Mtrc}Sw:Stp',
                         stop_val=1,
                         put_complete=True,
-                        name='epu2_gap')
-
-epu2_gap = PVPositioner('XF:23ID-ID{EPU:2-Ax:Gap}Pos-SP',
-                        readback='XF:23ID-ID{EPU:2-Ax:Gap}Pos-I',
-                        stop='SR:C23-ID:G1A{EPU:2-Ax:Gap}-Mtr.STOP',
-                        stop_val=1,
-                        put_complete=True,
-                        name='epu2_gap')
+                        name='ivu1_gap')
 
 # Front End Slits (Primary Slits)
 
-fe_xc = PVPositioner('FE:C23A-OP{Slt:12-Ax:X}center',
-                     readback='FE:C23A-OP{Slt:12-Ax:X}t2.D',
-                     stop='FE:C23A-CT{MC:1}allstop',
+fe_tb = PVPositioner('FE:C05A-OP{Slt:3-Ax:T}Mtr.VAL',
+                     readback='FE:C05A-OP{Slt:3-Ax:T}Mtr.RBV',
+                     stop='FE:C05A-OP{Slt:3-Ax:T}Mtr.STOP',
                      stop_val=1, put_complete=True,
-                     name='fe_xc')
+                     name='fe_tb')
 
-fe_yc = PVPositioner('FE:C23A-OP{Slt:12-Ax:Y}center',
-                     readback='FE:C23A-OP{Slt:12-Ax:Y}t2.D',
-                     stop='FE:C23A-CT{MC:1}allstop',
-                     stop_val=1,
-                     put_complete=True,
-                     name='fe_yc')
-
-fe_xg = PVPositioner('FE:C23A-OP{Slt:12-Ax:X}size',
-                     readback='FE:C23A-OP{Slt:12-Ax:X}t2.C',
-                     stop='FE:C23A-CT{MC:1}allstop',
+fe_bb = PVPositioner('FE:C05A-OP{Slt:3-Ax:B}Mtr.VAL',
+                     readback='FE:C05A-OP{Slt:3-Ax:B}Mtr.RBV',
+                     stop='FE:C05A-OP{Slt:3-Ax:B}Mtr.STOP',
                      stop_val=1, put_complete=True,
-                     name='fe_xg')
+                     name='fe_bb')
 
-fe_yg = PVPositioner('FE:C23A-OP{Slt:12-Ax:Y}size',
-                     readback='FE:C23A-OP{Slt:12-Ax:Y}t2.C',
-                     stop='FE:C23A-CT{MC:1}allstop',
-                     stop_val=1,
-                     put_complete=True,
-                     name='fe_yg')
+fe_ib = PVPositioner('FE:C05A-OP{Slt:3-Ax:I}Mtr.VAL',
+                     readback='FE:C05A-OP{Slt:3-Ax:I}Mtr.RBV',
+                     stop='FE:C05A-OP{Slt:3-Ax:I}Mtr.STOP',
+                     stop_val=1, put_complete=True,
+                     name='fe_ib')
+
+fe_ob = PVPositioner('FE:C05A-OP{Slt:3-Ax:O}Mtr.VAL',
+                     readback='FE:C05A-OP{Slt:3-Ax:O}Mtr.RBV',
+                     stop='FE:C05A-OP{Slt:3-Ax:O}Mtr.STOP',
+                     stop_val=1, put_complete=True,
+                     name='fe_ob')
+
