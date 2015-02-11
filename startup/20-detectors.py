@@ -39,3 +39,14 @@ bpm1_cam = EpicsSignal('XF:05IDA-BI:1{BPM:1-Cam:1}Acquire_RBV',
                         rw=True, name='hfm_cam_trigger')
 bpm1_tot1 = EpicsSignal('XF:05IDA-BI:1{BPM:1-Cam:1}Stats1:Total_RBV',
                          rw=False, name='bpm1_tot1')
+bpm1_diode0 = EpicsSignal('xf05bpm03:DataRead_Ch1',rw=False,name='bpm1_diode0')
+bpm1_diode1 = EpicsSignal('xf05bpm03:DataRead_Ch2',rw=False,name='bpm1_diode1')
+bpm1_diode2 = EpicsSignal('xf05bpm03:DataRead_Ch3',rw=False,name='bpm1_diode2')
+bpm1_diode3 = EpicsSignal('xf05bpm03:DataRead_Ch4',rw=False,name='bpm1_diode3')
+bpm1_femto = EpicsSignal('XF:05IDA-BI:1{IM:1}Int-I',rw=False,name='bpm1_femto')
+wbs_t=EpicsSignal('XF:05IDA-BI{BPM:01}AH501:Current1:MeanValue_RBV',rw=False,name='wbs_t')
+wbs_b=EpicsSignal('XF:05IDA-BI{BPM:02}AH501:Current1:MeanValue_RBV',rw=False,name='wbs_b')
+wbs_i=EpicsSignal('XF:05IDA-BI{BPM:03}AH501:Current1:MeanValue_RBV',rw=False,name='wbs_i')
+wbs_o=EpicsSignal('XF:05IDA-BI{BPM:04}AH501:Current1:MeanValue_RBV',rw=False,name='wbs_o')
+
+
