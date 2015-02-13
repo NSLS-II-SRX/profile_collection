@@ -43,7 +43,7 @@ dcm_x = EpicsMotor('XF:05IDA-OP:1{Mono:HDCM-Ax:X}Mtr', name='dcm_x')
 dcm_y = EpicsMotor('XF:05IDA-OP:1{Mono:HDCM-Ax:Y}Mtr', name='dcm_y')
 
 #Secondary source
-slt_ssa_tb = EpicsMotor('XF:05IDA-OP:1{Slt:SSA-Ax:T}Mtr', name='slt_ssa_tb')
-slt_ssa_bb = EpicsMotor('XF:05IDA-OP:1{Slt:SSA-Ax:B}Mtr', name='slt_ssa_bb')
-slt_ssa_ib = EpicsMotor('XF:05IDA-OP:1{Slt:SSA-Ax:I}Mtr', name='slt_ssa_ib')
-slt_ssa_ob = EpicsMotor('XF:05IDA-OP:1{Slt:SSA-Ax:O}Mtr', name='slt_ssa_ob')
+slt_ssa_tb = EpicsMotor('XF:05IDB-OP:1{Slt:SSA-Ax:T}Mtr', name='slt_ssa_tb')
+slt_ssa_bb = EpicsMotor('XF:05IDB-OP:1{Slt:SSA-Ax:B}Mtr', name='slt_ssa_bb')
+slt_ssa_ib = EpicsMotor('XF:05IDB-OP:1{Slt:SSA-Ax:I}Mtr', name='slt_ssa_ib')
+slt_ssa_ob = EpicsMotor('XF:05IDB-OP:1{Slt:SSA-Ax:O}Mtr', name='slt_ssa_ob')
