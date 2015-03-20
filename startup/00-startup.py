@@ -1,5 +1,5 @@
 import logging
-session_mgr._logger.setLevel(logging.CRITICAL)
+session_mgr._logger.setLevel(logging.INFO)
+
 from ophyd.userapi import *
-from metadataStore import conf as mds_cnf
-mds_cnf.mds_config['host'] = 'xf05id-ca1'
+from metadatastore import conf as mds_cnf

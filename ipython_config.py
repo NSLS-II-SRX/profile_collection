@@ -344,7 +344,7 @@ c.TerminalInteractiveShell.autocall = 2
 # c.PromptManager.justify = True
 
 # Input prompt.  '\#' will be transformed to the prompt number
-# c.PromptManager.in_template = 'In [\\#]: '
+c.PromptManager.in_template = 'Ophyd [\\#]: '
 
 #
 # c.PromptManager.color_scheme = 'Linux'
