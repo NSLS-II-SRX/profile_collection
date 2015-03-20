@@ -29,10 +29,10 @@ from ophyd.controls import ProsilicaDetector, EpicsSignal, EpicsScaler
 #                         write_pv='XF:23ID1-BI{Diag:3-Cam:1}cam1:Acquire',
 #                         rw=True, name='diag3_cam_trigger')
 
-hfm_cam = EpicsSignal('XF:05IDA-BI:1{Mir:1-Cam:1}Acquire_RBV',
-                        write_pv='XF:05IDA-BI:1{Mir:1-Cam:1}Acquire',
+hfm_cam = EpicsSignal('XF:05IDA-BI:1{FS:1-Cam:1}Acquire_RBV',
+                        write_pv='XF:05IDA-BI:1{FS:1-Cam:1}Acquire',
                         rw=True, name='hfm_cam_trigger')
-hfm_tot1 = EpicsSignal('XF:05IDA-BI:1{Mir:1-Cam:1}Stats1:Total_RBV',
+hfm_tot1 = EpicsSignal('XF:05IDA-BI:1{FS:1-Cam:1}Stats1:Total_RBV',
                          rw=False, name='hfm_tot1')
 bpm1_cam = EpicsSignal('XF:05IDA-BI:1{BPM:1-Cam:1}Acquire_RBV',
                         write_pv='XF:05IDA-BI:1{Mir:1-Cam:1}Acquire',
