@@ -1,3 +1,3 @@
 from ophyd.controls import PVPositioner, EpicsMotor
 
-# un-implemented at SRX
+#motors for xrf, tomo, etc. go here

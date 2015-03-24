@@ -17,9 +17,9 @@ fe_tb = PVPositioner('FE:C05A-OP{Slt:3-Ax:T}Mtr.VAL',
                      stop_val=1, put_complete=True,
                      name='fe_tb')
 
-fe_bb = PVPositioner('FE:C05A-OP{Slt:3-Ax:B}Mtr.VAL',
-                     readback='FE:C05A-OP{Slt:3-Ax:B}Mtr.RBV',
-                     stop='FE:C05A-OP{Slt:3-Ax:B}Mtr.STOP',
+fe_bb = PVPositioner('FE:C05A-OP{Slt:4-Ax:B}Mtr.VAL',
+                     readback='FE:C05A-OP{Slt:4-Ax:B}Mtr.RBV',
+                     stop='FE:C05A-OP{Slt:4-Ax:B}Mtr.STOP',
                      stop_val=1, put_complete=True,
                      name='fe_bb')
 
@@ -29,9 +29,9 @@ fe_ib = PVPositioner('FE:C05A-OP{Slt:3-Ax:I}Mtr.VAL',
                      stop_val=1, put_complete=True,
                      name='fe_ib')
 
-fe_ob = PVPositioner('FE:C05A-OP{Slt:3-Ax:O}Mtr.VAL',
-                     readback='FE:C05A-OP{Slt:3-Ax:O}Mtr.RBV',
-                     stop='FE:C05A-OP{Slt:3-Ax:O}Mtr.STOP',
+fe_ob = PVPositioner('FE:C05A-OP{Slt:4-Ax:O}Mtr.VAL',
+                     readback='FE:C05A-OP{Slt:4-Ax:O}Mtr.RBV',
+                     stop='FE:C05A-OP{Slt:4-Ax:O}Mtr.STOP',
                      stop_val=1, put_complete=True,
                      name='fe_ob')
 
