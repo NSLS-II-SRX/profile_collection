@@ -32,11 +32,11 @@ c = get_config()
 
 # Enable GUI event loop integration with any of ('glut', 'gtk', 'gtk3', 'none',
 # 'osx', 'pyglet', 'qt', 'qt4', 'tk', 'wx').
-# c.InteractiveShellApp.gui = 'auto'
+#c.InteractiveShellApp.gui = 'qt4'
 
 # Pre-load matplotlib and numpy for interactive use, selecting a particular
 # matplotlib backend and loop integration.
-#c.InteractiveShellApp.pylab = 'auto'
+c.InteractiveShellApp.pylab = 'auto'
 
 # Configure matplotlib for interactive use with the default matplotlib backend.
 # c.InteractiveShellApp.matplotlib = None
@@ -50,8 +50,7 @@ c = get_config()
 c.StoreMagics.autorestore = True
 
 # A list of dotted module names of IPython extensions to load.
-c.InteractiveShellApp.extensions = ['ophyd.session',
-                                    'pyOlog.cli.ipy']
+c.InteractiveShellApp.extensions = ['pyOlog.cli.ipy']
 
 # Run the module as a script.
 # c.InteractiveShellApp.module_to_run = ''
@@ -82,7 +81,7 @@ c.InteractiveShellApp.extensions = ['ophyd.session',
 
 # Pre-load matplotlib and numpy for interactive use, selecting a particular
 # matplotlib backend and loop integration.
-c.TerminalIPythonApp.pylab = 'auto'
+# c.TerminalIPythonApp.pylab = 'auto'
 
 # Create a massive crash report when IPython encounters what may be an internal
 # error.  The default is to append a short message to the usual traceback
@@ -344,7 +343,7 @@ c.TerminalInteractiveShell.autocall = 2
 # c.PromptManager.justify = True
 
 # Input prompt.  '\#' will be transformed to the prompt number
-c.PromptManager.in_template = 'Ophyd [\\#]: '
+c.PromptManager.in_template = 'BlueSky [\\#]: '
 
 #
 # c.PromptManager.color_scheme = 'Linux'
