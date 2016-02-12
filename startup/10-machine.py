@@ -8,11 +8,6 @@ from ophyd import Component as Cpt
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 
-class PermissiveGetSignal(Signal):
-    def get(self, use_monitor=None):
-        return super().get()
-
-
 class UVDone(PermissiveGetSignal):
     def __init__(self, parent, brake, readback, **kwargs):
         super().__init__(parent=parent, value=1, **kwargs)
@@ -153,31 +148,9 @@ _undulator_kwargs = dict(name='ivu1_gap', read_attrs=['readback'],
                          configuration_attrs=['corrfunc_sta', 'pos', 'girder', 
                                               'real_pos', 'elevation'])
 
-class FixedPseudoSingle(PseudoSingle):
-    """Adds missing methods
-
-    This will need to be removed when Positioner is fixed upstream
-    """
-    def read(self):
-        return {self.name: {'value': self.position,
-                            'timestamp': ttime.time()}}
-    
-    def describe(self):
-        return {self.name: {'dtype': 'number',
-                            'shape': [],
-                            'source': 'computed',
-                            'units': 'keV'}}
-
-    def read_configuration(self):
-        return {}
-    
-    def describe_configuration(self):
-        return {}
-                                
-
 ANG_OVER_EV = 12.3984
 
-class Energy(PseudoPositioner):     
+class Energy(MagicSetPseudoPositioner):     
     # synthetic axis
     energy = Cpt(FixedPseudoSingle)
     # real motors
