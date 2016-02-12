@@ -1,55 +1,62 @@
 from ophyd import EpicsMotor
+from ophyd import Device
+from ophyd import Component as Cpt
 
 # Slits
+class SRXSlits4(Device):
+    top = Cpt(EpicsMotor, 'T}Mtr')
+    bot = Cpt(EpicsMotor, 'B}Mtr')    
+    inb = Cpt(EpicsMotor, 'I}Mtr')
+    out = Cpt(EpicsMotor, 'O}Mtr')
 
-slt_wb_tb = EpicsMotor('XF:05IDA-OP:1{Slt:1-Ax:T}Mtr', name='slt_wb_tb')
-slt_wb_bb = EpicsMotor('XF:05IDA-OP:1{Slt:1-Ax:B}Mtr', name='slt_wb_bb')
-slt_wb_ib = EpicsMotor('XF:05IDA-OP:1{Slt:1-Ax:I}Mtr', name='slt_wb_ib')
-slt_wb_ob = EpicsMotor('XF:05IDA-OP:1{Slt:1-Ax:O}Mtr', name='slt_wb_ob')
+class SRXSlits2(Device):
+    inb = Cpt(EpicsMotor, 'I}Mtr')
+    out = Cpt(EpicsMotor, 'O}Mtr')
 
-slt_pb_ib = EpicsMotor('XF:05IDA-OP:1{Slt:2-Ax:I}Mtr', name='slt_pb_ib')
-slt_pb_ob = EpicsMotor('XF:05IDA-OP:1{Slt:2-Ax:O}Mtr', name='slt_pb_ob')
+# White Beam slits
+slt_wb = SRXSlits4('XF:05IDA-OP:1{Slt:1-Ax:', name='slt_wb')
+# Pink beam
+slt_pb = SRXSlits2('XF:05IDA-OP:1{Slt:2-Ax:', name='slt_pb')
+# Secondary source
+slt_ssa = SRXSlits4('XF:05IDB-OP:1{Slt:SSA-Ax:', name='slt_ssa')
+
+relabel_motors(slt_wb)
+relabel_motors(slt_ssa)
+relabel_motors(slt_pb)
 
 
 # HFM Mirror
+class SRXHFM(Device):
+    x = Cpt(EpicsMotor, 'X}Mtr')
+    y = Cpt(EpicsMotor, 'Y}Mtr')
+    pitch = Cpt(EpicsMotor, 'P}Mtr')
+    bend = Cpt(EpicsMotor, 'Bend}Mtr')
 
-hfm_x = EpicsMotor('XF:05IDA-OP:1{Mir:1-Ax:X}Mtr', name='hfm_x')
-hfm_y = EpicsMotor('XF:05IDA-OP:1{Mir:1-Ax:Y}Mtr', name='hfm_y')
-hfm_pit = EpicsMotor('XF:05IDA-OP:1{Mir:1-Ax:P}Mtr', name='hfm_pit')
-hfm_bdr = EpicsMotor('XF:05IDA-OP:1{Mir:1-Ax:Bend}Mtr', name='hfm_bdr')
+hfm = SRXHFM('XF:05IDA-OP:1{Mir:1-Ax:', name='hfm')
+relabel_motors(hfm)
 
 
 # HDCM
+class SRXDCM(Device):
+    bragg = Cpt(EpicsMotor, 'P}Mtr')
+    c1_roll = Cpt(EpicsMotor, 'R1}Mtr')
+    c2_x = Cpt(EpicsMotor, 'X2}Mtr')
+    c2_ptich = Cpt(EpicsMotor, 'P2}Mtr')
+    x = Cpt(EpicsMotor, 'X}Mtr')
+    y = Cpt(EpicsMotor, 'Y}Mtr')
 
-dcm_bragg = EpicsMotor('XF:05IDA-OP:1{Mono:HDCM-Ax:P}Mtr', name='dcm_bragg')
-dcm_c2_pitch = EpicsMotor('XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Mtr', name='dcm_c2_pitch')
-dcm_c1_roll = EpicsMotor('XF:05IDA-OP:1{Mono:HDCM-Ax:R1}Mtr', name='dcm_c1_roll')
-dcm_gap = EpicsMotor('XF:05IDA-OP:1{Mono:HDCM-Ax:X2}Mtr', name='dcm_gap')
-dcm_x = EpicsMotor('XF:05IDA-OP:1{Mono:HDCM-Ax:X}Mtr', name='dcm_x')
-dcm_y = EpicsMotor('XF:05IDA-OP:1{Mono:HDCM-Ax:Y}Mtr', name='dcm_y')
- 
+dcm = SRXDCM('XF:05IDA-OP:1{Mono:HDCM-Ax:' , name='dcm')
+relabel_motors(dcm)
+
 
 # BPMs
-
-bpm1_y=EpicsMotor('XF:05IDA-BI:1{BPM:1-Ax:YFoil}Mtr', name='bpm1_y')
-bpm1_diode_x=EpicsMotor('XF:05IDA-BI:1{BPM:1-Ax:XDiode}Mtr', name='bpm1_diode_x')
-bpm1_diode_y=EpicsMotor('XF:05IDA-BI:1{BPM:1-Ax:YDiode}Mtr', name='bpm1_diode_y')
-
-bpm2_y=EpicsMotor('XF:05IDB-BI:1{BPM:2-Ax:YFoil}Mtr', name='bpm2_y')
-bpm2_diode_x=EpicsMotor('XF:05IDB-BI:1{BPM:2-Ax:XDiode}Mtr', name='bpm2_diode_x')
-bpm2_diode_y=EpicsMotor('XF:05IDB-BI:1{BPM:2-Ax:YDiode}Mtr', name='bpm2_diode_y')
+class SRXBPM(Device):
+    y = Cpt(EpicsMotor, 'YFoil}Mtr')
+    diode_x = Cpt(EpicsMotor, 'XDiode}Mtr')
+    diode_y = Cpt(EpicsMotor, 'YDiode}Mtr')
 
 
-# Secondary source
-
-slt_ssa_tb = EpicsMotor('XF:05IDB-OP:1{Slt:SSA-Ax:T}Mtr', name='slt_ssa_tb')
-slt_ssa_bb = EpicsMotor('XF:05IDB-OP:1{Slt:SSA-Ax:B}Mtr', name='slt_ssa_bb')
-slt_ssa_ib = EpicsMotor('XF:05IDB-OP:1{Slt:SSA-Ax:I}Mtr', name='slt_ssa_ib')
-slt_ssa_ob = EpicsMotor('XF:05IDB-OP:1{Slt:SSA-Ax:O}Mtr', name='slt_ssa_ob')
-
-
-# High Flux KB
-hffm_vfm_pitch=EpicsMotor('XF:05IDD-OP:1{Mir:2-Ax:P}Mtr', name='hffm_vfm_pitch')
-hffm_vfm_roll=EpicsMotor('XF:05IDD-OP:1{Mir:2-Ax:R}Mtr', name='hffm_vfm_roll')
-hffm_vfm_y=EpicsMotor('XF:05IDD-OP:1{Mir:2-Ax:Y}Mtr', name='hffm_vfm_y')
-
+bpm1_pos = SRXBPM('XF:05IDA-BI:1{BPM:1-Ax:', name='bpm1_pos')
+bpm2_pos = SRXBPM('XF:05IDB-BI:1{BPM:2-Ax:', name='bpm2_pos')
+relabel_motors(bpm1_pos)
+relabel_motors(bpm2_pos)

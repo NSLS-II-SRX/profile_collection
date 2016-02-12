@@ -64,11 +64,11 @@ ssa = SlitDrainCurrent('XF:05IDA-BI{BPM:05}AH501:', name='ssa')
 
 
 class CurrentPreamp(Device):
-    trans_diode = Cpt(EpicsSignalRO, 'XF:05IDA{IM:1}Cur:I0-I')
-    fluor_diode = Cpt(EpicsSignalRO, 'XF:05IDA{IM:1}Cur:I1-I')
+    trans_diode = Cpt(EpicsSignalRO, ':I0-I')
+    fluor_diode = Cpt(EpicsSignalRO, ':I1-I')
     event_receiver = Cpt(EpicsSignal,
                          'XF:05IDD-ES:1{EVR:1-Out:FP3}Src:Scale-SP',
-                         trigger_value=1)
+                         trigger_value=1, add_prefix=())
 
     def stage(self):
         # Customize what is done before every scan (and undone at the end)
@@ -76,4 +76,4 @@ class CurrentPreamp(Device):
         # or just use pyepics directly if you need to
         super().stage()
     
-current_preamp = CurrentPreamp('XF:05IDA{IM:1}Cur:I0-I', name='current_preamp')
+current_preamp = CurrentPreamp('XF:05IDA{IM:1}Cur', name='current_preamp')
