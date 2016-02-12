@@ -58,7 +58,6 @@ class MagicSetPseudoPositioner(PseudoPositioner):
         return super().set(v)
 
 
-
 class PermissiveGetSignal(Signal):
     def get(self, use_monitor=None):
         return super().get()

@@ -299,10 +299,6 @@ class Energy(MagicSetPseudoPositioner):
         e = ANG_OVER_EV / (2 * self._d_111 * np.sin(np.deg2rad(bragg + self._delta_bragg)))
         return self.PseudoPosition(energy=e)
 
-    def set(self, *args):
-        v = self.PseudoPosition(*args)
-        return super().set(v)
-
 
 energy = Energy(prefix='', name='energy', 
                 d_111=3.12961447804, 
