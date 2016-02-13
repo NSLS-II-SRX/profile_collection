@@ -32,9 +32,9 @@ class SRXSlits4(MagicSetPseudoPositioner):
         top_zero, bot_zero, inb_zero, out_zero = zeros_pos
 
         top = (v_cen + top_zero) + (v_gap / 2)
-        bot = (v_cen + bot_zero) + (v_gap / 2)
+        bot = (-v_cen + bot_zero) + (v_gap / 2)
         
-        inb = (h_cen + inb_zero) + (h_gap / 2)
+        inb = (-h_cen + inb_zero) + (h_gap / 2)
         out = (h_cen + out_zero) + (h_gap / 2)
 
         return self.RealPosition(top=top, bot=bot, inb=inb, out=out)
