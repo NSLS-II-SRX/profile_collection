@@ -1,6 +1,6 @@
 import time as ttime
 
-from ophyd import (PVPositioner, EpicsSignal, EpicsSignalRO, EpicsMotor, 
+from ophyd import (PVPositioner, EpicsSignal, EpicsSignalRO, EpicsMotor,
                    Device, Signal, PseudoPositioner, PseudoSingle)
 from ophyd.utils.epics_pvs import set_and_wait
 from ophyd.ophydobj import StatusBase, MoveStatus
@@ -19,7 +19,7 @@ class UVDone(PermissiveGetSignal):
 
     def _put(self, *args, **kwargs):
         return super().put(*args, **kwargs)
-    
+
     def _watcher(self, obj=None, **kwargs):
         target = self.target
         rbv = getattr(self.parent, self._rbv)
@@ -36,7 +36,7 @@ class UVDone(PermissiveGetSignal):
         self._put(0)
         self.target = target
 
-class URealPos(Device):            
+class URealPos(Device):
     #undulator real position, gap and taper
     ds_low = Cpt(EpicsSignalRO, '}REAL_POSITION_DS_LOWER')
     ds_upp = Cpt(EpicsSignalRO, '}REAL_POSITION_DS_UPPER')
@@ -54,7 +54,7 @@ class UPos(Device):
 class GapPos(Device):
     gap_avg = Cpt(EpicsSignalRO, '}GAP_AVG')
     gap_ds = Cpt(EpicsSignalRO, '}GAP_DS')
-    gap_us = Cpt(EpicsSignalRO, '}GAP_US')    
+    gap_us = Cpt(EpicsSignalRO, '}GAP_US')
     gap_taper = Cpt(EpicsSignalRO, '}GAP_TAPER')
 
 
@@ -91,7 +91,7 @@ class Undulator(FixedPVPositioner):
     stop_signal = Cpt(EpicsSignal, '-Mtrc}Sw:Stp')
     actuate = Cpt(EpicsSignal, '-Mtr:2}Sw:Go')
     actuate_value = 1
-    done = Cpt(UVDone, None, brake='brake_on', 
+    done = Cpt(UVDone, None, brake='brake_on',
                readback='readback', add_prefix=())
 
     # correction function signals, need to be merged into single object
@@ -115,10 +115,10 @@ class Undulator(FixedPVPositioner):
 
         self.done.reset(v)
         ret = super().move(v, *args, **kwargs)
-        self.brake_on.subscribe(self.done._watcher, 
+        self.brake_on.subscribe(self.done._watcher,
                                 event_type=self.brake_on.SUB_VALUE)
-        self.readback.subscribe(self.done._watcher, 
-                                event_type=self.readback.SUB_VALUE) 
+        self.readback.subscribe(self.done._watcher,
+                                event_type=self.readback.SUB_VALUE)
         return ret
 
     def __init__(self, *args, calib_path=None, calib_file=None, **kwargs):
@@ -136,21 +136,21 @@ class Undulator(FixedPVPositioner):
             for line in f:
                 num = [float(x) for x in line.split()]
                 uposlistIn.append(num[0])
-                elistIn.append(num[1]) 
-        
+                elistIn.append(num[1])
+
         self.etoulookup = InterpolatedUnivariateSpline(elistIn, uposlistIn)
         self.utoelookup = InterpolatedUnivariateSpline(uposlistIn, elistIn)
 
 
-_undulator_kwargs = dict(name='ivu1_gap', read_attrs=['readback'], 
-                         calib_path='/nfs/xf05id1/UndulatorCalibration/', 
+_undulator_kwargs = dict(name='ivu1_gap', read_attrs=['readback'],
+                         calib_path='/nfs/xf05id1/UndulatorCalibration/',
                          calib_file='SRXUgapCalibration20150411_final.text',
-                         configuration_attrs=['corrfunc_sta', 'pos', 'girder', 
+                         configuration_attrs=['corrfunc_sta', 'pos', 'girder',
                                               'real_pos', 'elevation'])
 
 ANG_OVER_EV = 12.3984
 
-class Energy(MagicSetPseudoPositioner):     
+class Energy(MagicSetPseudoPositioner):
     # synthetic axis
     energy = Cpt(FixedPseudoSingle)
     # real motors
@@ -169,7 +169,7 @@ class Energy(MagicSetPseudoPositioner):
 
     def energy_to_positions(self, target_energy, undulator_harmonic, u_detune):
         """Compute undulator and mono positions given a target energy
-        
+
         Paramaters
         ----------
         target_energy : float
@@ -181,11 +181,11 @@ class Energy(MagicSetPseudoPositioner):
         uv_mistune : float, optional
             Amount to 'mistune' the undulator in keV.  Will settings such that the
             peak of the undulator spectrum will be at `target_energy + uv_mistune`.
-            
+
         Returns
         -------
         bragg : float
-             The angle to set the monocromotor 
+             The angle to set the monocromotor
         """
         # set up constants
         Xoffset = self._xoffset
@@ -196,22 +196,22 @@ class Energy(MagicSetPseudoPositioner):
         etoulookup = self.u_gap.etoulookup
 
 
-        #calculate Bragg RBV    
+        #calculate Bragg RBV
         BraggRBV = np.arcsin((ANG_OVER_EV / target_energy)/(2 * d_111))/np.pi*180 - delta_bragg
-    
-        #calculate C2X    
+
+        #calculate C2X
         Bragg = BraggRBV + delta_bragg
         T2 = Xoffset * np.sin(Bragg * np.pi / 180)/np.sin(2 * Bragg * np.pi / 180)
         dT2 = T2 - T2cal
-        C2X = C2Xcal - dT2    
-        
+        C2X = C2Xcal - dT2
+
         #calculate undulator gap
         # TODO make this more sohpisticated to stay a fixed distance off the
         # peak of the undulator energy
         ugap = float(etoulookup((target_energy + u_detune)/undulator_harmonic))
-        
-        return BraggRBV, C2X, ugap         
-    
+
+        return BraggRBV, C2X, ugap
+
     def undulator_energy(self, harmonic=3):
         """Return the current enegry peak of the undulator at the given harmonic
 
@@ -226,11 +226,11 @@ class Energy(MagicSetPseudoPositioner):
         fundemental = float(utoelookup(ugap))
 
         energy = fundemental * harmonic
-                
+
         return energy
-    
-    def __init__(self, *args, 
-                 xoffset=None, d_111=None, delta_bragg=None, C2Xcal=None, T2cal=None, 
+
+    def __init__(self, *args,
+                 xoffset=None, d_111=None, delta_bragg=None, C2Xcal=None, T2cal=None,
                  **kwargs):
         super().__init__(*args, **kwargs)
         self._xoffset = xoffset
@@ -256,7 +256,7 @@ class Energy(MagicSetPseudoPositioner):
         T2 = dT2 + T2cal
 
         XoffsetVal = T2/(np.sin(Bragg)/np.sin(2*Bragg))
-    
+
         return XoffsetVal
 
     def forward(self, p_pos):
@@ -269,7 +269,7 @@ class Energy(MagicSetPseudoPositioner):
         if energy >= 25:
             raise ValueError('The energy you entered is too high ({} keV). '
                              'Maximum energy = 25.0 keV'.format(energy))
-        
+
         if harmonic is None:
             harmonic = 3
             #choose the right harmonic
@@ -291,9 +291,9 @@ class Energy(MagicSetPseudoPositioner):
         # sometimes move the undulator
         if not self.move_u_gap.get():
             u_gap = self.u_gap.position
-        
+
         return self.RealPosition(bragg=bragg, c2_x=c2_x, u_gap=u_gap)
-        
+
     def inverse(self, r_pos):
         bragg = r_pos.bragg
         e = ANG_OVER_EV / (2 * self._d_111 * np.sin(np.deg2rad(bragg + self._delta_bragg)))
@@ -320,10 +320,8 @@ energy = Energy(prefix='', name='energy', **cal_data_2016cycle2)
 # Front End Slits (Primary Slits)
 class SRXSlitsFE(Device):
     top = Cpt(EpicsMotor, '3-Ax:T}Mtr')
-    bot = Cpt(EpicsMotor, '4-Ax:B}Mtr')    
+    bot = Cpt(EpicsMotor, '4-Ax:B}Mtr')
     inb = Cpt(EpicsMotor, '3-Ax:I}Mtr')
     out = Cpt(EpicsMotor, '4-Ax:O}Mtr')
 
 fe = SRXSlitsFE('FE:C05A-OP{Slt:', name='fe')
-
-
