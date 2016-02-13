@@ -299,15 +299,22 @@ class Energy(MagicSetPseudoPositioner):
         e = ANG_OVER_EV / (2 * self._d_111 * np.sin(np.deg2rad(bragg + self._delta_bragg)))
         return self.PseudoPosition(energy=e)
 
+# change it to a better way to pass the calibration
+cal_data_2016cycle1 = {'d_111': 3.12961447804,
+                       'delta_bragg': 0.322545952931,
+                       'C2Xcal': 3.6,
+                       'T2cal': 13.463294326,
+                       'xoffset': 25.2521}
 
-energy = Energy(prefix='', name='energy', 
-                d_111=3.12961447804, 
-                delta_bragg=0.322545952931,
-                C2Xcal=3.6, 
-                T2cal=13.463294326, 
-                xoffset=25.2521, 
-                configuration_attrs=['u_gap', 'move_u_gap', 'move_c2_x', 'harmonic'],
-                read_attrs=['energy', 'u_gap', 'bragg', 'c2_x'] )
+cal_data_2016cycle2 = {'d_111': 3.12924894907,  # 2016/1/27 (Se, Cu, Fe, Ti)
+                       'delta_bragg': 0.315532509387,  # 2016/1/27 (Se, Cu, Fe, Ti)
+                       # not in energy axis but for the record
+                       # 'C1Rcal' :  -4.88949983261, # 2016/1/29
+                       'C2Xcal': 3.6,  # 2016/1/29
+                       'T2cal': 13.7187120636,
+                       }  # 2016/1/29}
+
+energy = Energy(prefix='', name='energy', **cal_data_2016cycle2)
 
 
 # Front End Slits (Primary Slits)
