@@ -2,9 +2,24 @@ from ophyd import EpicsMotor
 from ophyd import Device
 from ophyd import Component as Cpt
 
+class SRXSlitsWB(Device):
+    #THIS IS BROKEN AT EPICS :LEVEL
+    # real synthetic axes
+    h_cen = Cpt(EpicsMotor, 'XCtr}Mtr')
+    h_gap = Cpt(EpicsMotor, 'XGap}Mtr')
+    v_cen = Cpt(EpicsMotor, 'YCtr}Mtr')
+    v_gap = Cpt(EpicsMotor, 'YGap}Mtr')
+    
+    # real motors
+    top = Cpt(EpicsMotor, 'T}Mtr')
+    bot = Cpt(EpicsMotor, 'B}Mtr')    
+    inb = Cpt(EpicsMotor, 'I}Mtr')
+    out = Cpt(EpicsMotor, 'O}Mtr')
+
 # Slits
-class SRXSlits4(MagicSetPseudoPositioner):
-    # synthetic axes
+class SRXSlits4SWPM(MagicSetPseudoPositioner):
+    # real synthetic axes
+
     h_cen = Cpt(FixedPseudoSingle)
     h_gap = Cpt(FixedPseudoSingle)
     v_cen = Cpt(FixedPseudoSingle)
@@ -69,7 +84,7 @@ class SRXSlits2(Device):
     out = Cpt(EpicsMotor, 'O}Mtr')
 
 # White Beam slits
-slt_wb = SRXSlits4('XF:05IDA-OP:1{Slt:1-Ax:', name='slt_wb')
+slt_wb = SRXSlits4SWPM('XF:05IDA-OP:1{Slt:1-Ax:', name='slt_wb')
 slt_wb.top_zero.put(-5.775)
 slt_wb.bot_zero.put(-4.905)
 slt_wb.inb_zero.put(-6.705)
@@ -78,8 +93,9 @@ slt_wb.out_zero.put(-4.345)
 
 # Pink beam
 slt_pb = SRXSlits2('XF:05IDA-OP:1{Slt:2-Ax:', name='slt_pb')
+
 # Secondary source
-slt_ssa = SRXSlits4('XF:05IDB-OP:1{Slt:SSA-Ax:', name='slt_ssa')
+slt_ssa = SRXSlits4SWPM('XF:05IDB-OP:1{Slt:SSA-Ax:', name='slt_ssa')
 slt_ssa.top_zero.put(0.2396)
 slt_ssa.bot_zero.put(-2.2046)
 slt_ssa.inb_zero.put(-0.4895)
