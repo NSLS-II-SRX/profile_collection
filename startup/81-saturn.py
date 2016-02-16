@@ -136,7 +136,7 @@ class SRXSaturn(SaturnSoftTrigger, Saturn):
 
         if configuration_attrs is None:
             configuration_attrs = ['mca.preset_real_time',
-                                   'mca.live_real_time',
+                                   'mca.preset_live_time',
                                    'dxp.preset_mode',
                                    ]
 
