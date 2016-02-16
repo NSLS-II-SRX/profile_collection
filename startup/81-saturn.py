@@ -1,5 +1,7 @@
 from ophyd.mca import (EpicsMCA, EpicsDXP)
-from ophyd import (Component as Cpt, Device, EpicsSignal, EpicsSignalWithRBV)
+from ophyd import (Component as Cpt, Device, EpicsSignal, EpicsSignalWithRBV,
+                   DeviceStatus)
+from ophyd.device import (BlueskyInterface, Staged)
 
 
 class SaturnMCA(EpicsMCA):
@@ -69,8 +71,76 @@ class Saturn(Device):
     set_client_wait = Cpt(EpicsSignal, 'SetClientWait')
 
 
-class SRXSaturn(Saturn):
-    pass
+class SaturnSoftTrigger(BlueskyInterface):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._status = None
+        self._acquisition_signal = self.mca.erase_start
+
+        self.stage_sigs[self.dxp.preset_mode] = 'Real time'
+        self._count_signal = self.mca.preset_real_time
+        self._count_time = None
+
+    def stage(self):
+        self._acquisition_signal.subscribe(self._acquire_changed)
+        if self._count_time is not None:
+            self.stage_sigs[self._count_signal] = self._count_time
+
+        super().stage()
+
+    def unstage(self):
+        try:
+            super().unstage()
+        finally:
+            self._acquisition_signal.clear_sub(self._acquire_changed)
+
+            if self._count_signal in self.stage_sigs:
+                del self.stage_sigs[self._count_signal]
+                self._count_time = None
+
+    def trigger(self):
+        "Trigger one acquisition."
+        if self._staged != Staged.yes:
+            raise RuntimeError("This detector is not ready to trigger."
+                               "Call the stage() method before triggering.")
+
+        self._status = DeviceStatus(self)
+        self._acquisition_signal.put(1, wait=False)
+        return self._status
+
+    def _acquire_changed(self, value=None, old_value=None, **kwargs):
+        "This is called when the 'acquire' signal changes."
+        if self._status is None:
+            return
+        if (old_value == 1) and (value == 0):
+            # Negative-going edge means an acquisition just finished.
+            self._status._finished()
+            self._status = None
+
+    @property
+    def count_time(self):
+        '''Exposure time, as set by bluesky'''
+        return self._count_time
+
+    @count_time.setter
+    def count_time(self, count_time):
+        self._count_time = count_time
+
+
+class SRXSaturn(SaturnSoftTrigger, Saturn):
+    def __init__(self, prefix, *, read_attrs=None, configuration_attrs=None,
+                 **kwargs):
+        if read_attrs is None:
+            read_attrs = ['mca.spectrum']
+
+        if configuration_attrs is None:
+            configuration_attrs = ['mca.preset_real_time',
+                                   'mca.live_real_time',
+                                   'dxp.preset_mode',
+                                   ]
+
+        super().__init__(prefix, read_attrs=read_attrs,
+                         configuration_attrs=configuration_attrs, **kwargs)
 
 
 if __name__ == '__main__':
