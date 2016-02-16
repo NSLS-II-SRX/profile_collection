@@ -67,9 +67,9 @@ class Girder(Device):
 
 class Elev(Device):
     ct_us =     Cpt(EpicsSignalRO, '-LEnc:1}Pos')
-    offset_us = Cpt(EpicsSignalRO, '-LEnc:1}Offset')
+    offset_us = Cpt(EpicsSignalRO, '-LEnc:1}Offset:RB')
     ct_ds =     Cpt(EpicsSignalRO, '-LEnc:6}Pos')
-    offset_ds = Cpt(EpicsSignalRO, '-LEnc:6}Offset')
+    offset_ds = Cpt(EpicsSignalRO, '-LEnc:6}Offset:RB')
 
 
 class FixedPVPositioner(PVPositioner):
