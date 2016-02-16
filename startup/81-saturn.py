@@ -1,10 +1,16 @@
 from ophyd.mca import (EpicsMCA, EpicsDXP)
-from ophyd import (Component as Cpt, Device, EpicsSignal, EpicsSignalWithRBV,
-                   DeviceStatus)
+from ophyd import (Component as Cpt, Device, EpicsSignal, EpicsSignalRO,
+                   EpicsSignalWithRBV, DeviceStatus)
 from ophyd.device import (BlueskyInterface, Staged)
 
 
 class SaturnMCA(EpicsMCA):
+    # TODO: fix upstream
+    preset_real_time = Cpt(EpicsSignal, '.PRTM')
+    preset_live_time = Cpt(EpicsSignal, '.PLTM')
+    elapsed_real_time = Cpt(EpicsSignalRO, '.ERTM')
+    elapsed_live_time = Cpt(EpicsSignalRO, '.ELTM')
+
     check_acquiring = Cpt(EpicsSignal, 'CheckACQG')
     client_wait = Cpt(EpicsSignal, 'ClientWait')
     collect_data = Cpt(EpicsSignal, 'CollectData')
@@ -18,7 +24,7 @@ class SaturnMCA(EpicsMCA):
     set_client_wait = Cpt(EpicsSignal, 'SetClientWait')
     start = Cpt(EpicsSignal, 'Start')
     status = Cpt(EpicsSignal, 'Status')
-    stop = Cpt(EpicsSignal, 'Stop')
+    stop_signal = Cpt(EpicsSignal, 'Stop')
     when_acq_stops = Cpt(EpicsSignal, 'WhenAcqStops')
     why1 = Cpt(EpicsSignal, 'Why1')
     why2 = Cpt(EpicsSignal, 'Why2')
@@ -42,8 +48,7 @@ class SaturnDXP(EpicsDXP):
     num_ll_params = Cpt(EpicsSignal, 'NumLLParams')
     peaking_time = Cpt(EpicsSignalWithRBV, 'PeakingTime')
     preset_events = Cpt(EpicsSignalWithRBV, 'PresetEvents')
-    preset_mode = Cpt(EpicsSignal, 'PresetMode')
-    preset_mode = Cpt(EpicsSignal, 'PresetMode_RBV')
+    preset_mode = Cpt(EpicsSignalWithRBV, 'PresetMode')
     preset_triggers = Cpt(EpicsSignalWithRBV, 'PresetTriggers')
     read_ll_params = Cpt(EpicsSignal, 'ReadLLParams')
     trace_data = Cpt(EpicsSignal, 'TraceData')
@@ -77,12 +82,13 @@ class SaturnSoftTrigger(BlueskyInterface):
         self._status = None
         self._acquisition_signal = self.mca.erase_start
 
+        self.stage_sigs[self.mca.stop_signal] = 1
         self.stage_sigs[self.dxp.preset_mode] = 'Real time'
+
         self._count_signal = self.mca.preset_real_time
         self._count_time = None
 
     def stage(self):
-        self._acquisition_signal.subscribe(self._acquire_changed)
         if self._count_time is not None:
             self.stage_sigs[self._count_signal] = self._count_time
 
@@ -92,8 +98,6 @@ class SaturnSoftTrigger(BlueskyInterface):
         try:
             super().unstage()
         finally:
-            self._acquisition_signal.clear_sub(self._acquire_changed)
-
             if self._count_signal in self.stage_sigs:
                 del self.stage_sigs[self._count_signal]
                 self._count_time = None
@@ -105,15 +109,12 @@ class SaturnSoftTrigger(BlueskyInterface):
                                "Call the stage() method before triggering.")
 
         self._status = DeviceStatus(self)
-        self._acquisition_signal.put(1, wait=False)
+        self._acquisition_signal.put(1, callback=self._acquisition_done)
         return self._status
 
-    def _acquire_changed(self, value=None, old_value=None, **kwargs):
-        "This is called when the 'acquire' signal changes."
-        if self._status is None:
-            return
-        if (old_value == 1) and (value == 0):
-            # Negative-going edge means an acquisition just finished.
+    def _acquisition_done(self, **kwargs):
+        '''pyepics callback for when put completion finishes'''
+        if self._status is not None:
             self._status._finished()
             self._status = None
 
