@@ -7,8 +7,41 @@ from ophyd import Component as Cpt
 from bluesky import Msg
 from bluesky.plan_tools import trigger_and_read, wrap_with_decorator, run_wrapper
 
+
 class UVDoneMOVN(PermissiveGetSignal):
-    def __init__(self, parent, moving, readback, actuate='actuate', stop='stop_signal',
+    """Signal for use as done signal for use in individual mode undulator motors
+
+    This is a soft-signal that monitors several real PVs to sort out when the
+    positioner is done moving.
+
+    If the positioner looks like it has stopped (ex, moving is 0) but the readback
+    is not close enough to the target, then re-actuate the motor.
+
+    Parameters
+    ----------
+    parent : Device
+         This comes from Cpt magic
+
+    moving : str
+        Name of the 'moving' signal on parent
+    readback : str
+        Name of the 'readback' signal on the parent
+    actuate : str
+        Name of the 'actuate' signal on the parent
+    stop : str
+        Name of the stop signal on the parent
+
+    kwargs : ??
+        All passed through to base Signal
+
+    Attributes
+    ----------
+    target : float or None
+        Where the positioner is going.  If ``None``, the callbacks short-circuit
+
+    """
+    def __init__(self, parent, moving, readback, actuate='actuate',
+                 stop='stop_signal',
                  **kwargs):
         super().__init__(parent=parent, value=1, **kwargs)
         self._rbv = readback
@@ -24,37 +57,55 @@ class UVDoneMOVN(PermissiveGetSignal):
         return super().put(*args, **kwargs)
 
     def _watcher(self, obj=None, **kwargs):
+        '''The callback to install on readback and moving signals
+
+        This callback watches if the position has gotten close enough to
+        it's target _and_ has stopped moving, and then flips this signal to 1 (which
+        in turn flips the Status object)
+
+        '''
         target = self.target
         if target is None:
             return
 
         rbv = getattr(self.parent, self._rbv)
-        stop = getattr(self.parent, self._stp)
         moving = getattr(self.parent, self._brake)
 
         cur_value = rbv.get()
         not_moving = not moving.get()
 
         # come back and check this threshold value
+        # this is 2 microns
         if not_moving and abs(target - cur_value) < 0.002:
             self._put(1)
             self._remove_cbs()
             return
 
-        # if it is not moving, but we are not where we want to be, 
+        # if it is not moving, but we are not where we want to be,
         # poke it again
         if not_moving:
             actuate = getattr(self.parent, self._act)
-            print(target, cur_value)
-
             print('re actuated')
             actuate.put(1)
 
     def _stop_watcher(self, *arg, **kwargs):
+        '''Call back to be installed on the stop signal
+
+        if this gets flipped, clear all of the other callbacks and tell
+        the status object that it is done.
+
+        TODO: mark status object as failed
+        TODO: only trigger this on 0 -> 1 transposition
+        '''
         print('STOPPED')
+        # set the target to None and remove all callbacks
         self.reset(None)
-        stop = getattr(self.parent, self._stp)
+        # flip this signal to 1 to signal it is done
         self._put(1)
+        # push stop again 'just to be safe'
+        # this is paranoia related to the re-kicking the motor is the
+        # other callback
+        stop = getattr(self.parent, self._stp)
         stop.put(1)
 
     def reset(self, target):
@@ -71,7 +122,14 @@ class UVDoneMOVN(PermissiveGetSignal):
         moving.clear_sub(self._watcher)
         stop.clear_sub(self._stop_watcher)
 
+
 class UndulatorPositioner(PVPositioner):
+    '''Base class for undulator motors
+
+    - patches up behavior of actuate
+    - installs done callbacks in proper places.  Assumes the above Done signal
+      is used
+    '''
     def _move_async(self, position, **kwargs):
         '''Move and do not wait until motion is complete (asynchronous)'''
         if self.actuate is not None:
@@ -79,7 +137,7 @@ class UndulatorPositioner(PVPositioner):
             self.actuate.put(self.actuate_value, wait=False)
         else:
             self.setpoint.put(position, wait=False)
-    
+
     def move(self, v, *args, **kwargs):
         self.done.reset(v)
         ret = super().move(v, *args, **kwargs)
@@ -97,7 +155,12 @@ class UndulatorPositioner(PVPositioner):
         self.done.reset(None)
         super().stop()
 
+
 def st_watcher(st):
+    '''helper function to watch status objects
+
+    Prints to screen every 0.5s
+    '''
     while not st.done:
         print(st)
         time.sleep(.5)
@@ -105,7 +168,8 @@ def st_watcher(st):
 
 
 class UndlatorMotorUSU(UndulatorPositioner):
-    readback = Cpt(EpicsSignal, '}REAL_POSITION_US_UPPER') 
+    'Upstream upper motor on SRX undulator'
+    readback = Cpt(EpicsSignal, '}REAL_POSITION_US_UPPER')
     setpoint = Cpt(EpicsSignal, '-Mtr:6}Inp:Pos')
     actuate = Cpt(EpicsSignal, '-Mtr:6}Sw:Go')
     done = Cpt(UVDoneMOVN, None, moving='moving',
@@ -116,6 +180,7 @@ class UndlatorMotorUSU(UndulatorPositioner):
 
 
 class UndlatorMotorUSL(UndulatorPositioner):
+    'Upstream lower motor on SRX undulator'
     readback = Cpt(EpicsSignal, '}REAL_POSITION_US_LOWER')
     setpoint = Cpt(EpicsSignal, '-Mtr:8}Inp:Pos')
     actuate = Cpt(EpicsSignal, '-Mtr:8}Sw:Go')
@@ -127,6 +192,7 @@ class UndlatorMotorUSL(UndulatorPositioner):
 
 
 class UndlatorMotorDSU(UndulatorPositioner):
+    'Downstream upper motor on SRX undulator'
     readback = Cpt(EpicsSignal, '}REAL_POSITION_DS_UPPER')
     setpoint = Cpt(EpicsSignal, '-Mtr:5}Inp:Pos')
     actuate = Cpt(EpicsSignal, '-Mtr:5}Sw:Go')
@@ -138,6 +204,7 @@ class UndlatorMotorDSU(UndulatorPositioner):
 
 
 class UndlatorMotorDSL(UndulatorPositioner):
+    'Downstream lower motor on SRX undulator'
     readback = Cpt(EpicsSignal, '}REAL_POSITION_DS_LOWER')
     setpoint = Cpt(EpicsSignal, '-Mtr:7}Inp:Pos')
     actuate = Cpt(EpicsSignal, '-Mtr:7}Sw:Go')
@@ -164,15 +231,18 @@ class UndlatorMotorElevation(UndulatorPositioner):
 
 
 class PowerUndulator(Device):
+    'Simple aggregate device to hold undulator motors'
     us_lower = Cpt(UndlatorMotorUSL, '')
     us_upper = Cpt(UndlatorMotorUSU, '')
     ds_lower = Cpt(UndlatorMotorDSL, '')
     ds_upper = Cpt(UndlatorMotorDSU, '')
-    elevation = Cpt(UndlatorMotorElevation, '') 
+    elevation = Cpt(UndlatorMotorElevation, '')
 
 pu = PowerUndulator('SR:C5-ID:G1{IVU21:1', name='pu')
 
+
 class UTemperatures(Device):
+    'Undulator temperatures'
     T1 = Cpt(EpicsSignal, '-Pt:1}T')
     T2 = Cpt(EpicsSignal, '-Pt:2}T')
     T3 = Cpt(EpicsSignal, '-Pt:3}T')
@@ -194,17 +264,49 @@ ut = UTemperatures('SR:C5-ID:G1{IVU21:1')
 
 TILT_LIMIT = 0.099  # 0.099 microns
 CRAB_LIMIT = 0.050  # 50 microns
-TARGET_THRESH = 0.002 # 2 microns, 
+TARGET_THRESH = 0.002 # 2 microns,
 
 @wrap_with_decorator(run_wrapper)
-def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets):
+def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets=None):
+    '''A generator plan for crabbing the undulator to new position
+
+    This is a single-use plan for moving the undulator to a new position ::
+
+       plan = ud_crab_plan(pu, a, 6.46, 6.46, 6.46, [ut])
+       gs.RE(plan)
+
+    This plan round-robin moves the motors to the desired positions taking
+    readings of all the motor positions and any additional detectors and ~1Hz
+
+    Parameters
+    ----------
+    pu : PowerUndulator
+        Bucket of undulator motors
+
+    us_u : float
+        The target upstream upper motor position
+
+    us_l : float
+        The target upstream lower motor position
+
+    ds_u : float
+        The target downstream upper motor position
+
+    ds_l : float
+        The target downstream lower motor position
+
+    other_dets : list, optional
+        List of other detectors to read
+    '''
+    if other_dets is None:
+        other_dets = []
     # magic goes here
     #if abs(us_u - ds_u) > CRAB_LIMIT:
     if abs(us_u - ds_u) > TILT_LIMIT:
         raise ValueError("exceded tilt limit on upper")
 
     #if abs(us_l - ds_l) > CRAB_LIMIT:
-    if abs(us_u - ds_u) > TILT_LIMIT:    
+    if abs(us_u - ds_u) > TILT_LIMIT:
         raise ValueError("exceded tilt limit on lower")
 
     def traj(pu):
@@ -222,7 +324,7 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets):
                 yield pu.us_upper, target
             else:
                 done_count += 1
-    
+
             # MOVE THE DOWNSTREAM UPPER
             cur_usu = pu.us_upper.position
             cur_dsu = pu.ds_upper.position
@@ -235,7 +337,7 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets):
                 yield pu.ds_upper, target
             else:
                 done_count += 1
-            
+
             # MOVE THE UPSTREAM lower
             cur_usl = pu.us_lower.position
             cur_dsl = pu.ds_lower.position
@@ -261,7 +363,7 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets):
                 yield pu.ds_lower, target
             else:
                 done_count += 1
-                
+
             if done_count == 4:
                 return
 
@@ -279,7 +381,7 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets):
                 mot.stop()
                 raise RuntimeError("Undulator move timed out")
             yield Msg('sleep', None, 1)
-            
+
 
         if st.error > .002:
             raise RuntimeError("only got with in {} of target {}".
@@ -290,15 +392,12 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets):
             yield from trigger_and_read([pu] + other_dets)
 
 
-
-
 def play():
+    '''Example of how to make a composite 'master' plan
+    '''
     for a in [6.46, 6.47, 6.48]:
         yield from ud_crab_plan(pu, a, 6.46, 6.46, 6.46, [ut])
         yield from EnergyPlan()
 
 
-# gs.RE(play())
-# gs.RE(play())
-# gs.RE(play())
 # gs.RE(play())
