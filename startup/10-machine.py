@@ -82,6 +82,15 @@ class FixedPVPositioner(PVPositioner):
             self.actuate.put(self.actuate_value, wait=False)
         else:
             self.setpoint.put(position, wait=False)
+    
+    def move(self, v, *args, **kwargs):
+        self.done.reset(v)
+        ret = super().move(v, *args, **kwargs)
+        self.brake_on.subscribe(self.done._watcher,
+                                event_type=self.brake_on.SUB_VALUE)
+        self.readback.subscribe(self.done._watcher,
+                                event_type=self.readback.SUB_VALUE)
+        return ret
 
 
 class Undulator(FixedPVPositioner):
@@ -112,14 +121,7 @@ class Undulator(FixedPVPositioner):
         if np.abs(v - self.position) < .001:
             self._done_moving()
             return MoveStatus(self, v, done=True)
-
-        self.done.reset(v)
-        ret = super().move(v, *args, **kwargs)
-        self.brake_on.subscribe(self.done._watcher,
-                                event_type=self.brake_on.SUB_VALUE)
-        self.readback.subscribe(self.done._watcher,
-                                event_type=self.readback.SUB_VALUE)
-        return ret
+        return super().move(v, *args, **kwargs)
 
     def __init__(self, *args, calib_path=None, calib_file=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -239,7 +241,7 @@ class Energy(MagicSetPseudoPositioner):
         self._c2xcal = C2Xcal
         self._t2cal = T2cal
 
-    def cyrstal_gap(self):
+    def crystal_gap(self):
         """Return the current physical gap between first and second crystals
         """
         C2X = self.c2_x.get().user_readback
@@ -252,7 +254,7 @@ class Energy(MagicSetPseudoPositioner):
 
         Bragg = np.pi/180 * (bragg + delta_bragg)
 
-        dT2 = c2xcal - C2X
+        dT2 = c2x_cal - C2X
         T2 = dT2 + T2cal
 
         XoffsetVal = T2/(np.sin(Bragg)/np.sin(2*Bragg))
@@ -312,6 +314,7 @@ cal_data_2016cycle2 = {'d_111': 3.12924894907,  # 2016/1/27 (Se, Cu, Fe, Ti)
                        # 'C1Rcal' :  -4.88949983261, # 2016/1/29
                        'C2Xcal': 3.6,  # 2016/1/29
                        'T2cal': 13.7187120636,
+                       'xoffset': 25.2521
                        }  # 2016/1/29}
 
 energy = Energy(prefix='', name='energy', **cal_data_2016cycle2)
