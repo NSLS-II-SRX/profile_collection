@@ -247,9 +247,9 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets):
 
     for mot, target in traj(pu):
         print("About to move {} to {}".format(mot.name, target))
-        yield Msg('checkpoint', None)
-        yield Msg('pause', None)
-        yield Msg('clear_checkpoint', None)
+        # yield Msg('checkpoint', None)
+        # yield Msg('pause', None)
+        # yield Msg('clear_checkpoint', None)
         st = yield Msg('set', mot, target)
         # move the motor
         fail_time = ttime.time() + 40 * 5
@@ -265,6 +265,17 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets):
             raise RuntimeError("only got with in {} of target {}".
                                format(st.error, st.target))
 
-        for j in range(5):
+        for j in range(2):
             yield Msg('sleep', None, 1)
             yield from trigger_and_read([pu] + other_dets)
+
+def play():
+    for a in [6.46, 6.47, 6.48]:
+        yield from ud_crab_plan(pu, a, 6.46, 6.46, 6.46, [ut])
+        yield from EnergyPlan()
+
+
+# gs.RE(play())
+# gs.RE(play())
+# gs.RE(play())
+# gs.RE(play())
