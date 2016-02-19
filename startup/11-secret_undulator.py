@@ -45,6 +45,7 @@ class UVDoneMOVN(PermissiveGetSignal):
         # poke it again
         if not_moving:
             actuate = getattr(self.parent, self._act)
+            print(target, cur_value)
 
             print('re actuated')
             actuate.put(1)
@@ -147,11 +148,27 @@ class UndlatorMotorDSL(UndulatorPositioner):
     moving = Cpt(EpicsSignal, '-Mtr:4}Pos.MOVN')
 
 
+class UndlatorMotorElevation(UndulatorPositioner):
+    readback = Cpt(EpicsSignal, '}REAL_ELEVATION_US')
+    setpoint = Cpt(EpicsSignal, '-Mtr:1}Inp:Pos')
+    actuate = Cpt(EpicsSignal, '-Mtr:1}Sw:Go')
+    done = Cpt(UVDoneMOVN, None, moving='moving',
+               readback='readback', add_prefix=())
+    #### CHECK THE STOP SIGNAL PV
+    stop_signal = Cpt(EpicsSignal, '-Mtr:1}Pos.STOP')
+
+    moving = Cpt(EpicsSignal, '-Mtr:1}Pos.MOVN')
+
+    ds_elevation = Cpt(EpicsSignal, '}REAL_ELEVATION_DS')
+    avg_elevation = Cpt(EpicsSignal, '}REAL_ELEVATION_AVG')
+
+
 class PowerUndulator(Device):
     us_lower = Cpt(UndlatorMotorUSL, '')
     us_upper = Cpt(UndlatorMotorUSU, '')
     ds_lower = Cpt(UndlatorMotorDSL, '')
     ds_upper = Cpt(UndlatorMotorDSU, '')
+    elevation = Cpt(UndlatorMotorElevation, '') 
 
 pu = PowerUndulator('SR:C5-ID:G1{IVU21:1', name='pu')
 
@@ -175,17 +192,20 @@ class UTemperatures(Device):
 
 ut = UTemperatures('SR:C5-ID:G1{IVU21:1')
 
+TILT_LIMIT = 0.099  # 0.099 microns
 CRAB_LIMIT = 0.050  # 50 microns
 TARGET_THRESH = 0.002 # 2 microns, 
 
 @wrap_with_decorator(run_wrapper)
 def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets):
     # magic goes here
-    if abs(us_u - ds_u) > CRAB_LIMIT:
-        raise ValueError("exceded crab limit on upper")
+    #if abs(us_u - ds_u) > CRAB_LIMIT:
+    if abs(us_u - ds_u) > TILT_LIMIT:
+        raise ValueError("exceded tilt limit on upper")
 
-    if abs(us_l - ds_l) > CRAB_LIMIT:
-        raise ValueError("exceded crab limit on lower")
+    #if abs(us_l - ds_l) > CRAB_LIMIT:
+    if abs(us_u - ds_u) > TILT_LIMIT:    
+        raise ValueError("exceded tilt limit on lower")
 
     def traj(pu):
         while True:
@@ -268,6 +288,9 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets):
         for j in range(2):
             yield Msg('sleep', None, 1)
             yield from trigger_and_read([pu] + other_dets)
+
+
+
 
 def play():
     for a in [6.46, 6.47, 6.48]:

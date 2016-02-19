@@ -7,6 +7,7 @@ from ophyd.ophydobj import StatusBase, MoveStatus
 from ophyd import Component as Cpt
 from scipy.interpolate import InterpolatedUnivariateSpline
 
+ring_current = EpicsSignalRO('SR:C03-BI{DCCT:1}I:Real-I', name='ring_current')
 
 class UVDone(PermissiveGetSignal):
     def __init__(self, parent, brake, readback, **kwargs):
