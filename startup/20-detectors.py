@@ -81,25 +81,30 @@ class CurrentPreamp(Device):
         #self.stage_sigs[self.initi_trigger] = 1 #this somewhat did not work
 
     def stage(self):
-        self.initi_trigger.put(1, wait=True)  #move to __init__ but that did not work
+
         # Customize what is done before every scan (and undone at the end)
         # self.stage_sigs[self.trans_diode] = 5
         # or just use pyepics directly if you need to
         super().stage()
+        self.initi_trigger.put(1, wait=True)
+        self.trigger()
 
     def trigger(self):
         init_ts = self.ch0.timestamp
         self.event_receiver.put('Force Low', wait=True)
         self.event_receiver.put('Force High', wait=True)
         self.event_receiver.put('Force Low')
-        ret = super().trigger()
+        ret = DeviceStatus(self)
 
         def done_cb(*args, obj=None, **kwargs):
+
             if obj is None:
                 raise RuntimeError('should never happen')
             cur_ts = obj.timestamp
+
             if cur_ts == init_ts:
                 return
+
             ret._finished()
             obj.clear_sub(done_cb)
 
