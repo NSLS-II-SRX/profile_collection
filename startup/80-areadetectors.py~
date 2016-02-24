@@ -1,0 +1,29 @@
+from ophyd.areadetector import (ProsilicaDetector, ImagePlugin,
+                                TIFFPlugin, StatsPlugin, HDF5Plugin,
+                                ProcessPlugin)
+from ophyd.device import BlueskyInterface
+from ophyd.areadetector.trigger_mixins import SingleTrigger
+from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
+                                                 FileStoreHDF5IterativeWrite,
+                                                 FileStoreTIFFSquashing,
+                                                 FileStoreTIFF)
+from ophyd import Signal
+from ophyd import Component as C
+
+class SRXTIFFPlugin(TIFFPlugin, FileStoreTIFF,
+                    FileStoreIterativeWrite):
+    pass
+
+class BPMCam(ProsilicaDetector):
+        image = C(ImagePlugin, 'image1:')
+
+    tiff = C(SRXTIFFPlugin, 'TIFF1:',
+             write_path_template='/DATA/epics/imgs/%Y/%m/%d/'
+
+    stats1 = C(StatsPlugin, 'Stats1:')
+    stats2 = C(StatsPlugin, 'Stats2:')
+    stats3 = C(StatsPlugin, 'Stats3:')
+    stats4 = C(StatsPlugin, 'Stats4:')
+    # this is flakey?
+    # stats5 = C(StatsPlugin, 'Stats5:')
+                               ])

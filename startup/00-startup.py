@@ -4,11 +4,15 @@ from bluesky import qt_kicker
 from bluesky.spec_api import *
 from ophyd import PseudoPositioner, PseudoSingle, Signal
 import matplotlib.pyplot as plt
+import matplotlib
 import ophyd
 from ophyd.commands import *  # imports mov, wh_pos, etc.
 
 qt_kicker.install_qt_kicker()
 gs.RE.md['beamline_id'] = 'xf05id'
+
+matplotlib.rcParams['axes.formatter.useoffset'] = False
+
 RE = gs.RE
 
 ophyd.utils.startup.setup()

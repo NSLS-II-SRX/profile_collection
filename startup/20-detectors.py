@@ -1,7 +1,7 @@
 from ophyd import ProsilicaDetector, EpicsSignal, Device
 from ophyd import Component as Cpt
 from ophyd.ophydobj import StatusBase
-
+import time as ttime
 
 hfm_cam = EpicsSignal('XF:05IDA-BI:1{FS:1-Cam:1}Acquire_RBV',
                         write_pv='XF:05IDA-BI:1{FS:1-Cam:1}Acquire',
@@ -64,16 +64,36 @@ ssa = SlitDrainCurrent('XF:05IDA-BI{BPM:05}AH501:', name='ssa')
 
 
 class CurrentPreamp(Device):
-    trans_diode = Cpt(EpicsSignalRO, ':I0-I')
-    fluor_diode = Cpt(EpicsSignalRO, ':I1-I')
+    ch0 = Cpt(EpicsSignalRO, 'Cur:I0-I')
+    ch1 = Cpt(EpicsSignalRO, 'Cur:I1-I')
+    ch2 = Cpt(EpicsSignalRO, 'Cur:I2-I')
+    ch3 = Cpt(EpicsSignalRO, 'Cur:I3-I')
+
+    exp_time = Cpt(EpicsSignal, 'Per-SP')
+    initi_trigger = Cpt(EpicsSignal, 'Cmd:Init')
     event_receiver = Cpt(EpicsSignal,
                          'XF:05IDD-ES:1{EVR:1-Out:FP3}Src:Scale-SP',
-                         trigger_value=1, add_prefix=())
+                         add_prefix=())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.stage_sigs[self.event_receiver] = 'Force Low'
+        #self.stage_sigs[self.initi_trigger] = 1 #this somewhat did not work
 
     def stage(self):
+        self.initi_trigger.put(1, wait=True)  #move to __init__ but that did not work
         # Customize what is done before every scan (and undone at the end)
         # self.stage_sigs[self.trans_diode] = 5
         # or just use pyepics directly if you need to
         super().stage()
-    
-current_preamp = CurrentPreamp('XF:05IDA{IM:1}Cur', name='current_preamp')
+
+    def trigger(self):
+        self.event_receiver.put('Force Low', wait=True)
+        self.event_receiver.put('Force High', wait=True)
+        self.event_receiver.put('Force Low')
+        ttime.sleep(.1)        
+        ret = super().trigger()
+        ret._finished()
+        return ret
+
+current_preamp = CurrentPreamp('XF:05IDA{IM:1}', name='current_preamp')

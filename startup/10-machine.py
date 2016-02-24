@@ -118,11 +118,17 @@ class Undulator(FixedPVPositioner):
     girder = Cpt(Girder, '')
     elevation = Cpt(Elev, '')
 
-    def move(self, v, *args, **kwargs):
+    def move(self, v, *args, moved_cb=None, **kwargs):
         if np.abs(v - self.position) < .001:
+            self._started_moving = True
+            self._moving = False
             self._done_moving()
-            return MoveStatus(self, v, done=True)
-        return super().move(v, *args, **kwargs)
+            st = MoveStatus(self, v)
+            if moved_cb:
+                moved_cb(obj=self)
+            st._finished()
+            return st
+        return super().move(v, *args, moved_cb=moved_cb, **kwargs)
 
     def __init__(self, *args, calib_path=None, calib_file=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -153,7 +159,7 @@ _undulator_kwargs = dict(name='ivu1_gap', read_attrs=['readback'],
 
 ANG_OVER_EV = 12.3984
 
-class Energy(MagicSetPseudoPositioner):
+class Energy(PseudoPositioner):
     # synthetic axis
     energy = Cpt(FixedPseudoSingle)
     # real motors
@@ -315,7 +321,7 @@ cal_data_2016cycle2 = {'d_111': 3.12924894907,  # 2016/1/27 (Se, Cu, Fe, Ti)
                        # 'C1Rcal' :  -4.88949983261, # 2016/1/29
                        'C2Xcal': 3.6,  # 2016/1/29
                        'T2cal': 13.7187120636,
-                       'xoffset': 25.2521
+                       'xoffset': 25.01567531283996
                        }  # 2016/1/29}
 
 energy = Energy(prefix='', name='energy', **cal_data_2016cycle2)

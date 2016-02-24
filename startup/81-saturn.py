@@ -84,6 +84,7 @@ class SaturnSoftTrigger(BlueskyInterface):
 
         self.stage_sigs[self.mca.stop_signal] = 1
         self.stage_sigs[self.dxp.preset_mode] = 'Real time'
+        #self.stage_sigs[self.dxp.preset_mode] = 'Live time'
 
         self._count_signal = self.mca.preset_real_time
         self._count_time = None

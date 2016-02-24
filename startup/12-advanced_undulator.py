@@ -55,4 +55,4 @@ if __name__ == "__main__":
 
     #test call
     #undSpecKPP(-50, -50, 300)
-    print('load advanced undulator moduel')
+    print('load advanced undulator module')
