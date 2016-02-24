@@ -37,7 +37,7 @@ class BpmDiode(Device):
         status = StatusBase()
         status._finished()
         return status
-    
+
 
 bpm1 = BpmDiode('xf05bpm03:DataRead', name='bpm1')
 bpm2 = BpmDiode('xf05bpm04:DataRead', name='bpm2')
@@ -88,12 +88,23 @@ class CurrentPreamp(Device):
         super().stage()
 
     def trigger(self):
+        init_ts = self.ch0.timestamp
         self.event_receiver.put('Force Low', wait=True)
         self.event_receiver.put('Force High', wait=True)
         self.event_receiver.put('Force Low')
-        ttime.sleep(.1)        
         ret = super().trigger()
-        ret._finished()
+
+        def done_cb(*args, obj=None, **kwargs):
+            if obj is None:
+                raise RuntimeError('should never happen')
+            cur_ts = obj.timestamp
+            if cur_ts == init_ts:
+                return
+            ret._finished()
+            obj.clear_sub(done_cb)
+
+        self.ch0.subscribe(done_cb, event_type=self.ch0.SUB_VALUE, run=True)
+
         return ret
 
 current_preamp = CurrentPreamp('XF:05IDA{IM:1}', name='current_preamp')
