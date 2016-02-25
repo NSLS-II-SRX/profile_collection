@@ -98,9 +98,9 @@ class CurrentPreamp(Device):
 
         def done_cb(*args, obj=None, old_value=None, value=None,
                     timestamp=None, **kwargs):
-            print('init ts: {!r}    cur ts : {!r}'.format(init_ts, timestamp))
-            print('old value: {!r}    new value : {!r}'.format(init_ts,
-                                                               timestamp))
+            #print('init ts: {!r}    cur ts : {!r}'.format(init_ts, timestamp))
+            #print('old value: {!r}    new value : {!r}'.format(init_ts,
+            #                                                   timestamp))
 
             # if the timestamp or the value has changed, assume it is done
             if (timestamp != init_ts) or (value != old_value):
