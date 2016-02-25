@@ -96,17 +96,16 @@ class CurrentPreamp(Device):
         self.event_receiver.put('Force Low')
         ret = DeviceStatus(self)
 
-        def done_cb(*args, obj=None, **kwargs):
+        def done_cb(*args, obj=None, old_value=None, value=None,
+                    timestamp=None, **kwargs):
+            print('init ts: {!r}    cur ts : {!r}'.format(init_ts, timestamp))
+            print('old value: {!r}    new value : {!r}'.format(init_ts,
+                                                               timestamp))
 
-            if obj is None:
-                raise RuntimeError('should never happen')
-            cur_ts = obj.timestamp
-
-            if cur_ts == init_ts:
-                return
-
-            ret._finished()
-            obj.clear_sub(done_cb)
+            # if the timestamp or the value has changed, assume it is done
+            if (timestamp != init_ts) or (value != old_value):
+                ret._finished()
+                obj.clear_sub(done_cb)
 
         self.ch0.subscribe(done_cb, event_type=self.ch0.SUB_VALUE, run=True)
 
