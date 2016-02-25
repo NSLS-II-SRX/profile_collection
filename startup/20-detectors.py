@@ -1,6 +1,8 @@
 from ophyd import ProsilicaDetector, EpicsSignal, Device
 from ophyd import Component as Cpt
 from ophyd.ophydobj import StatusBase
+from ophyd.status import wait
+
 import time as ttime
 
 hfm_cam = EpicsSignal('XF:05IDA-BI:1{FS:1-Cam:1}Acquire_RBV',
@@ -85,9 +87,10 @@ class CurrentPreamp(Device):
         # Customize what is done before every scan (and undone at the end)
         # self.stage_sigs[self.trans_diode] = 5
         # or just use pyepics directly if you need to
-        super().stage()
+        ret = super().stage()
         self.initi_trigger.put(1, wait=True)
-        self.trigger()
+        wait(self.trigger())
+        return ret
 
     def trigger(self):
         init_ts = self.ch0.timestamp
