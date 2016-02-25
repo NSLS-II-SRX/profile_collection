@@ -20,8 +20,8 @@ class BPMCam(SingleTrigger, AreaDetector):
     image = C(ImagePlugin, 'image1:')
 
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
-             write_path_template='/epicsdata/bpm1-cam1/2016/2/18/')
-             # write_path_template='/epicsdata/bpm1-cam1/%Y/%m/%d/')
+             write_path_template='/epicsdata/bpm1-cam1/2016/2/24/')
+             #write_path_template='/epicsdata/bpm1-cam1/%Y/%m/%d/')
 
     stats1 = C(StatsPlugin, 'Stats1:')
     stats2 = C(StatsPlugin, 'Stats2:')

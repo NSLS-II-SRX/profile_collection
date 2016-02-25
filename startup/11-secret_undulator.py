@@ -162,8 +162,8 @@ def st_watcher(st):
     Prints to screen every 0.5s
     '''
     while not st.done:
-        print(st)
-        time.sleep(.5)
+        print(st, st.done)
+        time.sleep(.1)
     print(st)
 
 
@@ -372,7 +372,7 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets=None):
         # yield Msg('checkpoint', None)
         # yield Msg('pause', None)
         # yield Msg('clear_checkpoint', None)
-        st = yield Msg('set', mot, target)
+        st = yield Msg('set', mot, target, timeout = None)
         # move the motor
         fail_time = ttime.time() + 40 * 5
         while not st.done:

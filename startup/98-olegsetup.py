@@ -24,8 +24,10 @@
 #energy.move_c2_x.put(False)
 #energy.u_gap.read_attrs.append('elevation')
 ##bpmAD.read_attrs.append('cam_acquire_time')
-##olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 7.792, 8.143, 20)
-#olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 7.792, 8.143, 176)
+##olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 7.792, 8.143, 20)   #testing
+##olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 7.792, 8.143, 176)  #for 5th harmonic at ugap = 6.8
+#olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 14.1, 14.6, 251)     #for 9th harmonic at ugap = 6.8
+#
 #livetableitem = [energy.energy, bpmAD.stats1.total, bpmAD.stats3.total, ring_current]
 #liveploty = bpmAD.stats3.total.name
 #liveplotx = energy.energy.name

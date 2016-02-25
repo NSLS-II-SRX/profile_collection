@@ -11,6 +11,7 @@ from bluesky.plans import AbsListScanPlan
 from bluesky.suspenders import PVSuspendFloor
 import scanoutput
 import numpy
+import time
 
 ring_current_pv = 'SR:C03-BI{DCCT:1}I:Real-I'
 cryo_v19_pv = 'XF:05IDA-UT{Cryo:1-IV:19}Sts-Sts'
@@ -29,7 +30,9 @@ def xanes_afterscan(scanuid, roinum, filename, i0scale, itscale):
     
     userheaderitem = {}
     userheaderitem['sample.name'] = h.start['sample']['name']
-    
+    userheaderitem['initial_sample_position.hf_stage.x'] = h.start['initial_sample_position']['hf_stage_x']
+    userheaderitem['initial_sample_position.hf_stage.y'] = h.start['initial_sample_position']['hf_stage_y']
+
     
     #columnitem = ['energy_energy','saturn_mca_rois_roi'+str(roinum)+'_net_count', 'current_preamp_ch1']
     columnitem = ['energy_energy','saturn_mca_rois_roi'+str(roinum)+'_net_count','saturn_mca_rois_roi'+str(roinum)+'_count', 'current_preamp_ch0', 'current_preamp_ch1']    
@@ -103,12 +106,16 @@ def xanes(erange = [], estep = [],
     livetableitem.append('saturn_mca_rois_roi'+str(roinum)+'_count')
     livecallbacks.append(LiveTable(livetableitem, max_post_decimal = 4))
 
-    liveploty = 'saturn_mca_rois_roi'+str(roinum)+'_net_count'
-    #liveploty = 'saturn_mca_rois_roi'+str(roinum)+'_count'
+    #liveploty = 'saturn_mca_rois_roi'+str(roinum)+'_net_count'
+    liveploty = 'saturn_mca_rois_roi'+str(roinum)+'_count'
     liveplotx = energy.energy.name
     liveplotfig = plt.figure()
     livecallbacks.append(LivePlot(liveploty, x=liveplotx, fig=liveplotfig))
-      
+    livenormfig = plt.figure()    
+    i0 = 'current_preamp_ch1'
+    livecallbacks.append(NormalizeLivePlot(liveploty, x=liveplotx, norm_key = i0, fig=livenormfig))  
+    livenormfig2 = plt.figure()    
+    livecallbacks.append(NormalizeLivePlot('current_preamp_ch0', x=liveplotx, norm_key = i0, fig=livenormfig2))  
 
     if correct_c2_x is False:
         energy.move_c2_x.put(False)
@@ -126,13 +133,55 @@ def xanes(erange = [], estep = [],
     xanes_scanplan = AbsListScanPlan(det, energy, ept)
 
     #run the plan
-    scaninfo = gs.RE(xanes_scanplan, livecallbacks)
+    scaninfo = gs.RE(xanes_scanplan, livecallbacks, raise_if_interrupted=True)
 
     #output the datafile
     xanes_afterscan(scaninfo, roinum, filename, i0scale, itscale)
 
+    logscan('xanes') 
+
     #clean up when the scan is done    
     energy.move_c2_x.put(True)
     energy.harmonic.put(None)
+    
               
     return scaninfo
+    
+def hfxanes_xybatch(xylist=[], waittime = 5, 
+                    samplename = None, filename = None,
+                    erange = [], estep = [],  
+                    harmonic = None, correct_c2_x=True,              
+                    acqtime=None, roinum=0, i0scale = 1e8, itscale = 1e8,
+                    ):
+    for pt_num, position in enumerate(xylist):
+        #move stages to the next point
+        hf_stage.x.set(position[0]) 
+        hf_stage.y.set(position[1])
+        
+        #wait for specified time period in sec.
+        time.sleep(waittime)
+        
+        if samplename is None:
+            pt_samplename = ''
+        else:
+            if len(samplename) is not len(xylist):
+                err_msg = 'number of samplename is different from the number of points'
+                raise Exception(err_msg)
+            else:
+                pt_samplename = samplename[pt_num]
+
+        if filename is None:
+            pt_filename = ''
+        else:
+            if len(filename) is not len(xylist):
+                err_msg = 'number of filename is different from the number of points'
+                raise Exception(err_msg)
+            else:
+                pt_filename = filename[pt_num]
+                
+        
+        xanes(erange = erange, estep = estep,  
+            harmonic = harmonic, correct_c2_x= correct_c2_x,              
+            acqtime = acqtime, roinum = roinum, 
+            i0scale = i0scale, itscale = itscale,
+            samplename = pt_samplename, filename = pt_filename)

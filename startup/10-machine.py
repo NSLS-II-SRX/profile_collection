@@ -28,7 +28,9 @@ class UVDone(PermissiveGetSignal):
         brake = getattr(self.parent, self._brake)
         brake_on = brake.get()
         # come back and check this threshold value
-        if brake_on and abs(target - cur_value) < 0.002:
+        #if brake_on and abs(target - cur_value) < 0.002:
+        if abs(target - cur_value) < 0.002:
+        
             self._put(1)
             rbv.clear_sub(self._watcher)
             brake.clear_sub(self._watcher)

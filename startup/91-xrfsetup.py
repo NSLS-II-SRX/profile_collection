@@ -15,11 +15,8 @@ set up for 2D XRF scan for HR mode
 
 from bluesky.plans import OuterProductAbsScanPlan
 from bluesky.callbacks import LiveRaster
-from bluesky.suspenders import PVSuspendFloor, PVSuspendCeil
 import matplotlib
 
-ring_current_pv = 'SR:C03-BI{DCCT:1}I:Real-I'
-cryo_v19_pv = 'XF:05IDA-UT{Cryo:1-IV:19}Sts-Sts'
 #matplotlib.pyplot.ticklabel_format(style='plain')
 
 def hf2dxrf(xstart=None, xnumstep=None, xstepsize=None, 
@@ -88,5 +85,10 @@ def hf2dxrf(xstart=None, xnumstep=None, xstepsize=None,
     #OuterProductAbsScanPlan(detectors, motor1, start1, stop1, num1, motor2, start2, stop2, num2, snake2, pre_run=None, post_run=None)
     hf2dxrf_scanplan = OuterProductAbsScanPlan(det, hf_stage.y, ystart, ystop, ynumstep, hf_stage.x, xstart, xstop, xnumstep, False)
     scaninfo = gs.RE(hf2dxrf_scanplan, livecallbacks)
+
+    #write to scan log    
+    logscan('2dxrf')    
+    
     return scaninfo
+
     
