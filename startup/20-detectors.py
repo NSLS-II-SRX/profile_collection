@@ -87,9 +87,10 @@ class CurrentPreamp(Device):
         # Customize what is done before every scan (and undone at the end)
         # self.stage_sigs[self.trans_diode] = 5
         # or just use pyepics directly if you need to
-        super().stage()
+        ret = super().stage()
         self.initi_trigger.put(1, wait=True)
         wait(self.trigger())
+        return ret
 
     def trigger(self):
         init_ts = self.ch0.timestamp
