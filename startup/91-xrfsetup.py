@@ -45,6 +45,9 @@ def hf2dxrf(xstart=None, xnumstep=None, xstepsize=None,
     if acqtime is None:
         raise Exception('acqtime = None, must specify an acqtime position')
 
+    #record relevant meta data in the Start document, defined in 90-usersetup.py
+    metadata_record()
+
     #setup the detector
     current_preamp.exp_time.put(acqtime)
     saturn.mca.preset_real_time.put(acqtime)
@@ -59,7 +62,7 @@ def hf2dxrf(xstart=None, xnumstep=None, xstepsize=None,
     #setup the live callbacks
     livecallbacks = []
     
-    livetableitem = [hf_stage.x, hf_stage.y, 'current_preamp_ch0', 'current_preamp_ch1']
+    livetableitem = [hf_stage.x, hf_stage.y, 'current_preamp_ch0', 'current_preamp_ch2']
 
     xstop = xstart + xnumstep*xstepsize
     ystop = ystart + ynumstep*ystepsize  
@@ -73,11 +76,11 @@ def hf2dxrf(xstart=None, xnumstep=None, xstepsize=None,
         livetableitem.append('saturn_mca_rois_roi'+str(roi_idx)+'_count')
         #roimap = LiveRaster((xnumstep, ynumstep), 'saturn_mca_rois_roi'+str(roi_idx)+'_net_count', clim=None, cmap='viridis', xlabel='x', ylabel='y', extent=None)
         colormap = 'jet' #previous set = 'viridis'
-        roimap = LiveRaster((xnumstep, ynumstep), 'saturn_mca_rois_roi'+str(roi_idx)+'_count', clim=None, cmap='jet', 
+        roimap = LiveRaster((ynumstep, xnumstep), 'saturn_mca_rois_roi'+str(roi_idx)+'_count', clim=None, cmap='jet', 
                             xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(roimap)
-
-    livecallbacks.append(LiveTable(livetableitem, max_post_decimal = 4)) 
+#
+#    livecallbacks.append(LiveTable(livetableitem, max_post_decimal = 4)) 
 
     
     #setup the plan  

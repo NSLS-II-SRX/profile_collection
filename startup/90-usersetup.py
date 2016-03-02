@@ -9,15 +9,19 @@ import scanoutput
 from databroker import DataBroker as db
 
 #user experiment will be put into the Start Document for every scan
-proposal_num = 300810
-proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-PI_lastname = 'Chubar'
-saf_num = 300265
+#proposal_num = 300810
+#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+#PI_lastname = 'Chubar'
+#saf_num = 300265
+
 
 proposal_num = 300802
 proposal_title = 'Elemental Segregation and Speciation in the Lead Carboxylate (Soap) Deterioration of Oil Paintings'
 PI_lastname = 'Centeno'
 saf_num = 300312
+#avoid hitting undulator minimum gap during XANES scan
+energy.harmonic.put(7)
+
 
 
 cycle = '2016_cycle1'
@@ -57,3 +61,12 @@ def logscan(scantype):
     userlogf = open(userlogfile, 'a')
     userlogf.write(str(scan_id)+'\t'+uid+'\t'+scantype+'\n')
     userlogf.close()
+    
+def metadata_record():
+    gs.RE.md['beamline_status']  = {'energy':  energy.energy.position, 
+                                'slt_wb': str(slt_wb.position),
+                                #'slt_ssa': str(slt_ssa.position)
+                                }
+                                
+    gs.RE.md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
+                                       'hf_stage_y': hf_stage.y.position}

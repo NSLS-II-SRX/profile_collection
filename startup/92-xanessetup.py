@@ -15,40 +15,48 @@ import time
 
 ring_current_pv = 'SR:C03-BI{DCCT:1}I:Real-I'
 cryo_v19_pv = 'XF:05IDA-UT{Cryo:1-IV:19}Sts-Sts'
-i0_baseline = 1.53e-7
-it_baseline = 9.34e-8
+i0_baseline = 7.24e-10
+it_baseline = 1.40e-8
 
-def xanes_afterscan(scanuid, roinum, filename, i0scale, itscale):
+def xanes_afterscan(scanid, roinum, filename, i0scale, itscale):
+    
+    #roinum=0, i0scale = 1e8, itscale = 1e8, 
+    #xanes_afterscan(789, 0, '118lw_palmiticontopetoh85rh', 1e8, 1e8)
 
+    print(scanid)
     headeritem = [] 
-    h=db[-1]
+    h=db[scanid]
 
-    #datatable = get_table(h, ['energy_energy', 'saturn_mca_rois_roi'+str(roinum)+'_net_count', 'current_preamp_ch1'])        
+    #datatable = get_table(h, ['energy_energy', 'saturn_mca_rois_roi'+str(roinum)+'_net_count', 'current_preamp_ch2'])        
     #energy_array = list(datatable['energy_energy'])   
     #if_array = list(datatable['saturn_mca_rois_roi'+str(roinum)+'_net_count'])
-    #i0_array = list(datatable['current_preamp_ch1'])
+    #i0_array = list(datatable['current_preamp_ch2'])
     
     userheaderitem = {}
     userheaderitem['sample.name'] = h.start['sample']['name']
     userheaderitem['initial_sample_position.hf_stage.x'] = h.start['initial_sample_position']['hf_stage_x']
     userheaderitem['initial_sample_position.hf_stage.y'] = h.start['initial_sample_position']['hf_stage_y']
+    
+    print(userheaderitem['initial_sample_position.hf_stage.x'])
+    print(userheaderitem['initial_sample_position.hf_stage.y'])
+    
 
     
-    #columnitem = ['energy_energy','saturn_mca_rois_roi'+str(roinum)+'_net_count', 'current_preamp_ch1']
-    columnitem = ['energy_energy','saturn_mca_rois_roi'+str(roinum)+'_net_count','saturn_mca_rois_roi'+str(roinum)+'_count', 'current_preamp_ch0', 'current_preamp_ch1']    
-    #columnitem = ['energy_energy','saturn_mca_rois_roi'+str(roinum)+'_count', 'current_preamp_ch1']    
+    #columnitem = ['energy_energy','saturn_mca_rois_roi'+str(roinum)+'_net_count', 'current_preamp_ch2']
+    columnitem = ['energy_energy','saturn_mca_rois_roi'+str(roinum)+'_net_count','saturn_mca_rois_roi'+str(roinum)+'_count', 'current_preamp_ch0', 'current_preamp_ch2']    
+    #columnitem = ['energy_energy','saturn_mca_rois_roi'+str(roinum)+'_count', 'current_preamp_ch2']    
     
     usercolumnitem = {}
  
-    usercolumnnameitem = ['scaled_current_preamp_ch0', 'scaled_current_preamp_ch1']
-    datatable = get_table(h, ['current_preamp_ch0', 'current_preamp_ch1'])        
-    i0_array = abs(numpy.array(datatable['current_preamp_ch1']) - i0_baseline) * i0scale
+    usercolumnnameitem = ['scaled_current_preamp_ch0', 'scaled_current_preamp_ch2']
+    datatable = get_table(h, ['current_preamp_ch0', 'current_preamp_ch2'])        
+    i0_array = abs(numpy.array(datatable['current_preamp_ch2']) - i0_baseline) * i0scale
     it_array = abs(numpy.array(datatable['current_preamp_ch0']) - it_baseline) * itscale
    
-    usercolumnitem['scaled_current_preamp_ch1'] = i0_array
+    usercolumnitem['scaled_current_preamp_ch2'] = i0_array
     usercolumnitem['scaled_current_preamp_ch0'] = it_array
     
-    scanoutput.textout(header = headeritem, userheader = userheaderitem, column = columnitem, 
+    scanoutput.textout(scan = scanid, header = headeritem, userheader = userheaderitem, column = columnitem, 
                        usercolumn = usercolumnitem, usercolumnname = usercolumnnameitem, output = False, filename_add = filename) 
     
     #ps.append(PeakStats(energy.energy.name, bpmAD.stats3.total.name))
@@ -76,6 +84,8 @@ def xanes(erange = [], estep = [],
     if acqtime is None:
         raise Exception('acqtime = None, must specify an acqtime position')
 
+    #record relevant meta data in the Start document, defined in 90-usersetup.py
+    metadata_record()
     
     #convert erange and estep to numpy array
     erange = numpy.array(erange)
@@ -101,7 +111,7 @@ def xanes(erange = [], estep = [],
     #setup the live callbacks
     livecallbacks = []    
     
-    livetableitem = ['energy_energy', 'current_preamp_ch0', 'current_preamp_ch1']    
+    livetableitem = ['energy_energy', 'current_preamp_ch0', 'current_preamp_ch2']    
     livetableitem.append('saturn_mca_rois_roi'+str(roinum)+'_net_count')
     livetableitem.append('saturn_mca_rois_roi'+str(roinum)+'_count')
     livecallbacks.append(LiveTable(livetableitem, max_post_decimal = 4))
@@ -111,11 +121,18 @@ def xanes(erange = [], estep = [],
     liveplotx = energy.energy.name
     liveplotfig = plt.figure()
     livecallbacks.append(LivePlot(liveploty, x=liveplotx, fig=liveplotfig))
+
+    liveploty = 'current_preamp_ch2'
+    liveplotfig2 = plt.figure()
+    livecallbacks.append(LivePlot(liveploty, x=liveplotx, fig=liveplotfig2))
+    
     livenormfig = plt.figure()    
-    i0 = 'current_preamp_ch1'
+    i0 = 'current_preamp_ch2'
     livecallbacks.append(NormalizeLivePlot(liveploty, x=liveplotx, norm_key = i0, fig=livenormfig))  
     livenormfig2 = plt.figure()    
     livecallbacks.append(NormalizeLivePlot('current_preamp_ch0', x=liveplotx, norm_key = i0, fig=livenormfig2))  
+
+
 
     if correct_c2_x is False:
         energy.move_c2_x.put(False)
@@ -164,16 +181,20 @@ def hfxanes_xybatch(xylist=[], waittime = 5,
         if samplename is None:
             pt_samplename = ''
         else:
-            if len(samplename) is not len(xylist):
+            if len(samplename) is 1:
+                pt_samplename = samplename[0]                
+            elif len(samplename) is not len(xylist):
                 err_msg = 'number of samplename is different from the number of points'
-                raise Exception(err_msg)
+                raise Exception(err_msg)            
             else:
                 pt_samplename = samplename[pt_num]
 
         if filename is None:
             pt_filename = ''
         else:
-            if len(filename) is not len(xylist):
+            if len(filename) is 1:
+                pt_filename = filename[0]     
+            elif len(filename) is not len(xylist):
                 err_msg = 'number of filename is different from the number of points'
                 raise Exception(err_msg)
             else:

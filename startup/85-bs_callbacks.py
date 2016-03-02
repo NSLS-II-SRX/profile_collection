@@ -6,7 +6,7 @@ Created on Wed Feb 24 12:30:06 2016
 """
 
 from bluesky.callbacks import LivePlot
-i0_baseline = 1.53e-7
+i0_baseline = 7.24e-10
 
 class NormalizeLivePlot(LivePlot):
     def __init__(self, *args, norm_key=None,  **kwargs):

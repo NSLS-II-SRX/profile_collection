@@ -38,3 +38,20 @@ bpmAD.stats1.read_attrs = ['total']
 bpmAD.stats2.read_attrs = ['total']
 bpmAD.stats3.read_attrs = ['total']
 bpmAD.stats4.read_attrs = ['total']
+
+#class Pixirad(SingleTrigger,AreaDetector):
+#    det = C(AreaDetectorCam, '')
+#    image = C(ImagePlugin, 'image1:')
+#    #do I want this or HDF?
+#    tiff = C(SRXTIFFPlugin, 'TIFF1:',
+#             write_path_template='/epicsdata/bpm1-cam1/%Y/%m/%d/')
+#    stats
+#    pass
+
+#pixi = Pixirad('', name='pixi')
+#pixi.read_attrs=['tiff','stats1','stats2','stats3','stats4']
+#pixi.tiff.read_attrs = []
+#pixi.stats1.read_attrs = ['total']
+#pixi.stats2.read_attrs = ['total']
+#pixi.stats3.read_attrs = ['total']
+#pixi.stats4.read_attrs = ['total']
