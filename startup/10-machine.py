@@ -14,6 +14,7 @@ class UVDone(PermissiveGetSignal):
         super().__init__(parent=parent, value=1, **kwargs)
         self._rbv = readback
         self._brake = brake
+        self._started = False
 
     def put(self, *arg, **kwargs):
         raise TypeError("You con not tell an undulator it is done")
@@ -21,23 +22,31 @@ class UVDone(PermissiveGetSignal):
     def _put(self, *args, **kwargs):
         return super().put(*args, **kwargs)
 
-    def _watcher(self, obj=None, **kwargs):
+    def _watcher(self, obj=None, value=None, **kwargs):
         target = self.target
         rbv = getattr(self.parent, self._rbv)
         cur_value = rbv.get()
         brake = getattr(self.parent, self._brake)
         brake_on = brake.get()
+        if not self._started:
+            self._started = not brake_on
         # come back and check this threshold value
         #if brake_on and abs(target - cur_value) < 0.002:
         if abs(target - cur_value) < 0.002:
-        
             self._put(1)
             rbv.clear_sub(self._watcher)
             brake.clear_sub(self._watcher)
+            self._started = False
+
+        elif brake_on and self._started:
+            print(self.parent.name, ": reactuated due to not reaching target")
+            self.parent.actuate.put(self.parent.actuate_value)
 
     def reset(self, target):
         self._put(0)
         self.target = target
+        self._started = False
+
 
 class URealPos(Device):
     #undulator real position, gap and taper

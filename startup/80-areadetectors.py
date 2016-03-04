@@ -1,4 +1,4 @@
-from ophyd.areadetector import (AreaDetector, ImagePlugin,
+from ophyd.areadetector import (AreaDetector, PixiradDetectorCam, ImagePlugin,
                                 TIFFPlugin, StatsPlugin, HDF5Plugin,
                                 ProcessPlugin)
 from ophyd.areadetector.cam import AreaDetectorCam
@@ -17,7 +17,7 @@ class SRXTIFFPlugin(TIFFPlugin, FileStoreTIFF,
 
 class BPMCam(SingleTrigger, AreaDetector):
     cam = C(AreaDetectorCam, '')
-    image = C(ImagePlugin, 'image1:')
+    image_plugin = C(ImagePlugin, 'image1:')
 
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
              write_path_template='/epicsdata/bpm1-cam1/2016/2/24/')
@@ -39,19 +39,12 @@ bpmAD.stats2.read_attrs = ['total']
 bpmAD.stats3.read_attrs = ['total']
 bpmAD.stats4.read_attrs = ['total']
 
-#class Pixirad(SingleTrigger,AreaDetector):
-#    det = C(AreaDetectorCam, '')
-#    image = C(ImagePlugin, 'image1:')
-#    #do I want this or HDF?
-#    tiff = C(SRXTIFFPlugin, 'TIFF1:',
-#             write_path_template='/epicsdata/bpm1-cam1/%Y/%m/%d/')
-#    stats
-#    pass
+class SRXPixirad(SingleTrigger,AreaDetector):
+    det = C(PixiradDetectorCam, 'cam1:')
+    image = C(ImagePlugin, 'image1:')
+    stats1 = C(StatsPlugin, 'Stats1:')
+    hdf = C(HDF5Plugin, 'HDF1:')
+    pass
 
-#pixi = Pixirad('', name='pixi')
-#pixi.read_attrs=['tiff','stats1','stats2','stats3','stats4']
-#pixi.tiff.read_attrs = []
-#pixi.stats1.read_attrs = ['total']
-#pixi.stats2.read_attrs = ['total']
-#pixi.stats3.read_attrs = ['total']
-#pixi.stats4.read_attrs = ['total']
+pixi = SRXPixirad('XF:05IDD-ES:1{Det:Pixi}', name='pixi', read_attrs=['stats1','hdf'])
+pixi.stats1.read_attrs = ['total']

@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Feb 19 12:16:52 2016
+set up for XANES scan for HF mode at SRX
 
-set up for 2D XRF scan for HR mode
+Created on Fri Feb 19 12:16:52 2016
+Modified on Wed Wed 02 14:14 to comment out the saturn detector which is not in use
+
 @author: xf05id1
 """
+
+
 
 
 from bluesky.plans import AbsListScanPlan
@@ -13,8 +17,6 @@ import scanoutput
 import numpy
 import time
 
-ring_current_pv = 'SR:C03-BI{DCCT:1}I:Real-I'
-cryo_v19_pv = 'XF:05IDA-UT{Cryo:1-IV:19}Sts-Sts'
 i0_baseline = 7.24e-10
 it_baseline = 1.40e-8
 
@@ -42,9 +44,8 @@ def xanes_afterscan(scanid, roinum, filename, i0scale, itscale):
     
 
     
-    #columnitem = ['energy_energy','saturn_mca_rois_roi'+str(roinum)+'_net_count', 'current_preamp_ch2']
-    columnitem = ['energy_energy','saturn_mca_rois_roi'+str(roinum)+'_net_count','saturn_mca_rois_roi'+str(roinum)+'_count', 'current_preamp_ch0', 'current_preamp_ch2']    
-    #columnitem = ['energy_energy','saturn_mca_rois_roi'+str(roinum)+'_count', 'current_preamp_ch2']    
+    #columnitem = ['energy_energy','saturn_mca_rois_roi'+str(roinum)+'_net_count','saturn_mca_rois_roi'+str(roinum)+'_count', 'current_preamp_ch0', 'current_preamp_ch2']    
+    columnitem = ['energy_energy', 'current_preamp_ch0', 'current_preamp_ch2']    
     
     usercolumnitem = {}
  
@@ -101,26 +102,28 @@ def xanes(erange = [], estep = [],
     
     #setup the detector
     current_preamp.exp_time.put(acqtime)
-    saturn.mca.preset_real_time.put(acqtime)
+    #saturn.mca.preset_real_time.put(acqtime)
     #saturn.mca.preset_live_time.put(acqtime)
 
-    saturn.read_attrs.append('mca.rois.roi'+str(roinum)+'.net_count')       
-    saturn.read_attrs.append('mca.rois.roi'+str(roinum)+'.count') 
-    det = [current_preamp, saturn, ring_current]        
+    #saturn.read_attrs.append('mca.rois.roi'+str(roinum)+'.net_count')       
+    #saturn.read_attrs.append('mca.rois.roi'+str(roinum)+'.count') 
+    #det = [current_preamp, saturn, ring_current]        
+    det = [current_preamp, ring_current]        
+
 
     #setup the live callbacks
     livecallbacks = []    
     
     livetableitem = ['energy_energy', 'current_preamp_ch0', 'current_preamp_ch2']    
-    livetableitem.append('saturn_mca_rois_roi'+str(roinum)+'_net_count')
-    livetableitem.append('saturn_mca_rois_roi'+str(roinum)+'_count')
-    livecallbacks.append(LiveTable(livetableitem, max_post_decimal = 4))
+    #livetableitem.append('saturn_mca_rois_roi'+str(roinum)+'_net_count')
+    #livetableitem.append('saturn_mca_rois_roi'+str(roinum)+'_count')
+    livecallbacks.append(LiveTable(livetableitem))
 
     #liveploty = 'saturn_mca_rois_roi'+str(roinum)+'_net_count'
-    liveploty = 'saturn_mca_rois_roi'+str(roinum)+'_count'
+    #liveploty = 'saturn_mca_rois_roi'+str(roinum)+'_count'
     liveplotx = energy.energy.name
-    liveplotfig = plt.figure()
-    livecallbacks.append(LivePlot(liveploty, x=liveplotx, fig=liveplotfig))
+    #liveplotfig = plt.figure()
+    #livecallbacks.append(LivePlot(liveploty, x=liveplotx, fig=liveplotfig))
 
     liveploty = 'current_preamp_ch2'
     liveplotfig2 = plt.figure()
@@ -151,9 +154,11 @@ def xanes(erange = [], estep = [],
 
     #run the plan
     scaninfo = gs.RE(xanes_scanplan, livecallbacks, raise_if_interrupted=True)
+    print(type(scaninfo))
+    print(scaninfo)
 
     #output the datafile
-    xanes_afterscan(scaninfo, roinum, filename, i0scale, itscale)
+    xanes_afterscan(scaninfo[0], roinum, filename, i0scale, itscale)
 
     logscan('xanes') 
 
@@ -162,7 +167,7 @@ def xanes(erange = [], estep = [],
     energy.harmonic.put(None)
     
               
-    return scaninfo
+    return scaninfo[0]
     
 def hfxanes_xybatch(xylist=[], waittime = 5, 
                     samplename = None, filename = None,

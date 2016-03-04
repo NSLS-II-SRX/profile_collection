@@ -2,6 +2,8 @@
 """
 Created on Wed Feb 24 20:57:20 2016
 
+Define suspenders that will be loaded
+
 @author: xf05id1
 """
 

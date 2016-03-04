@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Feb 24 08:32:39 2016
+set up all user specific information
 
 @author: xf05id1
 """
@@ -9,19 +10,23 @@ import scanoutput
 from databroker import DataBroker as db
 
 #user experiment will be put into the Start Document for every scan
-#proposal_num = 300810
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Chubar'
-#saf_num = 300265
+proposal_num = 300810
+proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+PI_lastname = 'Thieme'
+saf_num = 300265
 
+#proposal_num = 300802
+#proposal_title = 'Elemental Segregation and Speciation in the Lead Carboxylate (Soap) Deterioration of Oil Paintings'
+#PI_lastname = 'Centeno'
+#saf_num = 300312
+##avoid hitting undulator minimum gap during XANES scan
+#energy.harmonic.put(7)
+proposal_num = 300546
+proposal_title = 'Simultaneous nanoscale X-ray ptychography and fluorescence measurements of heavy metal uptake in developing C. elegans embryos'
+PI_lastname = 'Jones'
+saf_num = 300329
 
-proposal_num = 300802
-proposal_title = 'Elemental Segregation and Speciation in the Lead Carboxylate (Soap) Deterioration of Oil Paintings'
-PI_lastname = 'Centeno'
-saf_num = 300312
-#avoid hitting undulator minimum gap during XANES scan
-energy.harmonic.put(7)
-
+#
 
 
 cycle = '2016_cycle1'
@@ -65,7 +70,7 @@ def logscan(scantype):
 def metadata_record():
     gs.RE.md['beamline_status']  = {'energy':  energy.energy.position, 
                                 'slt_wb': str(slt_wb.position),
-                                #'slt_ssa': str(slt_ssa.position)
+                                'slt_ssa': str(slt_ssa.position)
                                 }
                                 
     gs.RE.md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
