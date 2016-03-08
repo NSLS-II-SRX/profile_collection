@@ -13,7 +13,7 @@ from ophyd import Component as C
 
 class SRXTIFFPlugin(TIFFPlugin, FileStoreTIFF,
                     FileStoreIterativeWrite):
-    pass
+    file_number_sync = None
 
 class BPMCam(SingleTrigger, AreaDetector):
     cam = C(AreaDetectorCam, '')
@@ -39,12 +39,41 @@ bpmAD.stats2.read_attrs = ['total']
 bpmAD.stats3.read_attrs = ['total']
 bpmAD.stats4.read_attrs = ['total']
 
+class HDF5PluginWithFileStore(HDF5Plugin, FileStoreHDF5IterativeWrite):
+    file_number_sync = None
+
 class SRXPixirad(SingleTrigger,AreaDetector):
+
     det = C(PixiradDetectorCam, 'cam1:')
     image = C(ImagePlugin, 'image1:')
     stats1 = C(StatsPlugin, 'Stats1:')
-    hdf = C(HDF5Plugin, 'HDF1:')
-    pass
+    stats2 = C(StatsPlugin, 'Stats2:')
+    stats3 = C(StatsPlugin, 'Stats3:')
+    stats4 = C(StatsPlugin, 'Stats4:')
+    tiff = C(SRXTIFFPlugin, 'TIFF1:',
+             write_path_template='/epicsdata/pixirad/%Y/%m/%d/')
 
-pixi = SRXPixirad('XF:05IDD-ES:1{Det:Pixi}', name='pixi', read_attrs=['stats1','hdf'])
-pixi.stats1.read_attrs = ['total']
+#pixi = SRXPixirad('XF:05IDD-ES:1{Det:Pixi}', name='pixi', read_attrs=['stats1','stats2','stats3','stats4','tiff'])
+#pixi.stats1.read_attrs = ['total','centroid','sigma_x','sigma_y']
+#pixi.stats2.read_attrs = ['total','centroid','sigma_x','sigma_y']
+#pixi.stats3.read_attrs = ['total','centroid','sigma_x','sigma_y']
+#pixi.stats4.read_attrs = ['total','centroid','sigma_x','sigma_y']
+#pixi.tiff.read_attrs = []
+
+class SRXHFVLMCam(SingleTrigger,AreaDetector):
+    cam = C(AreaDetectorCam, '')
+    image_plugin = C(ImagePlugin, 'image1:')
+    stats1 = C(StatsPlugin, 'Stats1:')
+    stats2 = C(StatsPlugin, 'Stats2:')
+    stats3 = C(StatsPlugin, 'Stats3:')
+    stats4 = C(StatsPlugin, 'Stats4:')
+    tiff = C(SRXTIFFPlugin, 'TIFF1:',
+             write_path_template='/epics/hfvlm/%Y/%m/%d/')
+
+hfvlmAD = SRXHFVLMCam('XF:05IDD-BI:1{Mscp:1-Cam:1}', name='hfvlm', read_attrs=['tiff'])
+hfvlmAD.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
+hfvlmAD.tiff.read_attrs = []
+hfvlmAD.stats1.read_attrs = ['total']
+hfvlmAD.stats2.read_attrs = ['total']
+hfvlmAD.stats3.read_attrs = ['total']
+hfvlmAD.stats4.read_attrs = ['total']

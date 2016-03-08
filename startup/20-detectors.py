@@ -15,6 +15,11 @@ bpm1_cam = EpicsSignal('XF:05IDA-BI:1{BPM:1-Cam:1}Acquire_RBV',
                         name='hfm_cam_trigger')
 bpm1_tot1 = EpicsSignal('XF:05IDA-BI:1{BPM:1-Cam:1}Stats1:Total_RBV',
                          name='bpm1_tot1')
+#hfvlm_cam = EpicsSignal('XF:05IDD-BI:1{Mscp:1-Cam:1}Acquire_RBV',
+#                        write_pv='XF:05IDD-BI:1{Mscp:1-Cam:1}Acquire',
+#                        name='hfvlm_cam_trigger')
+#hfvlm_tot1 = EpicsSignal('XF:05IDD-BI:1{Mscp:1-Cam:1}Stats1:Total_RBV',
+#                         name='hfvlm_tot1')
 
 class BpmStats(Device):
     tot1 = Cpt(EpicsSignal, 'Stats1:Total_RBV')

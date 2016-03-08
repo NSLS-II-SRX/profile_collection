@@ -61,7 +61,6 @@ def logscan(scantype):
     h=db[-1]
     scan_id = h.start['scan_id']
     uid = h.start['uid']
-    #scantype = '2dxrf'
 
     userlogf = open(userlogfile, 'a')
     userlogf.write(str(scan_id)+'\t'+uid+'\t'+scantype+'\n')
@@ -75,3 +74,11 @@ def metadata_record():
                                 
     gs.RE.md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
                                        'hf_stage_y': hf_stage.y.position}
+def logscan_detailed(scantype):
+    h=db[-1]
+    scan_id = h.start['scan_id']
+    uid = h.start['uid']
+
+    userlogf = open(userlogfile, 'a')
+    userlogf.write(str(scan_id)+'\t'+uid+'\t'+scantype+'\t'+str(h['start']['scan_params'])+'\n')
+    userlogf.close()

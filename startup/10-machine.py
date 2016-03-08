@@ -348,3 +348,12 @@ class SRXSlitsFE(Device):
     out = Cpt(EpicsMotor, '4-Ax:O}Mtr')
 
 fe = SRXSlitsFE('FE:C05A-OP{Slt:', name='fe')
+
+class SRXShutter(Device):
+    close_cmd = Cpt(EpicsSignal, 'Cmd:Cls-Cmd')
+    open_cmd = Cpt(EpicsSignal, 'Cmd:Opn-Cmd')
+    close_status = Cpt(EpicsSignalRO, 'Sts:Cls-Sts')
+
+shut_fe = SRXShutter('XF:05IDB-PPS{Sh:WB}', name='shut_fe')
+shut_a = SRXShutter('XF:05IDB-PPS:1{PSh:2}', name='shut_a')
+shut_b = SRXShutter('XF:05IDB-PPS:1{PSh:4}', name='shut_b')
