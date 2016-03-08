@@ -114,10 +114,18 @@ class SRXSSAH(PVPositioner):
 
 # Pseudo motor for secondary source slits
 slt_ssa = SRXSlits4SWPM('XF:05IDB-OP:1{Slt:SSA-Ax:', name='slt_ssa')
-slt_ssa.top_zero.put(0.2396)
-slt_ssa.bot_zero.put(-2.2046)
-slt_ssa.inb_zero.put(-0.4895)
-slt_ssa.out_zero.put(1.3610)
+
+#values to use when ssa offset in css/epics are set to zeros
+#slt_ssa.top_zero.put(0.2396)
+#slt_ssa.bot_zero.put(-2.2046)
+#slt_ssa.inb_zero.put(-0.4895)
+#slt_ssa.out_zero.put(1.3610)
+
+#values to use when ssa offset in css/epics are defined
+slt_ssa.top_zero.put(0.0)
+slt_ssa.bot_zero.put(0.0)
+slt_ssa.inb_zero.put(0.0)
+slt_ssa.out_zero.put(0.0)
 
 relabel_motors(slt_wb)
 relabel_motors(slt_ssa)
