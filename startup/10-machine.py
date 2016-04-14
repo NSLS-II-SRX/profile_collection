@@ -96,6 +96,7 @@ class FixedPVPositioner(PVPositioner):
             self.setpoint.put(position, wait=False)
     
     def move(self, v, *args, **kwargs):
+        kwargs['timeout'] = None
         self.done.reset(v)
         ret = super().move(v, *args, **kwargs)
         self.brake_on.subscribe(self.done._watcher,
@@ -130,6 +131,7 @@ class Undulator(FixedPVPositioner):
     elevation = Cpt(Elev, '')
 
     def move(self, v, *args, moved_cb=None, **kwargs):
+        kwargs['timeout'] = None
         if np.abs(v - self.position) < .001:
             self._started_moving = True
             self._moving = False
@@ -333,8 +335,21 @@ cal_data_2016cycle2 = {'d_111': 3.12924894907,  # 2016/1/27 (Se, Cu, Fe, Ti)
                        'C2Xcal': 3.6,  # 2016/1/29
                        'T2cal': 13.7187120636,
                        #'xoffset': 25.01567531283996 #2016 Jan
-                       'xoffset': 24.756374595028607 #2016/2/25 on Rh stripe, y=10 mm
+                       #'xoffset': 24.756374595028607 #2016/2/25 on Rh stripe, y=10 mm
                        #'xoffset': 24.908823293008666 #2016/2/26 on Si stripe, y=5 mm
+                       #'xoffset': 24.621311485825125 #2016/3/10 Fe edge
+                       #'xoffset': 24.661899615539824 #2016/3/13 Pt edge
+                       #'xoffset': 24.761023845083287 #2016/3/17 Zr edge, 18.2 keV
+                       #'xoffset': 24.741174927854445 #2016/3/23 15 keV
+                       #'xoffset': 24.593840056028178 #2016/3/26 10.5 keV W
+                       #'xoffset': 24.773110163531658 #2016/3/26 18.0 keV U
+                       #'xoffset':  24.615016005680289 #2016/4/06 12.8 keV Se
+                       #'xoffset': 24.672213516710034
+                       #'xoffset': 24.809807128906538
+                       #mono warmed up at 4/12/16
+                       #'xoffset': 24.809838976060604 #17keV
+                       #'xoffset': 24.887490886653893 #8.2 keV
+                       'xoffset': 24.770168843970197 #12.5 keV
                        }  # 2016/1/29}
 
 energy = Energy(prefix='', name='energy', **cal_data_2016cycle2)

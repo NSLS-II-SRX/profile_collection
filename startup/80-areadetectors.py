@@ -20,8 +20,8 @@ class BPMCam(SingleTrigger, AreaDetector):
     image_plugin = C(ImagePlugin, 'image1:')
 
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
-             write_path_template='/epicsdata/bpm1-cam1/2016/2/24/')
-             #write_path_template='/epicsdata/bpm1-cam1/%Y/%m/%d/')
+             #write_path_template='/epicsdata/bpm1-cam1/2016/2/24/')
+             write_path_template='/epicsdata/bpm1-cam1/%Y/%m/%d/')
 
     stats1 = C(StatsPlugin, 'Stats1:')
     stats2 = C(StatsPlugin, 'Stats2:')
@@ -68,7 +68,7 @@ class SRXHFVLMCam(SingleTrigger,AreaDetector):
     stats3 = C(StatsPlugin, 'Stats3:')
     stats4 = C(StatsPlugin, 'Stats4:')
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
-             write_path_template='/epics/hfvlm/%Y/%m/%d/')
+             write_path_template='/epicsdata/hfvlm/%Y/%m/%d/')
 
 hfvlmAD = SRXHFVLMCam('XF:05IDD-BI:1{Mscp:1-Cam:1}', name='hfvlm', read_attrs=['tiff'])
 hfvlmAD.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
@@ -77,3 +77,55 @@ hfvlmAD.stats1.read_attrs = ['total']
 hfvlmAD.stats2.read_attrs = ['total']
 hfvlmAD.stats3.read_attrs = ['total']
 hfvlmAD.stats4.read_attrs = ['total']
+
+
+
+from hxntools.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
+                                         Xspress3Channel, Xspress3FileStore)
+
+class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
+    # TODO: garth, the ioc is missing some PVs?
+    #   det_settings.erase_array_counters
+    #       (XF:05IDD-ES{Xsp:1}:ERASE_ArrayCounters)
+    #   det_settings.erase_attr_reset (XF:05IDD-ES{Xsp:1}:ERASE_AttrReset)
+    #   det_settings.erase_proc_reset_filter
+    #       (XF:05IDD-ES{Xsp:1}:ERASE_PROC_ResetFilter)
+    #   det_settings.update_attr (XF:05IDD-ES{Xsp:1}:UPDATE_AttrUpdate)
+    #   det_settings.update (XF:05IDD-ES{Xsp:1}:UPDATE)
+
+    channel1 = C(Xspress3Channel, 'C1_', channel_num=1, read_attrs=['rois'])
+    channel2 = C(Xspress3Channel, 'C2_', channel_num=2, read_attrs=['rois'])
+    channel3 = C(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
+
+    hdf5 = Cpt(Xspress3FileStore, 'HDF5:',
+               read_path_template='/data/XSPRESS3/2016-1/',
+               write_path_template='/epics/data/2016-1/')
+
+    def __init__(self, prefix, *, configuration_attrs=None, read_attrs=None,
+                 **kwargs):
+        if configuration_attrs is None:
+            configuration_attrs = ['external_trig', 'total_points',
+                                   'spectra_per_point', 'settings']
+        if read_attrs is None:
+            read_attrs = ['channel1', 'channel2', 'channel3', 'hdf5']
+        super().__init__(prefix, configuration_attrs=configuration_attrs,
+                         read_attrs=read_attrs, **kwargs)
+                         
+    def stop(self):
+        ret = super.stop()
+        self.hdf5.stop()
+        return ret
+
+    # Currently only using three channels. Uncomment these to enable more
+    # channels:
+    # channel4 = C(Xspress3Channel, 'C4_', channel_num=4)
+    # channel5 = C(Xspress3Channel, 'C5_', channel_num=5)
+    # channel6 = C(Xspress3Channel, 'C6_', channel_num=6)
+    # channel7 = C(Xspress3Channel, 'C7_', channel_num=7)
+    # channel8 = C(Xspress3Channel, 'C8_', channel_num=8)
+
+
+xs = SrxXspress3Detector('XF:05IDD-ES{Xsp:1}:', name='xs')
+xs.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
+xs.channel2.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
+xs.channel3.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]

@@ -99,11 +99,11 @@ class SRXSlits2(Device):
 #slt_wb.bot_zero.put(-4.905)
 #slt_wb.inb_zero.put(-6.705)
 #slt_wb.out_zero.put(-4.345)
-slt_wb = SRXSlitsWB('XF:05IDA-OP:1{Slt:1-Ax:')
+slt_wb = SRXSlitsWB('XF:05IDA-OP:1{Slt:1-Ax:', name='slt_wb')
 
 ## Pseudo motor for pink beam slits
 #slt_pb = SRXSlits2('XF:05IDA-OP:1{Slt:2-Ax:', name='slt_pb')
-slt_pb = SRXSlitsPB('XF:05IDA-OP:1{Slt:2-Ax:')
+slt_pb = SRXSlitsPB('XF:05IDA-OP:1{Slt:2-Ax:', name='slt_pb')
 
 class SRXSSAH(PVPositioner):
     setpoint = Cpt(EpicsSignal,'X}size')

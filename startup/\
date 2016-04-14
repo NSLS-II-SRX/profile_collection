@@ -32,8 +32,8 @@ import time
 #proposal_num = 300640
 #proposal_title = 'Benchmarking and optimization of microscopic and spectroscopic performances of SRX beamline'
 #PI_lastname = 'Tchoubar'
-#saf_num = 300388
-#logfilename_postfix = '20160406'
+#saf_num = 300265
+#logfilename_postfix = '20160309'
 
 #proposal_num = 300605
 #proposal_title = 'In-situ Spatial Resolution of the Electroactive Interface of iron bsed composite electrodes'
@@ -56,40 +56,11 @@ import time
 #PI_lastname = 'Chen-Wiegart-Henkel'
 #saf_num = 300362
 
-#proposal_num = 300381
-#proposal_title = 'Spatial and temporal nano-mapping of comlexes in low-cost aqueousbattery materials for large-scale, high energy density storage'
-#PI_lastname = 'Gallaway'
-#saf_num = 300372
+proposal_num = 300381
+proposal_title = 'Spatial and temporal nano-mapping of comlexes in low-cost aqueousbattery materials for large-scale, high energy density storage'
+PI_lastname = 'Gallaway'
+saf_num = 300372
 
-#proposal_num = 300658
-#proposal_title = 'Transition Metal Oxyanions as specific inhibitors of sulfidogenesis'
-#PI_lastname = 'Thieme'
-#saf_num = 300375
-
-#proposal_num = 300810
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Chen-Wiegart-MIT'
-#saf_num = 300337
-
-#proposal_num = 300579
-#proposal_title = 'Metal Uptake, Translocation and Accumulation in Plants Across Size'
-#PI_lastname = 'Blaby'
-#saf_num = 300397
-
-#proposal_num = 300537
-#proposal_title = 'Elemental and chemical evolution of Cu-S additives in Li-S battery for high energy density storage'
-#PI_lastname = 'Chen-Wiegart-LiSbattery'
-#saf_num = 300398
-
-#proposal_num = 300810
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Thieme-bandediron'
-#saf_num = 300265
-
-proposal_num = 300626
-proposal_title = 'Micro and Nanoscale Reactivity Matrices'
-PI_lastname = 'Hesterberg'
-saf_num = 300393
 
 logfilename_postfix = str(saf_num)
 
@@ -139,19 +110,6 @@ def metadata_record():
     gs.RE.md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
                                        'hf_stage_y': hf_stage.y.position,
                                        'hf_stage_z': hf_stage.z.position}
-    gs.RE.md['wb_slits'] = {'v_gap' : slt_wb.v_gap.position,
-                            'h_gap' : slt_wb.h_gap.position,
-                            'v_cen' : slt_wb.v_cen.position,
-                            'h_cen' : slt_wb.h_cen.position
-                            }
-    gs.RE.md['hfm'] = {'y' : hfm.y.position,
-                               'bend' : hfm.bend.position} 
-    gs.RE.md['ssa_slits'] = {'v_gap' : slt_ssa.v_gap.position,
-                            'h_gap' : slt_ssa.h_gap.position,
-                            'v_cen' : slt_ssa.v_cen.position,
-                            'h_cen' : slt_ssa.h_cen.position                                      
-                             }                                      
-                                       
 def logscan_detailed(scantype):
     h=db[-1]
     scan_id = h.start['scan_id']
