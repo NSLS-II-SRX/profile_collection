@@ -86,10 +86,21 @@ import time
 #PI_lastname = 'Thieme-bandediron'
 #saf_num = 300265
 
-proposal_num = 300626
-proposal_title = 'Micro and Nanoscale Reactivity Matrices'
-PI_lastname = 'Hesterberg'
-saf_num = 300393
+#proposal_num = 300626
+#proposal_title = 'Micro and Nanoscale Reactivity Matrices'
+#PI_lastname = 'Hesterberg'
+#saf_num = 300393
+
+#proposal_num = 300640
+#proposal_title = 'Benchmarking and optimization of microscopic and spectroscopic performances of SRX beamline'
+#PI_lastname = 'Tchoubar-20160417'
+#saf_num = 300388
+#logfilename_postfix = '20160406'
+
+proposal_num = 300810
+proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+PI_lastname = 'Chen-Wiegart-3Dprint'
+saf_num = 300265
 
 logfilename_postfix = str(saf_num)
 
