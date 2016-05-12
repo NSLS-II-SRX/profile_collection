@@ -137,18 +137,23 @@ def hf2dxrf(xstart=None, xnumstep=None, xstepsize=None,
         energy.set(energy)
         time.sleep(5)
     
-    shut_b.open_cmd.put(1)
-    while (shut_b.close_status.get() == 1):
-        epics.poll(.5)
-        shut_b.open_cmd.put(1)    
+
+    #TO-DO: implement fast shutter control (open)
+    #TO-DO: implement suspender for all shutters in genral start up script
+    
+#    shut_b.open_cmd.put(1)
+#    while (shut_b.close_status.get() == 1):
+#        epics.poll(.5)
+#        shut_b.open_cmd.put(1)    
     
     hf2dxrf_scanplan = OuterProductAbsScanPlan(det, hf_stage.y, ystart, ystop, ynumstep+1, hf_stage.x, xstart, xstop, xnumstep+1, True)
     scaninfo = gs.RE(hf2dxrf_scanplan, livecallbacks, raise_if_interrupted=True)
-    
-    shut_b.close_cmd.put(1)
-    while (shut_b.close_status.get() == 0):
-        epics.poll(.5)
-        shut_b.close_cmd.put(1)
+
+    #TO-DO: implement fast shutter control (close)    
+#    shut_b.close_cmd.put(1)
+#    while (shut_b.close_status.get() == 0):
+#        epics.poll(.5)
+#        shut_b.close_cmd.put(1)
 
     #write to scan log    
     logscan('2dxrf')    

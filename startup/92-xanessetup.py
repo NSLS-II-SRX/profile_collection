@@ -9,7 +9,6 @@ Modified on Wed Wed 02 14:14 to comment out the saturn detector which is not in 
 """
 
 from bluesky.plans import AbsListScanPlan
-from bluesky.suspenders import PVSuspendFloor
 import scanoutput
 import numpy
 import time
@@ -248,19 +247,19 @@ def xanes(erange = [], estep = [],
     xanes_scanplan = AbsListScanPlan(det, energy, ept)
 
    #open b shutter
-    shut_b.open_cmd.put(1)
-    while (shut_b.close_status.get() == 1):
-        epics.poll(.5)
-        shut_b.open_cmd.put(1) 
+#    shut_b.open_cmd.put(1)
+#    while (shut_b.close_status.get() == 1):
+#        epics.poll(.5)
+#        shut_b.open_cmd.put(1) 
 
     #run the plan
     scaninfo = gs.RE(xanes_scanplan, livecallbacks, raise_if_interrupted=True)
 
     #close b shutter
-    shut_b.close_cmd.put(1)
-    while (shut_b.close_status.get() == 0):
-        epics.poll(.5)
-        shut_b.close_cmd.put(1)
+#    shut_b.close_cmd.put(1)
+#    while (shut_b.close_status.get() == 0):
+#        epics.poll(.5)
+#        shut_b.close_cmd.put(1)
 
     print(type(scaninfo))
     print(scaninfo)

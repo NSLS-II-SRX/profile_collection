@@ -2,11 +2,12 @@ from ophyd import (EpicsSignal, EpicsSignalRO, EpicsMotor,
                    Device, Signal, PseudoPositioner, PseudoSingle)
 from ophyd.utils.epics_pvs import set_and_wait
 from ophyd.ophydobj import StatusBase, MoveStatus
-from ophyd import Component as Cpt
+from ophyd import Component as Cpt, Signal
 
 from bluesky import Msg
-from bluesky.plan_tools import trigger_and_read, wrap_with_decorator, run_wrapper
+#from bluesky.plan_tools import trigger_and_read, wrap_with_decorator, run_wrapper
 
+triggger_and_read = wrap_with_decorator = run_wrapper = None
 
 class UVDoneMOVN(PermissiveGetSignal):
     """Signal for use as done signal for use in individual mode undulator motors
