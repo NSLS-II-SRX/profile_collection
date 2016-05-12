@@ -172,16 +172,18 @@ def logscan_detailed(scantype):
     userlogf.write(str(scan_id)+'\t'+uid+'\t'+scantype+'\t'+str(h['start']['scan_params'])+'\n')
     userlogf.close()
 
-def scantime(scanid):
+def scantime(scanid, printresults=True):
     '''
     input: scanid
     return: start and stop time stamps as strings 
     '''
     start_str = 'scan start: '+time.ctime(db[scanid].start['time'])
     stop_str  = 'scan stop : '+time.ctime(db[scanid].stop['time'])
-    print(start_str)
-    print(stop_str)
-    return start_str, stop_str
+    
+    if printresults is True:
+        print(start_str)
+        print(stop_str)
+    return db[scanid].start['time'], db[scanid].stop['time'], start_str, stop_str
 
 def timestamp_batchoutput(filename = 'timestamplog.text', initial_scanid = None, final_scanid = None):
     f = open(filename,'w')
@@ -196,3 +198,13 @@ def timestamp_batchoutput(filename = 'timestamplog.text', initial_scanid = None,
         except:
             f.write('scan did no finish correctly.\n')
     f.close()
+
+def scantime_batchoutput(filename = 'scantimelog.txt', scanlist = []):
+
+    f = open(filename, 'w')
+    f.write('scanid\tstartime(s)\tstoptime(s)\tstartime(date-time)\tstoptime(date-time)\n')
+    for i in scanlist:
+        starttime_s, endtime_s, starttime, endtime = scantime(i, printresults=False)
+        f.write(str(i)+'\t'+str(starttime_s)+'\t'+str(endtime_s)+'\t'+starttime[12::]+'\t'+endtime[12::]+'\n')
+    f.close()
+
