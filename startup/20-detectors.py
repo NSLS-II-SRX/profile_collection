@@ -20,6 +20,8 @@ bpm1_tot1 = EpicsSignal('XF:05IDA-BI:1{BPM:1-Cam:1}Stats1:Total_RBV',
 #                        name='hfvlm_cam_trigger')
 #hfvlm_tot1 = EpicsSignal('XF:05IDD-BI:1{Mscp:1-Cam:1}Stats1:Total_RBV',
 #                         name='hfvlm_tot1')
+#hfvlm_tot3 = EpicsSignal('XF:05IDD-BI:1{Mscp:1-Cam:1}Stats3:Total_RBV',
+#                         name='hfvlm_tot3')
 
 class BpmStats(Device):
     tot1 = Cpt(EpicsSignal, 'Stats1:Total_RBV')

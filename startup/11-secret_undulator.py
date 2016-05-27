@@ -267,6 +267,7 @@ TILT_LIMIT = 0.099  # 0.099 microns
 CRAB_LIMIT = 0.050  # 50 microns
 TARGET_THRESH = 0.002 # 2 microns,
 
+"""
 @wrap_with_decorator(run_wrapper)
 def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets=None):
     '''A generator plan for crabbing the undulator to new position
@@ -392,7 +393,7 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets=None):
             yield Msg('sleep', None, 1)
             yield from trigger_and_read([pu] + other_dets)
 
-
+"""
 def play():
     '''Example of how to make a composite 'master' plan
     '''
@@ -402,3 +403,4 @@ def play():
 
 
 # gs.RE(play())
+#

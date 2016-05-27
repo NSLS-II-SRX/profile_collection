@@ -74,18 +74,26 @@ def hf2dxrf(xstart=None, xnumstep=None, xstepsize=None,
     #saturn.mca.preset_real_time.put(acqtime)
     #saturn.mca.preset_live_time.put(acqtime)
 
+    #hfvlmAD.cam.acquire_time.put(acqtime)
+
     #for roi_idx in range(numrois):
     #    saturn.read_attrs.append('mca.rois.roi'+str(roi_idx)+'.net_count')
     #    saturn.read_attrs.append('mca.rois.roi'+str(roi_idx)+'.count')
        
     #det = [current_preamp, saturn]        
     det = [current_preamp, xs]        
+    #gjw
+    #det = [xs, hfvlmAD]        
+    #gjw
 
 
     #setup the live callbacks
     livecallbacks = []
     
     livetableitem = [hf_stage.x, hf_stage.y, 'current_preamp_ch0', 'current_preamp_ch2']
+    #gjw
+    #livetableitem = [hf_stage.x, hf_stage.y, 'hfvlm_stats3_total']
+    #gjw
 
     xstop = xstart + xnumstep*xstepsize
     ystop = ystart + ynumstep*ystepsize  
@@ -121,7 +129,11 @@ def hf2dxrf(xstart=None, xnumstep=None, xstepsize=None,
         itmap = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='jet', 
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(itmap)
-
+    #gjw
+    #vlmmap=LiveRaster((ynumstep+1, xnumstep+1), 'hfvlm_stats3_total', clim=None, cmap='inferno',\
+    #    xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+    #livecallbacks.append(vlmmap)
+    #gjw
 
 #    commented out liveTable in 2D scan for now until the prolonged time issue is resolved
     livecallbacks.append(LiveTable(livetableitem)) 

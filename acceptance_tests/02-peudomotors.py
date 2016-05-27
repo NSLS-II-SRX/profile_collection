@@ -5,6 +5,7 @@ Created on Thu May 12 11:41:58 2016
 @author: xf05id1
 """
 
+from time import sleep as tsleep
 print('2. testing pseudo motors motion:')
 
 print('testing ssa')

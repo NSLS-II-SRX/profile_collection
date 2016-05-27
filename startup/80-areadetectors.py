@@ -98,8 +98,8 @@ class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
     channel3 = C(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
 
     hdf5 = Cpt(Xspress3FileStore, 'HDF5:',
-               read_path_template='/data/XSPRESS3/2016-1/',
-               write_path_template='/epics/data/2016-1/')
+               read_path_template='/data/XSPRESS3/2016-2/',
+               write_path_template='/epics/data/2016-2/')
 
     def __init__(self, prefix, *, configuration_attrs=None, read_attrs=None,
                  **kwargs):
