@@ -16,6 +16,7 @@ Modified on Wed Wed 02 14:14 to comment out the saturn detector which is not in 
     #5. add i0 into the default figure
 
 from bluesky.plans import OuterProductAbsScanPlan
+import bluesky.plans as bp
 from bluesky.callbacks import LiveRaster
 import matplotlib
 import time
@@ -24,13 +25,36 @@ import os
 import numpy
 
 #matplotlib.pyplot.ticklabel_format(style='plain')
+def get_stock_md():
+    md = {}
+    md['beamline_status']  = {'energy':  energy.energy.position 
+                                #'slt_wb': str(slt_wb.position),
+                                #'slt_ssa': str(slt_ssa.position)
+                                }
+                                
+    md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
+                                       'hf_stage_y': hf_stage.y.position,
+                                       'hf_stage_z': hf_stage.z.position}
+    md['wb_slits'] = {'v_gap' : slt_wb.v_gap.position,
+                            'h_gap' : slt_wb.h_gap.position,
+                            'v_cen' : slt_wb.v_cen.position,
+                            'h_cen' : slt_wb.h_cen.position
+                            }
+    md['hfm'] = {'y' : hfm.y.position,
+                               'bend' : hfm.bend.position} 
+    md['ssa_slits'] = {'v_gap' : slt_ssa.v_gap.position,
+                            'h_gap' : slt_ssa.h_gap.position,
+                            'v_cen' : slt_ssa.v_cen.position,
+                            'h_cen' : slt_ssa.h_cen.position                                      
+                             }                                      
+    return md
+                                       
 
-def hf2dxrf(xstart=None, xnumstep=None, xstepsize=None, 
-            ystart=None, ynumstep=None, ystepsize=None, 
+def hf2dxrf(*, xstart, xnumstep, xstepsize, 
+            ystart, ynumstep, ystepsize, 
             #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
-            acqtime=None, numrois=1, i0map_show=True, itmap_show = True,
-            energy = None, u_detune = None,
-            ):
+            acqtime, numrois=1, i0map_show=True, itmap_show=True,
+            energy=None, u_detune=None):
 
     '''
     input:
@@ -46,27 +70,11 @@ def hf2dxrf(xstart=None, xnumstep=None, xstepsize=None,
         u_detune (float): amount of undulator to detune in the unit of keV
     '''
 
-    #make sure user provided correct input
-
-    if xstart is None:
-        raise Exception('xstart = None, must specify an xstart position')
-    if xnumstep is None:
-        raise Exception('xnumstep = None, must specify an xnumstep position')
-    if xstepsize is None:
-        raise Exception('xstepsize = None, must specify an xstepsize position')
-    if ystart is None:
-        raise Exception('ystart = None, must specify an ystart position')
-    if ynumstep is None:
-        raise Exception('ynumstep = None, must specify an ynumstep position')
-    if ystepsize is None:
-        raise Exception('ystepsize = None, must specify an ystepsize position')
-    if acqtime is None:
-        raise Exception('acqtime = None, must specify an acqtime position')
-
     #record relevant meta data in the Start document, defined in 90-usersetup.py
-    metadata_record()
+    md = get_stock_md()
 
     #setup the detector
+    # TODO do this with configure
     current_preamp.exp_time.put(acqtime)
     xs.settings.acquire_time.put(acqtime)
     xs.total_points.put((xnumstep+1)*(ynumstep+1))
@@ -145,9 +153,10 @@ def hf2dxrf(xstart=None, xnumstep=None, xstepsize=None,
 
     if energy is not None:
         if u_detune is not None:
+            # TODO maybe do this with set
             energy.detune.put(u_detune)
-        energy.set(energy)
-        time.sleep(5)
+        # TODO fix name shadowing
+        yield from bp.abs_set(energy, energy, wait=True)
     
 
     #TO-DO: implement fast shutter control (open)
@@ -158,8 +167,9 @@ def hf2dxrf(xstart=None, xnumstep=None, xstepsize=None,
 #        epics.poll(.5)
 #        shut_b.open_cmd.put(1)    
     
-    hf2dxrf_scanplan = OuterProductAbsScanPlan(det, hf_stage.y, ystart, ystop, ynumstep+1, hf_stage.x, xstart, xstop, xnumstep+1, True)
-    scaninfo = gs.RE(hf2dxrf_scanplan, livecallbacks, raise_if_interrupted=True)
+    hf2dxrf_scanplan = OuterProductAbsScanPlan(det, hf_stage.y, ystart, ystop, ynumstep+1, hf_stage.x, xstart, xstop, xnumstep+1, True, md=md)
+    hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, livecallbacks)
+    scaninfo = yield from hf2dxrf_scanplan
 
     #TO-DO: implement fast shutter control (close)    
 #    shut_b.close_cmd.put(1)
@@ -173,6 +183,16 @@ def hf2dxrf(xstart=None, xnumstep=None, xstepsize=None,
     return scaninfo
     
     
+def multi_region_h(regions, energy_list=None, **kwargs):
+    ret = []
+    
+    for r in regions:
+        inp = {}
+        inp.update(kwargs)
+        inp.update(r)
+        rs_uid = yield from hf2dxrf(**inp)
+        ret.extend(rs_uid)
+    return ret
 
 
 def hf2dxrf_estack(batch_dir = None, batch_filename = None,
