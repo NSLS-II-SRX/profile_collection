@@ -3,11 +3,15 @@ from ophyd import (EpicsSignal, EpicsSignalRO, EpicsMotor,
 from ophyd.utils.epics_pvs import set_and_wait
 from ophyd.ophydobj import StatusBase, MoveStatus
 from ophyd import Component as Cpt, Signal
+import time as ttime
 
 from bluesky import Msg
+from bluesky.plans import open_run, close_run, trigger_and_read
+
 #from bluesky.plan_tools import trigger_and_read, wrap_with_decorator, run_wrapper
 
 triggger_and_read = wrap_with_decorator = run_wrapper = None
+
 
 class UVDoneMOVN(PermissiveGetSignal):
     """Signal for use as done signal for use in individual mode undulator motors
@@ -267,8 +271,7 @@ TILT_LIMIT = 0.099  # 0.099 microns
 CRAB_LIMIT = 0.050  # 50 microns
 TARGET_THRESH = 0.002 # 2 microns,
 
-"""
-@wrap_with_decorator(run_wrapper)
+
 def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets=None):
     '''A generator plan for crabbing the undulator to new position
 
@@ -369,12 +372,14 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets=None):
             if done_count == 4:
                 return
 
+    yield from open_run()
+    yield from trigger_and_read([pu] + other_dets)
     for mot, target in traj(pu):
         print("About to move {} to {}".format(mot.name, target))
         # yield Msg('checkpoint', None)
         # yield Msg('pause', None)
         # yield Msg('clear_checkpoint', None)
-        st = yield Msg('set', mot, target, timeout = None)
+        st = yield Msg('set', mot, target, timeout=None)
         # move the motor
         fail_time = ttime.time() + 40 * 5
         while not st.done:
@@ -382,18 +387,20 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets=None):
             if ttime.time() > fail_time:
                 mot.stop()
                 raise RuntimeError("Undulator move timed out")
+            yield Msg('checkpoint')
             yield Msg('sleep', None, 1)
-
 
         if st.error > .002:
             raise RuntimeError("only got with in {} of target {}".
                                format(st.error, st.target))
-
+        yield Msg('checkpoint')
         for j in range(2):
             yield Msg('sleep', None, 1)
             yield from trigger_and_read([pu] + other_dets)
+        yield Msg('checkpoint')
+    yield from close_run()
 
-"""
+
 def play():
     '''Example of how to make a composite 'master' plan
     '''
