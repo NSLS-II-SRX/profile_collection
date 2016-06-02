@@ -4,7 +4,7 @@ from ophyd.utils.epics_pvs import set_and_wait
 from ophyd.ophydobj import StatusBase, MoveStatus
 from ophyd import Component as Cpt, Signal
 import time as ttime
-
+from cycler import cycler
 from bluesky import Msg
 from bluesky.plans import open_run, close_run, trigger_and_read
 
@@ -54,6 +54,7 @@ class UVDoneMOVN(PermissiveGetSignal):
         self._act = actuate
         self._stp = stop
         self.target = None
+        self._next_reactuate_time = 0
 
     def put(self, *arg, **kwargs):
         raise TypeError("You con not tell an undulator motor it is done")
@@ -81,7 +82,7 @@ class UVDoneMOVN(PermissiveGetSignal):
 
         # come back and check this threshold value
         # this is 2 microns
-        if not_moving and abs(target - cur_value) < 0.002:
+        if not_moving and abs(target - cur_value) < 0.002:       
             self._put(1)
             self._remove_cbs()
             return
@@ -89,9 +90,12 @@ class UVDoneMOVN(PermissiveGetSignal):
         # if it is not moving, but we are not where we want to be,
         # poke it again
         if not_moving:
-            actuate = getattr(self.parent, self._act)
-            print('re actuated')
-            actuate.put(1)
+            cur_time = ttime.time()
+            if cur_time > self._next_reactuate_time:
+                actuate = getattr(self.parent, self._act)
+                print('re actuated', self.parent.name)
+                actuate.put(1)
+                self._next_reactuate_time = cur_time + 1
 
     def _stop_watcher(self, *arg, **kwargs):
         '''Call back to be installed on the stop signal
@@ -237,11 +241,11 @@ class UndlatorMotorElevation(UndulatorPositioner):
 
 class PowerUndulator(Device):
     'Simple aggregate device to hold undulator motors'
-    us_lower = Cpt(UndlatorMotorUSL, '')
-    us_upper = Cpt(UndlatorMotorUSU, '')
-    ds_lower = Cpt(UndlatorMotorDSL, '')
-    ds_upper = Cpt(UndlatorMotorDSU, '')
-    elevation = Cpt(UndlatorMotorElevation, '')
+    us_lower = Cpt(UndlatorMotorUSL, '', read_attrs=['readback', 'setpoint', 'moving'])
+    us_upper = Cpt(UndlatorMotorUSU, '', read_attrs=['readback', 'setpoint', 'moving'])
+    ds_lower = Cpt(UndlatorMotorDSL, '', read_attrs=['readback', 'setpoint', 'moving'])
+    ds_upper = Cpt(UndlatorMotorDSU, '', read_attrs=['readback', 'setpoint', 'moving'])
+    elevation = Cpt(UndlatorMotorElevation, '', read_attrs=['readback', 'setpoint', 'moving'])
 
 pu = PowerUndulator('SR:C5-ID:G1{IVU21:1', name='pu')
 
@@ -267,7 +271,7 @@ class UTemperatures(Device):
 
 ut = UTemperatures('SR:C5-ID:G1{IVU21:1')
 
-TILT_LIMIT = 0.099  # 0.099 microns
+TILT_LIMIT = 0.090  # 99 microns
 CRAB_LIMIT = 0.050  # 50 microns
 TARGET_THRESH = 0.002 # 2 microns,
 
@@ -303,16 +307,31 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets=None):
     other_dets : list, optional
         List of other detectors to read
     '''
+    pu.stop()
     if other_dets is None:
         other_dets = []
     # magic goes here
     #if abs(us_u - ds_u) > CRAB_LIMIT:
     if abs(us_u - ds_u) > TILT_LIMIT:
-        raise ValueError("exceded tilt limit on upper")
+        raise ValueError("exceded tilt limit on upper |{} - {}| > {}".format(
+                us_u,  ds_u, TILT_LIMIT))
 
     #if abs(us_l - ds_l) > CRAB_LIMIT:
-    if abs(us_u - ds_u) > TILT_LIMIT:
-        raise ValueError("exceded tilt limit on lower")
+    if abs(us_l - ds_l) > TILT_LIMIT:
+        raise ValueError("exceded tilt limit on lower |{} - {}| > {}".format(
+                us_l,  ds_l, TILT_LIMIT))
+
+    def limit_position(pos, pair_pos, target, pair_target):
+        if abs(pair_pos - pair_target) < TARGET_THRESH:
+            # on final step
+            limit = TILT_LIMIT
+        else:
+            limit = CRAB_LIMIT
+        # moving out
+        if target > pos:
+            return min(target, pair_pos + limit)
+        else:
+            return max(target, pair_pos - limit)
 
     def traj(pu):
         while True:
@@ -321,11 +340,7 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets=None):
             cur_usu = pu.us_upper.position
             cur_dsu = pu.ds_upper.position
             if abs(cur_usu - us_u) > TARGET_THRESH:
-                # moving out
-                if us_u > cur_usu:
-                    target = min(us_u, cur_dsu + CRAB_LIMIT)
-                else:
-                    target = max(us_u, cur_dsu - CRAB_LIMIT)
+                target = limit_position(cur_usu, cur_dsu, us_u, ds_u)
                 yield pu.us_upper, target
             else:
                 done_count += 1
@@ -334,11 +349,7 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets=None):
             cur_usu = pu.us_upper.position
             cur_dsu = pu.ds_upper.position
             if abs(cur_dsu - ds_u) > TARGET_THRESH:
-                # moving out
-                if ds_u > cur_dsu:
-                    target = min(ds_u, cur_usu + CRAB_LIMIT)
-                else:
-                    target = max(ds_u, cur_usu - CRAB_LIMIT)
+                target = limit_position(cur_dsu, cur_usu, ds_u, us_u)
                 yield pu.ds_upper, target
             else:
                 done_count += 1
@@ -347,11 +358,7 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets=None):
             cur_usl = pu.us_lower.position
             cur_dsl = pu.ds_lower.position
             if abs(cur_usl - us_l) > TARGET_THRESH:
-                # moving out
-                if us_l > cur_usl:
-                    target = min(us_l, cur_dsl + CRAB_LIMIT)
-                else:
-                    target = max(us_l, cur_dsl - CRAB_LIMIT)
+                target = limit_position(cur_usl, cur_dsl, us_l, ds_l)
                 yield pu.us_lower, target
             else:
                 done_count += 1
@@ -360,11 +367,7 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets=None):
             cur_usl = pu.us_lower.position
             cur_dsl = pu.ds_lower.position
             if abs(cur_dsl - ds_l) > TARGET_THRESH:
-                # moving out
-                if ds_l > cur_dsl:
-                    target = min(ds_l, cur_usl + CRAB_LIMIT)
-                else:
-                    target = max(ds_l, cur_usl - CRAB_LIMIT)
+                target = limit_position(cur_dsl, cur_usl, ds_l, us_l)
                 yield pu.ds_lower, target
             else:
                 done_count += 1
@@ -381,7 +384,9 @@ def ud_crab_plan(pu, us_u, us_l, ds_u, ds_l, other_dets=None):
         # yield Msg('clear_checkpoint', None)
         st = yield Msg('set', mot, target, timeout=None)
         # move the motor
-        fail_time = ttime.time() + 40 * 5
+        # speed is mm / s measured on us lower 2016-06-02
+        # timeout is 3 * max_crab / speed
+        fail_time = ttime.time() + (TILT_LIMIT / .0003) * 4
         while not st.done:
             yield from trigger_and_read([pu] + other_dets)
             if ttime.time() > fail_time:
@@ -408,6 +413,11 @@ def play():
         yield from ud_crab_plan(pu, a, 6.46, 6.46, 6.46, [ut])
         yield from EnergyPlan()
 
+name_cycle = (cycler('d', ['pu']) * cycler('end', ['us', 'ds']) * 
+              cycler('side', ['upper', 'lower']) * 
+              cycler('read', ['readback', 'moving']))
+lt = LiveTable(['{d}_{end}_{side}_{read}'.format(**_p) for _p in name_cycle], 
+                print_header_interval=15)
 
 # gs.RE(play())
 #

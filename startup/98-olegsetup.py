@@ -6,42 +6,43 @@
 ##"""
 ##
 ###might want to put in configuration file
-##import scanoutput
-#from bluesky.plans import AbsScanPlan
-#from bluesky.scientific_callbacks import PeakStats
-#from bluesky.scientific_callbacks import plot_peak_stats
-##from imp import reload
-#import matplotlib.pylab as plt
-##import sys
-##
+#import scanoutput
+from bluesky.plans import AbsScanPlan
+from bluesky.callbacks.scientific import PeakStats, plot_peak_stats
+#from imp import reload
+import matplotlib.pylab as plt
+#import sys
 #
-#bpmAD.cam.read_attrs = ['acquire_time']
-#bpmAD.configuration_attrs = ['cam']
-#
-##sys.path.append('/nfs/xf05id1/src/srxtools/')
+
+bpmAD.cam.read_attrs = ['acquire_time']
+bpmAD.configuration_attrs = ['cam']
+
+#sys.path.append('/nfs/xf05id1/src/srxtools/')
 #
 ##Oleg specifically
-#energy.move_u_gap.put(False)
-#energy.move_c2_x.put(False)
-#energy.u_gap.read_attrs.append('elevation')
+energy.move_u_gap.put(False)
+energy.move_c2_x.put(False)
+energy.u_gap.read_attrs.append('elevation')
 ##bpmAD.read_attrs.append('cam_acquire_time')
 ##   #testing
-##olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 7.792, 8.143, 176)  #for 5th harmonic at ugap = 6.8
+#olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 7.792, 8.143, 176)  #for 5th harmonic at ugap = 6.8
 #olegplan=AbsScanPlan([hfvlmAD, pu, ring_current], energy, 7.792, 8.143, 176)  #for 5th harmonic at ugap = 6.8
 ##olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 14.1, 14.6, 251)     #for 9th harmonic at ugap = 6.8
+olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 11.06, 11.1, 5)  #for testing
+
 #
 ##livetableitem = [energy.energy, bpmAD.stats1.total, bpmAD.stats3.total, ring_current]
 ##liveploty = bpmAD.stats3.total.name
-#livetableitem = [energy.energy, hfvlmAD.stats1.total, bpmAD.stats3.total, ring_current]
+livetableitem = [energy.energy, hfvlmAD.stats1.total, bpmAD.stats3.total, ring_current]
 #
-#liveploty1 = hfvlmAD.stats1.total.name 
-#liveploty2 = hfvlmAD.stats2.total.name 
-#liveploty3 = hfvlmAD.stats3.total.name
+liveploty1 = hfvlmAD.stats1.total.name 
+liveploty2 = hfvlmAD.stats2.total.name 
+liveploty3 = hfvlmAD.stats3.total.name
 #
-#liveplotx = energy.energy.name
-#liveplotfig1 = plt.figure()
-#liveplotfig2 = plt.figure()
-#liveplotfig3 = plt.figure()
+liveplotx = energy.energy.name
+liveplotfig1 = plt.figure()
+liveplotfig2 = plt.figure()
+liveplotfig3 = plt.figure()
 #        
 ##ps.append(PeakStats(energy.energy.name, bpmAD.stats3.total.name))
 #
@@ -151,57 +152,58 @@
 ##E.g. some acceptable limits of the parameters to be optimized, etc.
 #
 #
-#def undSpecKPP(_tilt_microrad, _taper_microm, _elev_microm): 
-#    
-#    #Some validation of _tilt_microrad, _taper_microm, _elev_microm can be placed here ?
-#    
-#    ylim = 0.099
-#    
-#    #Getting re-calculated direct settings for IVU axes:
-#    yUU_mm, yUL_mm, yDU_mm, yDL_mm, elev_mm = und_combined_motion(_tilt_microrad, _taper_microm, _elev_microm)
-#    if abs(yUU_mm-yDU_mm) > ylim:
-#        err_msg = 'y upper axes difference exceeds the limit '+str(ylim)
-#        raise Exception(err_msg)
-#
-#    if abs(yUL_mm-yDL_mm) > ylim:
-#        err_msg = 'y lower axes difference exceeds the limit '+str(ylim)
-#        raise Exception(err_msg)
-#        
-#    print('we can move undulator')
-#    
-#    #move undulator
-#    uplan_taper_tilt=ud_crab_plan(pu, yUU_mm, yUL_mm, yDU_mm, yDL_mm, [])
-#    gs.RE(uplan_taper_tilt)
-#    pu.elevation.set(elev_mm)
-#        
-#    #mono scan
-#    #ps = PeakStats(energy.energy.name, bpmAD.stats3.total.name)    
-#    ps = PeakStats(energy.energy.name, hfvlmAD.stats3.total.name)    
-#
-#    #current_pre = ring_current.get()
-#    gs.RE.md['undulator_setup']  = {'tilt': _tilt_microrad,  'taper': _taper_microm, 'elevation': _elev_microm}
-#    gs.RE(olegplan, [LiveTable(livetableitem), 
-#                     LivePlot(liveploty1, x=liveplotx, fig=liveplotfig1, legend_keys=['undulator_setup']), 
-#                     LivePlot(liveploty2, x=liveplotx, fig=liveplotfig2, legend_keys=['undulator_setup']), 
-#                     LivePlot(liveploty3, x=liveplotx, fig=liveplotfig3, legend_keys=['undulator_setup']), 
-#                       ps])    
-#    #current_post = ring_current.get()
-#    
-#    maxenergy, maxintensity, fwhm, maxcurrent = oleg_afterscan(ps)
-#    #current_avg = (current_pre + current_post)/2
-#
-#    #to-dos:
-#        #improve key performance paramters calculation
-#        #scale results by ring current
-#
-#    print ('scaled maxintensity: '+str(maxintensity/maxcurrent)+'\n')
-#    print ('fwhm               : '+str(fwhm)+'\n')
-#    print ('maxintensity       : '+str(maxintensity)+'\n')
-#    print ('maxcurrent         : '+str(maxcurrent)+'\n')
-#    print ('maxenergy          : '+str(maxenergy)+'\n')
-#    
-#    return maxintensity/maxcurrent, fwhm, maxenergy, maxcurrent
-#
+def undSpecKPP(_tilt_microrad, _taper_microm, _elev_microm, _ugap_mm = 38): 
+    
+    #Some validation of _tilt_microrad, _taper_microm, _elev_microm can be placed here ?
+    
+    ylim = 0.090
+    
+    #Getting re-calculated direct settings for IVU axes:
+    yUU_mm, yUL_mm, yDU_mm, yDL_mm, elev_mm = und_combined_motion(_tilt_microrad, _taper_microm, _elev_microm, _ugap = _ugap_mm)
+    if abs(yUU_mm-yDU_mm) > ylim:
+        err_msg = 'y upper axes difference exceeds the limit '+str(ylim)
+        raise Exception(err_msg)
+
+    if abs(yUL_mm-yDL_mm) > ylim:
+        err_msg = 'y lower axes difference exceeds the limit '+str(ylim)
+        raise Exception(err_msg)
+        
+    print('we can move undulator')
+    
+    #move undulator
+    uplan_taper_tilt=ud_crab_plan(pu, yUU_mm, yUL_mm, yDU_mm, yDL_mm, [])
+    gs.RE(uplan_taper_tilt)
+    #pu.elevation.set(elev_mm) #avoid using set
+    mov(pu.elevation, elev_mm) 
+       
+    #mono scan
+    #ps = PeakStats(energy.energy.name, bpmAD.stats3.total.name)    
+    ps = PeakStats(energy.energy.name, hfvlmAD.stats3.total.name)    
+
+    #current_pre = ring_current.get()
+    gs.RE.md['undulator_setup']  = {'tilt': _tilt_microrad,  'taper': _taper_microm, 'elevation': _elev_microm}
+    gs.RE(olegplan, [LiveTable(livetableitem), 
+                     LivePlot(liveploty1, x=liveplotx, fig=liveplotfig1, legend_keys=['undulator_setup']), 
+                     LivePlot(liveploty2, x=liveplotx, fig=liveplotfig2, legend_keys=['undulator_setup']), 
+                     LivePlot(liveploty3, x=liveplotx, fig=liveplotfig3, legend_keys=['undulator_setup']), 
+                       ps])    
+    #current_post = ring_current.get()
+    
+    maxenergy, maxintensity, fwhm, maxcurrent = oleg_afterscan(ps)
+    #current_avg = (current_pre + current_post)/2
+
+    #to-dos:
+        #improve key performance paramters calculation
+        #scale results by ring current
+
+    print ('scaled maxintensity: '+str(maxintensity/maxcurrent)+'\n')
+    print ('fwhm               : '+str(fwhm)+'\n')
+    print ('maxintensity       : '+str(maxintensity)+'\n')
+    print ('maxcurrent         : '+str(maxcurrent)+'\n')
+    print ('maxenergy          : '+str(maxenergy)+'\n')
+    
+    return maxintensity/maxcurrent, fwhm, maxenergy, maxcurrent
+
 #        
 #
 ######

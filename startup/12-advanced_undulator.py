@@ -3,9 +3,9 @@ from __future__ import print_function #Python 2.7 compatibility
 
 
 #--------------------------------------------------------------
-def und_combined_motion(_tilt_microrad, _taper_microm, _elev_microm):
+def und_combined_motion(_tilt_microrad, _taper_microm, _elev_microm, _ugap = 38):
 
-    _ugap = 6.8
+    #_ugap = 38
 
     yUU0 = _ugap/2
     yUL0 = _ugap/2
