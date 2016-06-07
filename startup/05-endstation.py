@@ -74,3 +74,26 @@ class SRXDownStreamGantry(Device):
 
 pcoedge_pos = SRXDownStreamGantry('XF:05IDD-ES:1{Det:3-Ax:', name='pcoedge_pos')
 relabel_motors(pcoedge_pos)
+
+# tomography setup
+class SRXTomo(Device):
+    y = Cpt(EpicsMotor, 'Y}Mtr')
+    theta = Cpt(EpicsMotor, 'Theta}Mtr')
+    roll = Cpt(EpicsMotor, 'R}Mtr')
+    pitch = Cpt(EpicsMotor, 'P}Mtr')
+
+    #Attobcube ECS5050
+    x = Cpt(EpicsMotor, 'X}Mtr')
+    z = Cpt(EpicsMotor, 'Z}Mtr')
+
+    #Attobcube ECS3030
+    finex_bot = Cpt(EpicsMotor, 'XFB}Mtr')
+    finez_bot = Cpt(EpicsMotor, 'ZFB}Mtr')
+
+    #PiezoJena    
+    finex_top = Cpt(EpicsMotor, 'XFT}Mtr')
+    finey_top = Cpt(EpicsMotor, 'YFT}Mtr')
+    finez_top = Cpt(EpicsMotor, 'ZFT}Mtr')
+
+tomo_stage = SRXTomo('XF:05IDD-ES:1{Stg:Tomo-Ax:', name='tomo_stage')
+relabel_motors(tomo_stage)

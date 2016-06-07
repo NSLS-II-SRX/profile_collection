@@ -97,14 +97,19 @@ import time
 #saf_num = 300388
 #logfilename_postfix = '20160406'
 
-proposal_num = 300810
+#proposal_num = 300810
+#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+#PI_lastname = 'Chen-Wiegart-3Dprint'
+#saf_num = 300265
+
+proposal_num = 301229
 proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-PI_lastname = 'Chen-Wiegart-3Dprint'
-saf_num = 300265
+PI_lastname = 'Thieme'
+saf_num = 300441
 
 logfilename_postfix = str(saf_num)
 
-cycle = '2016_cycle1'
+cycle = '2016_cycle2'
 
 gs.RE.md['proposal']  = {  'proposal_num': str(proposal_num), 
                          'proposal_title': str(proposal_title),

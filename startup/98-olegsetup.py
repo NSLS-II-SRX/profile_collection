@@ -25,24 +25,25 @@ energy.move_c2_x.put(False)
 energy.u_gap.read_attrs.append('elevation')
 ##bpmAD.read_attrs.append('cam_acquire_time')
 ##   #testing
-#olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 7.792, 8.143, 176)  #for 5th harmonic at ugap = 6.8
+olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 7.792, 8.143, 176)  #for 5th harmonic at ugap = 6.8
 #olegplan=AbsScanPlan([hfvlmAD, pu, ring_current], energy, 7.792, 8.143, 176)  #for 5th harmonic at ugap = 6.8
 ##olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 14.1, 14.6, 251)     #for 9th harmonic at ugap = 6.8
-olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 11.06, 11.1, 5)  #for testing
+#olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 11.06, 11.1, 5)  #for testing
 
 #
 ##livetableitem = [energy.energy, bpmAD.stats1.total, bpmAD.stats3.total, ring_current]
-##liveploty = bpmAD.stats3.total.name
+liveploty = bpmAD.stats3.total.name
 livetableitem = [energy.energy, hfvlmAD.stats1.total, bpmAD.stats3.total, ring_current]
 #
-liveploty1 = hfvlmAD.stats1.total.name 
-liveploty2 = hfvlmAD.stats2.total.name 
-liveploty3 = hfvlmAD.stats3.total.name
+#liveploty1 = hfvlmAD.stats1.total.name 
+#liveploty2 = hfvlmAD.stats2.total.name 
+#liveploty3 = hfvlmAD.stats3.total.name
 #
 liveplotx = energy.energy.name
 liveplotfig1 = plt.figure()
-liveplotfig2 = plt.figure()
-liveplotfig3 = plt.figure()
+#liveplotfig2 = plt.figure()
+#liveplotfig3 = plt.figure()
+plt.show()
 #        
 ##ps.append(PeakStats(energy.energy.name, bpmAD.stats3.total.name))
 #
@@ -82,48 +83,48 @@ liveplotfig3 = plt.figure()
 ##olegplan.subs['all'].append(LiveTable(livetableitem))
 ##olegplan.subs['all'].append(LivePlot(liveploty, x=liveplotx, fig=liveplotfig))
 #
-#def oleg_afterscan(cur_ps):
-#    plot_peak_stats(cur_ps) 
-#
-#    headeritem = ['pu_us_upper_readback','pu_us_lower_readback','pu_ds_upper_readback','pu_ds_lower_readback',\
-#                  'energy_u_gap_elevation_ct_us','energy_u_gap_elevation_offset_us',\
-#                  'pu_elevation_avg_elevation', 'pu_elevation_ds_elevation', 'pu_elevation_readback', \
-#                  'energy_u_gap_readback'] 
-#    maxenergy = cur_ps.max[0]
-#    maxintensity = cur_ps.max[1]
-#    fwhm = cur_ps.fwhm
-#    
-#    #extract the ring current for the max intensity point
-##    ring_current_array = []
-##    energy_array = []
-#    h=db[-1]
-##    events=list(get_events(h))
-##    for event in events:
-##        ring_current_array.append(event['data']['ring_current'])
-##        energy_array.append(event['data']['energy_energy'])
-#    datatable = get_table(h, ['energy_energy', 'ring_current'])        
-#    energy_array = list(datatable.energy_energy)   
-#    ring_current_array = list(datatable.ring_current)    
-#    maxcurrent = ring_current_array[energy_array.index(maxenergy)]  
-#    
-#    userheaderitem = {}
-#    userheaderitem['maxenergy'] = maxenergy
-#    userheaderitem['maxintensity'] = maxintensity
-#    userheaderitem['fwhm'] = fwhm
-#    userheaderitem['maxcurrent'] = maxcurrent
-#    userheaderitem['scaled_maxintensity'] = maxintensity/maxcurrent
-#
-#    #columnitem = ['energy_energy', 'energy_bragg_user_readback', 'bpmAD_stats1_total', 'bpmAD_stats2_total', 'bpmAD_stats3_total', 'ring_current']
-#    columnitem = ['energy_energy', 'energy_bragg_user_readback', 'hfvlmAD_stats1_total', 'hfvlmAD_stats2_total', 'hfvlmAD_stats3_total', 'ring_current']
-#
-#
-#    scanoutput.textout(header = headeritem, userheader = userheaderitem, column = columnitem, output = False) 
-#    #ps.append(PeakStats(energy.energy.name, bpmAD.stats3.total.name))
-#
-#
-#
-#
-#    return maxenergy, maxintensity, fwhm , maxcurrent
+def oleg_afterscan(cur_ps):
+    plot_peak_stats(cur_ps) 
+
+    headeritem = ['pu_us_upper_readback','pu_us_lower_readback','pu_ds_upper_readback','pu_ds_lower_readback',\
+                  'energy_u_gap_elevation_ct_us','energy_u_gap_elevation_offset_us',\
+                  'pu_elevation_avg_elevation', 'pu_elevation_ds_elevation', 'pu_elevation_readback', \
+                  'energy_u_gap_readback'] 
+    maxenergy = cur_ps.max[0]
+    maxintensity = cur_ps.max[1]
+    fwhm = cur_ps.fwhm
+    
+    #extract the ring current for the max intensity point
+#    ring_current_array = []
+#    energy_array = []
+    h=db[-1]
+#    events=list(get_events(h))
+#    for event in events:
+#        ring_current_array.append(event['data']['ring_current'])
+#        energy_array.append(event['data']['energy_energy'])
+    datatable = get_table(h, ['energy_energy', 'ring_current'])        
+    energy_array = list(datatable.energy_energy)   
+    ring_current_array = list(datatable.ring_current)    
+    maxcurrent = ring_current_array[energy_array.index(maxenergy)]  
+    
+    userheaderitem = {}
+    userheaderitem['maxenergy'] = maxenergy
+    userheaderitem['maxintensity'] = maxintensity
+    userheaderitem['fwhm'] = fwhm
+    userheaderitem['maxcurrent'] = maxcurrent
+    userheaderitem['scaled_maxintensity'] = maxintensity/maxcurrent
+
+    columnitem = ['energy_energy', 'energy_bragg_user_readback', 'bpmAD_stats1_total', 'bpmAD_stats2_total', 'bpmAD_stats3_total', 'ring_current']
+    #columnitem = ['energy_energy', 'energy_bragg_user_readback', 'hfvlmAD_stats1_total', 'hfvlmAD_stats2_total', 'hfvlmAD_stats3_total', 'ring_current']
+
+
+    scanoutput.textout(header = headeritem, userheader = userheaderitem, column = columnitem, output = False) 
+    #ps.append(PeakStats(energy.energy.name, bpmAD.stats3.total.name))
+
+
+
+
+    return maxenergy, maxintensity, fwhm , maxcurrent
 #
 ##def u_opt():
 ##    for target in [3.415, 3.42]:
@@ -171,21 +172,21 @@ def undSpecKPP(_tilt_microrad, _taper_microm, _elev_microm, _ugap_mm = 38):
     print('we can move undulator')
     
     #move undulator
-    uplan_taper_tilt=ud_crab_plan(pu, yUU_mm, yUL_mm, yDU_mm, yDL_mm, [])
-    gs.RE(uplan_taper_tilt)
-    #pu.elevation.set(elev_mm) #avoid using set
-    mov(pu.elevation, elev_mm) 
+#    uplan_taper_tilt=ud_crab_plan(pu, yUU_mm, yUL_mm, yDU_mm, yDL_mm, [])
+#    gs.RE(uplan_taper_tilt)
+#    mov(pu.elevation, elev_mm) 
        
     #mono scan
-    #ps = PeakStats(energy.energy.name, bpmAD.stats3.total.name)    
-    ps = PeakStats(energy.energy.name, hfvlmAD.stats3.total.name)    
+    ps = PeakStats(energy.energy.name, bpmAD.stats3.total.name)    
+#    ps = PeakStats(energy.energy.name, hfvlmAD.stats3.total.name)    
 
     #current_pre = ring_current.get()
     gs.RE.md['undulator_setup']  = {'tilt': _tilt_microrad,  'taper': _taper_microm, 'elevation': _elev_microm}
-    gs.RE(olegplan, [LiveTable(livetableitem), 
-                     LivePlot(liveploty1, x=liveplotx, fig=liveplotfig1, legend_keys=['undulator_setup']), 
-                     LivePlot(liveploty2, x=liveplotx, fig=liveplotfig2, legend_keys=['undulator_setup']), 
-                     LivePlot(liveploty3, x=liveplotx, fig=liveplotfig3, legend_keys=['undulator_setup']), 
+    gs.RE(olegplan, [LiveTable(livetableitem),                      
+                     LivePlot(liveploty, x=liveplotx, fig=liveplotfig1, legend_keys=['undulator_setup']), 
+#                     LivePlot(liveploty1, x=liveplotx, fig=liveplotfig1, legend_keys=['undulator_setup']), 
+#                     LivePlot(liveploty2, x=liveplotx, fig=liveplotfig2, legend_keys=['undulator_setup']), 
+#                     LivePlot(liveploty3, x=liveplotx, fig=liveplotfig3, legend_keys=['undulator_setup']), 
                        ps])    
     #current_post = ring_current.get()
     
@@ -203,6 +204,7 @@ def undSpecKPP(_tilt_microrad, _taper_microm, _elev_microm, _ugap_mm = 38):
     print ('maxenergy          : '+str(maxenergy)+'\n')
     
     return maxintensity/maxcurrent, fwhm, maxenergy, maxcurrent
+
 
 #        
 #
