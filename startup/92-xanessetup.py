@@ -243,8 +243,10 @@ def xanes(erange = [], estep = [],
 
     #add user meta data
     gs.RE.md['sample']  = {'name': samplename}
-    #setup the plan  
+    #setup the plan
+    ept = list(ept)
     xanes_scanplan = AbsListScanPlan(det, energy, ept)
+    ept = numpy.array(ept)
 
    #open b shutter
 #    shut_b.open_cmd.put(1)
@@ -358,7 +360,9 @@ def xanes_tmode(erange = [], estep = [],
     #add user meta data
     gs.RE.md['sample']  = {'name': samplename}
     #setup the plan  
+    ept = list(ept)
     xanes_scanplan = AbsListScanPlan(det, energy, ept)
+    ept = numpy.array(ept)
 
    #open b shutter
     shut_b.open_cmd.put(1)

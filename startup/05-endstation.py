@@ -101,8 +101,8 @@ class SRXTomo(Device):
 
     #PiezoJena   
     finex_top = Cpt(EpicsMotor, 'XFT}Mtr')
-    finey_top = Cpt(EpicsMotor, 'ZFT}Mtr') #need to update PV to swap y/z
-    finez_top = Cpt(EpicsMotor, 'YFT}Mtr') #need to update PV to swap y/z
+    finey_top = Cpt(EpicsMotor, 'YFT}Mtr') 
+    finez_top = Cpt(EpicsMotor, 'ZFT}Mtr') 
 
 tomo_stage = SRXTomo('XF:05IDD-ES:1{Stg:Tomo-Ax:', name='tomo_stage')
 relabel_motors(tomo_stage)

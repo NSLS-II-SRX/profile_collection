@@ -166,7 +166,8 @@ class Undulator(FixedPVPositioner):
 
 _undulator_kwargs = dict(name='ivu1_gap', read_attrs=['readback'],
                          calib_path='/nfs/xf05id1/UndulatorCalibration/',
-                         calib_file='SRXUgapCalibration20150411_final.text',
+                         #calib_file='SRXUgapCalibration20150411_final.text',
+                         calib_file='SRXUgapCalibration20160608_final.text',                                                  
                          configuration_attrs=['corrfunc_sta', 'pos', 'girder',
                                               'real_pos', 'elevation'])
 
@@ -328,7 +329,7 @@ cal_data_2016cycle1 = {'d_111': 3.12961447804,
                        'T2cal': 13.463294326,
                        'xoffset': 25.2521}
 
-cal_data_2016cycle2 = {'d_111': 3.12924894907,  # 2016/1/27 (Se, Cu, Fe, Ti)
+cal_data_2016cycle1_2 = {'d_111': 3.12924894907,  # 2016/1/27 (Se, Cu, Fe, Ti)
                        'delta_bragg': 0.315532509387,  # 2016/1/27 (Se, Cu, Fe, Ti)
                        # not in energy axis but for the record
                        # 'C1Rcal' :  -4.88949983261, # 2016/1/29
@@ -349,8 +350,19 @@ cal_data_2016cycle2 = {'d_111': 3.12924894907,  # 2016/1/27 (Se, Cu, Fe, Ti)
                        #mono warmed up at 4/12/16
                        #'xoffset': 24.809838976060604 #17keV
                        #'xoffset': 24.887490886653893 #8.2 keV
-                       'xoffset': 24.770168843970197 #12.5 keV
+                       #'xoffset': 24.770168843970197 #12.5 keV
                        }  # 2016/1/29}
+
+                        #2016-2
+cal_data_2016cycle2  ={ 'd_111': 3.13130245128, #2016/6/9 (Ti, Cr, Fe, Cu, Se)
+                        'delta_bragg' : 0.309366522013,
+                        #'xoffset': 24.864494684263519,                                             
+                        'C2Xcal': 3.6,  # 2016/1/29
+                        'T2cal': 14.2470486188,
+                        #'xoffset': 25.941277803299684
+                        'xoffset': 25.921698318063775
+                        #'C1Rcal':-4.7089492561 for the record
+                      }
 
 energy = Energy(prefix='', name='energy', **cal_data_2016cycle2)
 

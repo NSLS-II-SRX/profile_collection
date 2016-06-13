@@ -102,9 +102,19 @@ import time
 #PI_lastname = 'Chen-Wiegart-3Dprint'
 #saf_num = 300265
 
+#proposal_num = 301229
+#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+#PI_lastname = 'Thieme-undulatorAlignment'
+#saf_num = 300441
+
 proposal_num = 301229
 proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-PI_lastname = 'Thieme'
+PI_lastname = 'Thieme-beamlinecomissioning'
+saf_num = 300441
+
+proposal_num = 301229
+proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+PI_lastname = 'Chubar-MachineCollectiveEffects'
 saf_num = 300441
 
 logfilename_postfix = str(saf_num)

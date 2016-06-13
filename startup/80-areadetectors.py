@@ -11,6 +11,9 @@ from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
 from ophyd import Signal
 from ophyd import Component as C
 
+from hxntools.handlers import register
+register()
+
 class SRXTIFFPlugin(TIFFPlugin, FileStoreTIFF,
                     FileStoreIterativeWrite):
     file_number_sync = None

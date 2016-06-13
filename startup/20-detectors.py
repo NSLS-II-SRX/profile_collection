@@ -121,4 +121,55 @@ class CurrentPreamp(Device):
 
         return ret
 
-current_preamp = CurrentPreamp('XF:05IDA{IM:1}', name='current_preamp')
+class CurrentPreampZebra(Device):
+    ch0 = Cpt(EpicsSignalRO, 'Cur:I0-I')
+    ch1 = Cpt(EpicsSignalRO, 'Cur:I1-I')
+    ch2 = Cpt(EpicsSignalRO, 'Cur:I2-I')
+    ch3 = Cpt(EpicsSignalRO, 'Cur:I3-I')
+
+    exp_time = Cpt(EpicsSignal, 'Per-SP')
+    initi_trigger = Cpt(EpicsSignal, 'Cmd:Init')
+    zebra_trigger = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:SOFT_IN:B0',
+                        add_prefix=())
+    zebra_pulse_3_source = Cpt(EpicsSignal, 
+                            'XF:05IDD-ES:1{Dev:Zebra1}:PULSE3_INP',
+                            add_prefix=())
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.stage_sigs[self.zebra_trigger] = 0
+        self.stage_sigs[self.zebra_pulse_3_source] = 60
+
+    def stage(self):
+
+        # Customize what is done before every scan (and undone at the end)
+        # self.stage_sigs[self.trans_diode] = 5
+        # or just use pyepics directly if you need to
+        ret = super().stage()
+        self.zebra_pulse_3_source.put(60,wait=True)
+        self.initi_trigger.put(1, wait=True)
+        wait(self.trigger())
+        return ret
+
+    def trigger(self):
+        init_ts = self.ch0.timestamp
+        self.zebra_trigger.put(0,wait = True)
+        self.zebra_trigger.put(1,wait = True)
+        ret = DeviceStatus(self)
+
+        def done_cb(*args, obj=None, old_value=None, value=None,
+                    timestamp=None, **kwargs):
+            #print('init ts: {!r}    cur ts : {!r}'.format(init_ts, timestamp))
+            #print('old value: {!r}    new value : {!r}'.format(init_ts,
+            #                                                   timestamp))
+
+            # if the timestamp or the value has changed, assume it is done
+            if (timestamp != init_ts) or (value != old_value):
+                ret._finished()
+                obj.clear_sub(done_cb)
+
+        self.ch0.subscribe(done_cb, event_type=self.ch0.SUB_VALUE, run=True)
+
+        return ret
+
+current_preamp = CurrentPreampZebra('XF:05IDA{IM:1}', name='current_preamp')
+#current_preamp = CurrentPreamp('XF:05IDA{IM:1}', name='current_preamp')

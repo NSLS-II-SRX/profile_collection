@@ -29,7 +29,7 @@ def undulator_calibration():
     bpmAD.configuration_attrs = ['cam']
     
     UCalibDir = '/nfs/xf05id1/UndulatorCalibration/'
-    outfile = 'SRXUgapCalibration20160606_2014.text'
+    outfile = 'SRXUgapCalibration20160608_1342.text'
     newfile = False
     
     if newfile is True:
@@ -39,14 +39,16 @@ def undulator_calibration():
     
     
     #energy_setpoint = 8.0
-    energy_res = 0.005 #keV
+    energy_res = 0.002 #keV
     bragg_scanwidth = 0.1 #keV
     bragg_scanpoint = bragg_scanwidth*2/energy_res+1 
     harmonic = 3
     
-    u_gap_start = 9.03
+    u_gap_start = 9.53
     u_gap_end = 18.03
     u_gap_step = 0.5
+    
+    energy.harmonic.set(harmonic)
     
     for u_gap_setpoint in numpy.arange(u_gap_start, u_gap_end+u_gap_step, u_gap_step):
     
@@ -82,5 +84,5 @@ def undulator_calibration():
         print('fundemental energy:', maxenergy/harmonic)
         
         f = open(UCalibDir+outfile, 'a')
-        f.write(str(energy.u_gap.position)+'\t'+str(maxenergy/harmonic)+'\n')
+        f.write(str(energy.u_gap.position)+' '+str(maxenergy/harmonic)+'\n')
         f.close()

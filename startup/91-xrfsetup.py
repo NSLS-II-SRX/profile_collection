@@ -24,6 +24,10 @@ import epics
 import os
 import numpy
 
+#for tomography
+from bluesky.plans import scan_nd, subs_wrapper
+from cycler import cycler
+
 #matplotlib.pyplot.ticklabel_format(style='plain')
 def get_stock_md():
     md = {}
@@ -463,3 +467,158 @@ def hf2dxrf_xybatch(batch_dir = None, batch_filename = None, waittime = 5, repea
                     batchlogf.close()
                     time.sleep(waittime)
     batchf.close()    
+
+
+def hr2dxrf_top(*, xstart, xnumstep, xstepsize, 
+            ystart, ynumstep, ystepsize, 
+            #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
+            acqtime, numrois=1, i0map_show=True, itmap_show=True,
+            energy=None, u_detune=None):
+
+    '''
+    input:
+        xstart, xnumstep, xstepsize (float) unit: micron
+        ystart, ynumstep, ystepsize (float) unit: micron
+        acqtime (float): acqusition time to be set for both xspress3 and F460
+        numrois (integer): number of ROIs set to display in the live raster scans. This is for display ONLY. 
+                           The actualy number of ROIs saved depend on how many are enabled and set in the read_attr
+                           However noramlly one cares only the raw XRF spectra which are all saved and will be used for fitting.
+        i0map_show (boolean): When set to True, map of the i0 will be displayed in live raster, default is True
+        itmap_show (boolean): When set to True, map of the trasnmission diode will be displayed in the live raster, default is True   
+        energy (float): set energy, use with caution, hdcm might become misaligned
+        u_detune (float): amount of undulator to detune in the unit of keV
+    '''
+
+    #record relevant meta data in the Start document, defined in 90-usersetup.py
+    md = get_stock_md()
+
+    #setup the detector
+    # TODO do this with configure
+    current_preamp.exp_time.put(acqtime)
+    xs.settings.acquire_time.put(acqtime)
+    xs.total_points.put((xnumstep+1)*(ynumstep+1))
+
+         
+    det = [current_preamp, xs]        
+
+    #setup the live callbacks
+    livecallbacks = []
+    
+    livetableitem = [tomo_stage.finex_top, tomo_stage.finey_top, 'current_preamp_ch0', 'current_preamp_ch2']
+
+    xstop = xstart + xnumstep*xstepsize
+    ystop = ystart + ynumstep*ystepsize  
+  
+    print('xstop = '+str(xstop))  
+    print('ystop = '+str(ystop)) 
+    
+    
+    for roi_idx in range(numrois):
+        roi_name = 'roi{:02}'.format(roi_idx+1)
+        
+        roi_key = getattr(xs.channel1.rois, roi_name).value.name
+        livetableitem.append(roi_key)
+
+        colormap = 'jet' #previous set = 'viridis'
+
+        roimap = LiveRaster((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='jet', 
+                            xlabel='x (um)', ylabel='y (um)', extent=[xstart, xstop, ystop, ystart])
+        livecallbacks.append(roimap)
+
+
+    if i0map_show is True:
+        i0map = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='jet', 
+                        xlabel='x (um)', ylabel='y (um)', extent=[xstart, xstop, ystop, ystart])
+        livecallbacks.append(i0map)
+
+    if itmap_show is True:
+        itmap = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='jet', 
+                        xlabel='x (um)', ylabel='y (um)', extent=[xstart, xstop, ystop, ystart])
+        livecallbacks.append(itmap)
+
+    livecallbacks.append(LiveTable(livetableitem)) 
+
+    
+    #setup the plan  
+    #OuterProductAbsScanPlan(detectors, *args, pre_run=None, post_run=None)
+    #OuterProductAbsScanPlan(detectors, motor1, start1, stop1, num1, motor2, start2, stop2, num2, snake2, pre_run=None, post_run=None)
+
+    if energy is not None:
+        if u_detune is not None:
+            # TODO maybe do this with set
+            energy.detune.put(u_detune)
+        # TODO fix name shadowing
+        yield from bp.abs_set(energy, energy, wait=True)
+    
+
+    #TO-DO: implement fast shutter control (open)
+    #TO-DO: implement suspender for all shutters in genral start up script
+    
+#    shut_b.open_cmd.put(1)
+#    while (shut_b.close_status.get() == 1):
+#        epics.poll(.5)
+#        shut_b.open_cmd.put(1)    
+    
+    hr2dxrf_scanplan = OuterProductAbsScanPlan(det, tomo_stage.finey_top, ystart, ystop, ynumstep+1, tomo_stage.finex_top, xstart, xstop, xnumstep+1, True, md=md)
+    hr2dxrf_scanplan = bp.subs_wrapper(hr2dxrf_scanplan, livecallbacks)
+    scaninfo = yield from hr2dxrf_scanplan
+
+    #TO-DO: implement fast shutter control (close)    
+#    shut_b.close_cmd.put(1)
+#    while (shut_b.close_status.get() == 0):
+#        epics.poll(.5)
+#        shut_b.close_cmd.put(1)
+
+    #write to scan log    
+    logscan('2dxrf_hr_top')    
+    
+    return scaninfo
+    
+def tomo_xrf_proj(theta, det,
+                  xcen, zcen, hstepsize, hnumstep,
+                  ycen, ystepsize, ynumstep):
+    '''
+    collect an XRF 'projection' map at the current angle
+    zcen should be defined as the position when the sample is in focus at zero degree; if it is not given, the program should take the current z position
+    '''
+    
+    #horizontal axes
+    x_motor = tomo_stage.finex_top
+    z_motor = tomo_stage.finez_top
+    
+    #vertical axis
+    y_motor = tomo_stage.finex_top
+    
+    #stepsize setup    
+    xstepsize = hstepsize * numpy.cos(numpy.deg2rad(theta))
+    zstepsize = hstepsize * numpy.sin(numpy.deg2rad(theta))
+        
+    #start and end point setup
+    
+    xstart = xcen - xstepsize * hnumstep/2
+    xstop  = xcen + xstepsize * hnumstep/2    
+
+    zstart = zcen - zstepsize * hnumstep/2
+    zstop   = zcen + zstepsize * hnumstep/2    
+    
+    ystart = ycen - ystepsize * ynumstep/2
+    ystop  = ycen + ystepsize * ynumstep/2
+    
+    xlist = numpy.linspace(xstart, xstop, xnumstep+1) #some theta dependent function    
+    zlist = numpy.linspace(zstart, zstop, znumstep+1)
+    
+    ylist = numpy.linspace[ystart, ystop, ynumstep+1]
+    
+    xz_cycler = cycler(x_motor, xlist) + cycler(z_motor, zlist)
+    yxz_cycler = cycler(y_motor, ylist) * xz_cycler
+    # The scan_nd plan expects a list of detectors and a cycler.
+    plan = scan_nd(dets, yxz_cycler)
+    # Optionally, add subscritpions.
+    #TO-DO: need to figure out how to add LiveRaster with the new x/z axis 
+    plan = subs_wrapper(plan, [LiveTable([x_motor, y_motor, z_motor], LiveMesh(...)])
+    yield from plan    
+    
+def tomo_xrf(thetastart = -90, thetastop = 90, thetanumstep = 31):
+    dets = []
+    theta = np.linspace(thetastart, thetastop, thetanumstep)
+    
