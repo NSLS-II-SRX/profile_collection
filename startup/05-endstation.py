@@ -1,4 +1,4 @@
-from ophyd import EpicsMotor, EpicsSignalRO
+from ophyd import EpicsMotor, EpicsSignalRO, EpicsSignal, PVPositionerPC
 from ophyd import Device
 from ophyd import Component as Cpt
 #motors for xrf, tomo, etc. go here
@@ -75,6 +75,11 @@ class SRXDownStreamGantry(Device):
 pcoedge_pos = SRXDownStreamGantry('XF:05IDD-ES:1{Det:3-Ax:', name='pcoedge_pos')
 relabel_motors(pcoedge_pos)
 
+class PICOECC100(PVPositionerPC):
+    setpoint = Cpt(EpicsSignal,'CMD:TARGET')
+    readback = Cpt(EpicsSignalRO, 'POSITION')
+
+
 # tomography setup
 class SRXTomo(Device):
     y = Cpt(EpicsMotor, 'Y}Mtr')
@@ -82,18 +87,22 @@ class SRXTomo(Device):
     roll = Cpt(EpicsMotor, 'R}Mtr')
     pitch = Cpt(EpicsMotor, 'P}Mtr')
 
-    #Attobcube ECS5050
-    x = Cpt(EpicsMotor, 'X}Mtr')
-    z = Cpt(EpicsMotor, 'Z}Mtr')
+    #Attobcube ECS5050 - does not work 
+#    x = Cpt(EpicsMotor, 'X}Mtr')
+#    z = Cpt(EpicsMotor, 'Z}Mtr')
+    x = PICOECC100('XF:05IDD-ES:1{Stg:Tomo-Ax:X}')
+    z = PICOECC100('XF:05IDD-ES:1{Stg:Tomo-Ax:Z}')
 
-    #Attobcube ECS3030
-    finex_bot = Cpt(EpicsMotor, 'XFB}Mtr')
-    finez_bot = Cpt(EpicsMotor, 'ZFB}Mtr')
+    #Attobcube ECS3030 - does not work
+#    finex_bot = Cpt(EpicsMotor, 'XFB}Mtr')
+#    finez_bot = Cpt(EpicsMotor, 'ZFB}Mtr')
+    finex_bot = PICOECC100('XF:05IDD-ES:1{Stg:Tomo-Ax:XFB}')
+    finez_bot = PICOECC100('XF:05IDD-ES:1{Stg:Tomo-Ax:ZFB}')
 
-    #PiezoJena    
+    #PiezoJena   
     finex_top = Cpt(EpicsMotor, 'XFT}Mtr')
-    finey_top = Cpt(EpicsMotor, 'YFT}Mtr')
-    finez_top = Cpt(EpicsMotor, 'ZFT}Mtr')
+    finey_top = Cpt(EpicsMotor, 'ZFT}Mtr') #need to update PV to swap y/z
+    finez_top = Cpt(EpicsMotor, 'YFT}Mtr') #need to update PV to swap y/z
 
 tomo_stage = SRXTomo('XF:05IDD-ES:1{Stg:Tomo-Ax:', name='tomo_stage')
 relabel_motors(tomo_stage)
