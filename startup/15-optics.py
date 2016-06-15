@@ -195,6 +195,7 @@ relabel_motors(bpm2_pos)
 #fast shutter
 class SRXSOFTINP(Device):
     pulse = Cpt(EpicsSignal,'')
+    #these need to be put complete!!
     def high_cmd(self):
         self.pulse.put(1)
     def low_cmd(self):
@@ -204,5 +205,26 @@ class SRXSOFTINP(Device):
             self.pulse.put(1)
         else:
             self.pulse.put(0)
+#shut_fast = SRXFASTSHUT('XF:05IDD-ES:1{Dev:Zebra1}:SOFT_IN:B1',name='shut_fast')
 
-shut_fast = SRXSOFTINP('XF:05IDD-ES:1{Dev:Zebra1}:SOFT_IN:B1',name='shut_fast')
+class SRXFASTSHUT(SRXSOFTINP):
+    pulse = Cpt(EpicsSignal,':SOFT_IN:B1')
+    status = Cpt(EpicsSignalRO,':SYS_STAT1LO')
+    def high_cmd(self):
+        self.pulse.put(1)
+    def low_cmd(self):
+        self.pulse.put(0)
+    def toggle_cmd(self):
+        if self.pulse.get() == 0:
+            self.pulse.put(1)
+        else:
+            self.pulse.put(0)
+    def open_cmd(self):
+        if status.get() == 0:
+            self.pulse.low_cmd()
+            self.pulse.high_cmd()
+    def close_cmd(self):
+        if status.get() == 1:
+            self.pulse.low_cmd()
+            self.pulse.high_cmd()
+shut_fast = SRXFASTSHUT('XF:05IDD-ES:1{Dev:Zebra1}',name='shut_fast')
