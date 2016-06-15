@@ -191,3 +191,18 @@ bpm1_pos = SRXBPM('XF:05IDA-BI:1{BPM:1-Ax:', name='bpm1_pos')
 bpm2_pos = SRXBPM('XF:05IDB-BI:1{BPM:2-Ax:', name='bpm2_pos')
 relabel_motors(bpm1_pos)
 relabel_motors(bpm2_pos)
+
+#fast shutter
+class SRXSOFTINP(Device):
+    pulse = Cpt(EpicsSignal,'')
+    def high_cmd(self):
+        self.pulse.put(1)
+    def low_cmd(self):
+        self.pulse.put(0)
+    def toggle_cmd(self):
+        if self.pulse.get() == 0:
+            self.pulse.put(1)
+        else:
+            self.pulse.put(0)
+
+shut_fast = SRXSOFTINP('XF:05IDD-ES:1{Dev:Zebra1}:SOFT_IN:B1',name='shut_fast')
