@@ -2,6 +2,7 @@ from ophyd import EpicsMotor
 from ophyd import Device
 from ophyd import Component as Cpt
 from ophyd import PVPositionerPC
+from numpy import int16
 
 
 class SRXSlitsWB(Device):
@@ -209,22 +210,29 @@ class SRXSOFTINP(Device):
 
 class SRXFASTSHUT(SRXSOFTINP):
     pulse = Cpt(EpicsSignal,':SOFT_IN:B1')
-    status = Cpt(EpicsSignalRO,':SYS_STAT1LO')
+    iobit = Cpt(EpicsSignalRO,':SYS_STAT1LO')
+    def status(self):
+        self.low_cmd()
+        shutopen = bool(int16(self.iobit.get()) & int16(2))
+        if shutopen is True:
+            return 'Open'
+        else:
+            return 'Closed'
     def high_cmd(self):
         self.pulse.put(1)
     def low_cmd(self):
         self.pulse.put(0)
-    def toggle_cmd(self):
-        if self.pulse.get() == 0:
-            self.pulse.put(1)
-        else:
-            self.pulse.put(0)
     def open_cmd(self):
-        if status.get() == 0:
-            self.pulse.low_cmd()
-            self.pulse.high_cmd()
+        print(self.status())
+        if self.status() is 'Closed':
+            print(self.status())
+        #    self.low_cmd()
+            self.high_cmd()
     def close_cmd(self):
-        if status.get() == 1:
-            self.pulse.low_cmd()
-            self.pulse.high_cmd()
+        print(self.status())
+        if self.status() is 'Open':
+            print(self.status())
+         #   self.low_cmd()
+            self.high_cmd()
+
 shut_fast = SRXFASTSHUT('XF:05IDD-ES:1{Dev:Zebra1}',name='shut_fast')

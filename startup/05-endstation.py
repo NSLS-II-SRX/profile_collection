@@ -3,6 +3,9 @@ from ophyd import Device
 from ophyd import Component as Cpt
 #motors for xrf, tomo, etc. go here
 
+#piezo_jena_settle_time = 0.7 #conservative
+piezo_jena_settle_time = 0.7
+
 #High Flux KB mirrors
 
 class SRX_M2(Device):
@@ -100,9 +103,9 @@ class SRXTomo(Device):
     finez_bot = PICOECC100('XF:05IDD-ES:1{Stg:Tomo-Ax:ZFB}')
 
     #PiezoJena   
-    finex_top = Cpt(EpicsMotor, 'XFT}Mtr')
-    finey_top = Cpt(EpicsMotor, 'YFT}Mtr') 
-    finez_top = Cpt(EpicsMotor, 'ZFT}Mtr') 
+    finex_top = Cpt(EpicsMotor, 'XFT}Mtr', settle_time = piezo_jena_settle_time)
+    finey_top = Cpt(EpicsMotor, 'YFT}Mtr', settle_time = piezo_jena_settle_time) 
+    finez_top = Cpt(EpicsMotor, 'ZFT}Mtr', settle_time = piezo_jena_settle_time) 
 
 tomo_stage = SRXTomo('XF:05IDD-ES:1{Stg:Tomo-Ax:', name='tomo_stage')
 relabel_motors(tomo_stage)

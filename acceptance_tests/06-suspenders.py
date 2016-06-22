@@ -9,6 +9,7 @@ from bluesky.suspenders import SuspendBoolLow
 
 print('6. testing suspenders:')
 gv = EpicsSignal('XF:05IDB-VA:1{Slt:SSA-GV:1}Pos-Sts')
+
 susp_gv = SuspendBoolLow(gv)
 RE.install_suspender(susp_gv)
 

@@ -27,8 +27,8 @@ class FineSampleLabX(PseudoPositioner, NamedDevice):
     lab_z = Cpt(PseudoSingle)
 
     # real axes
-    real_finex_top = Cpt(EpicsMotor, 'XFT}Mtr',  doc='Attocube ECS3030 x, sampe as tomo_stage.finex_top')
-    real_finez_top = Cpt(EpicsMotor, 'ZFT}Mtr',  doc='Attocube ECS3030 z, sampe as tomo_stage.finez_top') 
+    real_finex_top = Cpt(EpicsMotor, 'XFT}Mtr',  doc='Attocube ECS3030 x, sampe as tomo_stage.finex_top', settle_time= piezo_jena_settle_time)
+    real_finez_top = Cpt(EpicsMotor, 'ZFT}Mtr',  doc='Attocube ECS3030 z, sampe as tomo_stage.finez_top', settle_time= piezo_jena_settle_time) 
     real_theta = Cpt(EpicsMotor, 'Theta}Mtr', doc='rotatry stage theta angle')
 
     # configuration settings
