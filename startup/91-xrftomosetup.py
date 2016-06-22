@@ -6,7 +6,7 @@ Created on Tue Jun 14 14:43:13 2016
 """
 
 #for tomography
-from bluesky.plans import scan_nd, subs_wrapper
+from bluesky.plans import scan_nd, subs_wrapper, pchain
 from cycler import cycler
 
 def tomo_xrf_proj_realmotor(xcen, zcen, hstepsize, hnumstep,
@@ -181,7 +181,7 @@ def tomo_xrf_proj(*, xstart, xnumstep, xstepsize,
 def tomo_xrf(*, xstart, xnumstep, xstepsize, 
             ystart, ynumstep, ystepsize, 
             thetastart = 80, thetastop = 90, numproj = 3,
-            lab_z_setpt = 0,
+            lab_z_setpt = 0, scans_per_angle = 1,
             acqtime, numrois=1, i0map_show=True, itmap_show=True,
             energy=None, u_detune=None
             ):
@@ -201,13 +201,14 @@ def tomo_xrf(*, xstart, xnumstep, xstepsize,
         print('tomo_lab.lab_z in set point position; its position should remain unchanged')
 
         print('start running tomo_xrf_proj to collect xrf projection for the current angle')
-        tomo_xrf_gen = yield from tomo_xrf_proj(xstart=xstart, xnumstep=xnumstep, xstepsize=xstepsize, 
-            ystart=ystart, ynumstep=ynumstep, ystepsize=ystepsize, 
-            acqtime=acqtime, numrois=numrois, i0map_show=i0map_show, itmap_show=itmap_show,
-            energy=energy, u_detune=u_detune)
-        tomo_scan_output.append(tomo_xrf_gen)
+        
+        for i in range(scans_per_angle):
+            tomo_xrf_gen = yield from tomo_xrf_proj(xstart=xstart, xnumstep=xnumstep, xstepsize=xstepsize, 
+                ystart=ystart, ynumstep=ynumstep, ystepsize=ystepsize, 
+                acqtime=acqtime, numrois=numrois, i0map_show=i0map_show, itmap_show=itmap_show,
+                energy=energy, u_detune=u_detune)
+    #        tomo_scan_output.append(tomo_xrf_gen)
         
         print('done running tomo_xrf_proj')
     
     print('tomography data collection completed')
-    return tomo_scan_output
