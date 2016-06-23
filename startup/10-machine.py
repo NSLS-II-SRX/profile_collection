@@ -381,7 +381,6 @@ class SRXShutter(Device):
     open_cmd = Cpt(EpicsSignal, 'Cmd:Opn-Cmd')
     close_status = Cpt(EpicsSignalRO, 'Sts:Cls-Sts')
 
-#shut_fe = SRXShutter('XF:05IDB-PPS{Sh:WB}', name='shut_fe')
 shut_fe = SRXShutter('XF:05ID-PPS{Sh:WB}', name='shut_fe')
 shut_a = SRXShutter('XF:05IDA-PPS:1{PSh:2}', name='shut_a')
 shut_b = SRXShutter('XF:05IDB-PPS:1{PSh:4}', name='shut_b')
