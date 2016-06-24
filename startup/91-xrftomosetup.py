@@ -85,7 +85,7 @@ def tomo_xrf_proj(*, xstart, xnumstep, xstepsize,
             #lab_z_setpt = 0,  #default lab_z initilization point, user can change it
             #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
             acqtime, numrois=1, i0map_show=True, itmap_show=True,
-            energy=None, u_detune=None):
+            energy=None, u_detune=None, usesnake = True):
     '''
     collect an XRF 'projection' map at the current angle
     note that the x-axis is in the laboraotry frame
@@ -162,7 +162,7 @@ def tomo_xrf_proj(*, xstart, xnumstep, xstepsize,
 #        epics.poll(.5)
 #        shut_b.open_cmd.put(1)    
     
-    tomo_xrf_proj_plan = OuterProductAbsScanPlan(det, tomo_stage.finey_top, ystart, ystop, ynumstep+1, tomo_lab.lab_x, xstart, xstop, xnumstep+1, True, md=md)
+    tomo_xrf_proj_plan = OuterProductAbsScanPlan(det, tomo_stage.finey_top, ystart, ystop, ynumstep+1, tomo_lab.lab_x, xstart, xstop, xnumstep+1, usesnake, md=md)
     tomo_xrf_proj_plan = bp.subs_wrapper(tomo_xrf_proj_plan, livecallbacks)
     tomo_xrf_proj_ren = yield from tomo_xrf_proj_plan
 
@@ -173,7 +173,7 @@ def tomo_xrf_proj(*, xstart, xnumstep, xstepsize,
 #        shut_b.close_cmd.put(1)
 
     #write to scan log    
-    logscan('2dxrf_hr_topy_labx')    
+    logscan('2dxrf_hr_topy_labx_at_theta_'+str(tomo_stage.theta.position))    
     
     return tomo_xrf_proj_ren
    
@@ -183,7 +183,7 @@ def tomo_xrf(*, xstart, xnumstep, xstepsize,
             thetastart = 80, thetastop = 90, numproj = 3,
             lab_z_setpt = 0, scans_per_angle = 1,
             acqtime, numrois=1, i0map_show=True, itmap_show=True,
-            energy=None, u_detune=None
+            energy=None, u_detune=None, usesnake = True
             ):
                 
     theta_traj = np.linspace(thetastart, thetastop, numproj)
@@ -206,7 +206,7 @@ def tomo_xrf(*, xstart, xnumstep, xstepsize,
             tomo_xrf_gen = yield from tomo_xrf_proj(xstart=xstart, xnumstep=xnumstep, xstepsize=xstepsize, 
                 ystart=ystart, ynumstep=ynumstep, ystepsize=ystepsize, 
                 acqtime=acqtime, numrois=numrois, i0map_show=i0map_show, itmap_show=itmap_show,
-                energy=energy, u_detune=u_detune)
+                energy=energy, u_detune=u_detune, usesnake = usesnake)
     #        tomo_scan_output.append(tomo_xrf_gen)
         
         print('done running tomo_xrf_proj')
