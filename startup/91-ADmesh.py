@@ -119,3 +119,66 @@ def hf2dad(xstart=None, xnumstep=None, xstepsize=None,
 
     return scaninfo
 
+def hf2dad_demo(xstart=None, xnumstep=None, xstepsize=None, 
+            ystart=None, ynumstep=None, ystepsize=None, 
+            #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
+            acqtime=None, num_images=1):
+
+    '''
+    example: 
+    '''
+
+    #make sure user provided correct input
+
+    if xstart is None:
+        raise Exception('xstart = None, must specify an xstart position')
+    if xnumstep is None:
+        raise Exception('xnumstep = None, must specify an xnumstep position')
+    if xstepsize is None:
+        raise Exception('xstepsize = None, must specify an xstepsize position')
+    if ystart is None:
+        raise Exception('ystart = None, must specify an ystart position')
+    if ynumstep is None:
+        raise Exception('ynumstep = None, must specify an ynumstep position')
+    if ystepsize is None:
+        raise Exception('ystepsize = None, must specify an ystepsize position')
+    if acqtime is None:
+        raise Exception('acqtime = None, must specify an acqtime position')
+
+    #record relevant meta data in the Start document, defined in 90-usersetup.py
+    #metadata_record()
+
+    #setup the detector
+    #think this is the wrong approach... should be calling configure()...
+    #current_preamp.exp_time.put(acqtime*.8)
+#    hfvlmAD.cam.acquire_time.put(acqtime)
+#    hfvlmAD.cam.num_images.put(num_images)
+#    hfvlmAD.tiff.auto_save.put(0)
+#    det = [hfvlmAD]        
+
+    pcoedge.cam.acquire_time.put(acqtime)
+    pcoedge.cam.num_images.put(num_images)
+    pcoedge.tiff.auto_save.put(0)
+    det = [pcoedge]        
+
+    #setup the live callbacks
+    livecallbacks = []
+    
+    livetableitem = ['hf_stage_x', 'hf_stage_y', 'hfvlm_stats1_total']
+
+    xstop = xstart + xnumstep*xstepsize
+    ystop = ystart + ynumstep*ystepsize  
+  
+#    first_map = LiveRaster((ynumstep, xnumstep), 'hfvlm_stats1_total', clim=None, cmap='inferno', 
+#                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+#    livecallbacks.append(first_map)
+    #this is causing seg faults
+
+    livecallbacks.append(LiveTable(livetableitem)) 
+
+    #setup the plan  
+    hf2dad_scanplan = OuterProductAbsScanPlan(det, hf_stage.y, ystart, ystop, ynumstep, hf_stage.x, xstart, xstop, xnumstep, True)
+    scaninfo = gs.RE(hf2dad_scanplan, livecallbacks)
+
+    return scaninfo
+

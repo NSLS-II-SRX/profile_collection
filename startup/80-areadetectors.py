@@ -81,6 +81,25 @@ hfvlmAD.stats2.read_attrs = ['total']
 hfvlmAD.stats3.read_attrs = ['total']
 hfvlmAD.stats4.read_attrs = ['total']
 
+class SRXPCOEDGECam(SingleTrigger,AreaDetector):
+    cam = C(AreaDetectorCam, 'cam1:')
+    image_plugin = C(ImagePlugin, 'image1:')
+    stats1 = C(StatsPlugin, 'Stats1:')
+    stats2 = C(StatsPlugin, 'Stats2:')
+    stats3 = C(StatsPlugin, 'Stats3:')
+    stats4 = C(StatsPlugin, 'Stats4:')
+    tiff = C(SRXTIFFPlugin, 'TIFF1:',
+            read_path_template='/data/PCOEDGE/2016-2/',
+            write_path_template='C:/epicsdata/pcoedge/2016-2\\')
+
+pcoedge = SRXPCOEDGECam('XF:05IDD-ES:1{Det:PCO}',name='pcoedge', 
+    read_attrs=['tiff'])
+pcoedge.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
+pcoedge.tiff.read_attrs = []
+pcoedge.stats1.read_attrs = ['total']
+pcoedge.stats2.read_attrs = ['total']
+pcoedge.stats3.read_attrs = ['total']
+pcoedge.stats4.read_attrs = ['total']
 
 
 from hxntools.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
