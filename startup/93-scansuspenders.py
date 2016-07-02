@@ -28,7 +28,7 @@ susp_dcm_bragg_temp = SuspendCeil(dcm_bragg_temp, 120, resume_thresh=70,
                                   sleep = 10)
 
 RE.install_suspender(susp_rc)
-#RE.install_suspender(susp_cryo)
+RE.install_suspender(susp_cryo)
 RE.install_suspender(susp_shut_a)
 RE.install_suspender(susp_shut_b)
 RE.install_suspender(susp_shut_fe)

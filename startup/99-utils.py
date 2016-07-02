@@ -72,3 +72,10 @@ def breakdown(batch_dir=None, batch_filename=None,xstart=None,ystart=None,\
                 batchf.write('%s '%entry)
             batchf.write('\n')
     return mylist
+
+def xybatch_grid(xstart, xstepsize, xnumstep, ystart, ystepsize, ynumstep):
+    xylist = []
+    for j in np.linspace(ystart, ystart+ystepsize*ynumstep, ynumstep+1):
+        for i in np.linspace(xstart, xstart+xstepsize*xnumstep, xnumstep+1):
+            xylist.append([i, j])
+    return xylist

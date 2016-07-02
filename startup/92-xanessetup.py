@@ -122,7 +122,7 @@ def xanes_afterscan_tmode(scanid, filename, i0scale, itscale):
 
 def xanes(erange = [], estep = [],  
             harmonic = None, correct_c2_x=True, correct_c1_r = False,             
-            acqtime=None, roinum=1, i0scale = 1e8, itscale = 1e8,
+            acqtime=None, roinum=1, i0scale = 1e8, itscale = 1e8, delaytime = 0.1,
             samplename = '', filename = ''):
                 
     '''
@@ -179,7 +179,7 @@ def xanes(erange = [], estep = [],
    
     
     #setup the detector
-    current_preamp.exp_time.put(acqtime)
+    current_preamp.exp_time.put(acqtime-delaytime)
     xs.settings.acquire_time.put(acqtime)
     xs.total_points.put(len(ept))
     #saturn.mca.preset_real_time.put(acqtime)
@@ -393,15 +393,12 @@ def xanes_tmode(erange = [], estep = [],
     energy.harmonic.put(None)
                   
     return scaninfo[0]
-
-    
-    
-    
+  
     
 def hfxanes_xybatch(xylist=[], waittime = None, 
                     samplename = None, filename = None,
                     erange = [], estep = [],  
-                    harmonic = None, correct_c2_x=True,              
+                    harmonic = None, correct_c2_x=True, delaytime=0.1,             
                     acqtime=None, roinum=1, i0scale = 1e8, itscale = 1e8,
                     ):
                         
@@ -465,7 +462,7 @@ def hfxanes_xybatch(xylist=[], waittime = None,
         xanes(erange = erange, estep = estep,  
             harmonic = harmonic, correct_c2_x= correct_c2_x,              
             acqtime = acqtime, roinum = roinum, 
-            i0scale = i0scale, itscale = itscale,
+            i0scale = i0scale, itscale = itscale, delaytime=delaytime,
             samplename = pt_samplename, filename = pt_filename)
             
                 #wait for specified time period in sec.

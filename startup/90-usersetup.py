@@ -122,10 +122,15 @@ import time
 #PI_lastname = 'Punshon'
 #saf_num = 300466
 
-proposal_num = 301229
-proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-PI_lastname = 'Thieme-tomography_comissioning'
-saf_num = 300441
+proposal_num = 300951
+proposal_title = 'Magnetism and chemistry in multiferrioc hexagonal RMn03 single crystals'
+PI_lastname = 'Tyson'
+saf_num = 300481
+
+#proposal_num = 301229
+#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+#PI_lastname = 'Thieme-tomography_comissioning'
+#saf_num = 300441
 
 
 logfilename_postfix = str(saf_num)
