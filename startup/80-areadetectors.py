@@ -94,8 +94,10 @@ class SRXPCOEDGECam(SingleTrigger,AreaDetector):
 
 pcoedge = SRXPCOEDGECam('XF:05IDD-ES:1{Det:PCO}',name='pcoedge', 
     read_attrs=['tiff'])
-pcoedge.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
-pcoedge.tiff.read_attrs = []
+pcoedge.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4', 'cam']
+#pcoedge.tiff.read_attrs = []
+pcoedge.tiff.read_attrs = ['file_name']
+
 pcoedge.stats1.read_attrs = ['total']
 pcoedge.stats2.read_attrs = ['total']
 pcoedge.stats3.read_attrs = ['total']

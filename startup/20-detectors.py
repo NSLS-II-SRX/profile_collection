@@ -137,7 +137,7 @@ class CurrentPreampZebra(Device):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.stage_sigs[self.zebra_trigger] = 0
-        self.stage_sigs[self.zebra_pulse_3_source] = 60
+        self.stage_sigs[self.zebra_pulse_3_source] = 44
 
     def stage(self):
 
@@ -145,25 +145,28 @@ class CurrentPreampZebra(Device):
         # self.stage_sigs[self.trans_diode] = 5
         # or just use pyepics directly if you need to
         ret = super().stage()
-        self.zebra_pulse_3_source.put(60,wait=True)
+        self.zebra_pulse_3_source.put(44,wait=True)
         self.initi_trigger.put(1, wait=True)
-        wait(self.trigger())
+#        wait(self.trigger())
+#        wait(self.trigger())
         return ret
 
     def trigger(self):
         init_ts = self.ch0.timestamp
-        self.zebra_trigger.put(0,wait = True)
-        self.zebra_trigger.put(1,wait = True)
+#        self.zebra_trigger.put(0,wait = True)
+#        self.zebra_trigger.put(1,wait = True)
         ret = DeviceStatus(self)
 
         def done_cb(*args, obj=None, old_value=None, value=None,
                     timestamp=None, **kwargs):
-            #print('init ts: {!r}    cur ts : {!r}'.format(init_ts, timestamp))
-            #print('old value: {!r}    new value : {!r}'.format(init_ts,
-            #                                                   timestamp))
+#            print('init ts: {!r}    cur ts : {!r}'.format(init_ts, timestamp))
+#            print('old value: {!r}    new value : {!r}'.format(old_value,
+#                                                               value))
 
             # if the timestamp or the value has changed, assume it is done
-            if (timestamp != init_ts) or (value != old_value):
+#            if (timestamp != init_ts) or (value != old_value):
+#            if (timestamp != init_ts):
+            if (value != old_value):
                 ret._finished()
                 obj.clear_sub(done_cb)
 

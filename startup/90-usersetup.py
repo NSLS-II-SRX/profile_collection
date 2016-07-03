@@ -122,15 +122,15 @@ import time
 #PI_lastname = 'Punshon'
 #saf_num = 300466
 
-proposal_num = 300951
-proposal_title = 'Magnetism and chemistry in multiferrioc hexagonal RMn03 single crystals'
-PI_lastname = 'Tyson'
-saf_num = 300481
+#proposal_num = 300951
+#proposal_title = 'Magnetism and chemistry in multiferrioc hexagonal RMn03 single crystals'
+#PI_lastname = 'Tyson'
+#saf_num = 300481
 
-#proposal_num = 301229
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Thieme-tomography_comissioning'
-#saf_num = 300441
+proposal_num = 301229
+proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+PI_lastname = 'Thieme'
+saf_num = 300441
 
 
 logfilename_postfix = str(saf_num)
@@ -170,6 +170,20 @@ def logscan(scantype):
 
     userlogf = open(userlogfile, 'a')
     userlogf.write(str(scan_id)+'\t'+uid+'\t'+scantype+'\n')
+    userlogf.close()
+    
+def logscan_event0info(scantype, event0info = []):
+    h=db[-1]
+    scan_id = h.start['scan_id']
+    uid = h.start['uid']
+
+    userlogf = open(userlogfile, 'a')
+    userlogf.write(str(scan_id)+'\t'+uid+'\t'+scantype)
+    events = list(get_events(h))
+
+    for item in event0info:      
+        userlogf.write('\t'+item+'='+str(events[0]['data'][item])+'\t')
+    userlogf.write('\n')
     userlogf.close()
     
 def metadata_record():
