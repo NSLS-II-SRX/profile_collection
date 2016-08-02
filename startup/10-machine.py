@@ -322,7 +322,7 @@ class Energy(PseudoPositioner):
     @real_position_argument
     def inverse(self, r_pos):
         bragg = r_pos.bragg
-        e = ANG_OVER_EV / (2 * self._d_111 * np.sin(np.deg2rad(bragg + self._delta_bragg)))
+        e = ANG_OVER_EV / (2 * self._d_111 * math.sin(math.radians(bragg + self._delta_bragg)))
         return self.PseudoPosition(energy=e)
 
 # change it to a better way to pass the calibration
