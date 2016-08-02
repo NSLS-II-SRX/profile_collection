@@ -214,29 +214,38 @@ class ZebraPositionCapture(Device):
     '''Signals for the position capture function of the Zebra
     '''
     #configuration settings and status PVs
-
     enc = Cpt(EpicsSignalWithRBV, 'PC_ENC')
     dir = Cpt(EpicsSignalWithRBV, 'PC_DIR')
     tspre = Cpt(EpicsSignalWithRBV, 'PC_TSPRE')
     trig_source = Cpt(EpicsSignalWithRBV, 'PC_ARM_SEL')
     arm = Cpt(EpicsSignal, 'PC_ARM')
     disarm = Cpt(EpicsSignal, 'PC_DISARM')
-    arm = Cpt(EpicsSignal, 'PC_ARM_OUT')
+    armed = Cpt(EpicsSignalRO, 'PC_ARM_OUT')
     gate_source = Cpt(EpicsSignalWithRBV, 'PC_GATE_SEL')
     gate_start = Cpt(EpicsSignalWithRBV, 'PC_GATE_START')
     gate_width = Cpt(EpicsSignalWithRBV, 'PC_GATE_WID')
     gate_step = Cpt(EpicsSignalWithRBV, 'PC_GATE_STEP')
     gate_num = Cpt(EpicsSignalWithRBV, 'PC_GATE_NGATE')
-    gate = Cpt(EpicsSignal, 'PC_GATE_OUT')
+    gated = Cpt(EpicsSignalRO, 'PC_GATE_OUT')
     pulse_source = Cpt(EpicsSignalWithRBV, 'PC_PULSE_SEL')
     pulse_start = Cpt(EpicsSignalWithRBV, 'PC_PULSE_START')
     pulse_width = Cpt(EpicsSignalWithRBV, 'PC_PULSE_WID')
     pulse_step = Cpt(EpicsSignalWithRBV, 'PC_PULSE_STEP')
     pulse_max = Cpt(EpicsSignalWithRBV, 'PC_PULSE_MAX')
-    pulse = Cpt(EpicsSignal, 'PC_PULSE_OUT')
+    pulse = Cpt(EpicsSignalRO, 'PC_PULSE_OUT')
     
-    #data arrays and metadata
     data=Cpt(ZebraPositionCaptureData,'')
+
+
+    def stage(self):
+        self.arm.put(1)
+
+        super().stage()
+
+    def unstage(self):
+        self.disarm.put(1)
+        
+        super().unstage()
     
 class SRXZebra(Zebra):
     '''SRX Zebra device.
