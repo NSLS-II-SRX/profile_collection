@@ -178,56 +178,81 @@ class CurrentPreampZebra(Device):
 current_preamp = CurrentPreampZebra('XF:05IDA{IM:1}', name='current_preamp')
 #current_preamp = CurrentPreamp('XF:05IDA{IM:1}', name='current_preamp')
 
-class SRXZebra(Zebra):
+class ZebraPositionCaptureData(Device):
+    '''Data arrays for the Zebra position capture function and their metadata.
+    '''
+    #data arrays
+    div1 = Cpt(EpicsSignal, 'PC_DIV1')
+    div2 = Cpt(EpicsSignal, 'PC_DIV2')
+    div3 = Cpt(EpicsSignal, 'PC_DIV3')
+    div4 = Cpt(EpicsSignal, 'PC_DIV4')
+    enc1 = Cpt(EpicsSignal, 'PC_ENC1')
+    enc2 = Cpt(EpicsSignal, 'PC_ENC2')
+    enc3 = Cpt(EpicsSignal, 'PC_ENC3')
+    enc4 = Cpt(EpicsSignal, 'PC_ENC4')
+    filt1 = Cpt(EpicsSignal, 'PC_FILT1')
+    filt2 = Cpt(EpicsSignal, 'PC_FILT2')
+    filt3 = Cpt(EpicsSignal, 'PC_FILT3')
+    filt4 = Cpt(EpicsSignal, 'PC_FILT4')
+    time = Cpt(EpicsSignal, 'PC_TIME')
+    #array sizes
+    num_cap = Cpt(EpicsSignal, 'PC_NUM_CAP')
+    num_down = Cpt(EpicsSignal, 'PC_NUM_DOWN')
+    #BOOLs to denote arrays with data
+    cap_enc1_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B0') 
+    cap_enc2_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B1') 
+    cap_enc3_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B2') 
+    cap_enc4_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B3') 
+    cap_filt1_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B4') 
+    cap_filt2_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B5') 
+    cap_div1_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B6') 
+    cap_div2_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B7') 
+    cap_div3_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B8') 
+    cap_div4_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B9') 
 
-    #Signals for the position capture function of the Zebra
+class ZebraPositionCapture(Device):
+    '''Signals for the position capture function of the Zebra
+    '''
     #configuration settings and status PVs
-    pc_enc = Cpt(EpicsSignalWithRBV, 'PC_ENC')
-    pc_dir = Cpt(EpicsSignalWithRBV, 'PC_DIR')
-    pc_tspre = Cpt(EpicsSignalWithRBV, 'PC_TSPRE')
-    pc_trig_source = Cpt(EpicsSignalWithRBV, 'PC_ARM_SEL')
-    pc_arm = Cpt(EpicsSignal, 'PC_ARM')
-    pc_disarm = Cpt(EpicsSignal, 'PC_DISARM')
-    pc_arm = Cpt(EpicsSignal, 'PC_ARM_OUT')
-    pc_gate_source = Cpt(EpicsSignalWithRBV, 'PC_GATE_SEL')
-    pc_gate_start = Cpt(EpicsSignalWithRBV, 'PC_GATE_START')
-    pc_gate_width = Cpt(EpicsSignalWithRBV, 'PC_GATE_WID')
-    pc_gate_step = Cpt(EpicsSignalWithRBV, 'PC_GATE_STEP')
-    pc_gate_num = Cpt(EpicsSignalWithRBV, 'PC_GATE_NGATE')
-    pc_gate = Cpt(EpicsSignal, 'PC_GATE_OUT')
-    pc_pulse_source = Cpt(EpicsSignalWithRBV, 'PC_PULSE_SEL')
-    pc_pulse_start = Cpt(EpicsSignalWithRBV, 'PC_PULSE_START')
-    pc_pulse_width = Cpt(EpicsSignalWithRBV, 'PC_PULSE_WID')
-    pc_pulse_step = Cpt(EpicsSignalWithRBV, 'PC_PULSE_STEP')
-    pc_pulse_max = Cpt(EpicsSignalWithRBV, 'PC_PULSE_MAX')
-    pc_pulse = Cpt(EpicsSignal, 'PC_PULSE_OUT')
+
+    enc = Cpt(EpicsSignalWithRBV, 'PC_ENC')
+    dir = Cpt(EpicsSignalWithRBV, 'PC_DIR')
+    tspre = Cpt(EpicsSignalWithRBV, 'PC_TSPRE')
+    trig_source = Cpt(EpicsSignalWithRBV, 'PC_ARM_SEL')
+    arm = Cpt(EpicsSignal, 'PC_ARM')
+    disarm = Cpt(EpicsSignal, 'PC_DISARM')
+    arm = Cpt(EpicsSignal, 'PC_ARM_OUT')
+    gate_source = Cpt(EpicsSignalWithRBV, 'PC_GATE_SEL')
+    gate_start = Cpt(EpicsSignalWithRBV, 'PC_GATE_START')
+    gate_width = Cpt(EpicsSignalWithRBV, 'PC_GATE_WID')
+    gate_step = Cpt(EpicsSignalWithRBV, 'PC_GATE_STEP')
+    gate_num = Cpt(EpicsSignalWithRBV, 'PC_GATE_NGATE')
+    gate = Cpt(EpicsSignal, 'PC_GATE_OUT')
+    pulse_source = Cpt(EpicsSignalWithRBV, 'PC_PULSE_SEL')
+    pulse_start = Cpt(EpicsSignalWithRBV, 'PC_PULSE_START')
+    pulse_width = Cpt(EpicsSignalWithRBV, 'PC_PULSE_WID')
+    pulse_step = Cpt(EpicsSignalWithRBV, 'PC_PULSE_STEP')
+    pulse_max = Cpt(EpicsSignalWithRBV, 'PC_PULSE_MAX')
+    pulse = Cpt(EpicsSignal, 'PC_PULSE_OUT')
     
-    #data PVs
-    pc_data_div1 = Cpt(EpicsSignal, 'PC_DIV1')
-    pc_data_div2 = Cpt(EpicsSignal, 'PC_DIV2')
-    pc_data_div3 = Cpt(EpicsSignal, 'PC_DIV3')
-    pc_data_div4 = Cpt(EpicsSignal, 'PC_DIV4')
-    pc_data_enc1 = Cpt(EpicsSignal, 'PC_ENC1')
-    pc_data_enc2 = Cpt(EpicsSignal, 'PC_ENC2')
-    pc_data_enc3 = Cpt(EpicsSignal, 'PC_ENC3')
-    pc_data_enc4 = Cpt(EpicsSignal, 'PC_ENC4')
-    pc_data_filt1 = Cpt(EpicsSignal, 'PC_FILT1')
-    pc_data_filt2 = Cpt(EpicsSignal, 'PC_FILT2')
-    pc_data_filt3 = Cpt(EpicsSignal, 'PC_FILT3')
-    pc_data_filt4 = Cpt(EpicsSignal, 'PC_FILT4')
-    pc_data_time = Cpt(EpicsSignal, 'PC_TIME')
-    pc_data_num_cap = Cpt(EpicsSignal, 'PC_NUM_CAP')
-    pc_data_num_down = Cpt(EpicsSignal, 'PC_NUM_DOWN')
-    pc_data_cap_enc1_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B0') 
-    pc_data_cap_enc2_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B1') 
-    pc_data_cap_enc3_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B2') 
-    pc_data_cap_enc4_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B3') 
-    pc_data_cap_filt1_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B4') 
-    pc_data_cap_filt2_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B5') 
-    pc_data_cap_div1_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B6') 
-    pc_data_cap_div2_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B7') 
-    pc_data_cap_div3_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B8') 
-    pc_data_cap_div4_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B9') 
+    #data arrays and metadata
+    data=Cpt(ZebraPositionCaptureData,'')
+    
+class SRXZebra(Zebra):
+    '''SRX Zebra device.
+    '''
+
+    pc=Cpt(ZebraPositionCapture,'')
+
+    def __init__(self, prefix, *, read_attrs=None, configuration_attrs=None,
+                **kwargs):
+        if read_attrs is None:
+            read_attrs = []
+        if configuration_attrs is None:
+            configuration_attrs = [] 
+
+        super().__init__(prefix, read_attrs=read_attrs,
+                        configuration_attrs=configuration_attrs, **kwargs)
     
 zebra = SRXZebra('XF:05IDD-ES:1{Dev:Zebra1}:', name='zebra')
-zebra.read_attrs =[]
+zebra.read_attrs =['zebra_pc_data_enc1','zebra_pc_data_time']
