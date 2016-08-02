@@ -1,6 +1,7 @@
 from ophyd.areadetector import (AreaDetector, PixiradDetectorCam, ImagePlugin,
                                 TIFFPlugin, StatsPlugin, HDF5Plugin,
-                                ProcessPlugin)
+                                ProcessPlugin, ROIPlugin, TransformPlugin) 
+from ophyd.areadetector.plugins import PluginBase
 from ophyd.areadetector.cam import AreaDetectorCam
 from ophyd.device import BlueskyInterface
 from ophyd.areadetector.trigger_mixins import SingleTrigger
@@ -25,7 +26,10 @@ class BPMCam(SingleTrigger, AreaDetector):
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
              #write_path_template='/epicsdata/bpm1-cam1/2016/2/24/')
              write_path_template='/epicsdata/bpm1-cam1/%Y/%m/%d/')
-
+    roi1 = C(ROIPlugin, 'ROI1:')
+    roi2 = C(ROIPlugin, 'ROI2:')
+    roi3 = C(ROIPlugin, 'ROI3:')
+    roi4 = C(ROIPlugin, 'ROI4:')
     stats1 = C(StatsPlugin, 'Stats1:')
     stats2 = C(StatsPlugin, 'Stats2:')
     stats3 = C(StatsPlugin, 'Stats3:')
@@ -49,6 +53,10 @@ class SRXPixirad(SingleTrigger,AreaDetector):
 
     det = C(PixiradDetectorCam, 'cam1:')
     image = C(ImagePlugin, 'image1:')
+    roi1 = C(ROIPlugin, 'ROI1:')
+    roi2 = C(ROIPlugin, 'ROI2:')
+    roi3 = C(ROIPlugin, 'ROI3:')
+    roi4 = C(ROIPlugin, 'ROI4:')
     stats1 = C(StatsPlugin, 'Stats1:')
     stats2 = C(StatsPlugin, 'Stats2:')
     stats3 = C(StatsPlugin, 'Stats3:')
@@ -70,6 +78,11 @@ class SRXHFVLMCam(SingleTrigger,AreaDetector):
     stats2 = C(StatsPlugin, 'Stats2:')
     stats3 = C(StatsPlugin, 'Stats3:')
     stats4 = C(StatsPlugin, 'Stats4:')
+    roi1 = C(ROIPlugin, 'ROI1:')
+    roi2 = C(ROIPlugin, 'ROI2:')
+    roi3 = C(ROIPlugin, 'ROI3:')
+    roi4 = C(ROIPlugin, 'ROI4:')
+    trans1 = C(TransformPlugin, 'Trans1:')
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
              write_path_template='/epicsdata/hfvlm/%Y/%m/%d/')
 
@@ -88,21 +101,23 @@ class SRXPCOEDGECam(SingleTrigger,AreaDetector):
     stats2 = C(StatsPlugin, 'Stats2:')
     stats3 = C(StatsPlugin, 'Stats3:')
     stats4 = C(StatsPlugin, 'Stats4:')
+    roi1 = C(ROIPlugin, 'ROI1:')
+    roi2 = C(ROIPlugin, 'ROI2:')
+    roi3 = C(ROIPlugin, 'ROI3:')
+    roi4 = C(ROIPlugin, 'ROI4:')
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
             read_path_template='/data/PCOEDGE/2016-2/',
             write_path_template='C:/epicsdata/pcoedge/2016-2\\')
 
-pcoedge = SRXPCOEDGECam('XF:05IDD-ES:1{Det:PCO}',name='pcoedge', 
-    read_attrs=['tiff'])
+pcoedge = SRXPCOEDGECam('XF:05IDD-ES:1{Det:PCO}',name='pcoedge')
+#    read_attrs=['tiff'])
 pcoedge.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4', 'cam']
-#pcoedge.tiff.read_attrs = []
-pcoedge.tiff.read_attrs = ['file_name']
 
+pcoedge.tiff.read_attrs = ['file_name']
 pcoedge.stats1.read_attrs = ['total']
 pcoedge.stats2.read_attrs = ['total']
 pcoedge.stats3.read_attrs = ['total']
 pcoedge.stats4.read_attrs = ['total']
-
 
 from hxntools.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
                                          Xspress3Channel, Xspress3FileStore)
@@ -116,7 +131,7 @@ class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
     #       (XF:05IDD-ES{Xsp:1}:ERASE_PROC_ResetFilter)
     #   det_settings.update_attr (XF:05IDD-ES{Xsp:1}:UPDATE_AttrUpdate)
     #   det_settings.update (XF:05IDD-ES{Xsp:1}:UPDATE)
-
+    roi_data = Cpt(PluginBase, 'ROIDATA:')
     channel1 = C(Xspress3Channel, 'C1_', channel_num=1, read_attrs=['rois'])
     channel2 = C(Xspress3Channel, 'C2_', channel_num=2, read_attrs=['rois'])
     channel3 = C(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
