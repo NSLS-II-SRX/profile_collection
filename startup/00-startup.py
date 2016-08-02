@@ -46,37 +46,3 @@ def relabel_motors(dev):
 
 
 from ophyd import PseudoSingle, PseudoPositioner, Signal
-
-
-class FixedPseudoSingle(PseudoSingle):
-    """Adds missing methods
-
-    This will need to be removed when Positioner is fixed upstream
-    """
-    def read(self):
-        return {self.name: {'value': self.position,
-                            'timestamp': ttime.time()}}
-    
-    def describe(self):
-        return {self.name: {'dtype': 'number',
-                            'shape': [],
-                            'source': 'computed',
-                            'units': 'keV'}}
-
-    def read_configuration(self):
-        return {}
-    
-    def describe_configuration(self):
-        return {}
-                                
-
-class MagicSetPseudoPositioner(PseudoPositioner):
-    def set(self, *args):
-        v = self.PseudoPosition(*args)
-        return super().set(v)
-
-
-class PermissiveGetSignal(Signal):
-    def get(self, use_monitor=None):
-        return super().get()
-

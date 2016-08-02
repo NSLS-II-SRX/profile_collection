@@ -13,7 +13,7 @@ from bluesky.plans import open_run, close_run, trigger_and_read
 triggger_and_read = wrap_with_decorator = run_wrapper = None
 
 
-class UVDoneMOVN(PermissiveGetSignal):
+class UVDoneMOVN(Signal):
     """Signal for use as done signal for use in individual mode undulator motors
 
     This is a soft-signal that monitors several real PVs to sort out when the

@@ -4,12 +4,13 @@ from ophyd import (PVPositioner, EpicsSignal, EpicsSignalRO, EpicsMotor,
                    Device, Signal, PseudoPositioner, PseudoSingle)
 from ophyd.utils.epics_pvs import set_and_wait
 from ophyd.ophydobj import StatusBase, MoveStatus
+from ophyd.pseudopos import (pseudo_position_argument, real_position_argument)
 from ophyd import Component as Cpt
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 ring_current = EpicsSignalRO('SR:C03-BI{DCCT:1}I:Real-I', name='ring_current')
 
-class UVDone(PermissiveGetSignal):
+class UVDone(Signal):
     def __init__(self, parent, brake, readback, **kwargs):
         super().__init__(parent=parent, value=1, **kwargs)
         self._rbv = readback
@@ -175,7 +176,7 @@ ANG_OVER_EV = 12.3984
 
 class Energy(PseudoPositioner):
     # synthetic axis
-    energy = Cpt(FixedPseudoSingle)
+    energy = Cpt(PseudoSingle)
     # real motors
     u_gap = Cpt(Undulator, 'SR:C5-ID:G1{IVU21:1', add_prefix=(), **_undulator_kwargs)
     bragg = Cpt(EpicsMotor, 'XF:05IDA-OP:1{Mono:HDCM-Ax:P}Mtr', add_prefix=(),
@@ -183,12 +184,12 @@ class Energy(PseudoPositioner):
     c2_x = Cpt(EpicsMotor, 'XF:05IDA-OP:1{Mono:HDCM-Ax:X2}Mtr', add_prefix=(),
                 read_attrs=['user_readback'])
     # motor enable flags
-    move_u_gap = Cpt(PermissiveGetSignal, None, add_prefix=(), value=True)
-    move_c2_x = Cpt(PermissiveGetSignal, None, add_prefix=(), value=True)
-    harmonic = Cpt(PermissiveGetSignal, None, add_prefix=(), value=None)
+    move_u_gap = Cpt(Signal, None, add_prefix=(), value=True)
+    move_c2_x = Cpt(Signal, None, add_prefix=(), value=True)
+    harmonic = Cpt(Signal, None, add_prefix=(), value=None)
 
     # experimental
-    detune = Cpt(PermissiveGetSignal, None, add_prefix=(), value=0)
+    detune = Cpt(Signal, None, add_prefix=(), value=0)
 
     def energy_to_positions(self, target_energy, undulator_harmonic, u_detune):
         """Compute undulator and mono positions given a target energy
@@ -282,6 +283,7 @@ class Energy(PseudoPositioner):
 
         return XoffsetVal
 
+    @pseudo_position_argument
     def forward(self, p_pos):
         energy = p_pos.energy
         harmonic = self.harmonic.get()
@@ -317,6 +319,7 @@ class Energy(PseudoPositioner):
 
         return self.RealPosition(bragg=bragg, c2_x=c2_x, u_gap=u_gap)
 
+    @real_position_argument
     def inverse(self, r_pos):
         bragg = r_pos.bragg
         e = ANG_OVER_EV / (2 * self._d_111 * np.sin(np.deg2rad(bragg + self._delta_bragg)))

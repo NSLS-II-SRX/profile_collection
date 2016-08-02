@@ -3,6 +3,7 @@ from ophyd import Device
 from ophyd import Component as Cpt
 from ophyd import PVPositionerPC
 from numpy import int16
+from ophyd.pseudopos import (pseudo_position_argument, real_position_argument)
 
 
 class SRXSlitsWB(Device):
@@ -29,13 +30,13 @@ class SRXSlitsPB(Device):
 
 
 # Pseudo motion for slits
-class SRXSlits4SWPM(MagicSetPseudoPositioner):
+class SRXSlits4SWPM(PseudoPositioner):
     # real synthetic axes
 
-    h_cen = Cpt(FixedPseudoSingle)
-    h_gap = Cpt(FixedPseudoSingle)
-    v_cen = Cpt(FixedPseudoSingle)
-    v_gap = Cpt(FixedPseudoSingle)
+    h_cen = Cpt(PseudoSingle)
+    h_gap = Cpt(PseudoSingle)
+    v_cen = Cpt(PseudoSingle)
+    v_gap = Cpt(PseudoSingle)
     
     # real motors
     top = Cpt(EpicsMotor, 'T}Mtr')
@@ -44,11 +45,12 @@ class SRXSlits4SWPM(MagicSetPseudoPositioner):
     out = Cpt(EpicsMotor, 'O}Mtr')
 
     # zero positions
-    top_zero = Cpt(PermissiveGetSignal, None, add_prefix=(), value=None)
-    bot_zero = Cpt(PermissiveGetSignal, None, add_prefix=(), value=None)
-    inb_zero = Cpt(PermissiveGetSignal, None, add_prefix=(), value=None)
-    out_zero = Cpt(PermissiveGetSignal, None, add_prefix=(), value=None)
-
+    top_zero = Cpt(Signal, None, add_prefix=(), value=None)
+    bot_zero = Cpt(Signal, None, add_prefix=(), value=None)
+    inb_zero = Cpt(Signal, None, add_prefix=(), value=None)
+    out_zero = Cpt(Signal, None, add_prefix=(), value=None)
+    
+    @pseudo_position_argument
     def forward(self, p_pos):
         h_cen, h_gap, v_cen, v_gap = p_pos
         
@@ -66,6 +68,7 @@ class SRXSlits4SWPM(MagicSetPseudoPositioner):
 
         return self.RealPosition(top=top, bot=bot, inb=inb, out=out)
 
+    @real_position_argument
     def inverse(self, r_pos):
         top, bot, inb, out = r_pos
 
@@ -86,9 +89,6 @@ class SRXSlits4SWPM(MagicSetPseudoPositioner):
         return self.PseudoPosition(v_cen=v_cen, v_gap=v_gap,
                                    h_cen=h_cen, h_gap=h_gap)
 
-    def set(self, *args):
-        v = self.PseudoPosition(*args)
-        return super().set(v)
 
 class SRXSlits2(Device):
     inb = Cpt(EpicsMotor, 'I}Mtr')
