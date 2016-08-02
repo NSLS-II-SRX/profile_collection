@@ -104,7 +104,7 @@
 ##    ring_current_array = []
 ##    energy_array = []
 #    h=db[-1]
-##    events=list(get_events(h))
+##    events=list(get_events(h, stream_name='primary'))
 ##    for event in events:
 ##        ring_current_array.append(event['data']['ring_current'])
 ##        energy_array.append(event['data']['energy_energy'])

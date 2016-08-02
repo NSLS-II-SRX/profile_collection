@@ -37,7 +37,7 @@ def scanderive(xaxis,yaxis):
 def find_edge(scanid = -1):
     baseline = -8.5e-10
     baseline_it = 4e-9
-    table = get_table(db[scanid])
+    table = get_table(db[scanid], stream_name='primary')
     
     braggpoints = table.energy_bragg
     it = table.current_preamp_ch0

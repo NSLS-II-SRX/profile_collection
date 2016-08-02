@@ -24,7 +24,7 @@ def vlmimgacq():
     studylogf.write('VLM images\n')
     studylogf.write('scan_id: '+str(db[-1].start['scan_id'])+'\n')
     studylogf.write('scan_uid: '+str(db[-1].start['uid'])+'\n')
-    event = list(get_events(db[-1]))
+    event = list(get_events(db[-1], stream_name='primary'))
     studylogf.write('hfvlm_cam_acquire_time: '+str(event[0]['data']['hfvlm_cam_acquire_time'])+'\n')
     studylogf.write('energy: '+str(db[-1].start['beamline_status']['energy'])+'\n') 
     studylogf.write('tiff_filename: '+event[0]['data']['hfvlm_tiff_file_name']+'\n')

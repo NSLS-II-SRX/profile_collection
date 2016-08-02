@@ -179,7 +179,7 @@ def logscan_event0info(scantype, event0info = []):
 
     userlogf = open(userlogfile, 'a')
     userlogf.write(str(scan_id)+'\t'+uid+'\t'+scantype)
-    events = list(get_events(h))
+    events = list(get_events(h, stream_name='primary'))
 
     for item in event0info:      
         userlogf.write('\t'+item+'='+str(events[0]['data'][item])+'\t')

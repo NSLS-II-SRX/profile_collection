@@ -39,7 +39,7 @@ class ROIPlanCreator(object):
         
 def plot_crab(hdr):
     fig, ax = plt.subplots()
-    tab = db.get_table(hdr)
+    tab = db.get_table(hdr, stream_name='primary')
     cols = tab.columns
     readbacks = [k for k in cols if 'readback' in k and 'elevation' not in k]
     setpoint = [k for k in cols if 'setpoint' in k and 'elevation' not in k]

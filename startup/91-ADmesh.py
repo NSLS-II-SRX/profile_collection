@@ -113,7 +113,7 @@ def hf2dad(xstart=None, xnumstep=None, xstepsize=None,
         str(h['start']['proposal']['PI_lastname'])+'/'+str(h['start']['scan_id'])+\
         '.log'
     fp=open(fn,'w')
-    tab=get_table(h,['time','hf_stage_x','hf_stage_y'])
+    tab=get_table(h,['time','hf_stage_x','hf_stage_y'], stream_name='primary')
     fp.write(tab.to_csv())
     fp.close()
 
