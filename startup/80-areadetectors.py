@@ -144,7 +144,8 @@ class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
                  **kwargs):
         if configuration_attrs is None:
             configuration_attrs = ['external_trig', 'total_points',
-                                   'spectra_per_point', 'settings']
+                                   'spectra_per_point', 'settings',
+                                   'rewindable']
         if read_attrs is None:
             read_attrs = ['channel1', 'channel2', 'channel3', 'hdf5']
         super().__init__(prefix, configuration_attrs=configuration_attrs,
