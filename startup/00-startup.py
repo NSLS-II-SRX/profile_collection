@@ -25,7 +25,7 @@ import numpy as np
 
 RE = gs.RE  # convenience alias
 gs.RE.md['beamline_id'] = 'xf05id'
-
+gs.RE.record_interruptions = True
 
 import matplotlib.pyplot as plt
 import matplotlib
