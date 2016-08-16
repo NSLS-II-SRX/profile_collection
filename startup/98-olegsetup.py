@@ -6,12 +6,107 @@
 ###"""
 ###
 ####might want to put in configuration file
-##import scanoutput
-#from bluesky.plans import AbsScanPlan
-#from bluesky.callbacks.scientific import PeakStats, plot_peak_stats
-##from imp import reload
-#import matplotlib.pylab as plt
-##import sys
+#import scanoutput
+from bluesky.plans import AbsScanPlan
+from bluesky.callbacks.scientific import PeakStats, plot_peak_stats
+#from imp import reload
+import matplotlib.pylab as plt
+import sys
+
+#liveplotfig1 = plt.figure()
+#liveplotfig2 = plt.figure()
+
+def undulator_spectrum_pcoedge(numpt = 21, c2x_correct = False, estart = 7.9, efinal=8.1):
+
+    energy.move_u_gap.put(False)
+    energy.move_c2_x.put(c2x_correct)
+    energy._xoffset = energy.crystal_gap()
+    uspecplan = AbsScanPlan([pcoedge, ring_current], energy, estart, efinal, numpt)    
+    
+    
+    livecallbacks = []
+    livetableitem = [energy.energy, pcoedge.stats1.total, pcoedge.stats2.total, bpmAD.stats3.total, ring_current]    
+    livecallbacks.append(LiveTable(livetableitem))
+    
+    liveplotx = energy.energy.name
+    liveploty1 = pcoedge.stats1.total.name 
+    liveploty2 = pcoedge.stats2.total.name 
+    
+    livecallbacks.append(LivePlot(liveploty1, x=liveplotx, fig=liveplotfig1))
+    livecallbacks.append(LivePlot(liveploty2, x=liveplotx, fig=liveplotfig2))
+
+    #ps = PeakStats(energy.energy.name, pcoedge.stats2.total.name)
+    
+    uspecplan = bp.subs_wrapper(uspecplan, livecallbacks)
+    gs.RE(uspecplan)
+    
+    #RE(olegplan, [LiveTable(livetableitem), LivePlot(liveploty, x=liveplotx, fig=liveplotfig), ps[-1]])
+        
+    columnitem = ['energy_energy', 'energy_bragg_user_readback', 'pcoedge_stats1_total', 'pcoedge_stats2_total', 'ring_current']
+    scanoutput.textout(header = [], userheader = {}, column = columnitem, output = False) 
+    logscan_event0info('undulator_spectrum_scan_HDCMbragg_pcoedge', event0info = ['pcoedge_tiff_file_name'])
+    
+def undulator_spectrum_hfvlm(numpt = 21, c2x_correct = False, estart = 7.9, efinal=8.1):
+
+    energy.move_u_gap.put(False)
+    energy.move_c2_x.put(c2x_correct)
+    energy._xoffset = energy.crystal_gap()
+    uspecplan = AbsScanPlan([pcoedge, ring_current], energy, estart, efinal, numpt)    
+    
+    
+    livecallbacks = []
+    livetableitem = [energy.energy, pcoedge.stats1.total, pcoedge.stats2.total, bpmAD.stats3.total, ring_current]  
+    livecallbacks.append(LiveTable(livetableitem))
+    
+    liveplotx = energy.energy.name
+    liveploty1 = hfvlmAD.stats1.total.name 
+    liveploty2 = hfvlmAD.stats2.total.name 
+    
+    livecallbacks.append(LivePlot(liveploty1, x=liveplotx, fig=liveplotfig1))
+    livecallbacks.append(LivePlot(liveploty2, x=liveplotx, fig=liveplotfig2))
+
+    #ps = PeakStats(energy.energy.name, pcoedge.stats2.total.name)
+    
+    uspecplan = bp.subs_wrapper(uspecplan, livecallbacks)
+    gs.RE(uspecplan)
+    
+    #RE(olegplan, [LiveTable(livetableitem), LivePlot(liveploty, x=liveplotx, fig=liveplotfig), ps[-1]])
+        
+    columnitem = ['energy_energy', 'energy_bragg_user_readback', 'hfvlmAD_stats1_total', 'hfvlmAD_stats2_total', 'ring_current']
+    scanoutput.textout(header = [], userheader = {}, column = columnitem, output = False) 
+    logscan_event0info('undulator_spectrum_scan_HDCMbragg_hfvlmAD', event0info = ['hfvlmAD_tiff_file_name'])
+    
+    
+def undulator_spectrum_diode(numpt = 21, c2x_correct = False, estart = 7.9, efinal=8.1, acqtime=0.2):
+
+    energy.move_u_gap.put(False)
+    energy.move_c2_x.put(c2x_correct)
+    energy._xoffset = energy.crystal_gap()
+    uspecplan = AbsScanPlan([current_preamp, ring_current], energy, estart, efinal, numpt)    
+    
+    current_preamp.exp_time.put(acqtime)
+    
+    
+    livecallbacks = []
+    livetableitem = [energy.energy, 'current_preamp_ch0', ring_current]  
+    livecallbacks.append(LiveTable(livetableitem))
+    
+    liveplotx = energy.energy.name
+    liveploty1 = 'current_preamp_ch0'
+    
+    livecallbacks.append(LivePlot(liveploty1, x=liveplotx, fig=liveplotfig1))
+
+    #ps = PeakStats(energy.energy.name, pcoedge.stats2.total.name)
+    
+    uspecplan = bp.subs_wrapper(uspecplan, livecallbacks)
+    gs.RE(uspecplan)
+    
+    #RE(olegplan, [LiveTable(livetableitem), LivePlot(liveploty, x=liveplotx, fig=liveplotfig), ps[-1]])
+        
+    columnitem = ['energy_energy', 'energy_bragg_user_readback', 'current_preamp_ch0', 'ring_current']
+    scanoutput.textout(header = [], userheader = {}, column = columnitem, output = False) 
+    logscan('undulator_spectrum_scan_HDCMbragg_diode')
+
 ##
 #
 #bpmAD.cam.read_attrs = ['acquire_time']
@@ -27,13 +122,17 @@
 ###   #testing
 ##olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 7.792, 8.143, 176)  #for 5th harmonic at ugap = 6.8
 #olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 7.7, 8.143, 222)  #for 5th harmonic at ugap = 6.8, slits 4x4
+
 #
 ##olegplan=AbsScanPlan([hfvlmAD, pu, ring_current], energy, 7.792, 8.143, 176)  #for 5th harmonic at ugap = 6.8
 ###olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 14.1, 14.6, 251)     #for 9th harmonic at ugap = 6.8
 ##olegplan=AbsScanPlan([bpmAD, pu, ring_current], energy, 11.06, 11.1, 5)  #for testing
 #
 ##
-#livetableitem = [energy.energy, bpmAD.stats1.total, bpmAD.stats2.total, bpmAD.stats3.total, ring_current]
+#livetableitem = [energy.energy, pcoedge.stats1.total, pcoedge.stats2.total, bpmAD.stats3.total, ring_current]
+#liveploty1 = pcoedge.stats1.total.name 
+#liveploty2 = pcoedge.stats2.total.name 
+
 ##liveploty = bpmAD.stats3.total.name
 ##livetableitem = [energy.energy, hfvlmAD.stats1.total, bpmAD.stats3.total, ring_current]
 ##
@@ -48,10 +147,15 @@
 #liveplotx = energy.energy.name
 #liveplotfig1 = plt.figure()
 #liveplotfig2 = plt.figure()
+#ps.append(PeakStats(energy.energy.name, pcoedge.stats2.total.name))
+#
+#RE(olegplan, [LiveTable(livetableitem), LivePlot(liveploty, x=liveplotx, fig=liveplotfig), ps[-1]])
+
 #liveplotfig3 = plt.figure()
 #plt.show()
 ##        
 ###ps.append(PeakStats(energy.energy.name, bpmAD.stats3.total.name))
+
 ##
 ###for executing the current plan
 ###RE(olegplan, [LiveTable(livetableitem), LivePlot(liveploty, x=liveplotx, fig=liveplotfig), ps[-1]])
@@ -124,6 +228,7 @@
 #    #columnitem = ['energy_energy', 'energy_bragg_user_readback', 'hfvlmAD_stats1_total', 'hfvlmAD_stats2_total', 'hfvlmAD_stats3_total', 'ring_current']
 #
 #
+#    columnitem = ['energy_energy', 'energy_bragg_user_readback', 'pcoedge_stats1_total', 'pcoedge_stats2_total', 'ring_current']
 #    scanoutput.textout(header = headeritem, userheader = userheaderitem, column = columnitem, output = False) 
 #    #ps.append(PeakStats(energy.energy.name, bpmAD.stats3.total.name))
 #

@@ -109,15 +109,15 @@ class SRXPCOEDGECam(SingleTrigger,AreaDetector):
             read_path_template='/data/PCOEDGE/2016-2/',
             write_path_template='C:/epicsdata/pcoedge/2016-2\\')
 
-pcoedge = SRXPCOEDGECam('XF:05IDD-ES:1{Det:PCO}',name='pcoedge')
-#    read_attrs=['tiff'])
-pcoedge.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4', 'cam']
-
-pcoedge.tiff.read_attrs = ['file_name']
-pcoedge.stats1.read_attrs = ['total']
-pcoedge.stats2.read_attrs = ['total']
-pcoedge.stats3.read_attrs = ['total']
-pcoedge.stats4.read_attrs = ['total']
+#pcoedge = SRXPCOEDGECam('XF:05IDD-ES:1{Det:PCO}',name='pcoedge')
+##    read_attrs=['tiff'])
+#pcoedge.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4', 'cam']
+#
+#pcoedge.tiff.read_attrs = ['file_name']
+#pcoedge.stats1.read_attrs = ['total']
+#pcoedge.stats2.read_attrs = ['total']
+#pcoedge.stats3.read_attrs = ['total']
+#pcoedge.stats4.read_attrs = ['total']
 
 from hxntools.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
                                          Xspress3Channel, Xspress3FileStore)

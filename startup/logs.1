@@ -1,90 +1,52 @@
-2016-02-02 07:52:52.444 WARNING [Thread 47010] org.csstudio.trends.databrowser2.ui.Controller$1 (archiveFetchFailed) - No archived data for Mir:4
-java.lang.Exception: archiver.values call failed: ../RawDataReader.cpp (80): Channel 'XF:05IDD-VA:1{Mir:4-CCG:1}P-I':
-../RawDataReader.cpp (277): Error in data header '/DATA/channelarchiver/05id1', '20141201' @ 0x0001C77A for channel 'XF:05IDD-VA:1{Mir:4-CCG:1}P-I'.
-../DataFile.cpp (105): Cannot reference '/DATA/channelarchiver/05id1/20141201'
-	at org.csstudio.archive.reader.channelarchiver.ValueRequest.read(ValueRequest.java:157)
-	at org.csstudio.archive.reader.channelarchiver.ChannelArchiverReader.getSamples(ChannelArchiverReader.java:180)
-	at org.csstudio.archive.reader.channelarchiver.ValueRequestIterator.fetch(ValueRequestIterator.java:67)
-	at org.csstudio.archive.reader.channelarchiver.ValueRequestIterator.<init>(ValueRequestIterator.java:55)
-	at org.csstudio.archive.reader.channelarchiver.ChannelArchiverReader.getOptimizedValues(ChannelArchiverReader.java:202)
-	at org.csstudio.trends.databrowser2.archive.ArchiveFetchJob$WorkerThread.run(ArchiveFetchJob.java:126)
-	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)
-	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
-	at java.lang.Thread.run(Thread.java:745)
-
-2016-02-02 07:52:52.811 WARNING [Thread 47010] org.csstudio.trends.databrowser2.ui.Controller$1 (archiveFetchFailed) - No archived data for Mir:4
-java.lang.Exception: archiver.values call failed: Server returned HTTP response code: 500 for URL: http://ca.cs.nsls2.local:8888/cgi-bin/ArchiveDataServer.cgi
-	at org.csstudio.archive.reader.channelarchiver.ValueRequest.read(ValueRequest.java:157)
-	at org.csstudio.archive.reader.channelarchiver.ChannelArchiverReader.getSamples(ChannelArchiverReader.java:180)
-	at org.csstudio.archive.reader.channelarchiver.ValueRequestIterator.fetch(ValueRequestIterator.java:67)
-	at org.csstudio.archive.reader.channelarchiver.ValueRequestIterator.<init>(ValueRequestIterator.java:55)
-	at org.csstudio.archive.reader.channelarchiver.ChannelArchiverReader.getOptimizedValues(ChannelArchiverReader.java:202)
-	at org.csstudio.trends.databrowser2.archive.ArchiveFetchJob$WorkerThread.run(ArchiveFetchJob.java:126)
-	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)
-	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
-	at java.lang.Thread.run(Thread.java:745)
-
-2016-02-02 07:59:35.369 WARNING [Thread 47038] org.csstudio.trends.databrowser2.ui.Controller$1 (archiveFetchFailed) - No archived data for XF:05IDA-VA:0{Msk:1-IP:1}P-I
-java.lang.Exception: archiver.values call failed: ../RawDataReader.cpp (80): Channel 'XF:05IDA-VA:0{Msk:1-IP:1}P-I':
-../RawDataReader.cpp (277): Error in data header '/DATA/channelarchiver/05id1', '20141201' @ 0x07C2D40D for channel 'XF:05IDA-VA:0{Msk:1-IP:1}P-I'.
-../DataFile.cpp (105): Cannot reference '/DATA/channelarchiver/05id1/20141201'
-	at org.csstudio.archive.reader.channelarchiver.ValueRequest.read(ValueRequest.java:157)
-	at org.csstudio.archive.reader.channelarchiver.ChannelArchiverReader.getSamples(ChannelArchiverReader.java:180)
-	at org.csstudio.archive.reader.channelarchiver.ValueRequestIterator.fetch(ValueRequestIterator.java:67)
-	at org.csstudio.archive.reader.channelarchiver.ValueRequestIterator.<init>(ValueRequestIterator.java:55)
-	at org.csstudio.archive.reader.channelarchiver.ChannelArchiverReader.getOptimizedValues(ChannelArchiverReader.java:202)
-	at org.csstudio.trends.databrowser2.archive.ArchiveFetchJob$WorkerThread.run(ArchiveFetchJob.java:126)
-	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)
-	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
-	at java.lang.Thread.run(Thread.java:745)
-
-2016-02-02 07:59:35.840 WARNING [Thread 47038] org.csstudio.trends.databrowser2.ui.Controller$1 (archiveFetchFailed) - No archived data for XF:05IDA-VA:0{Msk:1-IP:1}P-I
-java.lang.Exception: archiver.values call failed: Server returned HTTP response code: 500 for URL: http://ca.cs.nsls2.local:8888/cgi-bin/ArchiveDataServer.cgi
-	at org.csstudio.archive.reader.channelarchiver.ValueRequest.read(ValueRequest.java:157)
-	at org.csstudio.archive.reader.channelarchiver.ChannelArchiverReader.getSamples(ChannelArchiverReader.java:180)
-	at org.csstudio.archive.reader.channelarchiver.ValueRequestIterator.fetch(ValueRequestIterator.java:67)
-	at org.csstudio.archive.reader.channelarchiver.ValueRequestIterator.<init>(ValueRequestIterator.java:55)
-	at org.csstudio.archive.reader.channelarchiver.ChannelArchiverReader.getOptimizedValues(ChannelArchiverReader.java:202)
-	at org.csstudio.trends.databrowser2.archive.ArchiveFetchJob$WorkerThread.run(ArchiveFetchJob.java:126)
-	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)
-	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
-	at java.lang.Thread.run(Thread.java:745)
-
-2016-02-02 08:02:18.269 WARNING [Thread 47055] org.csstudio.trends.databrowser2.ui.Controller$1 (archiveFetchFailed) - No archived data for BPM:2
-java.lang.Exception: archiver.values call failed: ../RawDataReader.cpp (80): Channel 'XF:05IDB-VA:1{BPM:2-CCG:1}P-I':
-../RawDataReader.cpp (277): Error in data header '/DATA/channelarchiver/05id1', '20141201' @ 0x00009810 for channel 'XF:05IDB-VA:1{BPM:2-CCG:1}P-I'.
-../DataFile.cpp (105): Cannot reference '/DATA/channelarchiver/05id1/20141201'
-	at org.csstudio.archive.reader.channelarchiver.ValueRequest.read(ValueRequest.java:157)
-	at org.csstudio.archive.reader.channelarchiver.ChannelArchiverReader.getSamples(ChannelArchiverReader.java:180)
-	at org.csstudio.archive.reader.channelarchiver.ValueRequestIterator.fetch(ValueRequestIterator.java:67)
-	at org.csstudio.archive.reader.channelarchiver.ValueRequestIterator.<init>(ValueRequestIterator.java:55)
-	at org.csstudio.archive.reader.channelarchiver.ChannelArchiverReader.getOptimizedValues(ChannelArchiverReader.java:202)
-	at org.csstudio.trends.databrowser2.archive.ArchiveFetchJob$WorkerThread.run(ArchiveFetchJob.java:126)
-	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)
-	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
-	at java.lang.Thread.run(Thread.java:745)
-
-2016-02-02 08:02:18.567 WARNING [Thread 47055] org.csstudio.trends.databrowser2.ui.Controller$1 (archiveFetchFailed) - No archived data for BPM:2
-java.lang.Exception: archiver.values call failed: Server returned HTTP response code: 500 for URL: http://ca.cs.nsls2.local:8888/cgi-bin/ArchiveDataServer.cgi
-	at org.csstudio.archive.reader.channelarchiver.ValueRequest.read(ValueRequest.java:157)
-	at org.csstudio.archive.reader.channelarchiver.ChannelArchiverReader.getSamples(ChannelArchiverReader.java:180)
-	at org.csstudio.archive.reader.channelarchiver.ValueRequestIterator.fetch(ValueRequestIterator.java:67)
-	at org.csstudio.archive.reader.channelarchiver.ValueRequestIterator.<init>(ValueRequestIterator.java:55)
-	at org.csstudio.archive.reader.channelarchiver.ChannelArchiverReader.getOptimizedValues(ChannelArchiverReader.java:202)
-	at org.csstudio.trends.databrowser2.archive.ArchiveFetchJob$WorkerThread.run(ArchiveFetchJob.java:126)
-	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)
-	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
-	at java.lang.Thread.run(Thread.java:745)
-
+2016-07-30 08:37:46.683 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hprofyDID_34
+2016-07-30 08:37:46.683 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hprofyDID_34
+2016-07-30 08:37:46.683 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel vprofyDID_34
+2016-07-30 08:37:46.683 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel vprofyDID_34
+2016-07-30 08:37:46.683 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel vprofxDID_34
+2016-07-30 08:37:46.683 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel vprofxDID_34
+2016-07-30 08:37:46.683 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hprofxDID_34
+2016-07-30 08:37:46.683 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hprofxDID_34
+2016-07-30 08:37:46.684 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautomaxDID_34
+2016-07-30 08:37:46.684 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautomaxDID_34
+2016-07-30 08:37:46.684 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautominDID_34
+2016-07-30 08:37:46.684 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautominDID_34
+2016-07-30 08:37:47.005 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautomaxDID_34
+2016-07-30 08:37:47.006 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautomaxDID_34
+2016-07-30 08:37:47.006 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautominDID_34
+2016-07-30 08:37:47.006 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautominDID_34
+2016-07-30 08:39:55.154 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hprofyDID_35
+2016-07-30 08:39:55.154 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hprofyDID_35
+2016-07-30 08:39:55.154 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel vprofyDID_35
+2016-07-30 08:39:55.154 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel vprofyDID_35
+2016-07-30 08:39:55.155 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel vprofxDID_35
+2016-07-30 08:39:55.155 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel vprofxDID_35
+2016-07-30 08:39:55.155 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hprofxDID_35
+2016-07-30 08:39:55.155 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hprofxDID_35
+2016-07-30 08:39:55.155 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautomaxDID_35
+2016-07-30 08:39:55.155 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautomaxDID_35
+2016-07-30 08:39:55.155 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautominDID_35
+2016-07-30 08:39:55.155 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautominDID_35
+2016-07-30 08:39:55.313 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautomaxDID_35
+2016-07-30 08:39:55.313 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautomaxDID_35
+2016-07-30 08:39:55.314 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautominDID_35
+2016-07-30 08:39:55.314 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautominDID_35
+2016-07-30 08:41:48.980 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hprofyDID_36
+2016-07-30 08:41:48.981 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hprofyDID_36
+2016-07-30 08:41:48.981 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel vprofyDID_36
+2016-07-30 08:41:48.981 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel vprofyDID_36
+2016-07-30 08:41:48.981 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel vprofxDID_36
+2016-07-30 08:41:48.981 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel vprofxDID_36
+2016-07-30 08:41:48.981 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hprofxDID_36
+2016-07-30 08:41:48.981 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hprofxDID_36
+2016-07-30 08:41:48.982 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautomaxDID_36
+2016-07-30 08:41:48.982 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautomaxDID_36
+2016-07-30 08:41:48.982 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautominDID_36
+2016-07-30 08:41:48.982 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautominDID_36
+2016-07-30 08:41:49.126 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautomaxDID_36
+2016-07-30 08:41:49.126 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautomaxDID_36
+2016-07-30 08:41:49.127 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautominDID_36
+2016-07-30 08:41:49.127 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hfmcolorautominDID_36
+2016-07-30 08:45:14.164 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hprofyDID_39
+2016-07-30 08:45:14.164 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel hprofyDID_39
+2016-07-30 08:45:14.164 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel vprofyDID_39
+2016-07-30 08:45:14.164 WARNING [Thread 40] org.epics.pvmanager.loc.LocalDataSource (initialize) - Using zero initialization for channel vprofyDID_39

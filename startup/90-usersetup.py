@@ -127,11 +127,50 @@ import time
 #PI_lastname = 'Tyson'
 #saf_num = 300481
 
+#proposal_num = 301229
+#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+#PI_lastname = 'Thieme'
+#saf_num = 300441
+
+#proposal_num = 301216
+#proposal_title = 'X-ray tomography and florescence spectroscopy of coated SiC-SiC composite'
+#PI_lastname = 'Ecker'
+#saf_num = 300494
+
+#proposal_num = 301229
+#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+#PI_lastname = 'Chubar_undulator'
+#saf_num = 300441
+
+#proposal_num = 300954
+#proposal_title = 'Cu Uptake in biological tissue'
+#PI_lastname = 'Miller'
+#saf_num = 300514
+
+#proposal_num = 300928
+#proposal_title = 'Elemental association and chemical speciation of transition metals in submicrometer atmospheric particles'
+#PI_lastname = 'Moffet'
+#saf_num = 300517
+
+#proposal_num = 301229
+#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+#PI_lastname = 'Chen-Wiegart-METCourbet'
+#saf_num = 300441
+
+#proposal_num = 300386
+#proposal_title = 'Trace Element Chemistry of Marine Nanoparticulates and Their Availability to Organisms'
+#PI_lastname = 'Myneni'
+#saf_num = 300545
+
+#proposal_num = 300766
+#proposal_title = 'Trace Elements in Fluoride as a Window into Ore Forming Fluids and Igneous Petrogenesis'
+#PI_lastname = 'Acerbo'
+#saf_num = 300406
+
 proposal_num = 301229
 proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-PI_lastname = 'Thieme'
+PI_lastname = 'Chen-Wiegart-LiSbattery'
 saf_num = 300441
-
 
 logfilename_postfix = str(saf_num)
 

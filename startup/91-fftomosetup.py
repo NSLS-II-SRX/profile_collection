@@ -6,12 +6,13 @@ Created on Tue Jun 14 14:43:13 2016
 """
 
 #for tomography
-from bluesky.plans import subs_wrapper, scan, count, list_scan, relative_list_scan
+from bluesky.plans import subs_wrapper, scan, count, list_scan
+import time
   
-def tomo_fullfield(thetastart = -90, thetastop = 90, numproj = 361,
+def tomo_fullfield(thetastart = -90, thetastop = 90, numproj = 361, ffwait = 2,
             acqtime = 0.002, record_preamp = True, preamp_acqtime = None,
-            num_darkfield = 10, 
-            num_whitefield = 10, wf_sam_movrx = 0, wf_sam_movry = -1,
+            num_darkfield = 10, dfwait = 2,
+            num_whitefield = 10, wf_sam_movrx = 0, wf_sam_movry = -1, wfwait = 2,
             eventlog_list = ['pcoedge_tiff_file_name']
             ):
                 
@@ -32,6 +33,10 @@ def tomo_fullfield(thetastart = -90, thetastop = 90, numproj = 361,
     wf_sam_movrx (float): distance to move x before/after the tomography collection to collect white field
     wf_sam_movry (float): distance to move y before/after the tomography collection to collect white field
     eventlog_list (list of strings): fileds to record in the datalog file from evnets[0]['data']
+    
+    ffwait (float): time to wait before collecting full field tomography, in second
+    wfwait (float): time to wait before collecting white field, in second
+    d
     '''               
     
     print('start of full field tomography')
@@ -69,6 +74,7 @@ def tomo_fullfield(thetastart = -90, thetastop = 90, numproj = 361,
         epics.poll(.5)
         shut_b.close_cmd.put(1)    
     #collecting darkfield
+    time.sleep(dfwait)
     print('shutter closed, start collecting darkfield images, num = ', num_darkfield)
     fftomo_df_plan = count(det, num = num_darkfield)
     fftomo_df_plan = bp.subs_wrapper(fftomo_df_plan, livecallbacks)
@@ -84,6 +90,7 @@ def tomo_fullfield(thetastart = -90, thetastop = 90, numproj = 361,
 
     movesamplex_out = yield from list_scan([], tomo_stage.x, [tomo_stage.x.position+wf_sam_movrx])
     movesampley_out = yield from list_scan([], tomo_stage.y, [tomo_stage.y.position+wf_sam_movry])
+    time.sleep(wfwait)
     print('sample out')
     
     #open the shutter
@@ -126,7 +133,8 @@ def tomo_fullfield(thetastart = -90, thetastop = 90, numproj = 361,
     print('moving sample y relative by', wf_sam_movry)
     movesamplex_out = yield from list_scan([], tomo_stage.x, [tomo_stage.x.position+wf_sam_movrx])
     movesampley_out = yield from list_scan([], tomo_stage.y, [tomo_stage.y.position+wf_sam_movry])
-
+    
+    time.sleep(wfwait)
     #collecting whitefield    
     fftomo_wf_plan = count(det, num = num_whitefield)
     fftomo_wf_plan = bp.subs_wrapper(fftomo_wf_plan, livecallbacks)

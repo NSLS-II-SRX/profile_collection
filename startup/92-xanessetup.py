@@ -15,7 +15,7 @@ import time
 from epics import PV
 
 i0_baseline = 7.24e-10
-it_baseline = 1.40e-8
+it_baseline = 1.00e-7
 
 dcm_bragg_temp_pv = 'XF:05IDA-OP:1{Mono:HDCM-Ax:P}T-I'
 dcm_bragg_temp_pv_epics = PV(dcm_bragg_temp_pv)
@@ -252,27 +252,25 @@ def xanes(erange = [], estep = [],
     ept = numpy.array(ept)
 
    #open b shutter
-#    shut_b.open_cmd.put(1)
-#    while (shut_b.close_status.get() == 1):
-#        epics.poll(.5)
-#        shut_b.open_cmd.put(1) 
+    shut_b.open_cmd.put(1)
+    while (shut_b.close_status.get() == 1):
+        epics.poll(.5)
+        shut_b.open_cmd.put(1) 
 
     #run the plan
     scaninfo = gs.RE(xanes_scanplan, livecallbacks, raise_if_interrupted=True)
 
     #close b shutter
-#    shut_b.close_cmd.put(1)
-#    while (shut_b.close_status.get() == 0):
-#        epics.poll(.5)
-#        shut_b.close_cmd.put(1)
+    shut_b.close_cmd.put(1)
+    while (shut_b.close_status.get() == 0):
+        epics.poll(.5)
+        shut_b.close_cmd.put(1)
 
     print(type(scaninfo))
     print(scaninfo)
 
     #output the datafile
     xanes_afterscan(scaninfo[0], roinum, filename, i0scale, itscale, roi_key)
-
-
 
     logscan('xanes') 
 
@@ -410,7 +408,9 @@ def hfxanes_xybatch(xylist=[], waittime = None,
     input: 
         xylist (list of x,y positions in float): pairs of x, y positions on which XANES scans will be collected
             E.g. xylist = [[10.4, 20.4], [10.5, 20.8]] 
-        waitime (float): wait time between scans, if not specified, 2 seconds will be used
+        waitime (list of float): wait time between scans, if not specified, 2 seconds will be used
+            E.g. waittime = [10] #10 sec. wait time will be used between all scans
+            E.g. waititme = [10, 20] #10 sec. will be used between 1st and 2nd scans; 20 sec. will be used after the 2nd scan. The number of scans need to match with the number of waittime listed
         samplename (list of string): list of sample names to be used.
             If with one component, all scans will be set to the same sample name
             If with more than one component, the lenth of the list must match the lenth of the xylist. The sample name will then be assigned 1-1.
@@ -477,5 +477,3 @@ def hfxanes_xybatch(xylist=[], waittime = None,
             err_msg = 'number of waittime is different from the number of points'
         else:
             time.sleep(waittime[pt_num])
-
-

@@ -49,12 +49,35 @@ def get_stock_md():
                             'h_cen' : slt_ssa.h_cen.position                                      
                              }                                      
     return md
-                                       
+
+def get_stock_md_xfm():
+    md = {}
+    md['beamline_status']  = {'energy':  energy.energy.position 
+                                #'slt_wb': str(slt_wb.position),
+                                #'slt_ssa': str(slt_ssa.position)
+                                }
+                                
+    md['initial_sample_position'] = {'stage27a_x': stage.x.position,
+                                       'stage27a_y': stage.y.position,
+                                       'stage27a_z': stage.z.position}
+    md['wb_slits'] = {'v_gap' : slt_wb.v_gap.position,
+                            'h_gap' : slt_wb.h_gap.position,
+                            'v_cen' : slt_wb.v_cen.position,
+                            'h_cen' : slt_wb.h_cen.position
+                            }
+    md['hfm'] = {'y' : hfm.y.position,
+                               'bend' : hfm.bend.position} 
+    md['ssa_slits'] = {'v_gap' : slt_ssa.v_gap.position,
+                            'h_gap' : slt_ssa.h_gap.position,
+                            'v_cen' : slt_ssa.v_cen.position,
+                            'h_cen' : slt_ssa.h_cen.position                                      
+                             }                                      
+    return md                                       
 
 def hf2dxrf(*, xstart, xnumstep, xstepsize, 
             ystart, ynumstep, ystepsize, 
             #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
-            acqtime, numrois=1, i0map_show=True, itmap_show=True,
+            acqtime, numrois=1, i0map_show=True, itmap_show=False,
             energy=None, u_detune=None):
 
     '''
@@ -163,20 +186,20 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     #TO-DO: implement fast shutter control (open)
     #TO-DO: implement suspender for all shutters in genral start up script
     
-#    shut_b.open_cmd.put(1)
-#    while (shut_b.close_status.get() == 1):
-#        epics.poll(.5)
-#        shut_b.open_cmd.put(1)    
+    shut_b.open_cmd.put(1)
+    while (shut_b.close_status.get() == 1):
+        epics.poll(.5)
+        shut_b.open_cmd.put(1)    
     
     hf2dxrf_scanplan = OuterProductAbsScanPlan(det, hf_stage.y, ystart, ystop, ynumstep+1, hf_stage.x, xstart, xstop, xnumstep+1, True, md=md)
     hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, livecallbacks)
     scaninfo = yield from hf2dxrf_scanplan
 
     #TO-DO: implement fast shutter control (close)    
-#    shut_b.close_cmd.put(1)
-#    while (shut_b.close_status.get() == 0):
-#        epics.poll(.5)
-#        shut_b.close_cmd.put(1)
+    shut_b.close_cmd.put(1)
+    while (shut_b.close_status.get() == 0):
+        epics.poll(.5)
+        shut_b.close_cmd.put(1)
 
     #write to scan log    
     logscan('2dxrf')    
@@ -295,7 +318,7 @@ def hf2dxrf_repeat(num_scans = None, waittime = 10,
                 acqtime=acqtime, numrois=numrois, i0map_show=i0map_show, itmap_show = itmap_show)
         time.sleep(waittime)
         
-def hf2dxrf_xybatch(batch_dir = None, batch_filename = None, waittime = 5, repeat = 1):
+def hf2dxrf_xybatch(batch_dir = None, batch_filename = None, waittime = 5, repeat = 1, batch_filelog_ext = ''):
     '''
     This function will load from the batch text input file and run the 2D XRF according to the set points in the text file.
     input:
@@ -305,17 +328,17 @@ def hf2dxrf_xybatch(batch_dir = None, batch_filename = None, waittime = 5, repea
         
         see below for examples:
         batch_dir = '/nfs/xf05id1/userdata/2016_cycle1/300358_Woloschak/'
-        batch_filename = 'xrf_batch_config1.txt' 
-        
+        batch_filename = 'xrf_batch_config1.txt'         
 
         waittime (float): wait time in sec. between each scans. Recommand to have few seconds for the HDF5 to finish closing.
+        batch_filelog_ext (string): default is empty; any string can be assigned and will be inserted as part of the file name of the log file
     '''
         
-    zstage_range = (-17, 40) 
-    xstage_range = (0, 60) #need to check
+    zstage_range = (-3, 20) 
+    xstage_range = (0, 42.32) #need to check
     ystage_range = (0, 60) #need to check
 
-    numpoints_range = (1, 1600)
+    numpoints_range = (1, 160000)
     
     stepsize_range = (0.0002, 10) 
     acqtime_range = (0.1, 5) 
@@ -403,7 +426,7 @@ def hf2dxrf_xybatch(batch_dir = None, batch_filename = None, waittime = 5, repea
     print('batchfile is ok, start scans.')
     
     #initializing the batch log file
-    batchlogfile = batch_dir+'/logfile_'+batch_filename
+    batchlogfile = batch_dir+'/logfile_' + batch_filelog_ext + batch_filename
     batchlogf = open(batchlogfile, 'w')
     batchlogf.close()
 
@@ -455,7 +478,7 @@ def hf2dxrf_xybatch(batch_dir = None, batch_filename = None, waittime = 5, repea
                     
                     hf_stage.z.move(zposition)                
                     
-                    hf2dxrf(xstart=xstart, xnumstep=xnumstep, xstepsize=xstepsize, 
+                    hf2dxrf_gen = yield from hf2dxrf(xstart=xstart, xnumstep=xnumstep, xstepsize=xstepsize, 
                         ystart=ystart, ynumstep=ynumstep, ystepsize=ystepsize, 
                         acqtime=acqtime, numrois=numrois, i0map_show=False, itmap_show = False)
                         
@@ -570,3 +593,274 @@ def hr2dxrf_top(*, xstart, xnumstep, xstepsize,
     logscan('2dxrf_hr_top')    
     
     return scaninfo
+    
+    
+def hf2dxrf_xfm(*, xstart, xnumstep, xstepsize, 
+            ystart, ynumstep, ystepsize, 
+            #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
+            acqtime, numrois=1, i0map_show=True, itmap_show=False,
+            energy=None, u_detune=None):
+
+    '''
+    input:
+        xstart, xnumstep, xstepsize (float)
+        ystart, ynumstep, ystepsize (float)
+        acqtime (float): acqusition time to be set for both xspress3 and F460
+        numrois (integer): number of ROIs set to display in the live raster scans. This is for display ONLY. 
+                           The actualy number of ROIs saved depend on how many are enabled and set in the read_attr
+                           However noramlly one cares only the raw XRF spectra which are all saved and will be used for fitting.
+        i0map_show (boolean): When set to True, map of the i0 will be displayed in live raster, default is True
+        itmap_show (boolean): When set to True, map of the trasnmission diode will be displayed in the live raster, default is True   
+        energy (float): set energy, use with caution, hdcm might become misaligned
+        u_detune (float): amount of undulator to detune in the unit of keV
+    '''
+
+    #record relevant meta data in the Start document, defined in 90-usersetup.py
+    md = get_stock_md_xfm()
+
+    #setup the detector
+    # TODO do this with configure
+    current_preamp.exp_time.put(acqtime)
+    xs.settings.acquire_time.put(acqtime)
+    xs.total_points.put((xnumstep+1)*(ynumstep+1))
+
+    det = [current_preamp, xs]        
+
+    #setup the live callbacks
+    livecallbacks = []
+    
+    livetableitem = [stage.x, stage.y, 'current_preamp_ch0', 'current_preamp_ch2']
+
+    xstop = xstart + xnumstep*xstepsize
+    ystop = ystart + ynumstep*ystepsize  
+  
+    print('xstop = '+str(xstop))  
+    print('ystop = '+str(ystop)) 
+    
+    
+    for roi_idx in range(numrois):
+        roi_name = 'roi{:02}'.format(roi_idx+1)
+        
+        roi_key = getattr(xs.channel1.rois, roi_name).value.name
+        livetableitem.append(roi_key)
+        
+        roimap = LiveRaster((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='jet', 
+                            xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+        livecallbacks.append(roimap)
+
+
+    if i0map_show is True:
+        i0map = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='jet', 
+                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+        livecallbacks.append(i0map)
+
+    if itmap_show is True:
+        itmap = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='jet', 
+                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+        livecallbacks.append(itmap)
+
+    livecallbacks.append(LiveTable(livetableitem)) 
+
+    
+    #setup the plan  
+
+    if energy is not None:
+        if u_detune is not None:
+            # TODO maybe do this with set
+            energy.detune.put(u_detune)
+        # TODO fix name shadowing
+        yield from bp.abs_set(energy, energy, wait=True)
+    
+
+    #TO-DO: implement fast shutter control (open)
+    #TO-DO: implement suspender for all shutters in genral start up script
+    
+#    shut_b.open_cmd.put(1)
+#    while (shut_b.close_status.get() == 1):
+#        epics.poll(.5)
+#        shut_b.open_cmd.put(1)    
+    
+    hf2dxrf_scanplan = OuterProductAbsScanPlan(det, stage.y, ystart, ystop, ynumstep+1, stage.x, xstart, xstop, xnumstep+1, True, md=md)
+    hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, livecallbacks)
+    scaninfo = yield from hf2dxrf_scanplan
+
+    #TO-DO: implement fast shutter control (close)    
+#    shut_b.close_cmd.put(1)
+#    while (shut_b.close_status.get() == 0):
+#        epics.poll(.5)
+#        shut_b.close_cmd.put(1)
+
+    #write to scan log    
+    logscan('2dxrf_xfm')    
+    
+    return scaninfo
+    
+def hf2dxrf_xybatch_xfm(batch_dir = None, batch_filename = None, waittime = 5, repeat = 1):
+    '''
+    This function will load from the batch text input file and run the 2D XRF according to the set points in the text file.
+    input:
+        batch_dir (string): directory for the input batch file
+        batch_filename (string): text file name that defines the set points for batch scans
+        repeat (integer): number to repeat the scans in the batch; repeat = 1 is to run only ones, no repeat  
+        
+        see below for examples:
+        batch_dir = '/nfs/xf05id1/userdata/2016_cycle1/300358_Woloschak/'
+        batch_filename = 'xrf_batch_config1.txt' 
+        
+
+        waittime (float): wait time in sec. between each scans. Recommand to have few seconds for the HDF5 to finish closing.
+    '''
+        
+    zstage_range = (0, 80) #need to check
+    xstage_range = (0, 80) #need to check
+    ystage_range = (0, 80) #need to check
+
+    numpoints_range = (1, 1600)
+    
+    stepsize_range = (0.0002, 10) 
+    acqtime_range = (0.2, 5) 
+
+    numrois_range = (0, 4)    
+
+ 
+    #checking the batch file directory and file name settings           
+    if batch_dir is None:
+        batch_dir = os.getcwd()
+        print("No batch_dir was assigned, using the current directory")
+    else:
+        if not os.path.isdir(batch_dir):
+            raise Exception("Please provide a valid batch_dir for the batch file path.")
+
+    print("batch_dir: "+batch_dir)
+
+    if batch_filename is None:
+        raise Exception("Please provide a batch file name, e.g. batch_file = 'xrf_batch_test.txt'.")
+
+    batchfile = batch_dir+'/'+batch_filename        
+    if not os.path.isfile(batchfile):
+        raise Exception("The batch_filename is not valid")
+        
+    print("batch_filename: "+batch_filename)
+    
+    
+    #checking if the batch_file is correctly written:
+    with open(batchfile, 'r') as batchf:
+        for line in batchf:                     
+            #open the log file for recodring the batch scans
+            print(line)
+            setpoints = line.split()
+            #print(len(setpoints))
+            
+            if setpoints[0][0] is '#':                
+                print('commented line, not for scan')
+            elif len(setpoints) is not 9:
+                raise Exception('The number of set points is not correct (9)')                
+            else:
+                print('The number of set points is correct (9)')
+                                
+                zposition = float(setpoints[0])
+                xstart = float(setpoints[1])
+                xnumstep = int(setpoints[2])
+                xstepsize = float(setpoints[3]) 
+                ystart = float(setpoints[4])
+                ynumstep = int(setpoints[5])
+                ystepsize = float(setpoints[6])
+                acqtime = float(setpoints[7])
+                numrois = int(setpoints[8])  
+                
+                xstop = xstart + xnumstep*xstepsize
+                ystop = ystart + ynumstep*ystepsize 
+                
+                numpoints = (xnumstep+1) * (ynumstep + 1)
+                
+                if zposition < zstage_range[0] or zposition > zstage_range[1]:
+                    raise Exception('zposition is not within range', str(zstage_range)) 
+                elif xstart < xstage_range[0] or xstart > xstage_range[1]:
+                    raise Exception('xstart is not within range', str(xstage_range))  
+                elif xstop < xstage_range[0] or xstop > xstage_range[1]:
+                    raise Exception('x finale point willnot within range', str(xstage_range))                  
+                    
+                elif ystart < ystage_range[0] or ystart > ystage_range[1]:
+                    raise Exception('ystart is not within range', str(ystage_range)) 
+                elif ystop < ystage_range[0] or ystop > ystage_range[1]:
+                    raise Exception('y finale point will not be within range', str(ystage_range)) 
+               
+                elif numpoints < numpoints_range[0] or numpoints > numpoints_range[1]:
+                    raise Exception('total scan number of point is not within range', str(numpoints_range))
+                elif xstepsize < stepsize_range[0] or xstepsize > stepsize_range[1]:
+                    raise Exception('xstepsize is not within range', str(stepsize_range)) 
+                elif ystepsize < stepsize_range[0] or ystepsize > stepsize_range[1]:
+                    raise Exception('xstepsize is not within range', str(stepsize_range))              
+                elif acqtime < acqtime_range[0] or acqtime > acqtime_range[1]:
+                    raise Exception('acqtime is not within range', str(acqtime_range))             
+                elif numrois < numrois_range[0] or numrois > numrois_range[1]:
+                    raise Exception('acqtime is not within range', str(numrois_range))                       
+                else:
+                    print('line is ok.')                
+            
+    batchf.close()   
+
+    print('batchfile is ok, start scans.')
+    
+    #initializing the batch log file
+    batchlogfile = batch_dir+'/logfile_'+batch_filename
+    batchlogf = open(batchlogfile, 'w')
+    batchlogf.close()
+
+    for run_num in range(repeat):           
+        batchlogf = open(batchlogfile, 'a')
+        batchlogf.write('run number:'+str(run_num+1)+'\n')
+        batchlogf.close()
+
+        with open(batchfile, 'r') as batchf:
+            for line in batchf:                     
+                #open the log file for recodring the batch scans
+                setpoints = numpy.array(line.split())
+                
+                if setpoints[0][0] is '#':
+                    print(line)
+                    print('commented line, not for scan')
+                    batchlogf = open(batchlogfile, 'a')
+                    batchlogf.write(line)
+                    batchlogf.close()                
+                        
+                #elif len(setpoints) is not 8:
+                #    print(line)
+                #    print('The set points of this line in the file is not correct')
+                #    batchlogf = open(batch_dir+'logfile'+batch_filename, 'a')
+                #    batchlogf.write(line+' '+'inccorrect set points, scan did not run')
+                #    batchlogf.close()
+                else:
+                    
+                    zposition = float(setpoints[0])
+                    xstart = float(setpoints[1])
+                    xnumstep = int(setpoints[2])
+                    xstepsize = float(setpoints[3]) 
+                    ystart = float(setpoints[4])
+                    ynumstep = int(setpoints[5])
+                    ystepsize = float(setpoints[6])
+                    acqtime = float(setpoints[7])
+                    numrois = int(setpoints[8])          
+               
+                    print('setting:' + 'zposition=' + str(zposition) + '\n'
+                                     + 'xstart=' + str(xstart) + '\n'
+                                     + 'xnumstep=' + str(xnumstep) + '\n'
+                                     + 'xstepsize=' + str(xstepsize) + '\n'  
+                                     + 'ystart=' + str(ystart) + '\n' 
+                                     + 'ynumstep=' + str(ynumstep) + '\n'
+                                     + 'ystepsize=' + str(ystepsize) + '\n'
+                                     + 'acqtime=' + str(acqtime) + '\n'
+                                     + 'numrois=' + str(numrois)
+                         )
+                    hf_stage_z_gen = yield from list_scan([stage], stage.z, [zposition])
+                    #hf_stage.z.move(zposition)                
+                    
+                    hf2dxrf_xfm_gen = yield from hf2dxrf_xfm(xstart=xstart, xnumstep=xnumstep, xstepsize=xstepsize, 
+                        ystart=ystart, ynumstep=ynumstep, ystepsize=ystepsize, 
+                        acqtime=acqtime, numrois=numrois, i0map_show=False, itmap_show = False)
+                        
+                    batchlogf = open(batchlogfile, 'a')
+                    batchlogf.write(line+' scan_id:'+ str(db[-1].start['scan_id'])+'\n')
+                    batchlogf.close()
+                    time.sleep(waittime)
+    batchf.close()  

@@ -7,10 +7,21 @@ import scipy.optimize
 import x3toAthenaSetup as xa
 import srxpeak
 
-#plan:
-#1. load 4 scans - Ti(5), Fe(7), Cu (8), Se (12)
-#2. calculate their edge DCM location
-#3. fit the E vs Bragg RBV with four values, provide fitting results: dtheta, dlatticeSpace
+'''
+    
+This program provides functionality to calibrate hdcm energy:
+    With provided xanes scan rstuls, it will calculate their edge DCM location
+    It will then fit the E vs Bragg RBV with four values, provide fitting results: dtheta, dlatticeSpace
+    
+#1. collected xanes at 3-5 different energies - e.g. Ti(5 keV), Fe(7 keV), Cu (9 keV), Se (12 keV)
+    They can be in xrf mode or in transmission mode; note the scan id in bluesky
+#2. setup the scadid in scanlogDic dictionary
+    scanlogDic = {'Fe': 264, 'Ti': 265, 'Cr':267, 'Cu':271, 'Se': 273}
+#3. pass scanlogDic to braggcalib()
+    braggcalib(scanlogDic = scanlogDic, use_xrf = True)
+    currently, the xanes needs to be collected on roi1 in xrf mode
+'''
+
 from databroker import DataBroker as db, get_table, get_images, get_events
 
 def scanderive(xaxis,yaxis): 
@@ -34,26 +45,34 @@ def scanderive(xaxis,yaxis):
 
     return p, dxaxis,dyaxis, edge
 
-def find_edge(scanid = -1):
-    baseline = -8.5e-10
+def find_edge(scanid = -1, use_xrf = False):
+    #baseline = -8.5e-10
     baseline_it = 4e-9
     table = get_table(db[scanid], stream_name='primary')
     
     braggpoints = table.energy_bragg
-    it = table.current_preamp_ch0
-    i0 = table.current_preamp_ch2
+
+    if use_xrf is False:
+        it = table.current_preamp_ch0
+        #i0 = table.current_preamp_ch2        
+        #normliazedit = -numpy.log(numpy.array(it[1::])/abs(numpy.array((i0[1::])-baseline)))
+        mu = -numpy.log(abs(numpy.array(it[1::])-baseline_it))
+
+    else:
+        mu = table.xs_channel2_rois_roi01_value_sum
         
-    #normliazedit = -numpy.log(numpy.array(it[1::])/abs(numpy.array((i0[1::])-baseline)))
-    normliazedit = -numpy.log(abs(numpy.array(it[1::])-baseline_it))
-    p, xaxis, yaxis, edge = scanderive(numpy.array(braggpoints[1::]), normliazedit)
+    p, xaxis, yaxis, edge = scanderive(numpy.array(braggpoints[1::]), numpy.array(mu[1::]))
 
     return p, xaxis, yaxis, edge
 
-def braggcalib(scanlogDic = {}):
+def braggcalib(scanlogDic = {}, use_xrf = False):
 #    
-    #2016-3
-    scanlogDic = {'Fe': 264, 'Ti': 265, 'Cr':267, 'Cu':271, 'Se': 273}
+    #2016-2 July
+    #scanlogDic = {'Fe': 264, 'Ti': 265, 'Cr':267, 'Cu':271, 'Se': 273}    
     #scanlogDic = {'Fe': 264, 'Ti': 265, 'Cr':266}
+
+    #2016-2 Aug 15, after cryo tripped due to water intervention on power dip on 8/14/2016
+    #scanlogDic = {'Fe': 1982, 'Cu':1975, 'Cr': 1984, 'Ti': 1985, 'Se':1986}
 
     fitfunc = lambda pa, x: 12.3984/(2*pa[0]*numpy.sin((x+pa[1])*numpy.pi/180))  
     errfunc = lambda pa, x, y: fitfunc(pa,x) - y
@@ -67,7 +86,7 @@ def braggcalib(scanlogDic = {}):
     for element in scanlogDic:
         print(scanlogDic[element])
         current_scanid = scanlogDic[element]
-        p, xaxis, yaxis, edge = find_edge(scanid = current_scanid)
+        p, xaxis, yaxis, edge = find_edge(scanid = current_scanid, use_xrf = use_xrf)
             
         BraggRBVDic[element] = round(edge,3)
         print('Edge position is at Braggg RBV', BraggRBVDic[element])
