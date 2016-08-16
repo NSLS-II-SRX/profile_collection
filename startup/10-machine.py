@@ -11,11 +11,12 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 ring_current = EpicsSignalRO('SR:C03-BI{DCCT:1}I:Real-I', name='ring_current')
 
 class UVDone(Signal):
-    def __init__(self, parent, brake, readback, **kwargs):
+    def __init__(self, parent, brake, readback, err, **kwargs):
         super().__init__(parent=parent, value=1, **kwargs)
         self._rbv = readback
         self._brake = brake
         self._started = False
+        self._err = err
 
     def put(self, *arg, **kwargs):
         raise TypeError("You con not tell an undulator it is done")
@@ -29,6 +30,8 @@ class UVDone(Signal):
         cur_value = rbv.get()
         brake = getattr(self.parent, self._brake)
         brake_on = brake.get()
+
+        err_str = getattr(self.parent, self._err).get()
         if not self._started:
             self._started = not brake_on
         # come back and check this threshold value
@@ -39,15 +42,30 @@ class UVDone(Signal):
             brake.clear_sub(self._watcher)
             self._started = False
 
-        elif brake_on and self._started:
-            print(self.parent.name, ": reactuated due to not reaching target")
-            self.parent.actuate.put(self.parent.actuate_value)
+        elif brake_on:
+            if err_str:
+                self._put(1)
+                rbv.clear_sub(self._watcher)
+                brake.clear_sub(self._watcher)
+                self._started = False
+            elif self._started:
+                print(self.parent.name, ": reactuated due to not reaching target")
+                self.parent.actuate.put(self.parent.actuate_value)
+
+        
 
     def reset(self, target):
         self._put(0)
         self.target = target
         self._started = False
 
+    def stop(self):
+        self._put(1)
+        rbv = getattr(self.parent, self._rbv)
+        brake = getattr(self.parent, self._brake)
+        rbv.clear_sub(self._watcher)
+        brake.clear_sub(self._watcher)
+        
 
 class URealPos(Device):
     #undulator real position, gap and taper
@@ -115,7 +133,8 @@ class Undulator(FixedPVPositioner):
     actuate = Cpt(EpicsSignal, '-Mtr:2}Sw:Go')
     actuate_value = 1
     done = Cpt(UVDone, None, brake='brake_on',
-               readback='readback', add_prefix=())
+               readback='readback', err='err', 
+               add_prefix=())
 
     # correction function signals, need to be merged into single object
     corrfunc_en = Cpt(EpicsSignal, '-MtrC}EnaAdj:out')
@@ -130,6 +149,9 @@ class Undulator(FixedPVPositioner):
     pos = Cpt(UPos, '')
     girder = Cpt(Girder, '')
     elevation = Cpt(Elev, '')
+
+    # error status
+    err = Cpt(EpicsSignalRO, '-Motor}Err:GetCerr_.VALA')
 
     def move(self, v, *args, moved_cb=None, **kwargs):
         kwargs['timeout'] = None
@@ -164,6 +186,34 @@ class Undulator(FixedPVPositioner):
         self.etoulookup = InterpolatedUnivariateSpline(elistIn, uposlistIn)
         self.utoelookup = InterpolatedUnivariateSpline(uposlistIn, elistIn)
 
+    def _move_changed(self, timestamp=None, value=None, sub_type=None,
+                      **kwargs):
+        was_moving = self._moving
+        self._moving = (value != self.done_value)
+
+        started = False
+        if not self._started_moving:
+            started = self._started_moving = (not was_moving and self._moving)
+            logger.debug('[ts=%s] %s started moving: %s', fmt_time(timestamp),
+                         self.name, started)
+
+        logger.debug('[ts=%s] %s moving: %s (value=%s)', fmt_time(timestamp),
+                     self.name, self._moving, value)
+
+        if started:
+            self._run_subs(sub_type=self.SUB_START, timestamp=timestamp,
+                           value=value, **kwargs)
+
+        if not self.put_complete:
+            success = not bool(self.err.get())
+            # In the case of put completion, motion complete
+            if was_moving and not self._moving:
+                self._done_moving(success=success, timestamp=timestamp,
+                                  value=value)
+
+    def stop(self):
+        self.done.stop()
+        return super().stop()
 
 _undulator_kwargs = dict(name='ivu1_gap', read_attrs=['readback'],
                          calib_path='/nfs/xf05id1/UndulatorCalibration/',
@@ -171,6 +221,7 @@ _undulator_kwargs = dict(name='ivu1_gap', read_attrs=['readback'],
                          calib_file='SRXUgapCalibration20160608_final.text',                                                  
                          configuration_attrs=['corrfunc_sta', 'pos', 'girder',
                                               'real_pos', 'elevation'])
+
 
 ANG_OVER_EV = 12.3984
 
