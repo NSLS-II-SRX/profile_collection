@@ -52,6 +52,21 @@ class BpmDiode(Device):
 bpm1 = BpmDiode('xf05bpm03:DataRead', name='bpm1')
 bpm2 = BpmDiode('xf05bpm04:DataRead', name='bpm2')
 
+class DiamondBPM(Device):
+    diode_top = Cpt(EpicsSignalRO, 'Current1:MeanValue_RBV')
+    diode_inb = Cpt(EpicsSignalRO, 'Current2:MeanValue_RBV')
+    diode_out = Cpt(EpicsSignalRO, 'Current3:MeanValue_RBV')
+    diode_bot = Cpt(EpicsSignalRO, 'Current4:MeanValue_RBV')
+    sigma_top = Cpt(EpicsSignalRO, 'Current1:Sigma_RBV')
+    sigma_inb = Cpt(EpicsSignalRO, 'Current2:Sigma_RBV')
+    sigma_out = Cpt(EpicsSignalRO, 'Current3:Sigma_RBV')
+    sigma_bot = Cpt(EpicsSignalRO, 'Current4:Sigma_RBV')
+    x_pos = Cpt(EpicsSignalRO, 'PosX:MeanValue_RBV') 
+    y_pos = Cpt(EpicsSignalRO, 'PosY:MeanValue_RBV') 
+    x_sigma = Cpt(EpicsSignalRO, 'PosX:Sigma_RBV') 
+    y_sigma = Cpt(EpicsSignalRO, 'PosY:Sigma_RBV') 
+
+dbpm = DiamondBPM('XF:05ID-BI:1{BPM:01}:')
 
 class SlitDrainCurrent(Device):
     t = Cpt(EpicsSignalRO, 'Current1:MeanValue_RBV')
