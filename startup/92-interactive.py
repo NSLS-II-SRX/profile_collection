@@ -4,38 +4,7 @@ from collections import defaultdict
 from cycler import cycler as cy
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
-   
-class ROIPlanCreator(object):
-    def __init__(self, ax, step_size, plan_kwargs=None):
-        if plan_kwargs is None:
-            plan_kwargs = {}
-        self.plan_kwargs = plan_kwargs
-        self.step_size = step_size
-        self.ax = ax
-        self.widget = mwidgets.RectangleSelector(
-            self.ax, self._onselect, useblit=True, interactive=True)
-        self._pt1 = self._pt2 = None
-    
-    def _onselect(self, pt1, pt2):
-        print('triggered')
-        self._pt1 = pt1
-        self._pt2 = pt2
-
-    @property
-    def last_plan(self):
-        # TODO deal with ordering issues
-        x1, y1 = self._pt1.xdata, self._pt1.ydata
-        x2, y2 = self._pt2.xdata, self._pt2.ydata
-        dx = x2 - x1
-        dy = y2 - y1
-        
-        inp = dict(self.plan_kwargs)
-        inp.update({'xstart': x1, 'xnumstep': max(dx // self.step_size, 1),
-               'ystart': y1, 'ynumstep': max(dy // self.step_size, 1),
-               'xstepsize': self.step_size,
-               'ystepsize': self.step_size})
-        print(inp)
-        return hf2dxrf(**inp)
+import bluesky.interactive as bsi   
         
 def plot_crab(hdr):
     fig, ax = plt.subplots()
@@ -61,3 +30,64 @@ def plot_crab(hdr):
            for k,v in val_map.items()]
     ax.legend(handles=end_h + side_h + val_h, loc='best')
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+
+
+def display_vlm(ax, image_plugin, stage, overlay_read, pixel_scale):
+     im_sz = image_plugin.array_size.get()[:2]
+     vlm = image_plugin.array_data.get().reshape(im_sz)
+
+     x = stage.x.position
+     y = stage.y.position
+
+     bp_x = overlay_read.position_x.get()
+     bp_y = overlay_read.position_y.get()
+
+     left_edge = x - bp_x * pixel_scale
+     right_edge = x + (im_sz[1] - bp_x) * pixel_scale
+
+     top_edge = y - bp_y * pixel_scale
+     bottom_edge = y + (im_sz[0] - bp_y) * pixel_scale
+
+     ax.imshow(vlm, cmap='gray', interpolation='none',
+               extent=[left_edge, right_edge, bottom_edge, top_edge])
+     ax.axhline(y)
+     ax.axvline(x)
+
+class SRXPlanner(bsi.OuterProductWidget):
+    def __init__(self, *args, write_overlay, pixel_scale, stage, 
+                 overlay_read, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.write_overlay = write_overlay
+        self.pixel_scale = pixel_scale
+        self.stage = stage
+        self.overlay_read = overlay_read
+
+    def _onselect(self, pt1, pt2):
+        super()._onselect(pt1, pt2)
+        x1, y1 = pt1.xdata, pt1.ydata
+        x2, y2 = pt2.xdata, pt2.ydata
+
+        x = self.stage.x.position
+        y = self.stage.y.position
+
+        bp_x = self.overlay_read.position_x.get()
+        bp_y = self.overlay_read.position_y.get()
+
+        left_edge = (x1 - x) / self.pixel_scale + bp_x
+        width = (x2 - x1) / self.pixel_scale
+
+        top_edge = (y1 - y) / self.pixel_scale + bp_y
+        height = (y2 - y1) / self.pixel_scale
+
+        self.write_overlay.position_x.put(left_edge)
+        self.write_overlay.size_x.put(width)
+        self.write_overlay.position_y.put(top_edge)
+        self.write_overlay.size_y.put(height)
+
+
+def attach_planner(ax, stage, write_overlay, pixel_scale, 
+                   read_overlay):
+    return SRXPlanner(ax, [], stage.x, stage.y, 10, 10, 
+                      write_overlay=write_overlay,
+                      pixel_scale=pixel_scale, stage=stage, 
+                      overlay_read=read_overlay)
