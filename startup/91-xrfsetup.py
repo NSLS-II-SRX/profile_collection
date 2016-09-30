@@ -77,6 +77,7 @@ def get_stock_md_xfm():
 def hf2dxrf(*, xstart, xnumstep, xstepsize, 
             ystart, ynumstep, ystepsize, 
             #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
+            shutter = True,
             acqtime, numrois=1, i0map_show=True, itmap_show=False,
             energy=None, u_detune=None):
 
@@ -185,21 +186,22 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
     #TO-DO: implement fast shutter control (open)
     #TO-DO: implement suspender for all shutters in genral start up script
-    
-    shut_b.open_cmd.put(1)
-    while (shut_b.close_status.get() == 1):
-        epics.poll(.5)
-        shut_b.open_cmd.put(1)    
+    if shutter == True: 
+        shut_b.open_cmd.put(1)
+        while (shut_b.close_status.get() == 1):
+            epics.poll(.5)
+            shut_b.open_cmd.put(1)    
     
     hf2dxrf_scanplan = OuterProductAbsScanPlan(det, hf_stage.y, ystart, ystop, ynumstep+1, hf_stage.x, xstart, xstop, xnumstep+1, True, md=md)
     hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, livecallbacks)
     scaninfo = yield from hf2dxrf_scanplan
 
     #TO-DO: implement fast shutter control (close)    
-    shut_b.close_cmd.put(1)
-    while (shut_b.close_status.get() == 0):
-        epics.poll(.5)
+    if shutter == True:
         shut_b.close_cmd.put(1)
+        while (shut_b.close_status.get() == 0):
+            epics.poll(.5)
+            shut_b.close_cmd.put(1)
 
     #write to scan log    
     logscan('2dxrf')    
@@ -335,7 +337,7 @@ def hf2dxrf_xybatch(batch_dir = None, batch_filename = None, waittime = 5, repea
     '''
         
     zstage_range = (-3, 20) 
-    xstage_range = (0, 42.32) #need to check
+    xstage_range = (0, 70) #need to check
     ystage_range = (0, 60) #need to check
 
     numpoints_range = (1, 160000)
