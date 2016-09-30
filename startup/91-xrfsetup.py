@@ -144,7 +144,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     #    livetableitem.append('saturn_mca_rois_roi'+str(roi_idx)+'_net_count')
     #    livetableitem.append('saturn_mca_rois_roi'+str(roi_idx)+'_count')
     #    #roimap = LiveRaster((xnumstep, ynumstep), 'saturn_mca_rois_roi'+str(roi_idx)+'_net_count', clim=None, cmap='viridis', xlabel='x', ylabel='y', extent=None)
-        colormap = 'jet' #previous set = 'viridis'
+        colormap = 'viridis'
     #    roimap = LiveRaster((ynumstep, xnumstep), 'saturn_mca_rois_roi'+str(roi_idx)+'_count', clim=None, cmap='jet', 
     #                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
 
@@ -186,10 +186,11 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
     #TO-DO: implement fast shutter control (open)
     #TO-DO: implement suspender for all shutters in genral start up script
-    if shutter == True: 
+    if shutter is True: 
         shut_b.open_cmd.put(1)
         while (shut_b.close_status.get() == 1):
             epics.poll(.5)
+            print("I'm stupid")
             shut_b.open_cmd.put(1)    
     
     hf2dxrf_scanplan = OuterProductAbsScanPlan(det, hf_stage.y, ystart, ystop, ynumstep+1, hf_stage.x, xstart, xstop, xnumstep+1, True, md=md)
@@ -197,7 +198,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     scaninfo = yield from hf2dxrf_scanplan
 
     #TO-DO: implement fast shutter control (close)    
-    if shutter == True:
+    if shutter is True:
         shut_b.close_cmd.put(1)
         while (shut_b.close_status.get() == 0):
             epics.poll(.5)

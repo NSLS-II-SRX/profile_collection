@@ -1,6 +1,7 @@
 from ophyd.areadetector import (AreaDetector, PixiradDetectorCam, ImagePlugin,
                                 TIFFPlugin, StatsPlugin, HDF5Plugin,
-                                ProcessPlugin, ROIPlugin, TransformPlugin) 
+                                ProcessPlugin, ROIPlugin, TransformPlugin, 
+                                OverlayPlugin) 
 from ophyd.areadetector.plugins import PluginBase
 from ophyd.areadetector.cam import AreaDetectorCam
 from ophyd.device import BlueskyInterface
@@ -82,6 +83,7 @@ class SRXHFVLMCam(SingleTrigger,AreaDetector):
     roi2 = C(ROIPlugin, 'ROI2:')
     roi3 = C(ROIPlugin, 'ROI3:')
     roi4 = C(ROIPlugin, 'ROI4:')
+    over1 = C(OverlayPlugin, 'Over1:')
     trans1 = C(TransformPlugin, 'Trans1:')
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
              write_path_template='/epicsdata/hfvlm/%Y/%m/%d/')
@@ -106,19 +108,19 @@ class SRXPCOEDGECam(SingleTrigger,AreaDetector):
     roi3 = C(ROIPlugin, 'ROI3:')
     roi4 = C(ROIPlugin, 'ROI4:')
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
-            read_path_template='/data/PCOEDGE/2016-2/',
-            write_path_template='C:/epicsdata/pcoedge/2016-2\\')
+            read_path_template='/data/PCOEDGE/2016-3/',
+            write_path_template='C:/epicsdata/pcoedge/2016-3\\')
 
-#pcoedge = SRXPCOEDGECam('XF:05IDD-ES:1{Det:PCO}',name='pcoedge')
-##    read_attrs=['tiff'])
-#pcoedge.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4', 'cam']
-#
-#pcoedge.tiff.read_attrs = ['file_name']
-#pcoedge.stats1.read_attrs = ['total']
-#pcoedge.stats2.read_attrs = ['total']
-#pcoedge.stats3.read_attrs = ['total']
-#pcoedge.stats4.read_attrs = ['total']
-
+# pcoedge = SRXPCOEDGECam('XF:05IDD-ES:1{Det:PCO}',name='pcoedge')
+# ##    read_attrs=['tiff'])
+# pcoedge.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4', 'cam']
+# 
+# pcoedge.tiff.read_attrs = ['file_name']
+# pcoedge.stats1.read_attrs = ['total']
+# pcoedge.stats2.read_attrs = ['total']
+# pcoedge.stats3.read_attrs = ['total']
+# pcoedge.stats4.read_attrs = ['total']
+# 
 from hxntools.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
                                          Xspress3Channel, Xspress3FileStore)
 
@@ -137,8 +139,8 @@ class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
     channel3 = C(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
 
     hdf5 = Cpt(Xspress3FileStore, 'HDF5:',
-               read_path_template='/data/XSPRESS3/2016-2/',
-               write_path_template='/epics/data/2016-2/')
+               read_path_template='/data/XSPRESS3/2016-3/',
+               write_path_template='/epics/data/2016-3/')
 
     def __init__(self, prefix, *, configuration_attrs=None, read_attrs=None,
                  **kwargs):

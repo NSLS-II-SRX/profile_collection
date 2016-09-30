@@ -17,7 +17,7 @@ class SaturnMCA(EpicsMCA):
     enable_wait = Cpt(EpicsSignal, 'EnableWait')
     erase = Cpt(EpicsSignal, 'Erase')
     erase_start = Cpt(EpicsSignal, 'EraseStart')
-    read = Cpt(EpicsSignal, 'Read')
+    read_signal = Cpt(EpicsSignal, 'Read')
     read_callback = Cpt(EpicsSignal, 'ReadCallback')
     read_data_once = Cpt(EpicsSignal, 'ReadDataOnce')
     read_status_once = Cpt(EpicsSignal, 'ReadStatusOnce')

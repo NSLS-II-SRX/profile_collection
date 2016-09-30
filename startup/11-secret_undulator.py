@@ -116,12 +116,12 @@ class UVDoneMOVN(Signal):
         # other callback
         stop = getattr(self.parent, self._stp)
         stop.put(1)
-
+ 
     def reset(self, target):
         self.target = target
         self._put(0)
         self._remove_cbs()
-
+ 
     def _remove_cbs(self):
         rbv = getattr(self.parent, self._rbv)
         stop = getattr(self.parent, self._stp)

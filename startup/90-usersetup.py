@@ -167,10 +167,25 @@ import time
 #PI_lastname = 'Acerbo'
 #saf_num = 300406
 
-proposal_num = 301229
-proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-PI_lastname = 'Chen-Wiegart-LiSbattery'
-saf_num = 300441
+#proposal_num = 301229
+#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+#PI_lastname = 'Chen-Wiegart-LiSbattery'
+#saf_num = 300441
+
+#proposal_num = 301229
+#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+#PI_lastname = 'Chen-Wiegart-BASFcatalysts'
+#saf_num = 300441
+
+#proposal_num = 300640
+#proposal_title = 'Benchmarking and optimizatin of microscopic and spectroscopic performances of SRX beamline'
+#PI_lastname = 'Choubar'
+#saf_num = 300547
+
+proposal_num = 300727
+proposal_title = 'Plant uptake and trophic transfer of polymer coated CeO2 nanomaterials'
+PI_lastname = 'Unrine'
+saf_num = 300519
 
 logfilename_postfix = str(saf_num)
 

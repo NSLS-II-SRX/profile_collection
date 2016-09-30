@@ -91,3 +91,14 @@ def attach_planner(ax, stage, write_overlay, pixel_scale,
                       write_overlay=write_overlay,
                       pixel_scale=pixel_scale, stage=stage, 
                       overlay_read=read_overlay)
+
+'''example on how to use it:
+    BlueSky [373]: fig, ax = plt.subplots()
+    BlueSky [374]: display_vlm(ax, hfvlmAD.image_plugin, hf_stage, hfvlmAD.over1.overlay_5, 0.00122 * 3)
+    BlueSky [375]: planner = attach_planner(ax, hf_stage, hfvlmAD.over1.overlay_1, 0.00122 * 3, hfvlmAD.over1.overlay_5)
+
+    These are the top-left and bottom right coordinates
+    x1, y1 = pt1.xdata, pt1.ydata
+    x2, y2 = pt2.xdata, pt2.ydata    
+    
+'''

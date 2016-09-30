@@ -11,12 +11,14 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 ring_current = EpicsSignalRO('SR:C03-BI{DCCT:1}I:Real-I', name='ring_current')
 
 class UVDone(Signal):
-    def __init__(self, parent, brake, readback, err, **kwargs):
+    def __init__(self, parent, brake, readback, err, stp, **kwargs):
         super().__init__(parent=parent, value=1, **kwargs)
         self._rbv = readback
         self._brake = brake
         self._started = False
         self._err = err
+        self._stp = stp
+        self.target = None
 
     def put(self, *arg, **kwargs):
         raise TypeError("You con not tell an undulator it is done")
@@ -52,19 +54,44 @@ class UVDone(Signal):
                 print(self.parent.name, ": reactuated due to not reaching target")
                 self.parent.actuate.put(self.parent.actuate_value)
 
-        
+    def _stop_watcher(self, *arg, **kwargs):
+        '''Call back to be installed on the stop signal
+
+        if this gets flipped, clear all of the other callbacks and tell
+        the status object that it is done.
+
+        TODO: mark status object as failed
+        TODO: only trigger this on 0 -> 1 transposition
+        '''
+        print('STOPPED')
+        # set the target to None and remove all callbacks
+        self.reset(None)
+        # flip this signal to 1 to signal it is done
+        self._put(1)
+        # push stop again 'just to be safe'
+        # this is paranoia related to the re-kicking the motor is the
+        # other callback
+        stop = getattr(self.parent, self._stp)
+        stop.put(1)
 
     def reset(self, target):
-        self._put(0)
         self.target = target
+        self._put(0)
+        self._remove_cbs()
         self._started = False
+ 
+    def _remove_cbs(self):
+        rbv = getattr(self.parent, self._rbv)
+        stop = getattr(self.parent, self._stp)
+        moving = getattr(self.parent, self._brake)
+
+        rbv.clear_sub(self._watcher)
+        moving.clear_sub(self._watcher)
+        stop.clear_sub(self._stop_watcher)
 
     def stop(self):
+        self.reset(None)
         self._put(1)
-        rbv = getattr(self.parent, self._rbv)
-        brake = getattr(self.parent, self._brake)
-        rbv.clear_sub(self._watcher)
-        brake.clear_sub(self._watcher)
         
 
 class URealPos(Device):
@@ -122,6 +149,9 @@ class FixedPVPositioner(PVPositioner):
                                 event_type=self.brake_on.SUB_VALUE)
         self.readback.subscribe(self.done._watcher,
                                 event_type=self.readback.SUB_VALUE)
+
+        self.stop_signal.subscribe(self.done._stop_watcher,
+                                   event_type=self.stop_signal.SUB_VALUE, run=False)
         return ret
 
 
@@ -133,7 +163,7 @@ class Undulator(FixedPVPositioner):
     actuate = Cpt(EpicsSignal, '-Mtr:2}Sw:Go')
     actuate_value = 1
     done = Cpt(UVDone, None, brake='brake_on',
-               readback='readback', err='err', 
+               readback='readback', err='err', stp='stop_signal',
                add_prefix=())
 
     # correction function signals, need to be merged into single object
@@ -151,7 +181,7 @@ class Undulator(FixedPVPositioner):
     elevation = Cpt(Elev, '')
 
     # error status
-    err = Cpt(EpicsSignalRO, '-Motor}Err:GetCerr_.VALA')
+    err = Cpt(EpicsSignalRO, '-Motor}Err:GetCerr_.VALA', string=True)
 
     def move(self, v, *args, moved_cb=None, **kwargs):
         kwargs['timeout'] = None
@@ -194,11 +224,6 @@ class Undulator(FixedPVPositioner):
         started = False
         if not self._started_moving:
             started = self._started_moving = (not was_moving and self._moving)
-            logger.debug('[ts=%s] %s started moving: %s', fmt_time(timestamp),
-                         self.name, started)
-
-        logger.debug('[ts=%s] %s moving: %s (value=%s)', fmt_time(timestamp),
-                     self.name, self._moving, value)
 
         if started:
             self._run_subs(sub_type=self.SUB_START, timestamp=timestamp,
@@ -385,6 +410,8 @@ cal_data_2016cycle1 = {'d_111': 3.12961447804,
 
 cal_data_2016cycle1_2 = {'d_111': 3.12924894907,  # 2016/1/27 (Se, Cu, Fe, Ti)
                        'delta_bragg': 0.315532509387,  # 2016/1/27 (Se, Cu, Fe, Ti)
+                       'delta_bragg': 0.317124613301,  # ? before 8/18/2016
+                       #'delta_bragg': 0.357124613301,  # 2016/8/16 (Cu)
                        # not in energy axis but for the record
                        # 'C1Rcal' :  -4.88949983261, # 2016/1/29
                        'C2Xcal': 3.6,  # 2016/1/29
@@ -412,6 +439,7 @@ cal_data_2016cycle2  ={ #'d_111': 3.13130245128, #2016/6/9 (Ti, Cr, Fe, Cu, Se)
                         'd_111': 3.12929567478, #2016/8/16 (Ti, Cr, Fe, Cu, Se)
                         #'delta_bragg' : 0.309366522013,
                         #'delta_bragg' : 0.32936652201300004,
+                        #'delta_bragg': 0.337124613301, 
                         'delta_bragg': 0.317124613301, #2016/8/16 (Ti, Cr, Fe, Cu, Se)
                         #'xoffset': 24.864494684263519,                                             
                         'C2Xcal': 3.6,  # 2016/1/29
@@ -424,8 +452,9 @@ cal_data_2016cycle2  ={ #'d_111': 3.13130245128, #2016/6/9 (Ti, Cr, Fe, Cu, Se)
                         #'xoffset': 25.354968816872358 #2016/7/28 12-14 keV microscopy
                         #'xoffset': 25.414219669872864 #2016/8/2 14 keV
                         #'xoffset': 25.175826062860775 #2016/8/2 18 keV
-                        'xoffset': 25.527059255709876 #2016/8/16 9 keV
-
+                        #'xoffset': 25.527059255709876 #2016/8/16 9 keV
+                        #'xoffset': 25.487723997622723 #2016/8/18 11 keV
+                        'xoffset': 25.488305806234468, #2016/8/21 9.2 keV, aligned by Garth on 2016/8/20
                         #'C1Rcal':-4.7089492561 for the record
                       }
 

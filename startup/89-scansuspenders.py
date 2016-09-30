@@ -27,12 +27,12 @@ dcm_bragg_temp = EpicsSignal('XF:05IDA-OP:1{Mono:HDCM-Ax:P}T-I', name='dcm_bragg
 susp_dcm_bragg_temp = SuspendCeil(dcm_bragg_temp, 120, resume_thresh=70, 
                                   sleep = 10)
 
-#RE.install_suspender(susp_rc)
-#RE.install_suspender(susp_cryo)
-#RE.install_suspender(susp_shut_a)
-##RE.install_suspender(susp_shut_b)
-#RE.install_suspender(susp_shut_fe)
-#RE.install_suspender(susp_dcm_bragg_temp)
+RE.install_suspender(susp_rc)
+RE.install_suspender(susp_cryo)
+RE.install_suspender(susp_shut_a)
+#RE.install_suspender(susp_shut_b)
+RE.install_suspender(susp_shut_fe)
+RE.install_suspender(susp_dcm_bragg_temp)
 
 #example:
 #gv = EpicsSignal('XF:05IDA-VA:1{BPM:1-GV:1}Pos-Sts')

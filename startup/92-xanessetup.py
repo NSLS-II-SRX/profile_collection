@@ -125,7 +125,7 @@ def xanes_afterscan_tmode(scanid, filename, i0scale, itscale):
 
 def xanes(erange = [], estep = [],  
             harmonic = None, correct_c2_x=True, correct_c1_r = False,             
-            acqtime=None, roinum=1, i0scale = 1e8, itscale = 1e8, delaytime = 0.1,
+            acqtime=None, roinum=1, i0scale = 1e8, itscale = 1e8, delaytime = 0.2,
             samplename = '', filename = ''):
                 
     '''
@@ -251,7 +251,7 @@ def xanes(erange = [], estep = [],
     xanes_scanplan = AbsListScanPlan(det, energy, ept)
     ept = numpy.array(ept)
 
-   #open b shutter
+    #open b shutter
     shut_b.open_cmd.put(1)
     while (shut_b.close_status.get() == 1):
         epics.poll(.5)
@@ -399,7 +399,7 @@ def xanes_tmode(erange = [], estep = [],
 def hfxanes_xybatch(xylist=[], waittime = None, 
                     samplename = None, filename = None,
                     erange = [], estep = [],  
-                    harmonic = None, correct_c2_x=True, delaytime=0.1,             
+                    harmonic = None, correct_c2_x=True, delaytime=0.2,             
                     acqtime=None, roinum=1, i0scale = 1e8, itscale = 1e8,
                     ):
                         
