@@ -75,7 +75,7 @@ class UVDone(Signal):
         stop.put(1)
 
     def reset(self, target):
-        self.target = target
+        self.target = float(target)
         self._put(0)
         self._remove_cbs()
         self._started = False
@@ -399,7 +399,11 @@ class Energy(PseudoPositioner):
     def inverse(self, r_pos):
         bragg = r_pos.bragg
         e = ANG_OVER_EV / (2 * self._d_111 * math.sin(math.radians(bragg + self._delta_bragg)))
-        return self.PseudoPosition(energy=e)
+        return self.PseudoPosition(energy=float(e))
+
+    @pseudo_position_argument
+    def set(self, position):
+        return super().set([float(_) for _ in position])
 
 # change it to a better way to pass the calibration
 cal_data_2016cycle1 = {'d_111': 3.12961447804,
