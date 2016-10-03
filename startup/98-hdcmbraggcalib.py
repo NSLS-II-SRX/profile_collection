@@ -74,6 +74,9 @@ def braggcalib(scanlogDic = {}, use_xrf = False):
     #2016-2 Aug 15, after cryo tripped due to water intervention on power dip on 8/14/2016
     #scanlogDic = {'Fe': 1982, 'Cu':1975, 'Cr': 1984, 'Ti': 1985, 'Se':1986}
 
+    #2016-3 Oct 3
+    #scanlogDic = {'Se':20}
+
     fitfunc = lambda pa, x: 12.3984/(2*pa[0]*numpy.sin((x+pa[1])*numpy.pi/180))  
     errfunc = lambda pa, x, y: fitfunc(pa,x) - y
 

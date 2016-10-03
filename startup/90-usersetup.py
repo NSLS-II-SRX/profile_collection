@@ -182,14 +182,19 @@ import time
 #PI_lastname = 'Choubar'
 #saf_num = 300547
 
-proposal_num = 300727
-proposal_title = 'Plant uptake and trophic transfer of polymer coated CeO2 nanomaterials'
-PI_lastname = 'Unrine'
-saf_num = 300519
+#proposal_num = 300727
+#proposal_title = 'Plant uptake and trophic transfer of polymer coated CeO2 nanomaterials'
+#PI_lastname = 'Unrine'
+#saf_num = 300519
+
+proposal_num = 301229
+proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+PI_lastname = 'Thieme'
+saf_num = 300613
 
 logfilename_postfix = str(saf_num)
 
-cycle = '2016_cycle2'
+cycle = '2016_cycle3'
 
 gs.RE.md['proposal']  = {  'proposal_num': str(proposal_num), 
                          'proposal_title': str(proposal_title),

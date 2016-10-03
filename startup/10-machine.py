@@ -462,7 +462,17 @@ cal_data_2016cycle2  ={ #'d_111': 3.13130245128, #2016/6/9 (Ti, Cr, Fe, Cu, Se)
                         #'C1Rcal':-4.7089492561 for the record
                       }
 
-energy = Energy(prefix='', name='energy', **cal_data_2016cycle2)
+
+cal_data_2016cycle3  ={'d_111': 3.12929567478, #2016/8/16 (Ti, Cr, Fe, Cu, Se)
+                       'delta_bragg': 0.317124613301, #2016/8/16 (Ti, Cr, Fe, Cu, Se)
+                        'C2Xcal': 3.6,  # 2016/1/29
+                        'T2cal': 14.2470486188,
+                        'xoffset': 25.056582386746765, #2016/10/3 9 keV
+                        #'C1Rcal':-4.7089492561 for the record
+                      }
+
+
+energy = Energy(prefix='', name='energy', **cal_data_2016cycle3)
 
 
 # Front End Slits (Primary Slits)
