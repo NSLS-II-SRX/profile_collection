@@ -8,6 +8,7 @@ Created on Mon Oct  3 17:38:05 2016
 import xraylib
 def setroi(element = None, line = 'Ka', roisize = 200, roi=1):
     '''
+    setting rois for Xspress3 by providing elements
     input:
         element (string): element of interest, e.g. 'Se'
         line (string): 'Ka' for now
@@ -52,6 +53,9 @@ def setroi(element = None, line = 'Ka', roisize = 200, roi=1):
         print('cannot set roi values; roi = 1, 2, or 3')
         
 def edge(element = None, line = 'K', unit = 'eV'):
+    '''
+    function return edge (K or L3) in eV or keV with input element sympbol
+    '''
     
     atomic_num = xraylib.SymbolToAtomicNumber(element)
         
