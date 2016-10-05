@@ -33,7 +33,10 @@ class SRXFlyer1Axis:
         #in principle, one could change these and restage...
         self.stage_sigs[self._motor.velocity] = self.speed
         self.stage_sigs[self._encoder.arm] = 1
-        self.stage_sigs[self._encoder.gate_num = self.npts
+        self.stage_sigs[self._encoder.gate_num] = self.npts
+        #pc gate output is 30 for zebra.  use it to trigger xspress3 and I0
+        self.stage_sigs[self._encoder.output1] = 30
+        self.stage_sigs[self._encoder.output3] = 30
 
         super().stage()
 
@@ -77,23 +80,34 @@ class SRXFlyer1Axis:
     def collect(self):
         # fetch data from Zebra
         data = self._encoder.pc.data.get()
-        np.array(data.enc1)
-        np.array(data.time)
-        # now what?
+        output = np.zeros((2, len(data[0])))
+        output[0] = np.array(data.time)
+        output[1] = np.array(data.enc1)
+        #probably want to save data locally and make it 
+        #available later on the network device
+        #either way, need to register it with filestore
+        save_ndarray(output)
     
     def stop(self):
         pass
 
 
-def SRXFly(xstart=None,xstepsize=None,xpts=None,dwell=None,ystart=None,ystepsize=None,ypts=None,xs=xs):
+def SRXFly(xstart=None,xstepsize=None,xpts=None,dwell=None,ystart=None,ystepsize=None,ypts=None,xs=xs,ion=current_preamp):
     #xspress3 scan-specific set up
     xs.hdf5.capture = xpts
-
     rows = np.linspace(ystart,ystart+(ypts-1)*ystepsize,ypts)
 
-    md = ?
+    md = ChainMap(md, {
+        'detectors': [zebra,xs],
+        'x_range' : xstepsize*xpts,
+        'dwell' : dwell,
+        'y_range' : ystepzie*ypts,
+        }
+    )
     try:
         xs.external_trig = True
+        #set ion chamber to windowing mode
+        ion.trigger_mode = 5 
         yield from open_run(md)
         for n in rows:
             #flyer = SRXFlyer(encoder, detectors, motor, start, incr, dwell, Npts=1000)
@@ -101,14 +115,20 @@ def SRXFly(xstart=None,xstepsize=None,xpts=None,dwell=None,ystart=None,ystepsize
             flyer.stage()
             yield Msg('checkpoint')
             yield Msg('stage', xs)
-            yield Msg('stage',(flyer)
-            yield from set_abs(hf_stage.y,n,wait=True)
+            yield Msg('stage', ion)
+            #might be better to send I0 to file than database.  how?
+            yield Msg('monitor', ion)
+            yield Msg('stage', flyer)
+            yield from set_abs(hf_stage.y, n, wait=True)
             yield Msg('trigger',xs)
             yield from kickoff(flyer, wait=True)
             yield from complete(flyer, wait=True)
             yield from collect(flyer)
-            yield Msg('unstage',xs)
-            yield Msg('unstage',flyer)
+            yield Msg('unstage', flyer)
+            yield Msg('unmonitor', ion)
+            yield Msg('unstage', ion)
+            yield Msg('unstage', xs)
         yield from close_run()
     finally:
         xs.external_trig = False
+        ion.trigger_mode = 2
