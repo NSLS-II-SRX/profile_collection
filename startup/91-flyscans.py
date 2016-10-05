@@ -18,38 +18,47 @@
 
 class SRXFlyer1Axis:
 
-    def __init__(self, encoder, detectors, motor, start, incr, dwell, Npts=1000):
+#    def __init__(self, encoder, xspress3, motor, start, incr, dwell, Npts=1000):
+    def __init__(self, encoder, motor, start, incr, dwell, Npts=1000):
         self._encoder = encoder
-        self._detectors = detectors
-        self._start = float(start)
-        self._incr = float(incr)
-        self._speed = float(incr / dwell)
+#        self._xspress3 = xspress3
+        self.start = float(start)
+        self.incr = float(incr)
+        self.dwell = float(dwell)
         self._motor = motor
-        self._npts = Npts
+        self.npts = Npts
+        self.speed = float(self.incr / self.dwell)
 
-        return_values = []
+    def stage(self):
+        #in principle, one could change these and restage...
+        self.stage_sigs[self._motor.velocity] = self.speed
+        self.stage_sigs[self._encoder.arm] = 1
+        self.stage_sigs[self._encoder.gate_num = self.npts
+
+        super().stage()
+
+    def unstage(self):
+        super().unstage()
         
-    def kickoff(self):
-        # Arm Zebra, trigger any other detectors
-        devices = self._detectors
-        return_values = []
-        # set stage speed
-        ret = yield from abs_set(motor.velocity,self._speed)
-        return_values.append(ret)
-        # set hdf parameters??
-        for device in devices:
-            if hasattr(device, 'hdf5'):
-                ret = yield from abs_set(device.hdf5.capture, self._npts)
 
-        for device in devices:
-            if hasattr(device, 'trigger'):
-                ret = yield Msg('trigger', device, group=fly-group)
-                return_values.append(ret)
-        # arm zebra
-        ret = yield Msg('stage', self._encoder, group=fly-group)
-        return_values.append(ret)
+    def kickoff(self):
+        return_values = []
+#        # set stage speed
+#        self._motor.velocity = self._speed
+#        #####need to reset this!!!####
+#        # set number of gates
+#        self._encoder.gate_num = self.npts
+#        # arm motion capture
+#        self._encoder.arm = 1
+#        # set hdf parameters where applicable
+#        for device in devices:
+#            if hasattr(device, 'hdf5'):
+#                device.hdf5.capture = self.npts
+        #trigger detectors
+#        ret = yield Msg('trigger', self._xspress3, group=fly-group)
+#        return_values.append(ret)
         # command continuous motion
-        ret = yield Msg('set',self._motor, self._start+(self._npts*self._incr))
+        ret = yield Msg('set',self.motor, self.start+(self.npts*self.incr))
         return_values.append(ret)
         return return_values
 
@@ -66,28 +75,40 @@ class SRXFlyer1Axis:
         return NullStatus()
     
     def collect(self):
-        # fetch data from Zebra and do something with it
-        # halt xspress3
-        yield Msg('read',self._encoder)
+        # fetch data from Zebra
+        data = self._encoder.pc.data.get()
+        np.array(data.enc1)
+        np.array(data.time)
+        # now what?
     
     def stop(self):
         pass
 
-flyer = SRXFlyer(...)
 
-def SRXFly(...):
-    #conduct fly scan
+def SRXFly(xstart=None,xstepsize=None,xpts=None,dwell=None,ystart=None,ystepsize=None,ypts=None,xs=xs):
+    #xspress3 scan-specific set up
+    xs.hdf5.capture = xpts
 
-    #parse user information for Zebra and stage settings
+    rows = np.linspace(ystart,ystart+(ypts-1)*ystepsize,ypts)
 
-    #stage Zebra, Xspress3, F460
-
-    yield from open_run(md)
-    for n in num_rows:
-        yield Msg('checkpoint')
-        yield from flyer.kickoff(flyer, wait=True)
-        yield from flyer.complete(flyer, wait=True)
-        yield from flyer.collect(flyer)
-    
-    
-    yield from close_run()
+    md = ?
+    try:
+        xs.external_trig = True
+        yield from open_run(md)
+        for n in rows:
+            #flyer = SRXFlyer(encoder, detectors, motor, start, incr, dwell, Npts=1000)
+            flyer = SRXFlyer(zebra, hf_stage.x, xstart, xstepsize, dwell, xpts)
+            flyer.stage()
+            yield Msg('checkpoint')
+            yield Msg('stage', xs)
+            yield Msg('stage',(flyer)
+            yield from set_abs(hf_stage.y,n,wait=True)
+            yield Msg('trigger',xs)
+            yield from kickoff(flyer, wait=True)
+            yield from complete(flyer, wait=True)
+            yield from collect(flyer)
+            yield Msg('unstage',xs)
+            yield Msg('unstage',flyer)
+        yield from close_run()
+    finally:
+        xs.external_trig = False
