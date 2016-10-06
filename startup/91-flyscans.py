@@ -19,21 +19,29 @@
 class SRXFlyer1Axis:
 
 #    def __init__(self, encoder, xspress3, motor, start, incr, dwell, Npts=1000):
-    def __init__(self, encoder, motor, start, incr, dwell, Npts=1000):
+    def __init__(self, encoder, motor, start, incr, dwell, Npts=1000, delta):
         self._encoder = encoder
 #        self._xspress3 = xspress3
         self.start = float(start)
+        self.extent = float(start) + float(Ntps * incr)
         self.incr = float(incr)
         self.dwell = float(dwell)
         self._motor = motor
         self.npts = Npts
         self.speed = float(self.incr / self.dwell)
+        self.delta = delta
+        
+        self._encoder.enc_pos1_sync = 1 
 
     def stage(self):
-        #in principle, one could change these and restage...
+        # X speed
         self.stage_sigs[self._motor.velocity] = self.speed
-        self.stage_sigs[self._encoder.arm] = 1
+        # gating info for encoder capture
+        self.stage_sigs[self._encoder.gate_start] = self.start
+        self.stage_sigs[self._encoder.gate_width] = self.extent
+        self.stage_sigs[self._encoder.gate_step] = self.incr
         self.stage_sigs[self._encoder.gate_num] = self.npts
+        self.stage_sigs[self._encoder.arm] = 1
         #pc gate output is 30 for zebra.  use it to trigger xspress3 and I0
         self.stage_sigs[self._encoder.output1] = 30
         self.stage_sigs[self._encoder.output3] = 30
@@ -61,7 +69,7 @@ class SRXFlyer1Axis:
 #        ret = yield Msg('trigger', self._xspress3, group=fly-group)
 #        return_values.append(ret)
         # command continuous motion
-        ret = yield Msg('set',self.motor, self.start+(self.npts*self.incr))
+        ret = yield Msg('set',self.motor, self.start+(self.npts*self.incr)+self.delta)
         return_values.append(ret)
         return return_values
 
@@ -75,6 +83,8 @@ class SRXFlyer1Axis:
         return OrderedDict()
     
     def complete(self):
+        #depends on motor position and self._encoder.data_in_progress bool
+        #first, motor completes, then data download begins.
         return NullStatus()
     
     def collect(self):
@@ -83,18 +93,22 @@ class SRXFlyer1Axis:
         output = np.zeros((2, len(data[0])))
         output[0] = np.array(data.time)
         output[1] = np.array(data.enc1)
-        #probably want to save data locally and make it 
-        #available later on the network device
-        #either way, need to register it with filestore
-        save_ndarray(output)
+        # will cache these to xf05id1 user nfs directory and copy them to the 
+        # data volume
+        userdir = '/nfs/xf05id1/.fs_cache'
+        data_path = os.path.join(userdir, str(datetime.date.today())
+        uid = save_ndarray(output,data_path)
+        resource_document = fsapi.insert_resource('npy', data_path)
+        datum_document = fsapi.insert_datum(resource_document, uid, {})
+        # need to register this with metadatastore as x values...
+        # how?
     
     def stop(self):
         pass
 
 
 def SRXFly(xstart=None,xstepsize=None,xpts=None,dwell=None,ystart=None,ystepsize=None,ypts=None,xs=xs,ion=current_preamp):
-    #xspress3 scan-specific set up
-    xs.hdf5.capture = xpts
+    delta = 0.01
     rows = np.linspace(ystart,ystart+(ypts-1)*ystepsize,ypts)
 
     md = ChainMap(md, {
@@ -108,19 +122,22 @@ def SRXFly(xstart=None,xstepsize=None,xpts=None,dwell=None,ystart=None,ystepsize
         xs.external_trig = True
         #set ion chamber to windowing mode
         ion.trigger_mode = 5 
+        yield from set_abs(hf_stage.x, xstart-delta, wait=True)
         yield from open_run(md)
         for n in rows:
+            #xspress3 scan-specific set up
+            xs.hdf5.capture = xpts
             #flyer = SRXFlyer(encoder, detectors, motor, start, incr, dwell, Npts=1000)
-            flyer = SRXFlyer(zebra, hf_stage.x, xstart, xstepsize, dwell, xpts)
+            flyer = SRXFlyer(zebra, hf_stage.x, xstart, xstepsize, dwell, xpts, delta)
             flyer.stage()
             yield Msg('checkpoint')
             yield Msg('stage', xs)
             yield Msg('stage', ion)
+            yield Msg('trigger',xs)
             #might be better to send I0 to file than database.  how?
             yield Msg('monitor', ion)
             yield Msg('stage', flyer)
             yield from set_abs(hf_stage.y, n, wait=True)
-            yield Msg('trigger',xs)
             yield from kickoff(flyer, wait=True)
             yield from complete(flyer, wait=True)
             yield from collect(flyer)
@@ -128,6 +145,7 @@ def SRXFly(xstart=None,xstepsize=None,xpts=None,dwell=None,ystart=None,ystepsize
             yield Msg('unmonitor', ion)
             yield Msg('unstage', ion)
             yield Msg('unstage', xs)
+            #run-specific metadata?
         yield from close_run()
     finally:
         xs.external_trig = False
