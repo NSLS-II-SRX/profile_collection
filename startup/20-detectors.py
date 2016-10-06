@@ -144,6 +144,7 @@ class CurrentPreampZebra(Device):
     ch3 = Cpt(EpicsSignalRO, 'Cur:I3-I')
 
     exp_time = Cpt(EpicsSignal, 'Per-SP')
+    trigger_mode = Cpt(EpicsSignal, 'Cmd:TrigMode')
     initi_trigger = Cpt(EpicsSignal, 'Cmd:Init')
     zebra_trigger = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:SOFT_IN:B0',
                         add_prefix=())
@@ -250,6 +251,11 @@ class ZebraPositionCapture(Device):
     pulse_step = Cpt(EpicsSignalWithRBV, 'PC_PULSE_STEP')
     pulse_max = Cpt(EpicsSignalWithRBV, 'PC_PULSE_MAX')
     pulse = Cpt(EpicsSignalRO, 'PC_PULSE_OUT')
+    enc_pos1_sync = Cpt(EpicsSignal, 'M1:SETPOS.PROC')
+    enc_pos2_sync = Cpt(EpicsSignal, 'M2:SETPOS.PROC')
+    enc_pos3_sync = Cpt(EpicsSignal, 'M3:SETPOS.PROC')
+    enc_pos4_sync = Cpt(EpicsSignal, 'M4:SETPOS.PROC')
+    data_in_progress = Cpt(EpicsSignalRO, 'ARRAY_ACQ')
     
     data=Cpt(ZebraPositionCaptureData,'')
 
