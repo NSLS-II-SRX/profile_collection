@@ -143,7 +143,9 @@ class CurrentPreampZebra(Device):
     ch2 = Cpt(EpicsSignalRO, 'Cur:I2-I')
     ch3 = Cpt(EpicsSignalRO, 'Cur:I3-I')
 
-    exp_time = Cpt(EpicsSignal, 'Per-SP')
+    #exp_time = Cpt(EpicsSignal, 'Per-SP')
+    exp_time = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:PULSE3_WID',
+                    add_prefix=())
     trigger_mode = Cpt(EpicsSignal, 'Cmd:TrigMode')
     initi_trigger = Cpt(EpicsSignal, 'Cmd:Init')
     zebra_trigger = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:SOFT_IN:B0',
@@ -151,11 +153,20 @@ class CurrentPreampZebra(Device):
     zebra_pulse_3_source = Cpt(EpicsSignal, 
                             'XF:05IDD-ES:1{Dev:Zebra1}:PULSE3_INP',
                             add_prefix=())
+
+    current_scan_rate = Cpt(EpicsSignal, 'Cmd:RdCur.SCAN')
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.stage_sigs[self.zebra_trigger] = 0
 #        self.stage_sigs[self.zebra_pulse_3_source] = 44
         self.stage_sigs[self.zebra_pulse_3_source] = 60
+
+        self.current_scan_rate.put(9)
+        #update
+        self.trigger_mode.put(5)
+        self.initi_trigger.put(1, wait=True)
+
 
     def stage(self):
 
@@ -166,7 +177,7 @@ class CurrentPreampZebra(Device):
 #        self.zebra_pulse_3_source.put(44,wait=True)
 #        self.zebra_pulse_3_source.put(60,wait=True)
         self.initi_trigger.put(1, wait=True)
-        wait(self.trigger())
+#        wait(self.trigger())
 #        wait(self.trigger())
         return ret
 
