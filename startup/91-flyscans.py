@@ -16,79 +16,50 @@
 #Options:  open and write to Xspress3 HDF5, write to HDF5 and link in 
 #   Xspress3 data, write separately in some format and register later
 #
-from filestore import filestore.commands as fs
+from bluesky.plans import (one_1d_step, kickoff, collect, complete, scan, wait,
+                           monitor_during_wrapper, stage_decorator, abs_set)
+from bluesky.examples import NullStatus
+import filestore.commands as fs
+from ophyd import Device
 import uuid
 
-class SRXFlyer1Axis:
+class SRXFlyer1Axis(Device):
     LARGE_FILE_DIRECTORY_READ_PATH = '/tmp/test_data'
     LARGE_FILE_DIRECTORY_WRITE_PATH = '/tmp/test_data'
     "This is the Zebra."
-#    def __init__(self, encoder, xspress3, motor, start, incr, dwell, Npts=1000):
-    def __init__(self, encoder, motor, start, incr, dwell, delta, Npts=1000, *, fs=fs):
+    def __init__(self, encoder, *, fs=fs):
+        super().__init__('', parent=None)
         self._mode = 'idle'
         self._encoder = encoder
-#        self._xspress3 = xspress3
-        self.start = float(start)
-        self.extent = float(start) + float(Ntps * incr)
-        self.incr = float(incr)
-        self.dwell = float(dwell)
-        self._motor = motor
-        self.npts = Npts
-        self.speed = float(self.incr / self.dwell)
-        self.delta = delta
 
-        # X speed
-        self.stage_sigs[self._motor.velocity] = self.speed
         # gating info for encoder capture
-        self.stage_sigs[self._encoder.gate_start] = self.start
-        self.stage_sigs[self._encoder.gate_width] = self.extent
-        self.stage_sigs[self._encoder.gate_step] = self.extent 
-        self.stage_sigs[self._encoder.gate_num] = 1
-        self.stage_sigs[self._encoder.pulse_start] = 0
-        self.stage_sigs[self._encoder.pulse_width] = self.dwell-0.005
-        self.stage_sigs[self._encoder.pulse_step] = self.dwell
-        self.stage_sigs[self._encoder.pulse_num] = self.npts
+        self.stage_sigs[self._encoder.pc.gate_num] = 1
+        self.stage_sigs[self._encoder.pc.pulse_start] = 0
 
-        self.stage_sigs[self._encoder.arm] = 1
-        #pc gate output is 30 for zebra.  use it to trigger xspress3 and I0
-        self.stage_sigs[self._encoder.output1] = 31
-        self.stage_sigs[self._encoder.output3] = 31
+        self.stage_sigs[self._encoder.pc.arm] = 1
+        #pc gate output is 31 for zebra.  use it to trigger xspress3 and I0
+        self.stage_sigs[self._encoder.output1.ttl.addr] = 31
+        self.stage_sigs[self._encoder.output3.ttl.addr] = 31
         
-        self._encoder.enc_pos1_sync = 1 
+        self.stage_sigs[self._encoder.pc.enc_pos1_sync] = 1 
 
     def stage(self):
         super().stage()
 
-    def kickoff(self, xstart, xstop, xnum, dwell):
+    def kickoff(self, *, xstart, xstop, xnum, dwell):
+        print("KICKOFF")
         self._mode = 'kicked off'
-        self.gate_start.put(xstart)
-        self.gate_stop.put(xstop)
-        self.pulse_max.put(xnum)
-        self.gate_width.put(dwell)
-        self.arm.put(1)
-        return NullStatus()  # TODO Return a status object *first* and do the above asynchronously.
-
-        # NOTHING BELOW IS EVER RUN.
-        return_values = []
-        
-#        # set stage speed
-#        self._motor.velocity = self._speed
-#        #####need to reset this!!!####
-#        # set number of gates
-#        self._encoder.gate_num = self.npts
-#        # arm motion capture
-#        self._encoder.arm = 1
-#        # set hdf parameters where applicable
-#        for device in devices:
-#            if hasattr(device, 'hdf5'):
-#                device.hdf5.capture = self.npts
-        #trigger detectors
-#        ret = yield Msg('trigger', self._xspress3, group=fly-group)
-#        return_values.append(ret)
-        # command continuous motion
-        ret = yield Msg('set',self.motor, self.start+(self.npts*self.incr)+self.delta)
-        return_values.append(ret)
-        return return_values
+        extent = xstart - xstop
+        self._encoder.pc.gate_start.put(xstart)
+        self._encoder.pc.gate_step.put(extent)
+        self._encoder.pc.gate_width.put(extent)
+        self._encoder.pc.pulse_max.put(xnum)
+        self._encoder.pc.pulse_step.put(dwell)
+        self._encoder.pc.pulse_width.put(dwell - 0.005)
+        self._encoder.pc.arm.put(1)
+        st = NullStatus()  # TODO Return a status object *first* and do the above asynchronously.
+        print("RETUNING", st)
+        return st
 
     def complete(self):
         """
@@ -134,6 +105,9 @@ class SRXFlyer1Axis:
 
     def resume(self):
         self.stage()
+
+
+flying_zebra = SRXFlyer1Axis(zebra)
 
 
 def export_zebra_data(zebra, filepath):
@@ -198,10 +172,6 @@ def SRXFly(xstart=None,xstepsize=None,xpts=None,dwell=None,
         xs.external_trig.put(False)
 
 
-from bluesky.plans import (one_1d_step, kickoff, collect, complete, scan
-                           monitor_during_wrapper, abs_set)
-
-
 def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
                  delta=None,
                  xmotor=hf_stage.x, ymotor=hf_stage.y,
@@ -220,27 +190,37 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         delta=0.01
     md = ChainMap(md, {
         'detectors': [zebra,xs],
-        'x_range' : xstepsize*xpts,
         'dwell' : dwell,
-        'y_range' : ystepzie*ypts,
         }
     )
 
+    from bluesky.plans import stage, unstage
+    # @stage_decorator([xs])
     def fly_each_step(detectors, motor, step):
+        "See http://nsls-ii.github.io/bluesky/plans.html#the-per-step-hook"
         # First, let 'scan' handle the normal y step, including a checkpoint.
         yield from one_1d_step(detectors, motor, step)
 
         # Now do the x steps.
+        yield from stage(xs)
         yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
         v = (xstop - xstart) / xnum / dwell  # compute "stage speed"
         yield from abs_set(xmotor.velocity, v)  # set the "stage speed"
         # arm the Zebra (start caching x positions)
-        yield from kickoff(flying_zebra, xstart, xstop, xnum)
-        yield from abs_set(xmotor, stop, wait=True)  # move in x
+        print("ABOUT TO KICKOFF")
+        yield from kickoff(flying_zebra, xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell, wait=True)
+        yield from abs_set(xs.settings.acquire, 1)  # start acquiring images
+        yield from abs_set(xmotor, xstop, wait=True)  # move in x
+        yield from abs_set(xs.settings.acquire, 0)  # stop acquiring images
         yield from complete(flying_zebra)  # tell the Zebra we are done
         yield from collect(flying_zebra)  # extract data from Zebra
+        yield from unstage(xs)
 
-    @monitor_during_decorator([ion, xs])  # monitor values from ion and acquisitions from xs
-    @stage_decorator([xmotor, flying_zebra, xs, ion])  # Below, 'scan' stage ymotor.
+    # @monitor_during_decorator([ion])  # monitor values from ion
+    @stage_decorator([flying_zebra, ion])  # Below, 'scan' stage ymotor.
     def plan():
+        yield from abs_set(xs.settings.trigger_mode, 'TTL Veto Only')
         return (yield from scan([], ymotor, ystart, ystop, ynum, per_step=fly_each_step, md=md))
+        yield from abs_set(xs.settings.trigger_mode, 'Internal')
+
+    return (yield from plan())

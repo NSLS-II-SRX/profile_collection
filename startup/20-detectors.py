@@ -164,7 +164,8 @@ class CurrentPreampZebra(Device):
 
         self.current_scan_rate.put(9)
         #update
-        self.trigger_mode.put(5)
+        # self.trigger_mode.put(5)
+        self.stage_sigs[self.trigger_mode] = 5  # fix this
         self.initi_trigger.put(1, wait=True)
 
 
@@ -177,7 +178,7 @@ class CurrentPreampZebra(Device):
 #        self.zebra_pulse_3_source.put(44,wait=True)
 #        self.zebra_pulse_3_source.put(60,wait=True)
         self.initi_trigger.put(1, wait=True)
-#        wait(self.trigger())
+        wait(self.trigger())
 #        wait(self.trigger())
         return ret
 
