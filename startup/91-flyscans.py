@@ -174,7 +174,7 @@ def SRXFly(xstart=None,xstepsize=None,xpts=None,dwell=None,
     if md is None:
         md = {}
     md = ChainMap(md, {
-        'detectors': [zebra,xs],
+        'detectors': [zebra,xs.name],
         'x_range' : xstepsize*xpts,
         'dwell' : dwell,
         'y_range' : ystepzie*ypts,
