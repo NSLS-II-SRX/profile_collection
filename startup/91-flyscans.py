@@ -264,8 +264,9 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     def plan():
         #yield from abs_set(xs.settings.trigger_mode, 'TTL Veto Only')
         yield from abs_set(xs.external_trig, True)
-        return (yield from scan([], ymotor, ystart, ystop, ynum, per_step=fly_each_step, md=md))
+        ret = (yield from scan([], ymotor, ystart, ystop, ynum, per_step=fly_each_step, md=md))
         yield from abs_set(xs.external_trig, False)
+        return ret
         #yield from abs_set(xs.settings.trigger_mode, 'Internal')
 
     return (yield from plan())
