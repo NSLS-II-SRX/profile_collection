@@ -22,6 +22,7 @@ from bluesky.examples import NullStatus
 import filestore.commands as fs
 from ophyd import Device
 import uuid
+import h5py
 
 class SRXFlyer1Axis(Device):
     LARGE_FILE_DIRECTORY_READ_PATH = '/tmp/test_data'
@@ -31,25 +32,53 @@ class SRXFlyer1Axis(Device):
         super().__init__('', parent=None)
         self._mode = 'idle'
         self._encoder = encoder
+        self._filestore_resource = None
 
         # gating info for encoder capture
         self.stage_sigs[self._encoder.pc.gate_num] = 1
         self.stage_sigs[self._encoder.pc.pulse_start] = 0
 
-        self.stage_sigs[self._encoder.pc.arm] = 1
         #pc gate output is 31 for zebra.  use it to trigger xspress3 and I0
         self.stage_sigs[self._encoder.output1.ttl.addr] = 31
         self.stage_sigs[self._encoder.output3.ttl.addr] = 31
         
         self.stage_sigs[self._encoder.pc.enc_pos1_sync] = 1 
 
+        self._encoder.pc.block_state_reset.put(1)
+
     def stage(self):
+        #self.__filename = '{}.h5'.format(uuid.uuid4())
+        #self.__read_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_READ_PATH, self.__filename)
+        #self.__write_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH, self.__filename)
+        #resource = fs.insert_resource('ZEBRA_HDF51', self.__read_filepath)
+        #self._filestore_resource = resource
         super().stage()
 
+    def describe_collect(self):
+
+        if self._filestore_resource is not None:
+            ext_spec = 'FileStore::{!s}'.format(self._filestore_resource['id'])
+        else:
+            ext_spec = 'FileStore:'
+
+#        spec = {'external':'FILESTORE:',
+        spec = {'external': ext_spec,
+            'dtype' : 'array',
+            'shape' : [self._npts],
+            'source': ''  # make this the PV of the array the det is writing
+        }
+
+        desc = OrderedDict()
+        for chan in ('time','enc1'):
+            desc[chan] = spec
+            desc[chan]['source'] = getattr(self._encoder.pc.data, chan).pvname
+
+        return {'stream0':desc}
+
     def kickoff(self, *, xstart, xstop, xnum, dwell):
-        print("KICKOFF")
         self._mode = 'kicked off'
-        extent = xstart - xstop
+        self._npts = int(xnum)
+        extent = xstop - xstart
         self._encoder.pc.gate_start.put(xstart)
         self._encoder.pc.gate_step.put(extent)
         self._encoder.pc.gate_width.put(extent)
@@ -58,7 +87,6 @@ class SRXFlyer1Axis(Device):
         self._encoder.pc.pulse_width.put(dwell - 0.005)
         self._encoder.pc.arm.put(1)
         st = NullStatus()  # TODO Return a status object *first* and do the above asynchronously.
-        print("RETUNING", st)
         return st
 
     def complete(self):
@@ -67,23 +95,31 @@ class SRXFlyer1Axis(Device):
         whether that is true, so it will obligingly stop immediately. It is
         up to the caller to ensure that the motion is actually complete.
         """
+        # Our acquisition complete PV is : XF:05IDD-ES:1{Dev:Zebra1}:ARRAY_ACQ
+        while self._encoder.pc.data_in_progress is 1:
+            poll()
         self._mode = 'complete'
-        self.arm.put(0)  # sanity check; this should happen automatically
+        # self._encoder.pc.arm.put(0)  # sanity check; this should happen automatically
+        # this does the same as the above, but also aborts data collection
+        self._encoder.pc.block_state_reset.put(1)
         return NullStatus()
     
     def collect(self):
         # Create records in the FileStore database.
-        filename = '{}.h5'.format(uuid.uuid4())
-        read_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_READ_PATH, filename)
-        write_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH, filename)
-        resource = fs.insert_resource('ZEBRA_HDF51', read_filepath)
+        # move this to stage because I thinkt hat describe_collect needs the
+        # resource id
+        self.__filename = '{}.h5'.format(uuid.uuid4())
+        self.__read_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_READ_PATH, self.__filename)
+        self.__write_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH, self.__filename)
+        self.__filestore_resource = fs.insert_resource('ZEBRA_HDF51', self.__read_filepath)
+        # self._filestore_resource = resource
         time_datum_id = uuid.uuid4()
         enc1_datum_id = uuid.uuid4()
-        fs.insert_datum(resource, time_datum_id, {'column': 'time'})
-        fs.insert_datum(resource, enc1_datum_id, {'column': 'enc1'})
+        fs.insert_datum(self.__filestore_resource, time_datum_id, {'column': 'time'})
+        fs.insert_datum(self.__filestore_resource, enc1_datum_id, {'column': 'enc1'})
 
         # Write the file.
-        export_zebra_data(self._encoder, write_filepath)
+        export_zebra_data(self._encoder, self.__write_filepath)
 
         # Yield a (partial) Event document. The RunEngine will put this
         # into metadatastore, as it does all readings.
@@ -99,7 +135,7 @@ class SRXFlyer1Axis(Device):
 
     def pause(self):
         "Pausing in the middle of a kickoff nukes the partial dataset."
-        self.arm.put(0)
+        self._encoder.arm.put(0)
         self._mode = 'idle'
         self.unstage()
 
@@ -116,7 +152,11 @@ def export_zebra_data(zebra, filepath):
     output[0] = np.array(data.time)
     output[1] = np.array(data.enc1)
     with h5py.File(filepath, 'w') as f:
-        r.write(output)
+        dset1 = f.create_dataset("time",(len(output[0]),),dtype='f')
+        dset1 = output[0]
+        dset2 = f.create_dataset("enc1",(len(output[1]),),dtype='f')
+        dset2 = output[1]
+        f.close()
 
 
 def SRXFly(xstart=None,xstepsize=None,xpts=None,dwell=None,
@@ -170,6 +210,7 @@ def SRXFly(xstart=None,xstepsize=None,xpts=None,dwell=None,
         yield from close_run()
     finally:
         xs.external_trig.put(False)
+        xs.settings.trigger_mode.put('Internal')
 
 
 def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
@@ -206,21 +247,25 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
         v = (xstop - xstart) / xnum / dwell  # compute "stage speed"
         yield from abs_set(xmotor.velocity, v)  # set the "stage speed"
+        yield from abs_set(xs.hdf5.num_capture, xnum)
+        yield from abs_set(xs.settings.num_images, xnum)
         # arm the Zebra (start caching x positions)
-        print("ABOUT TO KICKOFF")
         yield from kickoff(flying_zebra, xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell, wait=True)
         yield from abs_set(xs.settings.acquire, 1)  # start acquiring images
-        yield from abs_set(xmotor, xstop, wait=True)  # move in x
+        yield from abs_set(xmotor, xstop+delta, wait=True)  # move in x
         yield from abs_set(xs.settings.acquire, 0)  # stop acquiring images
         yield from complete(flying_zebra)  # tell the Zebra we are done
         yield from collect(flying_zebra)  # extract data from Zebra
+        yield from abs_set(xmotor.velocity, 3.)  # set the "stage speed"
         yield from unstage(xs)
 
     # @monitor_during_decorator([ion])  # monitor values from ion
     @stage_decorator([flying_zebra, ion])  # Below, 'scan' stage ymotor.
     def plan():
-        yield from abs_set(xs.settings.trigger_mode, 'TTL Veto Only')
+        #yield from abs_set(xs.settings.trigger_mode, 'TTL Veto Only')
+        yield from abs_set(xs.external_trig, True)
         return (yield from scan([], ymotor, ystart, ystop, ynum, per_step=fly_each_step, md=md))
-        yield from abs_set(xs.settings.trigger_mode, 'Internal')
+        yield from abs_set(xs.external_trig, False)
+        #yield from abs_set(xs.settings.trigger_mode, 'Internal')
 
     return (yield from plan())
