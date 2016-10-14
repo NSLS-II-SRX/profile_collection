@@ -47,11 +47,6 @@ class SRXFlyer1Axis(Device):
         self._encoder.pc.block_state_reset.put(1)
 
     def stage(self):
-        #self.__filename = '{}.h5'.format(uuid.uuid4())
-        #self.__read_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_READ_PATH, self.__filename)
-        #self.__write_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH, self.__filename)
-        #resource = fs.insert_resource('ZEBRA_HDF51', self.__read_filepath)
-        #self._filestore_resource = resource
         super().stage()
 
     def describe_collect(self):
@@ -61,7 +56,6 @@ class SRXFlyer1Axis(Device):
         else:
             ext_spec = 'FileStore:'
 
-#        spec = {'external':'FILESTORE:',
         spec = {'external': ext_spec,
             'dtype' : 'array',
             'shape' : [self._npts],
@@ -112,7 +106,6 @@ class SRXFlyer1Axis(Device):
         self.__read_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_READ_PATH, self.__filename)
         self.__write_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH, self.__filename)
         self.__filestore_resource = fs.insert_resource('ZEBRA_HDF51', self.__read_filepath)
-        # self._filestore_resource = resource
         time_datum_id = uuid.uuid4()
         enc1_datum_id = uuid.uuid4()
         fs.insert_datum(self.__filestore_resource, time_datum_id, {'column': 'time'})
@@ -148,75 +141,21 @@ flying_zebra = SRXFlyer1Axis(zebra)
 
 def export_zebra_data(zebra, filepath):
     data = zebra.pc.data.get()
-    output = np.zeros((2, len(data[0])))
-    output[0] = np.array(data.time)
-    output[1] = np.array(data.enc1)
+    size = (len(data.time),)
     with h5py.File(filepath, 'w') as f:
-        dset1 = f.create_dataset("time",(len(output[0]),),dtype='f')
-        dset1 = output[0]
-        dset2 = f.create_dataset("enc1",(len(output[1]),),dtype='f')
-        dset2 = output[1]
+        dset0 = f.create_dataset("time",size,dtype='f')
+        dset0[...] = np.array(data.time)
+        dset1 = f.create_dataset("enc1",size,dtype='f')
+        dset1[...] = np.array(data.enc1)
+        dset0.flush()
+        dset1.flush()
         f.close()
-
-
-def SRXFly(xstart=None,xstepsize=None,xpts=None,dwell=None,
-           ystart=None,ystepsize=None,ypts=None,xs=xs,ion=current_preamp, md=None):
-    """
-
-    Monitor IO.
-    Zebra buffers x(t) points as a flyer.
-    Xpress3 is our detector.
-    The aerotech has the x and y positioners.
-    """
-    delta = 0.01
-    rows = np.linspace(ystart,ystart+(ypts-1)*ystepsize,ypts)
-
-    if md is None:
-        md = {}
-    md = ChainMap(md, {
-        'detectors': [zebra,xs],
-        'x_range' : xstepsize*xpts,
-        'dwell' : dwell,
-        'y_range' : ystepzie*ypts,
-        }
-    )
-    try:
-        xs.external_trig.put(True)
-        #set ion chamber to windowing mode
-        yield from set_abs(hf_stage.x, xstart-delta, wait=True)
-        yield from open_run(md)
-        for n in rows:
-            #xspress3 scan-specific set up
-            xs.hdf5.capture = xpts
-            #flyer = SRXFlyer(encoder, detectors, motor, start, incr, dwell, Npts=1000)
-            flyer = SRXFlyer(zebra, hf_stage.x, xstart, xstepsize, dwell, delta, xpts)
-            flyer.stage()
-            yield Msg('checkpoint')
-            yield Msg('stage', xs)
-            yield Msg('stage', ion)
-            yield Msg('trigger',xs)
-            #might be better to send I0 to file than database.  how?
-            yield Msg('monitor', ion)
-            yield Msg('stage', flyer)
-            yield from set_abs(hf_stage.y, n, wait=True)
-            yield from kickoff(flyer, wait=True)
-            yield from complete(flyer, wait=True)
-            yield from collect(flyer)
-            yield Msg('unstage', flyer)
-            yield Msg('unmonitor', ion)
-            yield Msg('unstage', ion)
-            yield Msg('unstage', xs)
-            #run-specific metadata?
-        yield from close_run()
-    finally:
-        xs.external_trig.put(False)
-        xs.settings.trigger_mode.put('Internal')
 
 
 def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
                  delta=None,
                  xmotor=hf_stage.x, ymotor=hf_stage.y,
-                 xs=xs, ion=current_preamp,
+                 xs=xs, ion=current_preamp.ch2,
                  flying_zebra=flying_zebra, md=None):
     """
 
@@ -230,7 +169,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     if delta is None:
         delta=0.01
     md = ChainMap(md, {
-        'detectors': [zebra,xs],
+        'detectors': [zebra.name,xs.name,ion.name],
         'dwell' : dwell,
         }
     )
@@ -259,13 +198,15 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from abs_set(xmotor.velocity, 3.)  # set the "stage speed"
         yield from unstage(xs)
 
-    # @monitor_during_decorator([ion])  # monitor values from ion
-    @stage_decorator([flying_zebra, ion])  # Below, 'scan' stage ymotor.
+    @monitor_during_decorator([ion])  # monitor values from ion
+    #@stage_decorator([flying_zebra, ion])  # Below, 'scan' stage ymotor.
+    @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     def plan():
         #yield from abs_set(xs.settings.trigger_mode, 'TTL Veto Only')
         yield from abs_set(xs.external_trig, True)
-        return (yield from scan([], ymotor, ystart, ystop, ynum, per_step=fly_each_step, md=md))
-        yield from abs_set(xs.external_trig, False)
+        ret = (yield from scan([], ymotor, ystart, ystop, ynum, per_step=fly_each_step, md=md))
         #yield from abs_set(xs.settings.trigger_mode, 'Internal')
+        yield from abs_set(xs.external_trig, False)
+        return ret
 
     return (yield from plan())
