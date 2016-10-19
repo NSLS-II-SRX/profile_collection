@@ -16,10 +16,13 @@
 #Options:  open and write to Xspress3 HDF5, write to HDF5 and link in 
 #   Xspress3 data, write separately in some format and register later
 #
+import copy
 from bluesky.plans import (one_1d_step, kickoff, collect, complete, scan, wait,
-                           monitor_during_wrapper, stage_decorator, abs_set)
+                           monitor_during_wrapper, stage_decorator, abs_set,
+                           run_decorator)
 from bluesky.examples import NullStatus
 import filestore.commands as fs
+from bluesky.callbacks import LiveTable, LivePlot, CallbackBase, LiveRaster
 from ophyd import Device
 import uuid
 import h5py
@@ -106,8 +109,8 @@ class SRXFlyer1Axis(Device):
         self.__read_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_READ_PATH, self.__filename)
         self.__write_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH, self.__filename)
         self.__filestore_resource = fs.insert_resource('ZEBRA_HDF51', self.__read_filepath)
-        time_datum_id = uuid.uuid4()
-        enc1_datum_id = uuid.uuid4()
+        time_datum_id = str(uuid.uuid4())
+        enc1_datum_id = str(uuid.uuid4())
         fs.insert_datum(self.__filestore_resource, time_datum_id, {'column': 'time'})
         fs.insert_datum(self.__filestore_resource, enc1_datum_id, {'column': 'enc1'})
 
@@ -152,6 +155,52 @@ def export_zebra_data(zebra, filepath):
         f.close()
 
 
+class ZebraHDF5Handler:
+    def __init__(self, resource_fn):
+        self._handle = h5py.File(resource_fn, 'r')
+
+    def __call__(self, *, column):
+        return self._handle[column]
+
+
+db.fs.register_handler('ZEBRA_HDF51', ZebraHDF5Handler, overwrite=True)
+
+
+class LiveZebraPlot(CallbackBase):
+    """
+    This is a really dumb approach but it gets the job done. To fix later.
+    """
+
+    def __init__(self, ax=None):
+        self._uid = None
+        self._desc_uid = None
+        if ax is None:
+            fig, ax = plt.subplots()
+        self.ax = ax
+        self.legend_title = 'sequence #'
+
+    def start(self, doc):
+        self._uid = doc['uid']
+
+    def descriptor(self, doc):
+        if doc['name'] == 'stream0':
+            self._desc_uid = doc['uid']
+
+    def bulk_events(self, docs):
+        # Don't actually use the docs, but use the fact that they have been
+        # emitted as a signal to go grab the data from the databroker now.
+        event_uids = [doc['uid'] for doc in docs[self._desc_uid]]
+        events = db.get_events(db[self._uid], stream_name='stream0', fill=True)
+        for event in events:
+            if event['uid'] in event_uids:
+                self.ax.plot(event['data']['time'], event['data']['enc1'], label=event['seq_num'])
+        self.ax.legend(loc=0, title=self.legend_title)
+
+    def stop(self, doc):
+        self._uid = None
+        self._desc_uid = None
+
+
 def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
                  delta=None,
                  xmotor=hf_stage.x, ymotor=hf_stage.y,
@@ -169,20 +218,20 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     if delta is None:
         delta=0.01
     md = ChainMap(md, {
+        'plan_name': 'scan_and_fly',
         'detectors': [zebra.name,xs.name,ion.name],
         'dwell' : dwell,
         }
     )
 
     from bluesky.plans import stage, unstage
-    # @stage_decorator([xs])
+    @stage_decorator([xs])
     def fly_each_step(detectors, motor, step):
         "See http://nsls-ii.github.io/bluesky/plans.html#the-per-step-hook"
         # First, let 'scan' handle the normal y step, including a checkpoint.
         yield from one_1d_step(detectors, motor, step)
 
         # Now do the x steps.
-        yield from stage(xs)
         yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
         v = (xstop - xstart) / xnum / dwell  # compute "stage speed"
         yield from abs_set(xmotor.velocity, v)  # set the "stage speed"
@@ -196,17 +245,17 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from complete(flying_zebra)  # tell the Zebra we are done
         yield from collect(flying_zebra)  # extract data from Zebra
         yield from abs_set(xmotor.velocity, 3.)  # set the "stage speed"
-        yield from unstage(xs)
 
-    @monitor_during_decorator([ion])  # monitor values from ion
-    #@stage_decorator([flying_zebra, ion])  # Below, 'scan' stage ymotor.
+    @subs_decorator([LiveTable([ymotor]), LiveRaster((ynum, xnum), ion.name), LiveZebraPlot()])
+    @monitor_during_decorator([ion], run=False)  # monitor values from ion
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
+    @run_decorator(md=md)
     def plan():
         #yield from abs_set(xs.settings.trigger_mode, 'TTL Veto Only')
         yield from abs_set(xs.external_trig, True)
-        ret = (yield from scan([], ymotor, ystart, ystop, ynum, per_step=fly_each_step, md=md))
+        for step in np.linspace(ystart, ystop, ynum):
+            yield from fly_each_step([], ymotor, step)
         #yield from abs_set(xs.settings.trigger_mode, 'Internal')
         yield from abs_set(xs.external_trig, False)
-        return ret
 
     return (yield from plan())
