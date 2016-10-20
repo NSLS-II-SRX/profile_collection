@@ -247,7 +247,9 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from abs_set(xmotor.velocity, 3.)  # set the "stage speed"
 
     @subs_decorator([LiveTable([ymotor]), LiveRaster((ynum, xnum), ion.name), LiveZebraPlot()])
+    #@subs_decorator([LiveTable([ymotor]), LiveRaster((ynum, xnum), xs.channel1.rois.roi03.value.name), LiveZebraPlot()])
     @monitor_during_decorator([ion], run=False)  # monitor values from ion
+    #@monitor_during_decorator([xs], run=False)  # monitor values from xs
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
     def plan():

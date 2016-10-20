@@ -268,6 +268,8 @@ class ZebraPositionCapture(Device):
     enc_pos3_sync = Cpt(EpicsSignal, 'M3:SETPOS.PROC')
     enc_pos4_sync = Cpt(EpicsSignal, 'M4:SETPOS.PROC')
     data_in_progress = Cpt(EpicsSignalRO, 'ARRAY_ACQ')
+
+    block_state_reset = Cpt(EpicsSignal, 'SYS_RESET.PROC')
     
     data=Cpt(ZebraPositionCaptureData,'')
 

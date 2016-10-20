@@ -187,10 +187,20 @@ import time
 #PI_lastname = 'Unrine'
 #saf_num = 300519
 
-proposal_num = 301229
-proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-PI_lastname = 'Thieme'
-saf_num = 300613
+#proposal_num = 301229
+#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+#PI_lastname = 'Thieme'
+#saf_num = 300613
+
+#proposal_num = 300766
+#proposal_title = 'Trace Elements in Fluorite as a Window into Ore Forming Fluids and Igneous Petrogenesis'
+#PI_lastname = 'Acerbo'
+#saf_num = 300633
+
+proposal_num = 301147 
+proposal_title = 'Monitoring Wellbore Cememnt Integritty in Shallow Gas Formations in Contact with Acid Mine Waters'
+PI_lastname = 'Gill'
+saf_num = 300676
 
 logfilename_postfix = str(saf_num)
 

@@ -78,7 +78,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             ystart, ynumstep, ystepsize, 
             #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
             shutter = True,
-            acqtime, numrois=1, i0map_show=True, itmap_show=False,
+            acqtime, numrois=1, i0map_show=True, itmap_show=False, record_cryo = False,
             energy=None, u_detune=None):
 
     '''
@@ -114,7 +114,13 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     #    saturn.read_attrs.append('mca.rois.roi'+str(roi_idx)+'.count')
        
     #det = [current_preamp, saturn]        
-    det = [current_preamp, xs]        
+    if record_cryo is True:
+        det = [current_preamp, xs, cryo_v19, cryo_lt19, cryo_pt1, 
+           hdcm_Si111_1stXtalrtd, hdcm_Si111_2ndXtal_rtd,  hdcm_1stXtal_ThermStab_rtd, hdcm_ln2out_rtd, hdcm_water_rtd,
+           dBPM_h, dBPM_v, dBPM_t, dBPM_i, dBPM_o, dBPM_b]
+    else: 
+        det = [current_preamp, xs]
+        
     #gjw
     #det = [xs, hfvlmAD]        
     #gjw
@@ -162,6 +168,26 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         itmap = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='jet', 
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(itmap)
+    
+    #this does not seem to work
+    if record_cryo is True:
+        cryo_v19map = LiveRaster((ynumstep+1, xnumstep+1), 'cryo_v19', clim=None, cmap='jet', 
+                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+        livecallbacks.append(cryo_v19map)
+
+        cryo_lt19map = LiveRaster((ynumstep+1, xnumstep+1), 'cryo_lt19', clim=None, cmap='jet', 
+                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+        livecallbacks.append(cryo_lt19map)
+
+        dBPM_hmap = LiveRaster((ynumstep+1, xnumstep+1), 'dBPM_h', clim=None, cmap='jet', 
+                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+        livecallbacks.append(dBPM_hmap)
+
+        dBPM_vmap = LiveRaster((ynumstep+1, xnumstep+1), 'dBPM_v', clim=None, cmap='jet', 
+                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+        livecallbacks.append(dBPM_vmap)
+
+
     #gjw
     #vlmmap=LiveRaster((ynumstep+1, xnumstep+1), 'hfvlm_stats3_total', clim=None, cmap='inferno',\
     #    xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
