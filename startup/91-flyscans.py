@@ -131,7 +131,7 @@ class SRXFlyer1Axis(Device):
 
     def pause(self):
         "Pausing in the middle of a kickoff nukes the partial dataset."
-        self._encoder.arm.put(0)
+        self._encoder.pc.arm.put(0)
         self._mode = 'idle'
         self.unstage()
 
@@ -246,9 +246,16 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from collect(flying_zebra)  # extract data from Zebra
         yield from abs_set(xmotor.velocity, 3.)  # set the "stage speed"
 
-    @subs_decorator([LiveTable([ymotor]), LiveRaster((ynum, xnum), ion.name), LiveZebraPlot()])
-    #@subs_decorator([LiveTable([ymotor]), LiveRaster((ynum, xnum), xs.channel1.rois.roi03.value.name), LiveZebraPlot()])
+    def prime_ic_signal(ion):
+        yield from abs_set(flying_zebra._encoder.output3.ttl.addr, 60, wait = True)
+        yield from abs_set(flying_zebra._encoder.soft_input1, 0, wait = True)
+        yield from abs_set(flying_zebra._encoder.soft_input1, 1, wait = True)
+        yield from abs_set(flying_zebra._encoder.soft_input1, 0, wait = True)
+
+    @subs_decorator([LiveTable([ymotor]), RowBasedLiveRaster((ynum, xnum), ion.name, row_key=ymotor.name), LiveZebraPlot()])
+    @subs_decorator([LiveRaster((ynum, xnum+1), xs.channel1.rois.roi01.value.name)])
     @monitor_during_decorator([ion], run=False)  # monitor values from ion
+    @monitor_during_decorator([xs.channel1.rois.roi01.value], run=False)  # monitor values from xs
     #@monitor_during_decorator([xs], run=False)  # monitor values from xs
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
@@ -260,4 +267,55 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         #yield from abs_set(xs.settings.trigger_mode, 'Internal')
         yield from abs_set(xs.external_trig, False)
 
+
     return (yield from plan())
+
+
+class RowBasedLiveRaster(LiveRaster):
+    """
+    Synthesize info from two event stream here.
+
+    Use the event with 'row_key' in it to figure out when we have moved to a new row.
+    Figure out if the seq_num has the right value, given the expected raster_shape.
+    If seq_num is low, we have missed some values. Pad the seq_num (effectively leaving
+    empty tiles at the end of the row) for future events.
+    """
+    def __init__(self, *args, row_key, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._row_key = row_key
+        self._last_row = None
+        self._column_counter = None  # count tiles we have seen in current row
+        self._pad = None
+        self._desired_columns = self.raster_shape[1]  # number of tiles row should have
+
+    def start(self, doc):
+        super().start(doc)
+        self._column_counter = 0
+        self._last_row = None
+        self._pad = 0
+
+    def event(self, doc):
+        # If this is an event that tells us what row we are in:
+        if self._row_key in doc['data']:
+            this_row = doc['data'][self._row_key]
+            if self._last_row is None:
+                # initialize with the first y value we see
+                self._last_row = this_row
+                return
+            if this_row != self._last_row:
+                # new row -- pad future sequence numbers if row fell short
+                missing = self._desired_columns - self._column_counter
+                self._pad += missing
+                self._last_row = this_row
+                self._column_counter = 0
+        # If this is an event with the data we want to plot:
+        if self.I in doc['data']:
+            self._column_counter += 1
+            doc = doc.copy()
+            doc['seq_num'] += self._pad
+            super().event(doc)
+
+    def stop(self, doc):
+        self._last_row = None
+        self._column_counter = None
+        self._pad = None
