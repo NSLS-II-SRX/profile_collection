@@ -79,7 +79,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
             shutter = True,
             acqtime, numrois=1, i0map_show=True, itmap_show=False, record_cryo = False,
-            energy=None, u_detune=None):
+            setenergy=None, u_detune=None):
 
     '''
     input:
@@ -202,12 +202,12 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     #OuterProductAbsScanPlan(detectors, *args, pre_run=None, post_run=None)
     #OuterProductAbsScanPlan(detectors, motor1, start1, stop1, num1, motor2, start2, stop2, num2, snake2, pre_run=None, post_run=None)
 
-    if energy is not None:
+    if setenergy is not None:
         if u_detune is not None:
             # TODO maybe do this with set
             energy.detune.put(u_detune)
         # TODO fix name shadowing
-        yield from bp.abs_set(energy, energy, wait=True)
+        yield from bp.abs_set(energy, setenergy, wait=True)
     
 
     #TO-DO: implement fast shutter control (open)
@@ -306,7 +306,7 @@ def hf2dxrf_estack(batch_dir = None, batch_filename = None,
         energy.harmonic.put(harmonic)
                                 
     for energy_setpt in ept:
-        energy.set(energy_setpt)  
+        energy.move(energy_setpt)  
         time.sleep(energy_waittime)
         
         batchlogf = open(batchlogfile, 'a')

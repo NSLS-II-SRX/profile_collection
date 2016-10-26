@@ -18,14 +18,14 @@ susp_cryo = SuspendCeil(cryo_v19, 0.8, resume_thresh=0.2, sleep=15*60)
 
 
 #shutter status suspender
-susp_shut_fe = SuspendBoolHigh(shut_fe.close_status, sleep = 10*60)
+susp_shut_fe = SuspendBoolHigh(shut_fe.close_status, sleep = 5*60)
 susp_shut_a = SuspendBoolHigh(shut_a.close_status, sleep = 10)
 susp_shut_b = SuspendBoolHigh(shut_b.close_status, sleep = 10)
 
 #HDCM bragg temperature suspender
 dcm_bragg_temp = EpicsSignal('XF:05IDA-OP:1{Mono:HDCM-Ax:P}T-I', name='dcm_bragg_temp')
-susp_dcm_bragg_temp = SuspendCeil(dcm_bragg_temp, 120, resume_thresh=70, 
-                                  sleep = 10)
+#susp_dcm_bragg_temp = SuspendCeil(dcm_bragg_temp, 120, resume_thresh=70, sleep = 10)
+susp_dcm_bragg_temp = SuspendCeil(dcm_bragg_temp, 120, resume_thresh=118, sleep = 1)
 
 RE.install_suspender(susp_rc)
 RE.install_suspender(susp_cryo)

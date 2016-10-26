@@ -85,27 +85,30 @@ class PICOECC100(PVPositionerPC):
 
 # tomography setup
 class SRXTomo(Device):
-    y = Cpt(EpicsMotor, 'Y}Mtr')
-    theta = Cpt(EpicsMotor, 'Theta}Mtr')
-    roll = Cpt(EpicsMotor, 'R}Mtr')
-    pitch = Cpt(EpicsMotor, 'P}Mtr')
+    y = Cpt(EpicsMotor, ':1{Stg:Tomo-Ax:Y}Mtr')
+    theta = Cpt(EpicsMotor, ':1{Stg:Tomo-Ax:Theta}Mtr')
+    roll = Cpt(EpicsMotor, ':1{Stg:Tomo-Ax:R}Mtr')
+    pitch = Cpt(EpicsMotor, ':1{Stg:Tomo-Ax:P}Mtr')
 
-    #Attobcube ECS5050 - does not work 
-#    x = Cpt(EpicsMotor, 'X}Mtr')
-#    z = Cpt(EpicsMotor, 'Z}Mtr')
-    x = PICOECC100('XF:05IDD-ES:1{Stg:Tomo-Ax:X}')
-    z = PICOECC100('XF:05IDD-ES:1{Stg:Tomo-Ax:Z}')
+    #Attobcube ECS5050 
+    #XF:05IDD-ES:1{Stg:Tomo-Ax:X}Mtr.RBV
+    x = Cpt(EpicsMotor, ':1{Stg:Tomo-Ax:X}Mtr')
+    z = Cpt(EpicsMotor, ':1{Stg:Tomo-Ax:Z}Mtr')
+#    x = PICOECC100('XF:05IDD-ES:1{Stg:Tomo-Ax:X}')
+#    z = PICOECC100('XF:05IDD-ES:1{Stg:Tomo-Ax:Z}')
 
-    #Attobcube ECS3030 - does not work
-#    finex_bot = Cpt(EpicsMotor, 'XFB}Mtr')
-#    finez_bot = Cpt(EpicsMotor, 'ZFB}Mtr')
-    finex_bot = PICOECC100('XF:05IDD-ES:1{Stg:Tomo-Ax:XFB}')
-    finez_bot = PICOECC100('XF:05IDD-ES:1{Stg:Tomo-Ax:ZFB}')
+    #Attobcube ECS3030
+    #XF:05IDD-ES:2{Stg:Tomo-Ax:XFB}Mtr.RBV
+    finex_bot = Cpt(EpicsMotor, ':2{Stg:Tomo-Ax:XFB}Mtr')
+    finez_bot = Cpt(EpicsMotor, ':2{Stg:Tomo-Ax:ZFB}Mtr')
+#    finex_bot = PICOECC100('XF:05IDD-ES:1{Stg:Tomo-Ax:XFB}')
+#    finez_bot = PICOECC100('XF:05IDD-ES:1{Stg:Tomo-Ax:ZFB}')
 
     #PiezoJena   
-    finex_top = Cpt(EpicsMotor, 'XFT}Mtr', settle_time = piezo_jena_settle_time)
-    finey_top = Cpt(EpicsMotor, 'YFT}Mtr', settle_time = piezo_jena_settle_time) 
-    finez_top = Cpt(EpicsMotor, 'ZFT}Mtr', settle_time = piezo_jena_settle_time) 
+    finex_top = Cpt(EpicsMotor, ':1{Stg:Tomo-Ax:XFT}Mtr', settle_time = piezo_jena_settle_time)
+    finey_top = Cpt(EpicsMotor, ':1{Stg:Tomo-Ax:YFT}Mtr', settle_time = piezo_jena_settle_time) 
+    finez_top = Cpt(EpicsMotor, ':1{Stg:Tomo-Ax:ZFT}Mtr', settle_time = piezo_jena_settle_time) 
 
-tomo_stage = SRXTomo('XF:05IDD-ES:1{Stg:Tomo-Ax:', name='tomo_stage')
+#tomo_stage = SRXTomo('XF:05IDD-ES:1{Stg:Tomo-Ax:', name='tomo_stage')
+tomo_stage = SRXTomo('XF:05IDD-ES', name='tomo_stage')
 relabel_motors(tomo_stage)

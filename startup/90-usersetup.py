@@ -7,7 +7,7 @@ set up all user specific information
 """
 import os
 import scanoutput
-from databroker import DataBroker as db
+from databroker import DataBroker as db, get_events
 import time
 
 #user experiment will be put into the Start Document for every scan
@@ -187,20 +187,25 @@ import time
 #PI_lastname = 'Unrine'
 #saf_num = 300519
 
-#proposal_num = 301229
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Thieme'
-#saf_num = 300613
-
 #proposal_num = 300766
 #proposal_title = 'Trace Elements in Fluorite as a Window into Ore Forming Fluids and Igneous Petrogenesis'
 #PI_lastname = 'Acerbo'
 #saf_num = 300633
 
-proposal_num = 301147 
-proposal_title = 'Monitoring Wellbore Cememnt Integritty in Shallow Gas Formations in Contact with Acid Mine Waters'
-PI_lastname = 'Gill'
-saf_num = 300676
+#proposal_num = 301147 
+#proposal_title = 'Monitoring Wellbore Cememnt Integritty in Shallow Gas Formations in Contact with Acid Mine Waters'
+#PI_lastname = 'Gill'
+#saf_num = 300676
+
+proposal_num = 301130 
+proposal_title = 'u-EXAFS study of lithium kinetics in iron-based composite electrodes'
+PI_lastname = 'Pelliccione'
+saf_num = 300698
+
+#proposal_num = 301229
+#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+#PI_lastname = 'Thieme'
+#saf_num = 300697
 
 logfilename_postfix = str(saf_num)
 
@@ -293,10 +298,15 @@ def scantime(scanid, printresults=True):
     '''
     start_str = 'scan start: '+time.ctime(db[scanid].start['time'])
     stop_str  = 'scan stop : '+time.ctime(db[scanid].stop['time'])
+    totaltime = db[scanid].stop['time'] - db[scanid].start['time']
+    scannumpt = len(list(get_events(db[scanid])))
     
     if printresults is True:
         print(start_str)
         print(stop_str)
+        print('total time:', totaltime, 's')
+        print('number of points:', scannumpt)
+        print('scan time per point:', totaltime/scannumpt, 's')
     return db[scanid].start['time'], db[scanid].stop['time'], start_str, stop_str
 
 def timestamp_batchoutput(filename = 'timestamplog.text', initial_scanid = None, final_scanid = None):

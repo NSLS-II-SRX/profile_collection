@@ -38,7 +38,7 @@ class UVDone(Signal):
             self._started = not brake_on
         # come back and check this threshold value
         #if brake_on and abs(target - cur_value) < 0.002:
-        if abs(target - cur_value) < 0.002:
+        if abs(target - cur_value) < 0.001:
             self._put(1)
             rbv.clear_sub(self._watcher)
             brake.clear_sub(self._watcher)
@@ -467,8 +467,10 @@ cal_data_2016cycle3  ={'d_111': 3.12941028109, #2016/10/3 (Ti, Fe, Cu, Se)
                        'delta_bragg': 0.317209816326, #2016/10/3 (Ti, Fe, Cu, Se)
                         'C2Xcal': 3.6,  # 2016/1/29
                         'T2cal': 14.2470486188,
-                        'xoffset': 25.056582386746765, #2016/10/3 9 keV
-                        'xoffset': 25.028130552150312, #2016/10/12 8 keV
+#                        'xoffset': 25.056582386746765, #2016/10/3 9 keV
+#                        'xoffset': 25.028130552150312, #2016/10/12 8 keV
+#                        'xoffset': 25.182303347383915, #2016/10/24 7.4 keV
+                        'xoffset': 25.531497575767418, #2016/10/24 7.4 keV
                         #'C1Rcal': -5.03023390228  #for the record, 2016/10/3
                       }
 

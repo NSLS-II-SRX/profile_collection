@@ -212,3 +212,151 @@ def tomo_xrf(*, xstart, xnumstep, xstepsize,
         print('done running tomo_xrf_proj')
     
     print('tomography data collection completed')
+    
+
+def tomo_xrf_proj_realaxes(*, xstart, xnumstep, xstepsize, 
+            ystart, ynumstep, ystepsize, 
+            #lab_z_setpt = 0,  #default lab_z initilization point, user can change it
+            #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
+            acqtime, numrois=1, i0map_show=True, itmap_show=True,
+            energy=None, u_detune=None, usesnake = True, usePiezoJenay=False):
+    '''
+    collect an XRF 'projection' map at the current angle
+    note that the x-axis is in the laboraotry frame
+    see motion definition in 06-endstation_pseudomotor_tomo.py
+    it should be checked at both 0 and 90/-90 degree. 
+   '''
+    #record relevant meta data in the Start document, defined in 90-usersetup.py
+    md = get_stock_md()
+    md = add_tomo_md(current_md = md)
+
+    #setup the detector
+    # TODO do this with configure
+    current_preamp.exp_time.put(acqtime)
+    xs.settings.acquire_time.put(acqtime)
+    xs.total_points.put((xnumstep+1)*(ynumstep+1))
+  
+    if usePiezoJenay is False:
+        det = [current_preamp, xs, tomo_stage.y, tomo_stage.x]        
+    else:    
+        det = [current_preamp, xs, tomo_stage.finey_top, tomo_stage.x]        
+
+
+    #setup the live callbacks
+    livecallbacks = []
+
+    if usePiezoJenay is False:
+        print('using micronix as the y stage')
+        livetableitem = [tomo_stage.x, tomo_stage.y, 'current_preamp_ch0', 'current_preamp_ch2']
+    else:    
+        print('using piezoJena as the y stage')                
+        livetableitem = [tomo_stage.x, tomo_stage.finey_top, 'current_preamp_ch0', 'current_preamp_ch2']
+
+    xstop = xstart + xnumstep*xstepsize
+    ystop = ystart + ynumstep*ystepsize  
+  
+    print('xstop = '+str(xstop))  
+    print('ystop = '+str(ystop)) 
+    
+    
+    for roi_idx in range(numrois):
+        roi_name = 'roi{:02}'.format(roi_idx+1)
+        
+        roi_key = getattr(xs.channel1.rois, roi_name).value.name
+        livetableitem.append(roi_key)
+
+        colormap = 'jet' #previous set = 'viridis'
+
+        roimap = LiveRaster((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='jet', 
+                            xlabel='x (um)', ylabel='y (um)', extent=[xstart, xstop, ystop, ystart])
+        livecallbacks.append(roimap)
+
+
+    if i0map_show is True:
+        i0map = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='jet', 
+                        xlabel='x (um)', ylabel='y (um)', extent=[xstart, xstop, ystop, ystart])
+        livecallbacks.append(i0map)
+
+    if itmap_show is True:
+        itmap = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='jet', 
+                        xlabel='x (um)', ylabel='y (um)', extent=[xstart, xstop, ystop, ystart])
+        livecallbacks.append(itmap)
+
+    livecallbacks.append(LiveTable(livetableitem)) 
+
+    
+    #setup the plan  
+    #OuterProductAbsScanPlan(detectors, *args, pre_run=None, post_run=None)
+    #OuterProductAbsScanPlan(detectors, motor1, start1, stop1, num1, motor2, start2, stop2, num2, snake2, pre_run=None, post_run=None)
+
+    if energy is not None:
+        if u_detune is not None:
+            # TODO maybe do this with set
+            energy.detune.put(u_detune)
+        # TODO fix name shadowing
+        yield from bp.abs_set(energy, energy, wait=True)
+    
+
+    #TO-DO: implement fast shutter control (open)
+    #TO-DO: implement suspender for all shutters in genral start up script
+    
+#    shut_b.open_cmd.put(1)
+#    while (shut_b.close_status.get() == 1):
+#        epics.poll(.5)
+#        shut_b.open_cmd.put(1)    
+    
+    
+    if usePiezoJenay is False:    
+        tomo_xrf_proj_plan = OuterProductAbsScanPlan(det, tomo_stage.y, ystart, ystop, ynumstep+1, tomo_stage.x, xstart, xstop, xnumstep+1, usesnake, md=md)
+    else:    
+        tomo_xrf_proj_plan = OuterProductAbsScanPlan(det, tomo_stage.finey_top, ystart, ystop, ynumstep+1, tomo_stage.x, xstart, xstop, xnumstep+1, usesnake, md=md) 
+    tomo_xrf_proj_plan = bp.subs_wrapper(tomo_xrf_proj_plan, livecallbacks)
+    tomo_xrf_proj_ren = yield from tomo_xrf_proj_plan
+
+    #TO-DO: implement fast shutter control (close)    
+#    shut_b.close_cmd.put(1)
+#    while (shut_b.close_status.get() == 0):
+#        epics.poll(.5)
+#        shut_b.close_cmd.put(1)
+
+    #write to scan log    
+    logscan('2dxrf_hr_topy_labx_at_theta_'+str(tomo_stage.theta.position))    
+    
+    return tomo_xrf_proj_ren
+
+    
+    
+def tomo_xrf_realaxes(*, xstart, xnumstep, xstepsize, 
+            ystart, ynumstep, ystepsize, 
+            thetastart = -90, thetastop = 90, numproj = 3,
+            scans_per_angle = 1,
+            acqtime, numrois=1, i0map_show=True, itmap_show=True,
+            energy=None, u_detune=None, usesnake = True, usePiezoJenay=False
+            ):
+         
+    theta_traj = np.linspace(thetastart, thetastop, numproj)
+    tomo_scan_output = []
+
+    for theta_setpt in theta_traj:
+        print('current angle')
+        print(tomo_stage.theta.position)
+        print('move angle to '+str(theta_setpt))        
+        tomo_theta_set_gen = yield from list_scan([tomo_stage], tomo_stage.theta, [theta_setpt])
+        print('angle in position')
+        
+        #print('initilize tomo_lab.lab_z to the aligned point', lab_z_setpt)
+        #tomo_lab_z_initi = yield from list_scan([], tomo_lab.lab_z, [lab_z_setpt])
+        #print('tomo_lab.lab_z in set point position; its position should remain unchanged')
+
+        print('start running tomo_xrf_proj to collect xrf projection for the current angle')
+        
+        for i in range(scans_per_angle):
+            tomo_xrf_gen = yield from tomo_xrf_proj_realaxes(xstart=xstart, xnumstep=xnumstep, xstepsize=xstepsize, 
+                ystart=ystart, ynumstep=ynumstep, ystepsize=ystepsize, 
+                acqtime=acqtime, numrois=numrois, i0map_show=i0map_show, itmap_show=itmap_show,
+                energy=energy, u_detune=u_detune, usesnake = usesnake, usePiezoJenay=usePiezoJenay)
+    #        tomo_scan_output.append(tomo_xrf_gen)
+        
+        print('done running tomo_xrf_proj')
+    
+    print('tomography data collection completed')
