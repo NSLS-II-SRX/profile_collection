@@ -72,9 +72,13 @@ def hdcm_c1roll_c2x_calibration():
         if endstation == False:
             #if dcm_bragg.position > 15:   
             if bragg_rbv.get() > 15:
-                elementList=['Ti', 'Cr', 'Fe', 'Cu', 'Se']  
+                #elementList=['Ti', 'Cr', 'Fe', 'Cu', 'Se']  
+                #Ti requires exposure times that would require resetting the 
+                #threshold in the stats record
+                elementList=['Cr', 'Fe', 'Cu', 'Se']  
             else:
-                    elementList=['Se', 'Cu', 'Fe', 'Cr', 'Ti']
+                #elementList=['Se', 'Cu', 'Fe', 'Cr', 'Ti']
+                elementList=['Se', 'Cu', 'Fe', 'Cr']
         else:
             if bragg_rbv.get() > 13:
             #if dcm_bragg.position > 13:     
@@ -87,7 +91,8 @@ def hdcm_c1roll_c2x_calibration():
         harmonicDic={'Cu':5, 'Se': 5, 'Fe':3, 'Ti':3, 'Cr':3}            #150 mA, 20151007
         
         #use for camera option
-        expotime={'Cu':0.005, 'Fe':0.008, 'Se':0.01, 'Ti':0.03, 'Cr':0.0012}  #150 mA, 20151110, BPM1
+        expotime={'Cu':0.003, 'Fe':0.004, 'Se':0.005, 'Ti':0.015, 'Cr':0.006}  #250 mA, 20161118, BPM1
+        #expotime={'Cu':0.005, 'Fe':0.008, 'Se':0.01, 'Ti':0.03, 'Cr':0.0012}  #150 mA, 20151110, BPM1
         #expotime={'Cu':0.1, 'Fe':0.2, 'Se':0.2, 'Cr': 0.3}  #150 mA, 20151007, end-station
         
         #use for bpm option    
@@ -118,10 +123,11 @@ def hdcm_c1roll_c2x_calibration():
             
             
             energy.move_c2_x.put(False)
-            energy.set(E)
-
-            while abs(energy.energy.position - E) > 0.001 :        
-                time.sleep(1)
+            energy.move(E,wait=True)
+#            energy.set(E)
+#
+#            while abs(energy.energy.position - E) > 0.001 :        
+#                time.sleep(1)
 
             print('done moving energy')            
             #BraggRBV, C2X, ugap=SRXenergy.EtoAll(E, harmonic = harmonicDic[element])

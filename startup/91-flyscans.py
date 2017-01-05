@@ -16,6 +16,7 @@
 #Options:  open and write to Xspress3 HDF5, write to HDF5 and link in 
 #   Xspress3 data, write separately in some format and register later
 #
+import numpy
 import copy
 from bluesky.plans import (one_1d_step, kickoff, collect, complete, scan, wait,
                            monitor_during_wrapper, stage_decorator, abs_set,
@@ -27,14 +28,20 @@ from ophyd import Device
 import uuid
 import h5py
 
+from hxntools.handlers import register
+register()
+from hxntools.detectors.xspress3 import Xspress3FileStore
+
 class SRXFlyer1Axis(Device):
     LARGE_FILE_DIRECTORY_READ_PATH = '/tmp/test_data'
     LARGE_FILE_DIRECTORY_WRITE_PATH = '/tmp/test_data'
     "This is the Zebra."
-    def __init__(self, encoder, *, fs=fs):
+    def __init__(self, encoder, xs, *, fs=fs):
+#    def __init__(self, encoder, *, fs=fs):
         super().__init__('', parent=None)
         self._mode = 'idle'
         self._encoder = encoder
+        self._det = xs
         self._filestore_resource = None
 
         # gating info for encoder capture
@@ -69,6 +76,8 @@ class SRXFlyer1Axis(Device):
         for chan in ('time','enc1'):
             desc[chan] = spec
             desc[chan]['source'] = getattr(self._encoder.pc.data, chan).pvname
+        desc['fluor'] = spec
+        desc['fluor']['source'] = 'FileStore::{!s}'.format(self._det.hdf5._filestore_res['id'])
 
         return {'stream0':desc}
 
@@ -111,8 +120,10 @@ class SRXFlyer1Axis(Device):
         self.__filestore_resource = fs.insert_resource('ZEBRA_HDF51', self.__read_filepath)
         time_datum_id = str(uuid.uuid4())
         enc1_datum_id = str(uuid.uuid4())
+        xs_datum_id = str(uuid.uuid4())
         fs.insert_datum(self.__filestore_resource, time_datum_id, {'column': 'time'})
         fs.insert_datum(self.__filestore_resource, enc1_datum_id, {'column': 'enc1'})
+        fs.insert_datum(self._det.hdf5._filestore_res, xs_datum_id, {})
 
         # Write the file.
         export_zebra_data(self._encoder, self.__write_filepath)
@@ -121,9 +132,13 @@ class SRXFlyer1Axis(Device):
         # into metadatastore, as it does all readings.
         yield {'time': time.time(), 'seq_num': 1,
                'data': {'time': time_datum_id,
-                        'enc1': enc1_datum_id},
+#                        'enc1': enc1_datum_id},
+                        'enc1': enc1_datum_id,
+                        'fluor' : xs_datum_id},
                'timestamps': {'time': time_datum_id,  # not a typo
-                              'enc1': time_datum_id}}
+#                              'enc1': time_datum_id}}
+                              'enc1': time_datum_id,
+                              'fluor' : time_datum_id}}
         self._mode = 'idle'
     
     def stop(self):
@@ -139,7 +154,8 @@ class SRXFlyer1Axis(Device):
         self.stage()
 
 
-flying_zebra = SRXFlyer1Axis(zebra)
+flying_zebra = SRXFlyer1Axis(zebra,xs)
+#flying_zebra = SRXFlyer1Axis(zebra)
 
 
 def export_zebra_data(zebra, filepath):
@@ -190,7 +206,7 @@ class LiveZebraPlot(CallbackBase):
         # Don't actually use the docs, but use the fact that they have been
         # emitted as a signal to go grab the data from the databroker now.
         event_uids = [doc['uid'] for doc in docs[self._desc_uid]]
-        events = db.get_events(db[self._uid], stream_name='stream0', fill=True)
+        events = db.get_events(db[self._uid], stream_name='stream0', fields=['enc1', 'time'], fill=True)
         for event in events:
             if event['uid'] in event_uids:
                 self.ax.plot(event['data']['time'], event['data']['enc1'], label=event['seq_num'])
@@ -221,6 +237,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         'plan_name': 'scan_and_fly',
         'detectors': [zebra.name,xs.name,ion.name],
         'dwell' : dwell,
+        'shape' : (xnum,ynum)
         }
     )
 
@@ -240,6 +257,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         # arm the Zebra (start caching x positions)
         yield from kickoff(flying_zebra, xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell, wait=True)
         yield from abs_set(xs.settings.acquire, 1)  # start acquiring images
+#        xs.trigger()
         yield from abs_set(xmotor, xstop+delta, wait=True)  # move in x
         yield from abs_set(xs.settings.acquire, 0)  # stop acquiring images
         yield from complete(flying_zebra)  # tell the Zebra we are done
@@ -319,3 +337,14 @@ class RowBasedLiveRaster(LiveRaster):
         self._last_row = None
         self._column_counter = None
         self._pad = None
+
+
+class SrxXSP3Handler:
+    XRF_DATA_KEY = 'entry/instrument/detector/data'
+
+    def __init__(self, filepath, **kwargs):
+        self._filepath = filepath
+
+    def __call__(self, **kwargs):
+        with h5py.File(self._filepath, 'r') as f:
+            return np.asarray(f[self.XRF_DATA_KEY])

@@ -197,15 +197,65 @@ import time
 #PI_lastname = 'Gill'
 #saf_num = 300676
 
-proposal_num = 301130 
-proposal_title = 'u-EXAFS study of lithium kinetics in iron-based composite electrodes'
-PI_lastname = 'Pelliccione'
-saf_num = 300698
+#proposal_num = 301130 
+#proposal_title = 'u-EXAFS study of lithium kinetics in iron-based composite electrodes'
+#PI_lastname = 'Pelliccione'
+#saf_num = 300698
 
 #proposal_num = 301229
 #proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
 #PI_lastname = 'Thieme'
 #saf_num = 300697
+
+#proposal_num = 301039
+#proposal_title = 'Elemental and chemical evolution of FeS2 additives in Li-S battery for high energy density storage'
+#PI_lastname = 'Chen-Wiegart'
+#saf_num = 300703
+
+#proposal_num = 301092
+#proposal_title = 'Spatially and Spectroscopically Resolved Carcenogenic Tungsten in Bone'
+#PI_lastname = 'Bohle'
+#saf_num = 300715
+
+#proposal_num = 300248
+#proposal_title = 'Spectro-holography as a full-field imaging method with elemental sensitivity'
+#PI_lastname = 'Salditt'
+#saf_num = 300722
+
+#proposal_num = 301225
+#proposal_title = 'BER Workshop'
+#PI_lastname = 'Miller_UCLA'
+#saf_num = 300713
+
+#proposal_num = 301225
+#proposal_title = 'BER Workshop'
+#PI_lastname = 'Miller_ORNL'
+#saf_num = 300713
+
+#proposal_num = 301225
+#proposal_title = 'BER Workshop'
+#PI_lastname = 'Miller_UF'
+#saf_num = 300713
+
+#proposal_num = 301204
+#proposal_title = 'title too long for me to bother to type it out here'
+#PI_lastname = 'Thieme'
+#saf_num = 300750
+
+#proposal_num = 300954
+#proposal_title = 'Evaluating Copper Speciation in Brain Amyloid...'
+#PI_lastname = 'Miller'
+#saf_num = 300788
+
+#proposal_num = 301047
+#proposal_title = 'Spatial and temporal nano-mapping of electrode-electrode...'
+#PI_lastname = 'Galloway'
+#saf_num = 300796
+
+proposal_num = 301130 
+proposal_title = 'u-EXAFS study of lithium kinetics in iron-based composite electrodes'
+PI_lastname = 'Pelliccione-20161204'
+saf_num = 300698
 
 logfilename_postfix = str(saf_num)
 

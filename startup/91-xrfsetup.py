@@ -79,7 +79,8 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
             shutter = True,
             acqtime, numrois=1, i0map_show=True, itmap_show=False, record_cryo = False,
-            setenergy=None, u_detune=None):
+            dpc = None,
+            setenergy=None, u_detune=None, echange_waittime=10):
 
     '''
     input:
@@ -125,14 +126,18 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     #det = [xs, hfvlmAD]        
     #gjw
 
+    if dpc is not None:
+        det.append(dpc)
+        dpc.cam.acquire.put(0)
+        dpc.cam.image_mode.put(0)
+        #dpc.cam.acquire_time.put(acqtime)
+        dpc.cam.acquire_time.put(acqtime*0.2)
+
 
     #setup the live callbacks
     livecallbacks = []
     
     livetableitem = [hf_stage.x, hf_stage.y, 'current_preamp_ch0', 'current_preamp_ch2']
-    #gjw
-    #livetableitem = [hf_stage.x, hf_stage.y, 'hfvlm_stats3_total']
-    #gjw
 
     xstop = xstart + xnumstep*xstepsize
     ystop = ystart + ynumstep*ystepsize  
@@ -154,18 +159,29 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     #    roimap = LiveRaster((ynumstep, xnumstep), 'saturn_mca_rois_roi'+str(roi_idx)+'_count', clim=None, cmap='jet', 
     #                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
 
-        roimap = LiveRaster((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='jet', 
+        roimap = LiveRaster((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno', 
                             xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(roimap)
 
+    if dpc is not None:
+        dpc_tmap = LiveRaster((ynumstep+1, xnumstep+1), dpc.stats1.total.name, clim=None, cmap='magma',
+                            xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+        livecallbacks.append(dpc_tmap)
+#        dpc_hmap = LiveRaster((ynumstep+1, xnumstep+1), dpc.stats1.centroid.x.name, clim=None, cmap='magma',
+#                            xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+#        livecallbacks.append(dpc_hmap)
+#        dpc_vmap = LiveRaster((ynumstep+1, xnumstep+1), dpc.stats1.centroid.y.name, clim=None, cmap='magma',
+#                            xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+#        livecallbacks.append(dpc_vmap)
+
 
     if i0map_show is True:
-        i0map = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='jet', 
+        i0map = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='viridis', 
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(i0map)
 
     if itmap_show is True:
-        itmap = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='jet', 
+        itmap = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='magma', 
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(itmap)
     
@@ -207,7 +223,10 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             # TODO maybe do this with set
             energy.detune.put(u_detune)
         # TODO fix name shadowing
+        print('changing energy to', setenergy)
         yield from bp.abs_set(energy, setenergy, wait=True)
+        time.sleep(echange_waittime)
+        print('waiting time (s)', echange_waittime)
     
 
     #TO-DO: implement fast shutter control (open)
@@ -216,7 +235,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         shut_b.open_cmd.put(1)
         while (shut_b.close_status.get() == 1):
             epics.poll(.5)
-            print("I'm stupid")
+            print("shutter does not open, trying to open the shutter again")
             shut_b.open_cmd.put(1)    
     
     hf2dxrf_scanplan = OuterProductAbsScanPlan(det, hf_stage.y, ystart, ystop, ynumstep+1, hf_stage.x, xstart, xstop, xnumstep+1, True, md=md)
@@ -231,7 +250,11 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             shut_b.close_cmd.put(1)
 
     #write to scan log    
-    logscan('2dxrf')    
+
+    if dpc is not None:    
+        logscan_event0info('2dxrf_withdpc', event0info = [dpc.tiff.file_name.name])
+    else:
+        logscan('2dxrf')    
     
     return scaninfo
     
@@ -250,7 +273,7 @@ def multi_region_h(regions, energy_list=None, **kwargs):
 
 def hf2dxrf_estack(batch_dir = None, batch_filename = None,
             erange = [], estep = [],
-            energy_pt = None,  waittime = 5, energy_waittime = 5,
+            energy_pt = None,  echange_waittime = 5, energy_waittime = 5,
             harmonic = None, correct_c2_x=True, correct_c1_r = False, 
           #same parameters as in hd2dxrf
             xstart=None, xnumstep=None, xstepsize=None, 
@@ -261,13 +284,15 @@ def hf2dxrf_estack(batch_dir = None, batch_filename = None,
     A function under development that will provide the ability to do xrf stack imaging.
     Warning: this function is not complete and has not been tested. 
     '''
-    if erange is []:
-        raise Exception('erange = [], must specify energy ranges')
-    if estep is []:
-        raise Exception('estep = [], must specify energy step sizes')
-    if len(erange)-len(estep) is not 1:
-        raise Exception('must specify erange and estep correctly.'\
-                         +'e.g. erange = [7000, 7100, 7150, 7500], estep = [2, 0.5, 5] ')
+    
+    if energy_pt is None:
+        if erange is []:
+            raise Exception('erange = [], must specify energy ranges')
+        if estep is []:
+            raise Exception('estep = [], must specify energy step sizes')
+        if len(erange)-len(estep) is not 1:
+            raise Exception('must specify erange and estep correctly.'\
+                             +'e.g. erange = [7000, 7100, 7150, 7500], estep = [2, 0.5, 5] ')
                          
     if acqtime is None:
         raise Exception('acqtime = None, must specify an acqtime position')
@@ -279,16 +304,19 @@ def hf2dxrf_estack(batch_dir = None, batch_filename = None,
     batchlogf.write('scanlist = []\n')    
     batchlogf.close()
 
-    #convert erange and estep to numpy array
-    erange = numpy.array(erange)
-    estep = numpy.array(estep)
-
-    #calculation for the energy points        
-    ept = numpy.array([])
-    for i in range(len(estep)):
-        ept = numpy.append(ept, numpy.arange(erange[i], erange[i+1], estep[i]))
-    ept = numpy.append(ept, numpy.array(erange[-1]))
-    ept = ept/1000
+    if energy_pt is not None:
+        ept = energy_pt
+    else:
+        #convert erange and estep to numpy array
+        erange = numpy.array(erange)
+        estep = numpy.array(estep)
+    
+        #calculation for the energy points        
+        ept = numpy.array([])
+        for i in range(len(estep)):
+            ept = numpy.append(ept, numpy.arange(erange[i], erange[i+1], estep[i]))
+        ept = numpy.append(ept, numpy.array(erange[-1]))
+        ept = ept/1000
 
     if correct_c2_x is False:
         energy.move_c2_x.put(False)
@@ -306,18 +334,19 @@ def hf2dxrf_estack(batch_dir = None, batch_filename = None,
         energy.harmonic.put(harmonic)
                                 
     for energy_setpt in ept:
-        energy.move(energy_setpt)  
-        time.sleep(energy_waittime)
+        #energy.move(energy_setpt)  
+        #time.sleep(energy_waittime)
         
         batchlogf = open(batchlogfile, 'a')
         batchlogf.write('energylist.append('+str(energy_setpt)+')\n')
         batchlogf.close()
         #run hf2dxrf scans
-        hf2dxrf(xstart=xstart, xnumstep=xnumstep, xstepsize=xstepsize, 
+        yield from hf2dxrf(xstart=xstart, xnumstep=xnumstep, xstepsize=xstepsize, 
             ystart=ystart, ynumstep=ynumstep, ystepsize=ystepsize,  i0map_show=i0map_show, itmap_show = itmap_show,
+            setenergy=energy_setpt, echange_waittime=echange_waittime,
             #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
             acqtime=acqtime, numrois=numrois)
-        time.sleep(waittime)
+        #time.sleep(waittime)
         batchlogf = open(batchlogfile, 'a')
         batchlogf.write('scanlist.append('+ str(db[-1].start['scan_id'])+')\n')
         batchlogf.close()
@@ -347,13 +376,14 @@ def hf2dxrf_repeat(num_scans = None, waittime = 10,
                 acqtime=acqtime, numrois=numrois, i0map_show=i0map_show, itmap_show = itmap_show)
         time.sleep(waittime)
         
-def hf2dxrf_xybatch(batch_dir = None, batch_filename = None, waittime = 5, repeat = 1, batch_filelog_ext = ''):
+def hf2dxrf_xybatch(batch_dir = None, batch_filename = None, waittime = 5, repeat = 1, batch_filelog_ext = '', shutter=True, dpc = None,i0map_show=False,itmap_show=False):
     '''
     This function will load from the batch text input file and run the 2D XRF according to the set points in the text file.
     input:
         batch_dir (string): directory for the input batch file
         batch_filename (string): text file name that defines the set points for batch scans
         repeat (integer): number to repeat the scans in the batch; repeat = 1 is to run only ones, no repeat  
+        dpc: pass dpc keyword to hf2dxrf
         
         see below for examples:
         batch_dir = '/nfs/xf05id1/userdata/2016_cycle1/300358_Woloschak/'
@@ -363,9 +393,9 @@ def hf2dxrf_xybatch(batch_dir = None, batch_filename = None, waittime = 5, repea
         batch_filelog_ext (string): default is empty; any string can be assigned and will be inserted as part of the file name of the log file
     '''
         
-    zstage_range = (-3, 20) 
+    zstage_range = (-28, 80)
     xstage_range = (0, 70) #need to check
-    ystage_range = (0, 60) #need to check
+    ystage_range = (-5, 60) #need to check
 
     numpoints_range = (1, 160000)
     
@@ -508,8 +538,8 @@ def hf2dxrf_xybatch(batch_dir = None, batch_filename = None, waittime = 5, repea
                     hf_stage.z.move(zposition)                
                     
                     hf2dxrf_gen = yield from hf2dxrf(xstart=xstart, xnumstep=xnumstep, xstepsize=xstepsize, 
-                        ystart=ystart, ynumstep=ynumstep, ystepsize=ystepsize, 
-                        acqtime=acqtime, numrois=numrois, i0map_show=False, itmap_show = False)
+                        ystart=ystart, ynumstep=ynumstep, ystepsize=ystepsize, shutter=shutter,
+                        acqtime=acqtime, numrois=numrois, i0map_show=i0map_show, itmap_show = itmap_show, dpc = dpc)
                         
                     batchlogf = open(batchlogfile, 'a')
                     batchlogf.write(line+' scan_id:'+ str(db[-1].start['scan_id'])+'\n')
@@ -626,6 +656,7 @@ def hr2dxrf_top(*, xstart, xnumstep, xstepsize,
     
 def hf2dxrf_xfm(*, xstart, xnumstep, xstepsize, 
             ystart, ynumstep, ystepsize, 
+            shutter = True,
             #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
             acqtime, numrois=1, i0map_show=True, itmap_show=False,
             energy=None, u_detune=None):
@@ -672,19 +703,20 @@ def hf2dxrf_xfm(*, xstart, xnumstep, xstepsize,
         
         roi_key = getattr(xs.channel1.rois, roi_name).value.name
         livetableitem.append(roi_key)
+        cscheme = 'inferno'
         
-        roimap = LiveRaster((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='jet', 
+        roimap = LiveRaster((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap=cscheme, 
                             xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(roimap)
 
 
     if i0map_show is True:
-        i0map = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='jet', 
+        i0map = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='viridis', 
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(i0map)
 
     if itmap_show is True:
-        itmap = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='jet', 
+        itmap = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='magma', 
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(itmap)
 
@@ -704,20 +736,23 @@ def hf2dxrf_xfm(*, xstart, xnumstep, xstepsize,
     #TO-DO: implement fast shutter control (open)
     #TO-DO: implement suspender for all shutters in genral start up script
     
-#    shut_b.open_cmd.put(1)
-#    while (shut_b.close_status.get() == 1):
-#        epics.poll(.5)
-#        shut_b.open_cmd.put(1)    
+    if shutter is True: 
+        shut_b.open_cmd.put(1)
+        while (shut_b.close_status.get() == 1):
+            epics.poll(.5)
+            print("shutter does not open, trying to open the shutter again")
+            shut_b.open_cmd.put(1)   
     
     hf2dxrf_scanplan = OuterProductAbsScanPlan(det, stage.y, ystart, ystop, ynumstep+1, stage.x, xstart, xstop, xnumstep+1, True, md=md)
     hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, livecallbacks)
     scaninfo = yield from hf2dxrf_scanplan
 
     #TO-DO: implement fast shutter control (close)    
-#    shut_b.close_cmd.put(1)
-#    while (shut_b.close_status.get() == 0):
-#        epics.poll(.5)
-#        shut_b.close_cmd.put(1)
+    if shutter is True:
+        shut_b.close_cmd.put(1)
+        while (shut_b.close_status.get() == 0):
+            epics.poll(.5)
+            shut_b.close_cmd.put(1)
 
     #write to scan log    
     logscan('2dxrf_xfm')    
@@ -740,11 +775,11 @@ def hf2dxrf_xybatch_xfm(batch_dir = None, batch_filename = None, waittime = 5, r
         waittime (float): wait time in sec. between each scans. Recommand to have few seconds for the HDF5 to finish closing.
     '''
         
-    zstage_range = (0, 80) #need to check
-    xstage_range = (0, 80) #need to check
-    ystage_range = (0, 80) #need to check
+    zstage_range = (-82.1, -70) #need to check
+    xstage_range = (41, 61) #need to check
+    ystage_range = (-140, 10) #need to check
 
-    numpoints_range = (1, 1600)
+    numpoints_range = (1, 1600000)
     
     stepsize_range = (0.0002, 10) 
     acqtime_range = (0.2, 5) 

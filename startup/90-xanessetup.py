@@ -477,3 +477,85 @@ def hfxanes_xybatch(xylist=[], waittime = None,
             err_msg = 'number of waittime is different from the number of points'
         else:
             time.sleep(waittime[pt_num])
+
+def xfmxanes_xybatch(xylist=[], waittime = None, 
+                    samplename = None, filename = None,
+                    erange = [], estep = [],  
+                    harmonic = None, correct_c2_x=True, delaytime=0.2,             
+                    acqtime=None, roinum=1, i0scale = 1e8, itscale = 1e8,
+                    ):
+                        
+    '''
+    Running batch XANES scans on different locations, defined as in xylist.
+    input: 
+        xylist (list of x,y positions in float): pairs of x, y positions on which XANES scans will be collected
+            E.g. xylist = [[10.4, 20.4], [10.5, 20.8]] 
+        waitime (list of float): wait time between scans, if not specified, 2 seconds will be used
+            E.g. waittime = [10] #10 sec. wait time will be used between all scans
+            E.g. waititme = [10, 20] #10 sec. will be used between 1st and 2nd scans; 20 sec. will be used after the 2nd scan. The number of scans need to match with the number of waittime listed
+        samplename (list of string): list of sample names to be used.
+            If with one component, all scans will be set to the same sample name
+            If with more than one component, the lenth of the list must match the lenth of the xylist. The sample name will then be assigned 1-1.
+            E.g. samplename = ['sample1']: all scans will have the same sample name
+            E.g. samplename = ['sample1', 'sample2']: two points in the xylist will have different sample names
+        filename (list of string): list of file names to be used
+            same rules as in sample name is used.
+            E.g. filename = ['sample1']: all scans will have the same file name
+            E.g. filename = ['sample1', 'sample2']: two points in the xylist will have different file names attached to their scan ids.
+                       
+        other inputs are same as in the xanes funciton.
+    '''
+    
+    for pt_num, position in enumerate(xylist):
+        #move stages to the next point
+        stage.x.set(position[0]) 
+        stage.y.set(position[1])
+
+        #check bragg temperature before start the scan
+        if dcm_bragg_temp_pv_epics.get() > 110:
+            print('bragg temperature too high, wait ' + str(bragg_waittime) + ' s.')            
+            time.sleep(bragg_waittime)
+        
+        time.sleep(3)
+        
+        
+        print(len(samplename))        
+        
+        if samplename is None:
+            pt_samplename = ''
+        else:
+            if len(samplename) is 1:
+                pt_samplename = samplename[0]                
+            elif len(samplename) is not len(xylist):
+                err_msg = 'number of samplename is different from the number of points'
+                raise Exception(err_msg)            
+            else:
+                pt_samplename = samplename[pt_num]
+
+        if filename is None:
+            pt_filename = ''
+        else:
+            if len(filename) is 1:
+                pt_filename = filename[0]     
+            elif len(filename) is not len(xylist):
+                err_msg = 'number of filename is different from the number of points'
+                raise Exception(err_msg)
+            else:
+                pt_filename = filename[pt_num]
+                
+        
+        xanes(erange = erange, estep = estep,  
+            harmonic = harmonic, correct_c2_x= correct_c2_x,              
+            acqtime = acqtime, roinum = roinum, 
+            i0scale = i0scale, itscale = itscale, delaytime=delaytime,
+            samplename = pt_samplename, filename = pt_filename)
+            
+                #wait for specified time period in sec.
+        if waittime is None:
+            time.sleep(2)
+        elif len(waittime) is 1:
+            time.sleep(waittime[0])
+        elif len(samplename) is not len(waittime):
+            err_msg = 'number of waittime is different from the number of points'
+        else:
+            time.sleep(waittime[pt_num])
