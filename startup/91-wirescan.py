@@ -25,7 +25,7 @@ def get_stock_md():
                                 }
                                 
     md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
-                                       'hf_stage_y': hf_stage.z.position,
+                                       'hf_stage_y': hf_stage.y.position,
                                        'hf_stage_z': hf_stage.z.position}
     md['wb_slits'] = {'v_gap' : slt_wb.v_gap.position,
                             'h_gap' : slt_wb.h_gap.position,
@@ -89,11 +89,12 @@ def hf2dwire(*, xstart, xnumstep, xstepsize,
 
     #setup the detector
     # TODO do this with configure
-    current_preamp.exp_time.put(acqtime-0.2)
+    current_preamp.exp_time.put(acqtime-0.09)
     xs.settings.acquire_time.put(acqtime)
     xs.total_points.put((xnumstep+1)*(znumstep+1))
     
-    det = [current_preamp, xs]        
+#    det = [current_preamp, xs]        
+    det = [xs]        
 
     #setup the live callbacks
     livecallbacks = []
@@ -120,20 +121,25 @@ def hf2dwire(*, xstart, xnumstep, xstepsize,
     #    roimap = LiveRaster((znumstep, xnumstep), 'saturn_mca_rois_roi'+str(roi_idx)+'_count', clim=None, cmap='inferno', 
     #                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, zstop, zstart])
 
-        roimap = myLiveRaster((znumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno', 
+#        roimap = myLiveRaster((znumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno', aspect='equal', 
+#                            xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, zstop, zstart])
+        roimap = LiveRaster((znumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno', aspect=0.01, 
                             xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, zstop, zstart])
+#        liveplotfig = plt.figure('through focus')
+#        roiplot = LivePlot(roi_key,x=hf_stage.x.name, fig=liveplotfig)
         livecallbacks.append(roimap)
+#        livecallbacks.append(roiplot)
 
 
-    if i0map_show is True:
-        i0map = myLiveRaster((znumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='inferno', 
-                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, zstop, zstart])
-        livecallbacks.append(i0map)
+#    if i0map_show is True:
+#        i0map = myLiveRaster((znumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='inferno', 
+#                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, zstop, zstart])
+#        livecallbacks.append(i0map)
 
-    if itmap_show is True:
-        itmap = myLiveRaster((znumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='inferno', 
-                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, zstop, zstart])
-        livecallbacks.append(itmap)
+#    if itmap_show is True:
+#        itmap = myLiveRaster((znumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='inferno', 
+#                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, zstop, zstart])
+#        livecallbacks.append(itmap)
 #    commented out liveTable in 2D scan for now until the prolonged time issue is resolved
     livecallbacks.append(LiveTable(livetableitem)) 
 
@@ -232,3 +238,111 @@ class myLiveRaster(CallbackBase):
             self.im.set_clim(np.nanmin(self._Idata), np.nanmax(self._Idata))
 
         self.im.set_array(self._Idata)
+def hf2dwire_y(*, xstart, xnumstep, xstepsize, 
+            zstart, znumstep, zstepsize, 
+            acqtime, numrois=1, i0map_show=True, itmap_show=False,
+            energy=None, u_detune=None):
+
+    '''
+    input:
+        xstart, xnumstep, xstepsize (float)
+        zstart, znumstep, zstepsize (float)
+        acqtime (float): acqusition time to be set for both xspress3 and F460
+        numrois (integer): number of ROIs set to display in the live raster scans. This is for display ONLY. 
+                           The actualy number of ROIs saved depend on how many are enabled and set in the read_attr
+                           However noramlly one cares only the raw XRF spectra which are all saved and will be used for fitting.
+        i0map_show (boolean): When set to True, map of the i0 will be displayed in live raster, default is True
+        itmap_show (boolean): When set to True, map of the trasnmission diode will be displayed in the live raster, default is True   
+        energy (float): set energy, use with caution, hdcm might become misaligned
+        u_detune (float): amount of undulator to detune in the unit of keV
+    '''
+
+    #record relevant meta data in the Start document, defined in 90-usersetup.py
+    md = get_stock_md()
+
+    #setup the detector
+    # TODO do this with configure
+    current_preamp.exp_time.put(acqtime-0.09)
+    xs.settings.acquire_time.put(acqtime)
+    xs.total_points.put((xnumstep+1)*(znumstep+1))
+    
+#    det = [current_preamp, xs]        
+    det = [xs]        
+
+    #setup the live callbacks
+    livecallbacks = []
+    
+    livetableitem = [hf_stage.y, hf_stage.z, 'current_preamp_ch0', 'current_preamp_ch2', 'xs_channel1_rois_roi01_value']
+
+    xstop = xstart + xnumstep*xstepsize
+    zstop = zstart + znumstep*zstepsize 
+
+    print('xstop = '+str(xstop))  
+    print('zstop = '+str(zstop)) 
+    
+    
+    for roi_idx in range(numrois):
+        roi_name = 'roi{:02}'.format(roi_idx+1)
+        
+        roi_key = getattr(xs.channel1.rois, roi_name).value.name
+        livetableitem.append(roi_key)
+        
+    #    livetableitem.append('saturn_mca_rois_roi'+str(roi_idx)+'_net_count')
+    #    livetableitem.append('saturn_mca_rois_roi'+str(roi_idx)+'_count')
+    #    #roimap = LiveRaster((xnumstep, znumstep), 'saturn_mca_rois_roi'+str(roi_idx)+'_net_count', clim=None, cmap='viridis', xlabel='x', ylabel='y', extent=None)
+        colormap = 'inferno' #previous set = 'viridis'
+    #    roimap = LiveRaster((znumstep, xnumstep), 'saturn_mca_rois_roi'+str(roi_idx)+'_count', clim=None, cmap='inferno', 
+    #                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, zstop, zstart])
+
+#        roimap = myLiveRaster((znumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno', aspect='equal', 
+#                            xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, zstop, zstart])
+        roimap = LiveRaster((znumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno', aspect=0.01, 
+                            xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, zstop, zstart])
+#        liveplotfig = plt.figure('through focus')
+#        roiplot = LivePlot(roi_key,x=hf_stage.x.name, fig=liveplotfig)
+        livecallbacks.append(roimap)
+#        livecallbacks.append(roiplot)
+
+
+#    if i0map_show is True:
+#        i0map = myLiveRaster((znumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='inferno', 
+#                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, zstop, zstart])
+#        livecallbacks.append(i0map)
+
+#    if itmap_show is True:
+#        itmap = myLiveRaster((znumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='inferno', 
+#                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, zstop, zstart])
+#        livecallbacks.append(itmap)
+#    commented out liveTable in 2D scan for now until the prolonged time issue is resolved
+    livecallbacks.append(LiveTable(livetableitem)) 
+
+    
+    #setup the plan  
+
+    if energy is not None:
+        if u_detune is not None:
+            # TODO maybe do this with set
+            energy.detune.put(u_detune)
+        # TODO fix name shadowing
+        yield from bp.abs_set(energy, energy, wait=True)
+    
+
+    
+#    shut_b.open_cmd.put(1)
+#    while (shut_b.close_status.get() == 1):
+#        epics.poll(.5)
+#        shut_b.open_cmd.put(1)    
+    
+    hf2dwire_scanplan = OuterProductAbsScanPlan(det, hf_stage.z, zstart, zstop, znumstep+1, hf_stage.y, xstart, xstop, xnumstep+1, True, md=md)
+    hf2dwire_scanplan = bp.subs_wrapper( hf2dwire_scanplan, livecallbacks)
+    scaninfo = yield from hf2dwire_scanplan
+
+#    shut_b.close_cmd.put(1)
+#    while (shut_b.close_status.get() == 0):
+#        epics.poll(.5)
+#        shut_b.close_cmd.put(1)
+
+    #write to scan log    
+    logscan('2dwire')    
+    
+    return scaninfo

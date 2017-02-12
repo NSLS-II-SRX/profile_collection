@@ -15,9 +15,10 @@ Modified on Wed Wed 02 14:14 to comment out the saturn detector which is not in 
     #4. put x/y axes onto the live plot
     #5. add i0 into the default figure
 
-from bluesky.plans import OuterProductAbsScanPlan
+from bluesky.plans import OuterProductAbsScanPlan, scan
 import bluesky.plans as bp
 from bluesky.callbacks import LiveRaster
+from bluesky.callbacks.scientific import PeakStats
 import matplotlib
 import time
 import epics
@@ -79,7 +80,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
             shutter = True,
             acqtime, numrois=1, i0map_show=True, itmap_show=False, record_cryo = False,
-            dpc = None,
+            dpc = None, struck = False,
             setenergy=None, u_detune=None, echange_waittime=10):
 
     '''
@@ -101,7 +102,10 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
     #setup the detector
     # TODO do this with configure
-    current_preamp.exp_time.put(acqtime)
+    if struck == False:
+        current_preamp.exp_time.put(acqtime)
+    else:
+        sclr1.preset_time.put(acqtime)
     xs.settings.acquire_time.put(acqtime)
     xs.total_points.put((xnumstep+1)*(ynumstep+1))
     
@@ -120,7 +124,10 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
            hdcm_Si111_1stXtalrtd, hdcm_Si111_2ndXtal_rtd,  hdcm_1stXtal_ThermStab_rtd, hdcm_ln2out_rtd, hdcm_water_rtd,
            dBPM_h, dBPM_v, dBPM_t, dBPM_i, dBPM_o, dBPM_b]
     else: 
-        det = [current_preamp, xs]
+        if struck == False:
+            det = [current_preamp, xs]
+        else:
+            det = [sclr1, xs]
         
     #gjw
     #det = [xs, hfvlmAD]        
@@ -137,7 +144,10 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     #setup the live callbacks
     livecallbacks = []
     
-    livetableitem = [hf_stage.x, hf_stage.y, 'current_preamp_ch0', 'current_preamp_ch2']
+    if struck == False:
+        livetableitem = [hf_stage.x.name, hf_stage.y.name, 'current_preamp_ch0', 'current_preamp_ch2']
+    else:
+        livetableitem = [hf_stage.x.name, hf_stage.y.name, i0.name]
 
     xstop = xstart + xnumstep*xstepsize
     ystop = ystart + ynumstep*ystepsize  
@@ -176,7 +186,11 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
 
     if i0map_show is True:
-        i0map = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='viridis', 
+        if struck == False:
+            i0map = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='viridis', 
+                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+        else:
+            i0map = LiveRaster((ynumstep+1, xnumstep+1), i0.name, clim=None, cmap='viridis', 
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(i0map)
 
@@ -232,22 +246,30 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     #TO-DO: implement fast shutter control (open)
     #TO-DO: implement suspender for all shutters in genral start up script
     if shutter is True: 
-        shut_b.open_cmd.put(1)
-        while (shut_b.close_status.get() == 1):
-            epics.poll(.5)
-            print("shutter does not open, trying to open the shutter again")
-            shut_b.open_cmd.put(1)    
-    
+        shut_b.open()
+
+    #peak up monochromator at this energy
+    ps = PeakStats(dcm.c2_pitch.name,i0.name)
+    e_value = energy.energy.get()[1]
+    if e_value < 10. and struck==True:
+        sclr1.preset_time.put(0.1, wait = True)
+        peakup = scan([sclr1], dcm.c2_pitch, -19.335, -19.305, 31)
+    elif (struck == True):
+        sclr1.preset_time.put(1., wait = True)
+        peakup = scan([sclr1], dcm.c2_pitch, -19.355, -19.320, 36)
+    if struck == True:
+        peakup = bp.subs_wrapper(peakup,ps)
+        yield from peakup
+        dcm.c2_pitch.move(ps.cen)
+
+
     hf2dxrf_scanplan = OuterProductAbsScanPlan(det, hf_stage.y, ystart, ystop, ynumstep+1, hf_stage.x, xstart, xstop, xnumstep+1, True, md=md)
     hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, livecallbacks)
     scaninfo = yield from hf2dxrf_scanplan
 
     #TO-DO: implement fast shutter control (close)    
     if shutter is True:
-        shut_b.close_cmd.put(1)
-        while (shut_b.close_status.get() == 0):
-            epics.poll(.5)
-            shut_b.close_cmd.put(1)
+        shut_b.close()
 
     #write to scan log    
 
@@ -633,20 +655,12 @@ def hr2dxrf_top(*, xstart, xnumstep, xstepsize,
     #TO-DO: implement fast shutter control (open)
     #TO-DO: implement suspender for all shutters in genral start up script
     
-#    shut_b.open_cmd.put(1)
-#    while (shut_b.close_status.get() == 1):
-#        epics.poll(.5)
-#        shut_b.open_cmd.put(1)    
     
     hr2dxrf_scanplan = OuterProductAbsScanPlan(det, tomo_stage.finey_top, ystart, ystop, ynumstep+1, tomo_stage.finex_top, xstart, xstop, xnumstep+1, True, md=md)
     hr2dxrf_scanplan = bp.subs_wrapper(hr2dxrf_scanplan, livecallbacks)
     scaninfo = yield from hr2dxrf_scanplan
 
     #TO-DO: implement fast shutter control (close)    
-#    shut_b.close_cmd.put(1)
-#    while (shut_b.close_status.get() == 0):
-#        epics.poll(.5)
-#        shut_b.close_cmd.put(1)
 
     #write to scan log    
     logscan('2dxrf_hr_top')    
@@ -737,22 +751,15 @@ def hf2dxrf_xfm(*, xstart, xnumstep, xstepsize,
     #TO-DO: implement suspender for all shutters in genral start up script
     
     if shutter is True: 
-        shut_b.open_cmd.put(1)
-        while (shut_b.close_status.get() == 1):
-            epics.poll(.5)
-            print("shutter does not open, trying to open the shutter again")
-            shut_b.open_cmd.put(1)   
-    
+        shut_b.open()
+
     hf2dxrf_scanplan = OuterProductAbsScanPlan(det, stage.y, ystart, ystop, ynumstep+1, stage.x, xstart, xstop, xnumstep+1, True, md=md)
     hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, livecallbacks)
     scaninfo = yield from hf2dxrf_scanplan
 
     #TO-DO: implement fast shutter control (close)    
     if shutter is True:
-        shut_b.close_cmd.put(1)
-        while (shut_b.close_status.get() == 0):
-            epics.poll(.5)
-            shut_b.close_cmd.put(1)
+        shut_b.close()
 
     #write to scan log    
     logscan('2dxrf_xfm')    

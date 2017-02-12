@@ -144,8 +144,8 @@ class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
     channel3 = C(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
 
     hdf5 = Cpt(Xspress3FileStore, 'HDF5:',
-               read_path_template='/data/XSPRESS3/2016-3/',
-               write_path_template='/epics/data/2016-3/')
+               read_path_template='/data/XSPRESS3/2017-1/',
+               write_path_template='/epics/data/2017-1/')
 
     def __init__(self, prefix, *, configuration_attrs=None, read_attrs=None,
                  **kwargs):
@@ -176,3 +176,7 @@ xs = SrxXspress3Detector('XF:05IDD-ES{Xsp:1}:', name='xs')
 xs.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
 xs.channel2.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
 xs.channel3.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
+
+for i in range(1,4):
+    ch=getattr(xs.channel1.rois,'roi{:02}.value'.format(i))
+    ch.name = 'ROI_{:02}'.format(i)

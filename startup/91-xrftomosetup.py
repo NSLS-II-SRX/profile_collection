@@ -157,20 +157,12 @@ def tomo_xrf_proj(*, xstart, xnumstep, xstepsize,
     #TO-DO: implement fast shutter control (open)
     #TO-DO: implement suspender for all shutters in genral start up script
     
-#    shut_b.open_cmd.put(1)
-#    while (shut_b.close_status.get() == 1):
-#        epics.poll(.5)
-#        shut_b.open_cmd.put(1)    
     
     tomo_xrf_proj_plan = OuterProductAbsScanPlan(det, tomo_stage.finey_top, ystart, ystop, ynumstep+1, tomo_lab.lab_x, xstart, xstop, xnumstep+1, usesnake, md=md)
     tomo_xrf_proj_plan = bp.subs_wrapper(tomo_xrf_proj_plan, livecallbacks)
     tomo_xrf_proj_ren = yield from tomo_xrf_proj_plan
 
     #TO-DO: implement fast shutter control (close)    
-#    shut_b.close_cmd.put(1)
-#    while (shut_b.close_status.get() == 0):
-#        epics.poll(.5)
-#        shut_b.close_cmd.put(1)
 
     #write to scan log    
     logscan('2dxrf_hr_topy_labx_at_theta_'+str(tomo_stage.theta.position))    
@@ -300,10 +292,6 @@ def tomo_xrf_proj_realaxes(*, xstart, xnumstep, xstepsize,
     #TO-DO: implement fast shutter control (open)
     #TO-DO: implement suspender for all shutters in genral start up script
     
-#    shut_b.open_cmd.put(1)
-#    while (shut_b.close_status.get() == 1):
-#        epics.poll(.5)
-#        shut_b.open_cmd.put(1)    
     
     
     if usePiezoJenay is False:    
@@ -314,10 +302,6 @@ def tomo_xrf_proj_realaxes(*, xstart, xnumstep, xstepsize,
     tomo_xrf_proj_ren = yield from tomo_xrf_proj_plan
 
     #TO-DO: implement fast shutter control (close)    
-#    shut_b.close_cmd.put(1)
-#    while (shut_b.close_status.get() == 0):
-#        epics.poll(.5)
-#        shut_b.close_cmd.put(1)
 
     #write to scan log    
     logscan('2dxrf_hr_topy_labx_at_theta_'+str(tomo_stage.theta.position))    

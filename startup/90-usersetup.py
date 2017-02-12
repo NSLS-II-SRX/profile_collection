@@ -12,254 +12,29 @@ import time
 
 #user experiment will be put into the Start Document for every scan
 
-#proposal_num = 300810
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Thieme'
-#saf_num = 300265
+proposal_num = None 
+proposal_title = None
+PI_lastname = None
+saf_num = None
 
-#proposal_num = 300802
-#proposal_title = 'Elemental Segregation and Speciation in the Lead Carboxylate (Soap) Deterioration of Oil Paintings'
-#PI_lastname = 'Centeno'
-#saf_num = 300312
-##avoid hitting undulator minimum gap during XANES scan
-#energy.harmonic.put(7)
+proposal_num = 300766
+proposal_title = 'Trace Elements in Fluorite as a Window into Ore Forming Fluids and Igneous Petrogenesis'
+PI_lastname = 'Acerbo'
+saf_num = 300846
 
-#proposal_num = 300546
-#proposal_title = 'Simultaneous nanoscale X-ray ptychography and fluorescence measurements of heavy metal uptake in developing C. elegans embryos'
-#PI_lastname = 'Jones'
-#saf_num = 300329
+proposal_num = 301566
+proposal_title = 'Study oxidation of nuclear cladding advanced steel alloys'
+PI_lastname = 'Elbakhshwan'
+saf_num = 300887
 
-#proposal_num = 300640
-#proposal_title = 'Benchmarking and optimization of microscopic and spectroscopic performances of SRX beamline'
-#PI_lastname = 'Tchoubar'
-#saf_num = 300388
-#logfilename_postfix = '20160406'
-
-#proposal_num = 300605
-#proposal_title = 'In-situ Spatial Resolution of the Electroactive Interface of iron bsed composite electrodes'
-#PI_lastname = 'Takeuchi'
-#saf_num = 300353
-#logfilename_postfix = str(saf_num)
-
-#proposal_num = 300178
-#proposal_title = 'Nanoparticle Distribution in Biological Samples'
-#PI_lastname = 'Woloschak'
-#saf_num = 300358
-
-#proposal_num = 300261
-#proposal_title = 'Correlation between Processing Conditions, Chemical Heterogeneity, and Morphology in Nanofoams for Energy Applications'
-#PI_lastname = 'Chen-Wiegart-ssfoam'
-#saf_num = 300360
-
-#proposal_num = 300126
-#proposal_title = 'Process-Structure-Properties Correlation in Anti-corrosion Nano-coatings Fabricated via Environmentally Friendly Processes'
-#PI_lastname = 'Chen-Wiegart-Henkel'
-#saf_num = 300362
-
-#proposal_num = 300381
-#proposal_title = 'Spatial and temporal nano-mapping of comlexes in low-cost aqueousbattery materials for large-scale, high energy density storage'
-#PI_lastname = 'Gallaway'
-#saf_num = 300372
-
-#proposal_num = 300658
-#proposal_title = 'Transition Metal Oxyanions as specific inhibitors of sulfidogenesis'
-#PI_lastname = 'Thieme'
-#saf_num = 300375
-
-#proposal_num = 300810
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Chen-Wiegart-MIT'
-#saf_num = 300337
-
-#proposal_num = 300579
-#proposal_title = 'Metal Uptake, Translocation and Accumulation in Plants Across Size'
-#PI_lastname = 'Blaby'
-#saf_num = 300397
-
-#proposal_num = 300537
-#proposal_title = 'Elemental and chemical evolution of Cu-S additives in Li-S battery for high energy density storage'
-#PI_lastname = 'Chen-Wiegart-LiSbattery'
-#saf_num = 300398
-
-#proposal_num = 300810
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Thieme-bandediron'
-#saf_num = 300265
-
-#proposal_num = 300626
-#proposal_title = 'Micro and Nanoscale Reactivity Matrices'
-#PI_lastname = 'Hesterberg'
-#saf_num = 300393
-
-#proposal_num = 300640
-#proposal_title = 'Benchmarking and optimization of microscopic and spectroscopic performances of SRX beamline'
-#PI_lastname = 'Tchoubar-20160417'
-#saf_num = 300388
-#logfilename_postfix = '20160406'
-
-#proposal_num = 300810
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Chen-Wiegart-3Dprint'
-#saf_num = 300265
-
-#proposal_num = 301229
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Thieme-undulatorAlignment'
-#saf_num = 300441
-
-#proposal_num = 301229
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Thieme-beamlinecomissioning'
-#saf_num = 300441
-#
-#proposal_num = 301229
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Chubar-MachineCollectiveEffects'
-#saf_num = 300441
-#
-#proposal_num = 300775
-#proposal_title = 'Charaterization of the role of OsVIT1 and OSVIT2 in iron localization of rice seeds'
-#PI_lastname = 'Punshon'
-#saf_num = 300466
-
-#proposal_num = 300951
-#proposal_title = 'Magnetism and chemistry in multiferrioc hexagonal RMn03 single crystals'
-#PI_lastname = 'Tyson'
-#saf_num = 300481
-
-#proposal_num = 301229
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Thieme'
-#saf_num = 300441
-
-#proposal_num = 301216
-#proposal_title = 'X-ray tomography and florescence spectroscopy of coated SiC-SiC composite'
-#PI_lastname = 'Ecker'
-#saf_num = 300494
-
-#proposal_num = 301229
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Chubar_undulator'
-#saf_num = 300441
-
-#proposal_num = 300954
-#proposal_title = 'Cu Uptake in biological tissue'
-#PI_lastname = 'Miller'
-#saf_num = 300514
-
-#proposal_num = 300928
-#proposal_title = 'Elemental association and chemical speciation of transition metals in submicrometer atmospheric particles'
-#PI_lastname = 'Moffet'
-#saf_num = 300517
-
-#proposal_num = 301229
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Chen-Wiegart-METCourbet'
-#saf_num = 300441
-
-#proposal_num = 300386
-#proposal_title = 'Trace Element Chemistry of Marine Nanoparticulates and Their Availability to Organisms'
-#PI_lastname = 'Myneni'
-#saf_num = 300545
-
-#proposal_num = 300766
-#proposal_title = 'Trace Elements in Fluoride as a Window into Ore Forming Fluids and Igneous Petrogenesis'
-#PI_lastname = 'Acerbo'
-#saf_num = 300406
-
-#proposal_num = 301229
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Chen-Wiegart-LiSbattery'
-#saf_num = 300441
-
-#proposal_num = 301229
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Chen-Wiegart-BASFcatalysts'
-#saf_num = 300441
-
-#proposal_num = 300640
-#proposal_title = 'Benchmarking and optimizatin of microscopic and spectroscopic performances of SRX beamline'
-#PI_lastname = 'Choubar'
-#saf_num = 300547
-
-#proposal_num = 300727
-#proposal_title = 'Plant uptake and trophic transfer of polymer coated CeO2 nanomaterials'
-#PI_lastname = 'Unrine'
-#saf_num = 300519
-
-#proposal_num = 300766
-#proposal_title = 'Trace Elements in Fluorite as a Window into Ore Forming Fluids and Igneous Petrogenesis'
-#PI_lastname = 'Acerbo'
-#saf_num = 300633
-
-#proposal_num = 301147 
-#proposal_title = 'Monitoring Wellbore Cememnt Integritty in Shallow Gas Formations in Contact with Acid Mine Waters'
-#PI_lastname = 'Gill'
-#saf_num = 300676
-
-#proposal_num = 301130 
-#proposal_title = 'u-EXAFS study of lithium kinetics in iron-based composite electrodes'
-#PI_lastname = 'Pelliccione'
-#saf_num = 300698
-
-#proposal_num = 301229
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Thieme'
-#saf_num = 300697
-
-#proposal_num = 301039
-#proposal_title = 'Elemental and chemical evolution of FeS2 additives in Li-S battery for high energy density storage'
-#PI_lastname = 'Chen-Wiegart'
-#saf_num = 300703
-
-#proposal_num = 301092
-#proposal_title = 'Spatially and Spectroscopically Resolved Carcenogenic Tungsten in Bone'
-#PI_lastname = 'Bohle'
-#saf_num = 300715
-
-#proposal_num = 300248
-#proposal_title = 'Spectro-holography as a full-field imaging method with elemental sensitivity'
-#PI_lastname = 'Salditt'
-#saf_num = 300722
-
-#proposal_num = 301225
-#proposal_title = 'BER Workshop'
-#PI_lastname = 'Miller_UCLA'
-#saf_num = 300713
-
-#proposal_num = 301225
-#proposal_title = 'BER Workshop'
-#PI_lastname = 'Miller_ORNL'
-#saf_num = 300713
-
-#proposal_num = 301225
-#proposal_title = 'BER Workshop'
-#PI_lastname = 'Miller_UF'
-#saf_num = 300713
-
-#proposal_num = 301204
-#proposal_title = 'title too long for me to bother to type it out here'
-#PI_lastname = 'Thieme'
-#saf_num = 300750
-
-#proposal_num = 300954
-#proposal_title = 'Evaluating Copper Speciation in Brain Amyloid...'
-#PI_lastname = 'Miller'
-#saf_num = 300788
-
-#proposal_num = 301047
-#proposal_title = 'Spatial and temporal nano-mapping of electrode-electrode...'
-#PI_lastname = 'Galloway'
-#saf_num = 300796
-
-proposal_num = 301130 
-proposal_title = 'u-EXAFS study of lithium kinetics in iron-based composite electrodes'
-PI_lastname = 'Pelliccione-20161204'
-saf_num = 300698
+proposal_num = 300269
+proposal_title = 'Laser Fabrication of single-crystal architecture in glass'
+PI_lastname = 'Jain'
+saf_num = 300828
 
 logfilename_postfix = str(saf_num)
 
-cycle = '2016_cycle3'
+cycle = '2017_cycle1'
 
 gs.RE.md['proposal']  = {  'proposal_num': str(proposal_num), 
                          'proposal_title': str(proposal_title),

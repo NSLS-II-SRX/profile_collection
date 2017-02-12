@@ -69,11 +69,7 @@ def hf2dad(xstart=None, xnumstep=None, xstepsize=None,
     pixi.det.acquire_time.put(acqtime)
     pixi.det.num_images.put(num_images)
     pixi.tiff.auto_save.put(0)
-    shut_b.open_cmd.put(1)
-    while (shut_b.close_status.get() == 1):
-        epics.poll(.5)
-        shut_b.open_cmd.put(1)
-
+    shut_b.open()
     det = [current_preamp,pixi]        
 
     #setup the live callbacks
@@ -100,10 +96,7 @@ def hf2dad(xstart=None, xnumstep=None, xstepsize=None,
     hf2dad_scanplan = OuterProductAbsScanPlan(det, hf_stage.y, ystart, ystop, ynumstep, hf_stage.x, xstart, xstop, xnumstep, True)
     scaninfo = gs.RE(hf2dad_scanplan, livecallbacks)
 
-    shut_b.close_cmd.put(1)
-    while (shut_b.close_status.get() == 0):
-        epics.poll(.5)
-        shut_b.close_cmd.put(1)
+    shut_b.close()
     logscan_detailed('ADmesh')
 
     #dirty text output

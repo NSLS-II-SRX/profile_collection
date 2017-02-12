@@ -69,10 +69,7 @@ def tomo_fullfield(thetastart = -90, thetastop = 90, numproj = 361, ffwait = 2,
         
     #close the shutter
     print('closing shutter to collect darkfield')
-    shut_b.close_cmd.put(1)
-    while (shut_b.close_status.get() == 0):
-        epics.poll(.5)
-        shut_b.close_cmd.put(1)    
+    shut_b.close()
     #collecting darkfield
     time.sleep(dfwait)
     print('shutter closed, start collecting darkfield images, num = ', num_darkfield)
@@ -95,10 +92,7 @@ def tomo_fullfield(thetastart = -90, thetastop = 90, numproj = 361, ffwait = 2,
     
     #open the shutter
     print('opening shutter to collect whitefield')
-    shut_b.open_cmd.put(1)
-    while (shut_b.close_status.get() == 1):
-        epics.poll(.5)
-        shut_b.open_cmd.put(1) 
+    shut_b.open()
 
     #collecting whitefield
     print('shutter opened, start collecting whitefield images, num = ', num_whitefield)        

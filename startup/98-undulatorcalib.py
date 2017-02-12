@@ -24,12 +24,22 @@ def bpmAD_exposuretime_adjust():
             bpmAD.cam.acquire_time.set(current_exptime-0.0005)
             time.sleep(0.5)
 
-def undulator_calibration():    
+def undulator_calibration(outfile = 'SRXUgapCalibration.txt', u_gap_start = 9.53, u_gap_end = 18.03, u_gap_step = 0.5):
+
+    '''
+    outfile (string) is a .txt file for the lookup table, desirable to name it with the date of the calibration, e.g. SRXUgapCalibration20161225.txt
+    undulator gap set point range are defined in:
+        u_gap_start (float)
+        u_gap_end (float)
+        u_gap_step (float)
+    '''  
+    
     bpmAD.cam.read_attrs = ['acquire_time']
     bpmAD.configuration_attrs = ['cam']
     
+    #default output directory for the lookup table
     UCalibDir = '/nfs/xf05id1/UndulatorCalibration/'
-    outfile = 'SRXUgapCalibration20160608_1342.text'
+    
     newfile = False
     
     if newfile is True:
@@ -38,21 +48,18 @@ def undulator_calibration():
         f.close()
     
     
-    #energy_setpoint = 8.0
+    #bragg scan setup default
     energy_res = 0.002 #keV
     bragg_scanwidth = 0.1 #keV
     bragg_scanpoint = bragg_scanwidth*2/energy_res+1 
     harmonic = 3
-    
-    u_gap_start = 9.53
-    u_gap_end = 18.03
-    u_gap_step = 0.5
-    
+
     energy.harmonic.set(harmonic)
     
+    #generate lookup table by scanning Bragg at each undulator gap set point
     for u_gap_setpoint in numpy.arange(u_gap_start, u_gap_end+u_gap_step, u_gap_step):
     
-        energy_setpoint = energy.u_gap.utoelookup(u_gap_setpoint)*harmonic
+        energy_setpoint = float(energy.u_gap.utoelookup(u_gap_setpoint))*harmonic
         
         print('move u_gap to:', u_gap_setpoint)
         print('move bragg energy to:', energy_setpoint)

@@ -243,7 +243,8 @@ class Undulator(FixedPVPositioner):
 _undulator_kwargs = dict(name='ivu1_gap', read_attrs=['readback'],
                          calib_path='/nfs/xf05id1/UndulatorCalibration/',
                          #calib_file='SRXUgapCalibration20150411_final.text',
-                         calib_file='SRXUgapCalibration20160608_final.text',                                                  
+                         #calib_file='SRXUgapCalibration20160608_final.text',                                                  
+                         calib_file='SRXUgapCalibration20170131.txt',                                                  
                          configuration_attrs=['corrfunc_sta', 'pos', 'girder',
                                               'real_pos', 'elevation'])
 
@@ -259,6 +260,10 @@ class Energy(PseudoPositioner):
                 read_attrs=['user_readback'])
     c2_x = Cpt(EpicsMotor, 'XF:05IDA-OP:1{Mono:HDCM-Ax:X2}Mtr', add_prefix=(),
                 read_attrs=['user_readback'])
+    epics_d_spacing = EpicsSignal('XF:05IDA-CT{IOC:Status01}DCMDspacing.VAL', 
+        name='epics_d_spacing')
+    epics_bragg_offset = EpicsSignal('XF:05IDA-CT{IOC:Status01}BraggOffset.VAL', 
+        name='epics_bragg_offset')
     # motor enable flags
     move_u_gap = Cpt(Signal, None, add_prefix=(), value=True)
     move_c2_x = Cpt(Signal, None, add_prefix=(), value=True)
@@ -339,6 +344,7 @@ class Energy(PseudoPositioner):
         self._c2xcal = C2Xcal
         self._t2cal = T2cal
 
+
     def crystal_gap(self):
         """Return the current physical gap between first and second crystals
         """
@@ -367,9 +373,17 @@ class Energy(PseudoPositioner):
         if energy <= 4.4:
             raise ValueError("The energy you entered is too low ({} keV). "
                              "Minimum energy = 4.4 keV".format(energy))
-        if energy >= 25:
-            raise ValueError('The energy you entered is too high ({} keV). '
-                             'Maximum energy = 25.0 keV'.format(energy))
+#        if energy >= 25:
+#            raise ValueError('The energy you entered is too high ({} keV). '
+#                             'Maximum energy = 25.0 keV'.format(energy))
+        if (energy > 25.):
+            if (energy < 4400.) or (energy > 25000.):
+            #energy is invalid
+                raise ValueError('The requested photon energy is invalid ({} keV). '
+                             'Values must be in the range of 4.4 - 25 keV'.format(energy))
+            else:
+            #energy is in eV
+                energy = energy / 1000.
 
         if harmonic is None:
             harmonic = 3
@@ -404,6 +418,10 @@ class Energy(PseudoPositioner):
     @pseudo_position_argument
     def set(self, position):
         return super().set([float(_) for _ in position])
+
+    def synch_with_epics(self):
+        self.epics_d_spacing.put(self._d_111)
+        self.epics_bragg_offset.put(self._delta_bragg)
 
 # change it to a better way to pass the calibration
 cal_data_2016cycle1 = {'d_111': 3.12961447804,
@@ -462,7 +480,6 @@ cal_data_2016cycle2  ={ #'d_111': 3.13130245128, #2016/6/9 (Ti, Cr, Fe, Cu, Se)
                         #'C1Rcal':-4.7089492561 for the record
                       }
 
-
 cal_data_2016cycle3  ={'d_111': 3.12941028109, #2016/10/3 (Ti, Fe, Cu, Se)
                        'delta_bragg': 0.317209816326, #2016/10/3 (Ti, Fe, Cu, Se)
                         'C2Xcal': 3.6,  # 2016/1/29
@@ -476,7 +493,16 @@ cal_data_2016cycle3  ={'d_111': 3.12941028109, #2016/10/3 (Ti, Fe, Cu, Se)
                       }
 
 
-energy = Energy(prefix='', name='energy', **cal_data_2016cycle3)
+cal_data_2017cycle1  ={'d_111': 3.12988412345, #2017/1/17 (Ti, Cr, Fe, Cu, Se)
+                       'delta_bragg': 0.314906135851, #2017/1/17 (Ti, Cr, Fe, Cu, Se)
+                        'C2Xcal': 3.6,  # 2017/1/17
+                        'T2cal': 15.0347755916,  # 2017/1/17
+                        'xoffset': 25.4253705456081, #2017/1/17 12.6 keV
+                        #'C1Rcal': -4.98854110244  #for the record, #2017/1/17
+                      }
+
+energy = Energy(prefix='', name='energy', **cal_data_2017cycle1)
+energy.synch_with_epics()
 
 
 # Front End Slits (Primary Slits)
@@ -492,6 +518,24 @@ class SRXShutter(Device):
     close_cmd = Cpt(EpicsSignal, 'Cmd:Cls-Cmd')
     open_cmd = Cpt(EpicsSignal, 'Cmd:Opn-Cmd')
     close_status = Cpt(EpicsSignalRO, 'Sts:Cls-Sts')
+    def close(self):
+        N=0
+        self.close_cmd.put(1)
+        while(self.close_status.get() == 0):
+            ttime.sleep(1.)
+            N = N + 1
+            self.close_cmd.put(1)
+            if N > 5:
+                raise Exception("Cannot close shutter!")
+    def open(self):
+        N=0
+        self.open_cmd.put(1)
+        while(self.close_status.get() == 1):
+            ttime.sleep(1.)
+            N = N + 1
+            self.open_cmd.put(1)
+            if N > 5:
+                raise Exception("Cannot open shutter!")
 
 shut_fe = SRXShutter('XF:05ID-PPS{Sh:WB}', name='shut_fe')
 shut_a = SRXShutter('XF:05IDA-PPS:1{PSh:2}', name='shut_a')

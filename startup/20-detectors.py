@@ -1,4 +1,5 @@
-from ophyd import ProsilicaDetector, EpicsSignal, Device
+import threading
+from ophyd import ProsilicaDetector, EpicsSignal, Device, EpicsScaler
 from ophyd import Component as Cpt
 from ophyd.ophydobj import StatusBase
 from ophyd.status import wait
@@ -87,6 +88,72 @@ wbs = SlitDrainCurrent('XF:05IDA-BI{BPM:01}AH501:', name='wbs')
 pbs= SlitDrainCurrent('XF:05IDA-BI{BPM:02}AH501:', name='pbs')
 ssa = SlitDrainCurrent('XF:05IDA-BI{BPM:05}AH501:', name='ssa')
 
+class EpicsSignalROLazyier(EpicsSignalRO):
+    def get(self, *args, timeout=5, **kwargs):
+        return super().get(*args, timeout=timeout, **kwargs)
+
+def _scaler_fields(attr_base, field_base, range_, **kwargs):
+    defn = OrderedDict()
+    for i in range_:
+        attr = '{attr}{i}'.format(attr=attr_base, i=i)
+        suffix = '{field}{i}'.format(field=field_base, i=i)
+        defn[attr] = (EpicsSignalROLazyier, suffix, kwargs)
+
+    return defn
+
+from ophyd.device import (Component as C, DynamicDeviceComponent as DDC)
+
+class SRXScaler(EpicsScaler):
+    acquire_mode = Cpt(EpicsSignal, 'AcquireMode')
+    acquiring = Cpt(EpicsSignal, 'Acquiring')
+    asyn = Cpt(EpicsSignal, 'Asyn')
+    channel1_source = Cpt(EpicsSignal, 'Channel1Source')
+    channel_advance = Cpt(EpicsSignal, 'ChannelAdvance', string=True)
+    channels = DDC(_scaler_fields('chan', '.S', range(1, 33)))
+    client_wait = Cpt(EpicsSignal, 'ClientWait')
+    count_on_start = Cpt(EpicsSignal, 'CountOnStart')
+    current_channel = Cpt(EpicsSignal, 'CurrentChannel')
+    disable_auto_count = Cpt(EpicsSignal, 'DisableAutoCount')
+    do_read_all = Cpt(EpicsSignal, 'DoReadAll')
+    dwell = Cpt(EpicsSignal, 'Dwell')
+    elapsed_real = Cpt(EpicsSignal, 'ElapsedReal')
+    enable_client_wait = Cpt(EpicsSignal, 'EnableClientWait')
+    erase_all = Cpt(EpicsSignal, 'EraseAll')
+    erase_start = Cpt(EpicsSignal, 'EraseStart')
+    firmware = Cpt(EpicsSignal, 'Firmware')
+    hardware_acquiring = Cpt(EpicsSignal, 'HardwareAcquiring')
+    input_mode = Cpt(EpicsSignal, 'InputMode')
+    max_channels = Cpt(EpicsSignal, 'MaxChannels')
+    model = Cpt(EpicsSignal, 'Model')
+    mux_output = Cpt(EpicsSignal, 'MUXOutput')
+    nuse_all = Cpt(EpicsSignal, 'NuseAll')
+    output_mode = Cpt(EpicsSignal, 'OutputMode')
+    output_polarity = Cpt(EpicsSignal, 'OutputPolarity')
+    prescale = Cpt(EpicsSignal, 'Prescale')
+    preset_real = Cpt(EpicsSignal, 'PresetReal')
+    read_all = Cpt(EpicsSignal, 'ReadAll')
+    read_all_once = Cpt(EpicsSignal, 'ReadAllOnce')
+    set_acquiring = Cpt(EpicsSignal, 'SetAcquiring')
+    set_client_wait = Cpt(EpicsSignal, 'SetClientWait')
+    snl_connected = Cpt(EpicsSignal, 'SNL_Connected')
+    software_channel_advance = Cpt(EpicsSignal, 'SoftwareChannelAdvance')
+    start_all = Cpt(EpicsSignal, 'StartAll')
+    stop_all = Cpt(EpicsSignal, 'StopAll')
+    user_led = Cpt(EpicsSignal, 'UserLED')
+    wfrm = Cpt(EpicsSignal, 'Wfrm')
+
+    def __init__(self, prefix, **kwargs):
+        super().__init__(prefix, **kwargs)
+        self.stage_sigs[self.count_mode] = 'OneShot'
+
+sclr1 = SRXScaler('XF:05IDD-ES:1{Sclr:1}',name='sclr1')
+sclr1.read_attrs = ['channels.chan6','channels.chan5']
+i0_channel = getattr(sclr1.channels,'chan6')
+i0_channel.name = 'sclr_i0'
+it_channel = getattr(sclr1.channels,'chan5')
+it_channel.name = 'sclr_it'
+i0 = sclr1.channels.chan6
+iT = sclr1.channels.chan5
 
 class CurrentPreamp(Device):
     ch0 = Cpt(EpicsSignalRO, 'Cur:I0-I')
@@ -168,40 +235,38 @@ class CurrentPreampZebra(Device):
         self.stage_sigs[self.trigger_mode] = 5  # fix this
         self.initi_trigger.put(1, wait=True)
 
-
     def stage(self):
 
         # Customize what is done before every scan (and undone at the end)
         # self.stage_sigs[self.trans_diode] = 5
         # or just use pyepics directly if you need to
         ret = super().stage()
-#        self.zebra_pulse_3_source.put(44,wait=True)
-#        self.zebra_pulse_3_source.put(60,wait=True)
         self.initi_trigger.put(1, wait=True)
-        wait(self.trigger())
-#        wait(self.trigger())
         return ret
 
     def trigger(self):
         init_ts = self.ch0.timestamp
-        self.zebra_trigger.put(0,wait = True)
-        self.zebra_trigger.put(1,wait = True)
-        ret = DeviceStatus(self)
+        timeout = float(self.exp_time.get() + .8)
 
+        def retrigger():
+            print("[WW] Re-triggered ion chamber;  I0 for this point is suspect.")
+            self.zebra_trigger.put(0,wait=True)
+            self.zebra_trigger.put(1,wait=True)
         def done_cb(*args, obj=None, old_value=None, value=None,
                     timestamp=None, **kwargs):
-#            print('init ts: {!r}    cur ts : {!r}'.format(init_ts, timestamp))
-#            print('old value: {!r}    new value : {!r}'.format(old_value,
-#                                                               value))
-
-            # if the timestamp or the value has changed, assume it is done
-#            if (timestamp != init_ts) or (value != old_value):
-#            if (timestamp != init_ts):
+            # if the value has changed, assume it is done
             if (value != old_value):
+                tmr.cancel()
                 ret._finished()
                 obj.clear_sub(done_cb)
 
-        self.ch0.subscribe(done_cb, event_type=self.ch0.SUB_VALUE, run=True)
+        tmr = threading.Timer(timeout,retrigger)
+        tmr.start()
+        ret = DeviceStatus(self)
+
+        self.ch0.subscribe(done_cb, event_type=self.ch0.SUB_VALUE, run=False)
+        self.zebra_trigger.put(0, wait=True)
+        self.zebra_trigger.put(1, wait=True)
 
         return ret
 

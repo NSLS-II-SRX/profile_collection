@@ -186,7 +186,7 @@ class SRXDCM(Device):
     bragg = Cpt(EpicsMotor, 'P}Mtr')
     c1_roll = Cpt(EpicsMotor, 'R1}Mtr')
     c2_x = Cpt(EpicsMotor, 'X2}Mtr')
-    c2_ptich = Cpt(EpicsMotor, 'P2}Mtr')
+    c2_pitch = Cpt(EpicsMotor, 'P2}Mtr')
     x = Cpt(EpicsMotor, 'X}Mtr')
     y = Cpt(EpicsMotor, 'Y}Mtr')
 
@@ -219,7 +219,7 @@ class SRXSOFTINP(Device):
             self.pulse.put(1)
         else:
             self.pulse.put(0)
-#shut_fast = SRXFASTSHUT('XF:05IDD-ES:1{Dev:Zebra1}:SOFT_IN:B1',name='shut_fast')
+shut_fast = SRXSOFTINP('XF:05IDD-ES:1{Sclr:1}UserLED',name='shut_fast')
 
 class SRXFASTSHUT(SRXSOFTINP):
     pulse = Cpt(EpicsSignal,':SOFT_IN:B1')
@@ -248,4 +248,4 @@ class SRXFASTSHUT(SRXSOFTINP):
          #   self.low_cmd()
             self.high_cmd()
 
-shut_fast = SRXFASTSHUT('XF:05IDD-ES:1{Dev:Zebra1}',name='shut_fast')
+#shut_fast = SRXFASTSHUT('XF:05IDD-ES:1{Dev:Zebra1}',name='shut_fast')

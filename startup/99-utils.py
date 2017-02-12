@@ -1,5 +1,25 @@
 import os
 import numpy as np
+from ophyd import EpicsSignal
+from bluesky.plans import relative_scan
+from bluesky.callbacks import LiveFit,LiveFitPlot
+from bluesky.callbacks.scientific import PeakStats
+import lmfit
+
+def cryofill(wait_time_after_v19_claose = 60*10):
+    cryo_v19_possp = EpicsSignal('XF:05IDA-UT{Cryo:1-IV:19}Pos-SP', name='cryov19_possp')
+    cryo_v19_possp.set(100)
+    while abs(cryo_v19.get() - 1) > 0.05:
+        cryo_v19_possp.set(100)
+        time.sleep(2)
+    
+    time.sleep(5)
+    while (cryo_v19.get() - 0) > 0.05:
+        print('cryo cooler still refilling')
+        time.sleep(5)
+    cryo_v19_possp.set(0)
+    print('waiting for', wait_time_after_v19_claose, 's', 'before taking data...')
+    time.sleep(wait_time_after_v19_claose)    
 
 def breakdown(batch_dir=None, batch_filename=None,xstart=None,ystart=None,\
     xsteps=None,ysteps=None,xstepsize=None,ystepsize=None,zposition=None,\
@@ -79,3 +99,27 @@ def xybatch_grid(xstart, xstepsize, xnumstep, ystart, ystepsize, ynumstep):
         for i in np.linspace(xstart, xstart+xstepsize*xnumstep, xnumstep+1):
             xylist.append([i, j])
     return xylist
+
+def gaussian(x, A, sigma, x0):
+    return A*np.exp(-(x - x0)**2/(2 * sigma**2))
+
+def peakup_dcm():
+    e_value=energy.energy.get()[1]
+    det = [sclr1]
+    ps = PeakStats(dcm.c2_pitch.name,i0.name)
+    shut_b.open()
+    
+    if e_value < 10.:
+        sclr1.preset_time.put(0.1)
+        RE(scan([sclr1], dcm.c2_pitch, -19.335, -19.305, 31), [ps])
+    else:
+        sclr1.preset_time.put(1.)
+        RE(scan([sclr1], dcm.c2_pitch, -19.355, -19.310, 46), [ps])
+
+
+    #RE(relative_scan([sclr1], dcm.c2_pitch, -0.01, 0.01, 21), [ps])
+    dcm.c2_pitch.move(ps.cen)
+
+
+def retune_undulator():
+    energy.detune.put(0.)
