@@ -187,7 +187,6 @@ class LiveZebraPlot(CallbackBase):
     This is a really dumb approach but it gets the job done. To fix later.
     """
 
-<<<<<<< HEAD
     def __init__(self, ax=None):
         self._uid = None
         self._desc_uid = None
@@ -216,48 +215,6 @@ class LiveZebraPlot(CallbackBase):
     def stop(self, doc):
         self._uid = None
         self._desc_uid = None
-=======
-    if md is None:
-        md = {}
-    md = ChainMap(md, {
-        'detectors': [zebra,xs.name],
-        'x_range' : xstepsize*xpts,
-        'dwell' : dwell,
-        'y_range' : ystepzie*ypts,
-        }
-    )
-    try:
-        xs.external_trig.put(True)
-        #set ion chamber to windowing mode
-        yield from set_abs(hf_stage.x, xstart-delta, wait=True)
-        yield from open_run(md)
-        for n in rows:
-            #xspress3 scan-specific set up
-            xs.hdf5.capture = xpts
-            #flyer = SRXFlyer(encoder, detectors, motor, start, incr, dwell, Npts=1000)
-            flyer = SRXFlyer(zebra, hf_stage.x, xstart, xstepsize, dwell, delta, xpts)
-            flyer.stage()
-            yield Msg('checkpoint')
-            yield Msg('stage', xs)
-            yield Msg('stage', ion)
-            yield Msg('trigger',xs)
-            #might be better to send I0 to file than database.  how?
-            yield Msg('monitor', ion)
-            yield Msg('stage', flyer)
-            yield from set_abs(hf_stage.y, n, wait=True)
-            yield from kickoff(flyer, wait=True)
-            yield from complete(flyer, wait=True)
-            yield from collect(flyer)
-            yield Msg('unstage', flyer)
-            yield Msg('unmonitor', ion)
-            yield Msg('unstage', ion)
-            yield Msg('unstage', xs)
-            #run-specific metadata?
-        yield from close_run()
-    finally:
-        xs.external_trig.put(False)
-        xs.settings.trigger_mode.put('Internal')
->>>>>>> be048dbf5d1c99df811eb12f54de28cc28e3bb4c
 
 
 def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
@@ -323,14 +280,8 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     def plan():
         #yield from abs_set(xs.settings.trigger_mode, 'TTL Veto Only')
         yield from abs_set(xs.external_trig, True)
-<<<<<<< HEAD
         for step in np.linspace(ystart, ystop, ynum):
             yield from fly_each_step([], ymotor, step)
-=======
-        ret = (yield from scan([], ymotor, ystart, ystop, ynum, per_step=fly_each_step, md=md))
-        yield from abs_set(xs.external_trig, False)
-        return ret
->>>>>>> be048dbf5d1c99df811eb12f54de28cc28e3bb4c
         #yield from abs_set(xs.settings.trigger_mode, 'Internal')
         yield from abs_set(xs.external_trig, False)
 
