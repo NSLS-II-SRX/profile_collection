@@ -17,20 +17,20 @@ proposal_title = None
 PI_lastname = None
 saf_num = None
 
-proposal_num = 300766
-proposal_title = 'Trace Elements in Fluorite as a Window into Ore Forming Fluids and Igneous Petrogenesis'
-PI_lastname = 'Acerbo'
-saf_num = 300846
+#proposal_num = 300766
+#proposal_title = 'Trace Elements in Fluorite as a Window into Ore Forming Fluids and Igneous Petrogenesis'
+#PI_lastname = 'Acerbo'
+#saf_num = 300846
 
-proposal_num = 301566
-proposal_title = 'Study oxidation of nuclear cladding advanced steel alloys'
-PI_lastname = 'Elbakhshwan'
-saf_num = 300887
+#proposal_num = 301566
+#proposal_title = 'Study oxidation of nuclear cladding advanced steel alloys'
+#PI_lastname = 'Elbakhshwan'
+#saf_num = 300887
 
-proposal_num = 300269
-proposal_title = 'Laser Fabrication of single-crystal architecture in glass'
-PI_lastname = 'Jain'
-saf_num = 300828
+#proposal_num = 300269
+#proposal_title = 'Laser Fabrication of single-crystal architecture in glass'
+#PI_lastname = 'Jain'
+#saf_num = 300828
 
 logfilename_postfix = str(saf_num)
 

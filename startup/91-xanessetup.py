@@ -147,7 +147,7 @@ def xanes_afterscan_tmode(scanid, filename, i0scale, itscale):
 def xanes(erange = [], estep = [],  
             harmonic = None, correct_c2_x=True, correct_c1_r = False, detune = None,            
             acqtime=None, roinum=1, i0scale = 1, itscale = 1, delaytime = 0.00, struck=False,
-            samplename = '', filename = '', shutter_control = True):
+            samplename = '', filename = '', shutter_control = True, peak_up = True):
                 
     '''
     erange (list of float): energy ranges for XANES in eV, e.g. erange = [7112-50, 7112-20, 7112+50, 7112+120]
@@ -294,8 +294,9 @@ def xanes(erange = [], estep = [],
         shut_b.open()
 
     #peak up DCM at first scan point
-    energy.move(ept[0])
-    peakup_dcm()
+    if peak_up is True:
+        energy.move(ept[0])
+        peakup_dcm()
 
     #run the plan
     scaninfo = gs.RE(xanes_scanplan, livecallbacks, raise_if_interrupted=True)
@@ -434,7 +435,7 @@ def xanes_tmode(erange = [], estep = [],
     
 def hfxanes_xybatch(xylist=[], waittime = None, 
                     samplename = None, filename = None,
-                    erange = [], estep = [], struck = False, 
+                    erange = [], estep = [], struck = False, peak_up = True, 
                     harmonic = None, correct_c2_x=True, delaytime=0.0, detune = None,            
                     acqtime=None, roinum=1, i0scale = 1e8, itscale = 1e8,
                     ):
@@ -500,7 +501,7 @@ def hfxanes_xybatch(xylist=[], waittime = None,
         
         xanes(erange = erange, estep = estep,  
             harmonic = harmonic, correct_c2_x= correct_c2_x, detune = detune,              
-            acqtime = acqtime, roinum = roinum, 
+            acqtime = acqtime, roinum = roinum, peak_up = peak_up, 
             i0scale = i0scale, itscale = itscale, delaytime=delaytime,
             samplename = pt_samplename, filename = pt_filename, struck=struck)
             
