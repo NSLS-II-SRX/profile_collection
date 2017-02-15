@@ -142,7 +142,7 @@ def xanes_afterscan_tmode(scanid, filename, i0scale, itscale):
     usercolumnitem['It'] = it_array
    
     scanoutput.textout(scan = scanid, header = headeritem, userheader = userheaderitem, column = columnitem, 
-                       usercolumn = usercolumnitem, usercolumnname = usercolumnnameitem, output = False, filename_add = filename) 
+                       usercolumn = usercolumnitem, usercolumnname = usercolumnnameitem, output = True, filename_add = filename) 
 
 def xanes(erange = [], estep = [],  
             harmonic = None, correct_c2_x=True, correct_c1_r = False, detune = None,            

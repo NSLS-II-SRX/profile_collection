@@ -190,6 +190,8 @@ class SRXDCM(Device):
     x = Cpt(EpicsMotor, 'X}Mtr')
     y = Cpt(EpicsMotor, 'Y}Mtr')
 
+    temp_pitch = Cpt(EpicsSignalRO, 'P}T-I')
+
 dcm = SRXDCM('XF:05IDA-OP:1{Mono:HDCM-Ax:' , name='dcm')
 relabel_motors(dcm)
 
