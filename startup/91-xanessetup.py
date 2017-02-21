@@ -146,8 +146,8 @@ def xanes_afterscan_tmode(scanid, filename, i0scale, itscale):
 
 def xanes(erange = [], estep = [],  
             harmonic = None, correct_c2_x=True, correct_c1_r = False, detune = None,            
-            acqtime=None, roinum=1, i0scale = 1, itscale = 1, delaytime = 0.00, struck=False,
-            samplename = '', filename = '', shutter_control = True, peak_up = True):
+            acqtime=None, roinum=1, i0scale = 1, itscale = 1, delaytime = 0.00, struck=True,
+            samplename = '', filename = '', shutter_control = True, peak_up = False):
                 
     '''
     erange (list of float): energy ranges for XANES in eV, e.g. erange = [7112-50, 7112-20, 7112+50, 7112+120]
@@ -291,7 +291,7 @@ def xanes(erange = [], estep = [],
 
     #open b shutter
     if shutter_control is True:
-        shut_b.open()
+        shut_b.put(1)
 
     #peak up DCM at first scan point
     if peak_up is True:
@@ -303,7 +303,7 @@ def xanes(erange = [], estep = [],
 
     #close b shutter
     if shutter_control is True:
-        shut_b.close()
+        shut_b.put(0)
 
     print(type(scaninfo))
     print(scaninfo)
@@ -409,13 +409,13 @@ def xanes_tmode(erange = [], estep = [],
     ept = numpy.array(ept)
 
    #open b shutter
-    shut_b.open()
+    shut_b.put(1)
 
     #run the plan
     scaninfo = gs.RE(xanes_scanplan, livecallbacks, raise_if_interrupted=True)
 
     #close b shutter
-    shut_b.close()
+    shut_b.put(0)
 
     print(type(scaninfo))
     print(scaninfo)

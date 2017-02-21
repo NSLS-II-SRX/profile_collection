@@ -107,7 +107,7 @@ def peakup_dcm():
     e_value=energy.energy.get()[1]
     det = [sclr1]
     ps = PeakStats(dcm.c2_pitch.name,i0.name)
-    shut_b.open()
+    shut_b.put(1)
     
     if e_value < 10.:
         sclr1.preset_time.put(0.1)

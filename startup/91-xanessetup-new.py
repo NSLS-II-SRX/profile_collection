@@ -7,6 +7,7 @@ from epics import PV
 from databroker import get_table
 
 def xanes_afterscan_plan(scanid, filename, roinum):
+    #print(scanid,filename,roinum)
     # custom header list 
     headeritem = [] 
     # load header for our scan
@@ -112,6 +113,7 @@ def xanes_plan(erange = [], estep = [],
                 
     ept = numpy.array([])
     det = []
+    filename=filename
 
     #make sure user provided correct input
     if erange is []:
@@ -170,7 +172,8 @@ def xanes_plan(erange = [], estep = [],
         yield from abs_set(energy, ept[0])
     #open b shutter
     if shutter_control is True:
-        yield from shut_b.open()
+        #shut_b.open()
+        yield from abs_set(shut_b,1,wait=True)
     #peak up DCM at first scan point
     if peak_up is True:
         ps = PeakStats(dcm.c2_pitch.name,i0.name)
@@ -224,26 +227,28 @@ def xanes_plan(erange = [], estep = [],
     else:
         livecallbacks.append(NormalizeLivePlot('sclr_it', x=liveplotx, norm_key = i0, fig=livenormfig))  
 
-    #clean up when the scan is done    
-    energy.move_c2_x.put(True)
-    energy.harmonic.put(None)
-    #undulator hack
-    energy.u_gap.corrfunc_en.put(1)
-    if detune is not None:
-        energy.detune.put(0)
+
+    def after_scan(name, doc):
+        if name != 'stop':
+            print("You must export this scan data manually: xanes_afterscan_plan(doc[-1], <filename>, <roinum>)")
+            return
+        xanes_afterscan_plan(doc['run_start'], filename, roinum)
+        logscan('xanes')
+
+    def finalize_scan():
+        yield from abs_set(energy.u_gap.corrfunc_en,1)
+        yield from abs_set(energy.move_c2_x, True)
+        yield from abs_set(energy.harmonic, None)
+        if shutter_control == True:
+            shut_b.put(0)
+        if detune is not None:
+            energy.detune.put(0)
     
-    @subs_decorator(livecallbacks)
 
-    def plan(roinum,filename):              
-        myscan = AbsListScanPlan(det, energy, list(ept))
-#        myscan = scan(det, dcm.c2_pitch, -19.355, -19.320, 36)
-        subs_wrapper(myscan, {'stop':xanes_afterscan_plan(-1, filename, roinum)})
-        subs_wrapper(myscan, {'stop':logscan('xanes')})
-        yield from myscan
-#        xanes_afterscan_plan(-1, filename, roinum)
-#        logscan('xanes') 
+    myscan = AbsListScanPlan(det, energy, list(ept))
+    myscan = bp.finalize_wrapper(myscan,finalize_scan)
 
-    return (yield from plan(roinum,filename))
+    return (yield from bp.subs_wrapper(myscan,{'all':livecallbacks,'stop':after_scan})) 
 
 #not up to date, ignore for now
 def xanes_batch_plan(xylist=[], waittime = [2], 
@@ -315,7 +320,7 @@ def xanes_batch_plan(xylist=[], waittime = [2],
                 
         if type(waittime) is not list:
             waittime = [waittime]
-        if len(samplename) is not len(waittime):
+        if len(samplename) is not len(waittime) and len(waittime) is not 1:
             err_msg = 'number of waittime is different from the number of points'
             raise ValueError(err_msg)
         

@@ -1,5 +1,6 @@
 import time as ttime
 import os
+import epics
 from ophyd import (PVPositioner, EpicsSignal, EpicsSignalRO, EpicsMotor,
                    Device, Signal, PseudoPositioner, PseudoSingle)
 from ophyd.utils.epics_pvs import set_and_wait
@@ -9,6 +10,7 @@ from ophyd import Component as Cpt
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 ring_current = EpicsSignalRO('SR:C03-BI{DCCT:1}I:Real-I', name='ring_current')
+cryo_v19 = EpicsSignal('XF:05IDA-UT{Cryo:1-IV:19}Sts-Sts', name='cryo_v19')
 
 class UVDone(Signal):
     def __init__(self, parent, brake, readback, err, stp, **kwargs):
@@ -236,9 +238,9 @@ class Undulator(FixedPVPositioner):
                 self._done_moving(success=success, timestamp=timestamp,
                                   value=value)
 
-    def stop(self):
+    def stop(self, success=True):
         self.done.stop()
-        return super().stop()
+        return super().stop(success=success)
 
 _undulator_kwargs = dict(name='ivu1_gap', read_attrs=['readback'],
                          calib_path='/nfs/xf05id1/UndulatorCalibration/',
@@ -539,4 +541,37 @@ class SRXShutter(Device):
 
 shut_fe = SRXShutter('XF:05ID-PPS{Sh:WB}', name='shut_fe')
 shut_a = SRXShutter('XF:05IDA-PPS:1{PSh:2}', name='shut_a')
-shut_b = SRXShutter('XF:05IDB-PPS:1{PSh:4}', name='shut_b')
+#shut_b = SRXShutter('XF:05IDB-PPS:1{PSh:4}', name='shut_b')
+
+class PhotonShutter(EpicsSignal):
+    def __init__(self, read_pv, open_pv, open_status, close_pv, close_status,
+                 *args, **kw):
+        self.open_pv = epics.PV(open_pv)
+        self.open_status = open_status
+        self.close_pv = epics.PV(close_pv)
+        self.close_status = close_status
+
+        super(PhotonShutter, self).__init__(read_pv=read_pv, *args, **kw)
+
+    def put(self, value, force=False, **kwargs):
+        if value == 0:
+            self._write_pv = self.close_pv
+        else:
+            self._write_pv = self.open_pv
+        super(PhotonShutter, self).put(1)
+
+    def get(self):
+        rbv = self._read_pv.get()
+        if rbv == 1:
+            return 0
+        else:
+            return 1
+
+shut_b = PhotonShutter(
+            read_pv='XF:05IDB-PPS:1{PSh:4}Pos-Sts',
+            open_pv='XF:05IDB-PPS:1{PSh:4}Cmd:Opn-Cmd',
+            open_status='XF:05IDB-PPS:1{PSh:4}Cmd:Opn-Sts',
+            close_pv='XF:05IDB-PPS:1{PSh:4}Cmd:Cls-Cmd',
+            close_status='XF:05IDB-PPS:1{PSh:4}Cmd:Cls-Sts',
+            name='shut_b')
+

@@ -32,6 +32,11 @@ saf_num = None
 #PI_lastname = 'Jain'
 #saf_num = 300828
 
+#proposal_num = 300928
+#proposal_title = 'Elemental Association and Chemical Speciation of Transition Metals in Submicrometer Atmospheric Particles'
+#PI_lastname = 'Moffet'
+#saf_num = 300947
+
 logfilename_postfix = str(saf_num)
 
 cycle = '2017_cycle1'
