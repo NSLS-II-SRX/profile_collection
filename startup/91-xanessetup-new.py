@@ -5,6 +5,7 @@ import numpy
 import time
 from epics import PV
 from databroker import get_table
+import collections
 
 def xanes_afterscan_plan(scanid, filename, roinum):
     #print(scanid,filename,roinum)
@@ -114,6 +115,8 @@ def xanes_plan(erange = [], estep = [],
     ept = numpy.array([])
     det = []
     filename=filename
+    last_time_pt = time.time()
+    ringbuf = collections.deque(maxlen=10)
 
     #make sure user provided correct input
     if erange is []:
@@ -173,10 +176,11 @@ def xanes_plan(erange = [], estep = [],
     #open b shutter
     if shutter_control is True:
         #shut_b.open()
-        yield from abs_set(shut_b,1,wait=True)
+        shut_b.put(1,wait=True)
+        #yield from abs_set(shut_b,1,wait=True)
     #peak up DCM at first scan point
     if peak_up is True:
-        ps = PeakStats(dcm.c2_pitch.name,i0.name)
+        ps = PeakStats(dcm.c2_pitch.name,'sclr_i0')
         e_value = energy.energy.get()[1]
         if e_value < 10.:
             yield from abs_set(sclr1.preset_time,0.1, wait = True)
@@ -212,6 +216,7 @@ def xanes_plan(erange = [], estep = [],
         liveplotfig = plt.figure('raw xanes')
     
     livecallbacks.append(LivePlot(liveploty, x=liveplotx, fig=liveplotfig))
+    #livecallbacks.append(LivePlot(liveploty, x=liveplotx, ax=plt.gca(title='raw xanes')))
         
     if struck == True:
         liveploty = 'sclr_i0'
@@ -221,13 +226,14 @@ def xanes_plan(erange = [], estep = [],
         i0 = 'current_preamp_ch2'
     liveplotfig2 = plt.figure('i0')
     livecallbacks.append(LivePlot(liveploty, x=liveplotx, fig=liveplotfig2))
+    #livecallbacks.append(LivePlot(liveploty, x=liveplotx, ax=plt.gca(title='incident intensity')))
     livenormfig = plt.figure('normalized xanes')    
     if fluor == True:
         livecallbacks.append(NormalizeLivePlot(roi_key[0], x=liveplotx, norm_key = i0, fig=livenormfig))  
+        #livecallbacks.append(NormalizeLivePlot(roi_key[0], x=liveplotx, norm_key = i0, ax=plt.gca(title='normalized xanes')))  
     else:
         livecallbacks.append(NormalizeLivePlot('sclr_it', x=liveplotx, norm_key = i0, fig=livenormfig))  
-
-
+        #livecallbacks.append(NormalizeLivePlot(roi_key[0], x=liveplotx, norm_key = i0, ax=plt.gca(title='normalized xanes')))  
     def after_scan(name, doc):
         if name != 'stop':
             print("You must export this scan data manually: xanes_afterscan_plan(doc[-1], <filename>, <roinum>)")
@@ -240,10 +246,9 @@ def xanes_plan(erange = [], estep = [],
         yield from abs_set(energy.move_c2_x, True)
         yield from abs_set(energy.harmonic, None)
         if shutter_control == True:
-            shut_b.put(0)
+            shut_b.put(0, wait = True)
         if detune is not None:
             energy.detune.put(0)
-    
 
     myscan = AbsListScanPlan(det, energy, list(ept))
     myscan = bp.finalize_wrapper(myscan,finalize_scan)
@@ -288,9 +293,9 @@ def xanes_batch_plan(xylist=[], waittime = [2],
         yield from abs_set(hf_stage.y, position[1])
 
         #check bragg temperature before start the scan
-        if dcm.temp_pitch.get() > 110:
-            print('bragg temperature too high, wait ' + str(bragg_waittime) + ' s.')            
-            time.sleep(bragg_waittime)
+#        if dcm.temp_pitch.get() > 110:
+#            print('bragg temperature too high, wait ' + str(bragg_waittime) + ' s.')            
+#            time.sleep(bragg_waittime)
         
         if samplename is None:
             pt_samplename = ''
@@ -320,7 +325,7 @@ def xanes_batch_plan(xylist=[], waittime = [2],
                 
         if type(waittime) is not list:
             waittime = [waittime]
-        if len(samplename) is not len(waittime) and len(waittime) is not 1:
+        if len(waittime) is not len(xylist) and len(waittime) is not 1:
             err_msg = 'number of waittime is different from the number of points'
             raise ValueError(err_msg)
         
@@ -334,5 +339,11 @@ def xanes_batch_plan(xylist=[], waittime = [2],
         #wait for specified time period in sec.
         if len(waittime) is 1:
             time.sleep(waittime[0])
-        elif len(samplename) is len(waittime):
-            time.sleep(waittime[pt_num])
+        elif len(xylist) is len(waittime):
+            print('waiting: ',waittime[pt_num])
+#            time.sleep(waittime[pt_num])
+            try:
+                time.sleep(waittime[pt_num])
+            except KeyboardInterrupt:
+                pass
+

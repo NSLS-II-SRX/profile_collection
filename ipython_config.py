@@ -343,7 +343,7 @@ c.TerminalInteractiveShell.autocall = 0
 # c.PromptManager.justify = True
 
 # Input prompt.  '\#' will be transformed to the prompt number
-c.PromptManager.in_template = 'BlueSky [\\#]: '
+#c.PromptManager.in_template = 'BlueSky [\\#]: '
 
 #
 # c.PromptManager.color_scheme = 'Linux'

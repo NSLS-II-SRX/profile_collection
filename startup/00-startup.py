@@ -63,3 +63,13 @@ def relabel_motors(dev):
 
 
 from ophyd import PseudoSingle, PseudoPositioner, Signal
+
+from IPython.terminal.prompts import Prompts, Token
+class SRXPrompt(Prompts):
+    def in_prompt_tokens(self, cli=None):
+        return [(Token.Prompt, 'BlueSky@SRX ['),
+                (Token.PromptNum, str(self.shell.execution_count)),
+                (Token.Prompt, ']: ')]
+
+ip = get_ipython()
+ip.prompts = SRXPrompt(ip)

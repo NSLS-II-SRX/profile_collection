@@ -538,18 +538,25 @@ class SRXShutter(Device):
             self.open_cmd.put(1)
             if N > 5:
                 raise Exception("Cannot open shutter!")
+    def put(self, value, **kwargs):
+        if value == 0:
+            self.close()
+        else:
+            self.open()
+    def set(self, value, **kwargs):
+        self.put(value, **kwargs)
 
 shut_fe = SRXShutter('XF:05ID-PPS{Sh:WB}', name='shut_fe')
 shut_a = SRXShutter('XF:05IDA-PPS:1{PSh:2}', name='shut_a')
-#shut_b = SRXShutter('XF:05IDB-PPS:1{PSh:4}', name='shut_b')
+shut_b = SRXShutter('XF:05IDB-PPS:1{PSh:4}', name='shut_b')
 
 class PhotonShutter(EpicsSignal):
     def __init__(self, read_pv, open_pv, open_status, close_pv, close_status,
                  *args, **kw):
         self.open_pv = epics.PV(open_pv)
-        self.open_status = open_status
+        self.open_status = epics.PV(open_status)
         self.close_pv = epics.PV(close_pv)
-        self.close_status = close_status
+        self.close_status = epics.PV(close_status)
 
         super(PhotonShutter, self).__init__(read_pv=read_pv, *args, **kw)
 
@@ -558,6 +565,7 @@ class PhotonShutter(EpicsSignal):
             self._write_pv = self.close_pv
         else:
             self._write_pv = self.open_pv
+
         super(PhotonShutter, self).put(1)
 
     def get(self):
@@ -566,12 +574,11 @@ class PhotonShutter(EpicsSignal):
             return 0
         else:
             return 1
-
-shut_b = PhotonShutter(
-            read_pv='XF:05IDB-PPS:1{PSh:4}Pos-Sts',
-            open_pv='XF:05IDB-PPS:1{PSh:4}Cmd:Opn-Cmd',
-            open_status='XF:05IDB-PPS:1{PSh:4}Cmd:Opn-Sts',
-            close_pv='XF:05IDB-PPS:1{PSh:4}Cmd:Cls-Cmd',
-            close_status='XF:05IDB-PPS:1{PSh:4}Cmd:Cls-Sts',
-            name='shut_b')
+#shut_b = PhotonShutter(
+#            read_pv='XF:05IDB-PPS:1{PSh:4}Pos-Sts',
+#            open_pv='XF:05IDB-PPS:1{PSh:4}Cmd:Opn-Cmd',
+#            open_status='XF:05IDB-PPS:1{PSh:4}Cmd:Opn-Sts',
+#            close_pv='XF:05IDB-PPS:1{PSh:4}Cmd:Cls-Cmd',
+#            close_status='XF:05IDB-PPS:1{PSh:4}Cmd:Cls-Sts',
+#            name='shut_b')
 

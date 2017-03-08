@@ -37,6 +37,21 @@ saf_num = None
 #PI_lastname = 'Moffet'
 #saf_num = 300947
 
+#proposal_num = 301398
+#proposal_title = 'Stoichiometry of detector-grate CdZnTe crystals and its influence on detectors performance'
+#PI_lastname = 'Hossain'
+#saf_num = 300953
+
+#proposal_num = 301373
+#proposal_title = 'Fe redox transformations during serpentinization: Implications for life and planetary-scale oxidation states'
+#PI_lastname = 'Tutolo'
+#saf_num = 300970
+
+proposal_num = 301387 
+proposal_title = 'Elemental concentration and size apportionment of combustion particles from wood-fired appliances'
+PI_lastname = 'Gray-Georges'
+saf_num = 300994
+
 logfilename_postfix = str(saf_num)
 
 cycle = '2017_cycle1'

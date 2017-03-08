@@ -24,7 +24,7 @@ import time
 import epics
 import os
 import numpy
-
+import collections
 
 #matplotlib.pyplot.ticklabel_format(style='plain')
 def get_stock_md():
@@ -80,7 +80,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
             shutter = True, peakup = False,
             acqtime, numrois=1, i0map_show=True, itmap_show=False, record_cryo = False,
-            dpc = None, struck = True, 
+            dpc = None, struck = True, srecord = None, 
             setenergy=None, u_detune=None, echange_waittime=10):
 
     '''
@@ -99,9 +99,13 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
     #record relevant meta data in the Start document, defined in 90-usersetup.py
     md = get_stock_md()
+    h=db[-1]
 
     #setup the detector
     # TODO do this with configure
+
+    if acqtime < 0.001:
+        acqtime = 0.001
     if struck == False:
         current_preamp.exp_time.put(acqtime)
     else:
@@ -144,6 +148,22 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     #setup the live callbacks
     livecallbacks = []
     
+    def time_per_point(name,doc, st=time.time()):
+        if 'seq_num' in doc.keys():
+            #print((doc['time'] - st) / doc['seq_num'])
+            if srecord is None:
+                scanrecord.scan0.tpp.put((doc['time'] - st) / doc['seq_num'])
+                scanrecord.scan0.curpt.put(int(doc['seq_num']))
+            else:
+                srecord.tpp.put((doc['time'] - st) / doc['seq_num'])
+                srecord.curpt.put(int(doc['seq_num']))
+            scanrecord.time_remaining.put( (doc['time'] - st) / doc['seq_num'] * 
+                                           ( (xnumstep + 1) * (ynumstep + 1) - doc['seq_num']) / 3600)
+                
+
+        #write current point and the time per point
+    livecallbacks.append(time_per_point)
+                                
     if struck == False:
         livetableitem = [hf_stage.x.name, hf_stage.y.name, 'current_preamp_ch0', 'current_preamp_ch2']
     else:
@@ -152,8 +172,8 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     xstop = xstart + xnumstep*xstepsize
     ystop = ystart + ynumstep*ystepsize  
   
-    print('xstop = '+str(xstop))  
-    print('ystop = '+str(ystop)) 
+#    print('xstop = '+str(xstop))  
+#    print('ystop = '+str(ystop)) 
     
     
     for roi_idx in range(numrois):
@@ -937,3 +957,34 @@ def hf2dxrf_xybatch_xfm(batch_dir = None, batch_filename = None, waittime = 5, r
                     batchlogf.close()
                     time.sleep(waittime)
     batchf.close()  
+
+def hf2dxrf_gui(waittime = 5, repeat = 1, shutter=True, dpc = None, i0map_show=False,itmap_show=False, 
+                     struck = True, peakup = False, numrois = 1):
+    '''
+        
+    '''
+    
+    scanlist = [ scanrecord.scan7, scanrecord.scan6, scanrecord.scan5, 
+                 scanrecord.scan4, scanrecord.scan3, scanrecord.scan2,
+                 scanrecord.scan1, scanrecord.scan0 ]
+    Nscan = 0
+    for scannum in range(len(scanlist)):
+        thisscan = scanlist.pop()
+        Nscan = Nscan + 1
+        if thisscan.ena.get() == 1:
+            scanrecord.current_scan.put('Scan {}'.format(Nscan)) 
+            xstart = thisscan.p1s.get()
+            xnumstep = int(thisscan.p1stp.get())
+            xstepsize = thisscan.p1i.get()
+            ystart = thisscan.p2s.get()
+            ynumstep = int(thisscan.p2stp.get())
+            ystepsize = thisscan.p2i.get()
+            acqtime = thisscan.acq.get()
+     
+            hf2dxrf_gen = yield from hf2dxrf(xstart=xstart, xnumstep=xnumstep, xstepsize=xstepsize, 
+                    ystart=ystart, ynumstep=ynumstep, ystepsize=ystepsize, shutter=shutter, struck=struck,
+                    acqtime=acqtime, numrois=numrois, i0map_show=i0map_show, itmap_show = itmap_show, 
+                    dpc = dpc, peakup = peakup)
+            if len(scanlist) is not 0:
+                time.sleep(waittime)
+    scanrecord.current_scan.put('')
