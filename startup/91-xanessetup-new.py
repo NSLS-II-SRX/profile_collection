@@ -172,7 +172,7 @@ def xanes_plan(erange = [], estep = [],
     energy.u_gap.corrfunc_dis.put(1)
     #prepare to peak up DCM at first scan point
     if peak_up is True:
-        yield from abs_set(energy, ept[0])
+        yield from abs_set(energy, ept[0], wait = True)
     #open b shutter
     if shutter_control is True:
         #shut_b.open()
@@ -182,12 +182,18 @@ def xanes_plan(erange = [], estep = [],
     if peak_up is True:
         ps = PeakStats(dcm.c2_pitch.name,'sclr_i0')
         e_value = energy.energy.get()[1]
+#        if e_value < 10.:
+#            yield from abs_set(sclr1.preset_time,0.1, wait = True)
+#            peakup = scan([sclr1], dcm.c2_pitch, -19.335, -19.305, 31)
+#        else:
+#            yield from abs_set(sclr1.preset_time,1., wait = True)
+#            peakup = scan([sclr1], dcm.c2_pitch, -19.355, -19.320, 36)
         if e_value < 10.:
-            yield from abs_set(sclr1.preset_time,0.1, wait = True)
-            peakup = scan([sclr1], dcm.c2_pitch, -19.335, -19.305, 31)
+            sclr1.preset_time.put(0.1)
         else:
-            yield from abs_set(sclr1.preset_time,1., wait = True)
-            peakup = scan([sclr1], dcm.c2_pitch, -19.355, -19.320, 36)
+            sclr1.preset_time.put(1.)
+        peakup = scan([sclr1], dcm.c2_pitch, -19.250, -19.200, 51)
+
         peakup = bp.subs_wrapper(peakup,ps)
         yield from peakup
         yield from abs_set(dcm.c2_pitch, ps.cen, wait = True)
@@ -346,4 +352,54 @@ def xanes_batch_plan(xylist=[], waittime = [2],
                 time.sleep(waittime[pt_num])
             except KeyboardInterrupt:
                 pass
+
+def hfxanes_ioc(waittime = None, samplename = None, filename = None,
+                erange = [], estep = [], struck = True, peak_up = False,
+                harmonic = None, correct_c2_x= True, delaytime=0.0, detune = None,
+                acqtime=None, roinum=1, shutter_control = True, fluor = True, 
+                ):
+    '''
+    invokes hf2dxrf repeatedly with parameters provided separately.
+        waittime                [sec]       time to wait between scans
+        shutter                 [bool]      scan controls shutter
+        struck                  [bool]      use scaler for I_0
+        peak_up                  [bool]      optimize beam location on each scan
+        roinum                  [1,2,3]     ROI number for data output
+
+    '''
+
+    scanlist = [ scanrecord.scan15, scanrecord.scan14, scanrecord.scan13,
+                 scanrecord.scan12, scanrecord.scan11, scanrecord.scan10,
+                 scanrecord.scan9, scanrecord.scan8, scanrecord.scan7,
+                 scanrecord.scan6, scanrecord.scan5, scanrecord.scan4,
+                 scanrecord.scan3, scanrecord.scan2, scanrecord.scan1,
+                 scanrecord.scan0 ]
+    Nscan = 0
+    for scannum in range(len(scanlist)):
+        thisscan = scanlist.pop()
+        Nscan = Nscan + 1
+        if thisscan.Eena.get() == 1:
+            scanrecord.current_scan.put('Scan {}'.format(Nscan))
+            erange = [thisscan.e1s.get(),thisscan.e2s.get(),thisscan.e3s.get(),thisscan.efs.get()]
+            estep = [thisscan.e1i.get(), thisscan.e2i.get(), thisscan.e3i.get()]
+            waittime = thisscan.Ewait.get()
+
+            xstart = thisscan.p1s.get()
+            ystart = thisscan.p2s.get()
+            #move stages to the next point
+            yield from abs_set(hf_stage.x, xstart, wait=True) 
+            yield from abs_set(hf_stage.y, ystart, wait=True)
+#            print(xstart,ystart)
+            acqtime = thisscan.acq.get()
+
+            hfxanes_gen = yield from xanes_plan(erange = erange, estep = estep,  
+                harmonic = harmonic, correct_c2_x= correct_c2_x,              
+                acqtime = thisscan.acq.get(), roinum = int(thisscan.roi.get()), peak_up = peak_up, 
+                delaytime=delaytime, samplename = thisscan.sampname.get(), 
+                filename = thisscan.filename.get(), struck=struck, fluor=fluor, detune=thisscan.detune.get(),
+                shutter_control=shutter_control)
+            if len(scanlist) is not 0:
+                time.sleep(waittime)
+#            print(erange, estep, thisscan.acq.get(), thisscan.roi.get(), thisscan.sampname.get(), thisscan.filename.get())
+    scanrecord.current_scan.put('')
 

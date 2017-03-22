@@ -47,10 +47,26 @@ saf_num = None
 #PI_lastname = 'Tutolo'
 #saf_num = 300970
 
-proposal_num = 301387 
-proposal_title = 'Elemental concentration and size apportionment of combustion particles from wood-fired appliances'
-PI_lastname = 'Gray-Georges'
-saf_num = 300994
+#proposal_num = 301387 
+#proposal_title = 'Elemental concentration and size apportionment of combustion particles from wood-fired appliances'
+#PI_lastname = 'Gray-Georges'
+#saf_num = 300994
+
+#proposal_num = 301591 
+#proposal_title = 'Investigation of composition and phase changes during dissolution and carbonation of steelmaking slag and the associated fate of rare earth elements in slag'
+#PI_lastname = 'Park'
+#saf_num = 300940
+
+#proposal_num = 301047 
+#proposal_title = 'Spatial and temporal nano-mapping of electrode-electrode interactions in a novel MnO2 chemical transformation electrode for high energy density batteries'
+#PI_lastname = 'Gallaway'
+#saf_num = 301033
+
+proposal_num = 301229
+proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+PI_lastname = 'Thieme'
+saf_num = 301032
+
 
 logfilename_postfix = str(saf_num)
 

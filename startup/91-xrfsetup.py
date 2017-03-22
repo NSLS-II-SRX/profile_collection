@@ -958,15 +958,27 @@ def hf2dxrf_xybatch_xfm(batch_dir = None, batch_filename = None, waittime = 5, r
                     time.sleep(waittime)
     batchf.close()  
 
-def hf2dxrf_gui(waittime = 5, repeat = 1, shutter=True, dpc = None, i0map_show=False,itmap_show=False, 
+def hf2dxrf_ioc(waittime = 5, shutter=True, dpc = None, i0map_show=False,itmap_show=False, 
                      struck = True, peakup = False, numrois = 1):
     '''
+    invokes hf2dxrf repeatedly with parameters provided separately.
+        waittime                [sec]       time to wait between scans
+        shutter                 [bool]      scan controls shutter
+        dpc                     [bool]      use transmission area detector
+        i0map_show              [bool]      show I_0 map
+        itmap_show              [bool]      show I_t map
+        struck                  [bool]      use scaler for I_0
+        peakup                  [bool]      optimize beam location on each scan
+        numrois                 [1,2,3]     number of rois to display on each scan
         
     '''
     
-    scanlist = [ scanrecord.scan7, scanrecord.scan6, scanrecord.scan5, 
-                 scanrecord.scan4, scanrecord.scan3, scanrecord.scan2,
-                 scanrecord.scan1, scanrecord.scan0 ]
+    scanlist = [ scanrecord.scan15, scanrecord.scan14, scanrecord.scan13, 
+                 scanrecord.scan12, scanrecord.scan11, scanrecord.scan10,
+                 scanrecord.scan9, scanrecord.scan8, scanrecord.scan7,
+                 scanrecord.scan6, scanrecord.scan5, scanrecord.scan4,
+                 scanrecord.scan3, scanrecord.scan2, scanrecord.scan1,
+                 scanrecord.scan0 ]
     Nscan = 0
     for scannum in range(len(scanlist)):
         thisscan = scanlist.pop()

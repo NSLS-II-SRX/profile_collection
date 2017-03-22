@@ -53,6 +53,7 @@ def find_edge(scanid = -1, use_xrf = False):
     braggpoints = table.energy_bragg
 
     if use_xrf is False:
+        #it = table.current_preamp_ch0
         it = table.current_preamp_ch0
         #i0 = table.current_preamp_ch2        
         #normliazedit = -numpy.log(numpy.array(it[1::])/abs(numpy.array((i0[1::])-baseline)))

@@ -109,12 +109,17 @@ def peakup_dcm():
     ps = PeakStats(dcm.c2_pitch.name,i0.name)
     shut_b.put(1)
     
+    #if e_value < 10.:
+    #    sclr1.preset_time.put(0.1)
+    #    RE(scan([sclr1], dcm.c2_pitch, -19.335, -19.305, 31), [ps])
+    #else:
+    #    sclr1.preset_time.put(1.)
+    #    RE(scan([sclr1], dcm.c2_pitch, -19.355, -19.310, 46), [ps])
     if e_value < 10.:
         sclr1.preset_time.put(0.1)
-        RE(scan([sclr1], dcm.c2_pitch, -19.335, -19.305, 31), [ps])
     else:
         sclr1.preset_time.put(1.)
-        RE(scan([sclr1], dcm.c2_pitch, -19.355, -19.310, 46), [ps])
+    RE(scan([sclr1], dcm.c2_pitch, -19.250, -19.200, 51), [ps])
 
 
     #RE(relative_scan([sclr1], dcm.c2_pitch, -0.01, 0.01, 21), [ps])
