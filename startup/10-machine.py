@@ -1,4 +1,5 @@
 import time as ttime
+import datetime
 import os
 import epics
 from ophyd import (PVPositioner, EpicsSignal, EpicsSignalRO, EpicsMotor,
@@ -496,8 +497,10 @@ cal_data_2016cycle3  ={'d_111': 3.12941028109, #2016/10/3 (Ti, Fe, Cu, Se)
 
 
 cal_data_2017cycle1  ={#'d_111': 3.12988412345, #2017/1/17 (Ti, Cr, Fe, Cu, Se)
-                        'd_111': 3.13246886211,
-                        'delta_bragg': 0.298805934621, # Cu, Se 3/17/2017
+#                        'd_111': 3.13246886211,
+#                        'delta_bragg': 0.298805934621, # Cu, Se 3/17/2017
+                        'd_111': 3.11630891423,
+                        'delta_bragg': 0.357259819067, # {'Cu':3941, 'Se':3940, 'V':3937, 'Ti':3946, 'Mn':3951} 3/23/2017
 #                       'delta_bragg': 0.314906135851, #2017/1/17 (Ti, Cr, Fe, Cu, Se)
 #                       'delta_bragg': 0.33490613585100004, #2017/3/9 (peakup spectrum)
 #                       'delta_bragg': 0.309906135851, #2017/3/17 (Cu)
@@ -520,69 +523,80 @@ class SRXSlitsFE(Device):
 
 fe = SRXSlitsFE('FE:C05A-OP{Slt:', name='fe')
 
-class SRXShutter(Device):
-    close_cmd = Cpt(EpicsSignal, 'Cmd:Cls-Cmd')
-    open_cmd = Cpt(EpicsSignal, 'Cmd:Opn-Cmd')
+_time_fmtstr = '%Y-%m-%d %H:%M:%S'
+
+class TwoButtonShutter(Device):
+    # TODO this needs to be fixed in EPICS as these names make no sense
+    # the vlaue comingout of the PV do not match what is shown in CSS
+    open_cmd = Cpt(EpicsSignal, 'Cmd:Opn-Cmd', string=True)
+    open_val = 'Open'
+
+    close_cmd = Cpt(EpicsSignal, 'Cmd:Cls-Cmd', string=True)
+    close_val = 'Not Open'
+
+    status = Cpt(EpicsSignalRO, 'Pos-Sts', string=True)
+
     close_status = Cpt(EpicsSignalRO, 'Sts:Cls-Sts')
-    def close(self):
-        N=0
-        self.close_cmd.put(1)
-        while(self.close_status.get() == 0):
-            ttime.sleep(1.)
-            N = N + 1
-            self.close_cmd.put(1)
-            if N > 5:
-                raise Exception("Cannot close shutter!")
-    def open(self):
-        N=0
-        self.open_cmd.put(1)
-        while(self.close_status.get() == 1):
-            ttime.sleep(1.)
-            N = N + 1
-            self.open_cmd.put(1)
-            if N > 5:
-                raise Exception("Cannot open shutter!")
-    def put(self, value, **kwargs):
-        if value == 0:
-            self.close()
-        else:
-            self.open()
-    def set(self, value, **kwargs):
-        self.put(value, **kwargs)
+    fail_to_close = Cpt(EpicsSignalRO, 'Sts:FailCls-Sts', string=True)
+    fail_to_open = Cpt(EpicsSignalRO, 'Sts:FailOpn-Sts', string=True)
+    # user facing commands
+    open_str = 'Open'
+    close_str = 'Close'
 
-shut_fe = SRXShutter('XF:05ID-PPS{Sh:WB}', name='shut_fe')
-shut_a = SRXShutter('XF:05IDA-PPS:1{PSh:2}', name='shut_a')
-shut_b = SRXShutter('XF:05IDB-PPS:1{PSh:4}', name='shut_b')
+    def set(self, val):
+        if self._set_st is not None:
+            raise RuntimeError('trying to set while a set is in progress')
 
-class PhotonShutter(EpicsSignal):
-    def __init__(self, read_pv, open_pv, open_status, close_pv, close_status,
-                 *args, **kw):
-        self.open_pv = epics.PV(open_pv)
-        self.open_status = epics.PV(open_status)
-        self.close_pv = epics.PV(close_pv)
-        self.close_status = epics.PV(close_status)
+        cmd_map = {self.open_str: self.open_cmd,
+                   self.close_str: self.close_cmd}
+        target_map = {self.open_str: self.open_val,
+                      self.close_str: self.close_val}
 
-        super(PhotonShutter, self).__init__(read_pv=read_pv, *args, **kw)
+        cmd_sig = cmd_map[val]
+        target_val = target_map[val]
 
-    def put(self, value, force=False, **kwargs):
-        if value == 0:
-            self._write_pv = self.close_pv
-        else:
-            self._write_pv = self.open_pv
+        st = self._set_st = DeviceStatus(self)
+        enums = self.status.enum_strs
 
-        super(PhotonShutter, self).put(1)
+        def shutter_cb(value, timestamp, **kwargs):
+            value = enums[int(value)]
+            if value == target_val:
+                print('    at target')
+                self._set_st._finished()
+                self._set_st = None
+                self.status.clear_sub(shutter_cb)
+        uid = str(uuid.uuid4())
+        cmd_enums = cmd_sig.enum_strs
+        count = 0
+        def cmd_retry_cb(value, timestamp, **kwargs):
+            nonlocal count
+            value = cmd_enums[int(value)]
+            # ts = datetime.datetime.fromtimestamp(timestamp).strftime(_time_fmtstr)
+            # print('sh', ts, val, st)
+            if count > 5:
+                cmd_sig.clear_sub(cmd_retry_cb)
+                st._finished(success=False)
+            if value == 'None':
+                if not st.done:
+                    time.sleep(1)
+                    count += 1
+                    cmd_sig.set(1)
+                else:
+                    cmd_sig.clear_sub(cmd_retry_cb)
 
-    def get(self):
-        rbv = self._read_pv.get()
-        if rbv == 1:
-            return 0
-        else:
-            return 1
-#shut_b = PhotonShutter(
-#            read_pv='XF:05IDB-PPS:1{PSh:4}Pos-Sts',
-#            open_pv='XF:05IDB-PPS:1{PSh:4}Cmd:Opn-Cmd',
-#            open_status='XF:05IDB-PPS:1{PSh:4}Cmd:Opn-Sts',
-#            close_pv='XF:05IDB-PPS:1{PSh:4}Cmd:Cls-Cmd',
-#            close_status='XF:05IDB-PPS:1{PSh:4}Cmd:Cls-Sts',
-#            name='shut_b')
+        cmd_sig.subscribe(cmd_retry_cb, run=False)
+        cmd_sig.set(1)
+        self.status.subscribe(shutter_cb)
+        return st
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._set_st = None
+        self.read_attrs = ['status']
+
+
+
+shut_fe = TwoButtonShutter('XF:05ID-PPS{Sh:WB}', name='shut_fe')
+shut_a = TwoButtonShutter('XF:05IDA-PPS:1{PSh:2}', name='shut_a')
+shut_b = TwoButtonShutter('XF:05IDB-PPS:1{PSh:4}', name='shut_b')
 

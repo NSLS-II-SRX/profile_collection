@@ -266,6 +266,8 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     #TO-DO: implement fast shutter control (open)
     #TO-DO: implement suspender for all shutters in genral start up script
     if shutter is True: 
+        yield from abs_set(hf_stage.x,xstart, wait = True)
+        yield from abs_set(hf_stage.y,ystart, wait = True)
         shut_b.put(1)
 
     #peak up monochromator at this energy

@@ -6,8 +6,11 @@ Define suspenders that will be loaded
 
 @author: xf05id1
 """
-from bluesky.suspenders import SuspendFloor, SuspendCeil, SuspendBoolHigh
+from bluesky.suspenders import SuspendFloor, SuspendCeil, SuspendBoolHigh, SuspendBoolLow
 import bluesky.plans as bp
+
+def shuttergenerator(shutter, value):
+    return (yield from bp.rewindable_wrapper(bp.mv(shutter, value), False))
 
 #ring current suspender
 susp_rc = SuspendFloor(ring_current, 140, resume_thresh=140, sleep=10*60)
@@ -24,13 +27,13 @@ susp_cryo = SuspendCeil(cryo_v19, 0.8, resume_thresh=0.2, sleep=15*60)
 
 #shutter status suspender
 susp_shut_fe = SuspendBoolHigh(shut_fe.close_status, sleep = 5*60)
-susp_shut_a = SuspendBoolHigh(shut_a.close_status, sleep = 10)
+#susp_shut_a = SuspendBoolHigh(shut_a.close_status, sleep = 10)
 #susp_shut_fe = SuspendBoolHigh(shut_fe.close_status, sleep = 5*60,
 #                               pre_plan=bp.abs_set(shut_b, 0), post_plan=bp.mv(shut_b, 1)
 #                              ) 
-#susp_shut_a = SuspendBoolHigh(shut_a.close_status, sleep = 10,
-#                               pre_plan=bp.mv(shut_b, 0), post_plan=bp.mv(shut_b, 1)
-#                              ) 
+susp_shut_a = SuspendBoolHigh(shut_a.close_status, sleep = 10,
+                               pre_plan=list(shuttergenerator(shut_b, 'Close')), post_plan=list(shuttergenerator(shut_b, 'Open'))
+                              ) 
 
 #HDCM bragg temperature suspender
 #dcm_bragg_temp = EpicsSignal('XF:05IDA-OP:1{Mono:HDCM-Ax:P}T-I', name='dcm_bragg_temp')

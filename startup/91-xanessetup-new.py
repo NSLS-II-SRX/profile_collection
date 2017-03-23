@@ -85,7 +85,7 @@ def xanes_afterscan_plan(scanid, filename, roinum):
 def xanes_plan(erange = [], estep = [],  
             harmonic = None, correct_c2_x=True, correct_c1_r = False, detune = None,
             acqtime=1., roinum=1, delaytime = 0.00, struck=True, fluor = True,
-            samplename = '', filename = '', shutter_control = True, peak_up = False):
+            samplename = '', filename = '', shutter = True, peak_up = False):
                 
     '''
     erange (list of floats): energy ranges for XANES in eV, e.g. erange = [7112-50, 7112-20, 7112+50, 7112+120]
@@ -108,7 +108,7 @@ def xanes_plan(erange = [], estep = [],
     samplename (string): sample name to be saved in the scan metadata
     filename (string): filename to be added to the scan id as the text output filename
 
-    shutter_control:  instruct the scan to control the B shutter [bool]
+    shutter:  instruct the scan to control the B shutter [bool]
     peak_up:  control the tuning of the DCM pointing before each XANES scan [bool]
     '''                                
                 
@@ -174,7 +174,7 @@ def xanes_plan(erange = [], estep = [],
     if peak_up is True:
         yield from abs_set(energy, ept[0], wait = True)
     #open b shutter
-    if shutter_control is True:
+    if shutter is True:
         #shut_b.open()
         shut_b.put(1,wait=True)
         #yield from abs_set(shut_b,1,wait=True)
@@ -251,7 +251,7 @@ def xanes_plan(erange = [], estep = [],
         yield from abs_set(energy.u_gap.corrfunc_en,1)
         yield from abs_set(energy.move_c2_x, True)
         yield from abs_set(energy.harmonic, None)
-        if shutter_control == True:
+        if shutter == True:
             shut_b.put(0, wait = True)
         if detune is not None:
             energy.detune.put(0)
@@ -266,7 +266,7 @@ def xanes_batch_plan(xylist=[], waittime = [2],
                     samplename = None, filename = None,
                     erange = [], estep = [], struck = True, peak_up = False, 
                     harmonic = None, correct_c2_x=True, delaytime=0.0, detune = None,            
-                    acqtime=None, roinum=1, shutter_control = True, fluor = True
+                    acqtime=None, roinum=1, shutter = True, fluor = True
                     ):
                         
     '''
@@ -340,7 +340,7 @@ def xanes_batch_plan(xylist=[], waittime = [2],
             acqtime = acqtime, roinum = roinum, peak_up = peak_up, 
             delaytime=delaytime, samplename = pt_samplename, 
             filename = pt_filename, struck=struck, fluor=fluor,
-            shutter_control=shutter_control)
+            shutter=shutter)
             
         #wait for specified time period in sec.
         if len(waittime) is 1:
@@ -356,7 +356,7 @@ def xanes_batch_plan(xylist=[], waittime = [2],
 def hfxanes_ioc(waittime = None, samplename = None, filename = None,
                 erange = [], estep = [], struck = True, peak_up = False,
                 harmonic = None, correct_c2_x= True, delaytime=0.0, detune = None,
-                acqtime=None, roinum=1, shutter_control = True, fluor = True, 
+                acqtime=None, roinum=1, shutter = True, fluor = True, 
                 ):
     '''
     invokes hf2dxrf repeatedly with parameters provided separately.
@@ -397,7 +397,7 @@ def hfxanes_ioc(waittime = None, samplename = None, filename = None,
                 acqtime = thisscan.acq.get(), roinum = int(thisscan.roi.get()), peak_up = peak_up, 
                 delaytime=delaytime, samplename = thisscan.sampname.get(), 
                 filename = thisscan.filename.get(), struck=struck, fluor=fluor, detune=thisscan.detune.get(),
-                shutter_control=shutter_control)
+                shutter=shutter)
             if len(scanlist) is not 0:
                 time.sleep(waittime)
 #            print(erange, estep, thisscan.acq.get(), thisscan.roi.get(), thisscan.sampname.get(), thisscan.filename.get())
