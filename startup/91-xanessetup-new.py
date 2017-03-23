@@ -393,7 +393,7 @@ def hfxanes_ioc(waittime = None, samplename = None, filename = None,
 
             hfxanes_gen = yield from xanes_plan(erange = erange, estep = estep,  
                 harmonic = harmonic, correct_c2_x= correct_c2_x,              
-                acqtime = thisscan.acq.get(), roinum = int(thisscan.roi.get()), align, 
+                acqtime = thisscan.acq.get(), roinum = int(thisscan.roi.get()), align = align, 
                 delaytime=delaytime, samplename = thisscan.sampname.get(), 
                 filename = thisscan.filename.get(), struck=struck, fluor=fluor, detune=thisscan.detune.get(),
                 shutter=shutter)
