@@ -78,7 +78,7 @@ def get_stock_md_xfm():
 def hf2dxrf(*, xstart, xnumstep, xstepsize, 
             ystart, ynumstep, ystepsize, 
             #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
-            shutter = True, peakup = False,
+            shutter = True, align = False,
             acqtime, numrois=1, i0map_show=True, itmap_show=False, record_cryo = False,
             dpc = None, struck = True, srecord = None, 
             setenergy=None, u_detune=None, echange_waittime=10):
@@ -271,19 +271,17 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         shut_b.put(1)
 
     #peak up monochromator at this energy
-    if peakup == True:
+    if align == True:
         ps = PeakStats(dcm.c2_pitch.name,i0.name)
         e_value = energy.energy.get()[1]
         if e_value < 10. and struck==True:
             sclr1.preset_time.put(0.1, wait = True)
-            peakup = scan([sclr1], dcm.c2_pitch, -19.335, -19.305, 31)
         elif (struck == True):
             sclr1.preset_time.put(1., wait = True)
-            peakup = scan([sclr1], dcm.c2_pitch, -19.355, -19.320, 36)
-        if struck == True:
-            peakup = bp.subs_wrapper(peakup,ps)
-            yield from peakup
-            dcm.c2_pitch.move(ps.cen)
+        peakup = scan([sclr1], dcm.c2_pitch, -19.250, -19.200, 51)
+        peakup = bp.subs_wrapper(peakup,ps)
+        yield from peakup
+        yield from abs_set(dcm.c2_pitch, ps.cen, wait = True)
 
 
     hf2dxrf_scanplan = OuterProductAbsScanPlan(det, hf_stage.y, ystart, ystop, ynumstep+1, hf_stage.x, xstart, xstop, xnumstep+1, True, md=md)
@@ -421,7 +419,7 @@ def hf2dxrf_repeat(num_scans = None, waittime = 10,
                 acqtime=acqtime, numrois=numrois, i0map_show=i0map_show, itmap_show = itmap_show)
         time.sleep(waittime)
         
-def hf2dxrf_xybatch(batch_dir = None, batch_filename = None, waittime = 5, repeat = 1, batch_filelog_ext = '', shutter=True, dpc = None,i0map_show=False,itmap_show=False, struck = True, peakup = False):
+def hf2dxrf_xybatch(batch_dir = None, batch_filename = None, waittime = 5, repeat = 1, batch_filelog_ext = '', shutter=True, dpc = None,i0map_show=False,itmap_show=False, struck = True, align = False):
     '''
     This function will load from the batch text input file and run the 2D XRF according to the set points in the text file.
     input:
@@ -585,7 +583,7 @@ def hf2dxrf_xybatch(batch_dir = None, batch_filename = None, waittime = 5, repea
                     hf2dxrf_gen = yield from hf2dxrf(xstart=xstart, xnumstep=xnumstep, xstepsize=xstepsize, 
                         ystart=ystart, ynumstep=ynumstep, ystepsize=ystepsize, shutter=shutter, struck=struck,
                         acqtime=acqtime, numrois=numrois, i0map_show=i0map_show, itmap_show = itmap_show, 
-                        dpc = dpc, peakup = peakup)
+                        dpc = dpc, align = align)
                         
                     batchlogf = open(batchlogfile, 'a')
                     batchlogf.write(line+' scan_id:'+ str(db[-1].start['scan_id'])+'\n')
@@ -694,7 +692,7 @@ def hr2dxrf_top(*, xstart, xnumstep, xstepsize,
     
 def hf2dxrf_xfm(*, xstart, xnumstep, xstepsize, 
             ystart, ynumstep, ystepsize, 
-            shutter = True, struck = True, peakup = False,
+            shutter = True, struck = True, align = False,
             #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
             acqtime, numrois=1, i0map_show=True, itmap_show=False,
             energy=None, u_detune=None):
@@ -961,7 +959,7 @@ def hf2dxrf_xybatch_xfm(batch_dir = None, batch_filename = None, waittime = 5, r
     batchf.close()  
 
 def hf2dxrf_ioc(waittime = 5, shutter=True, dpc = None, i0map_show=False,itmap_show=False, 
-                     struck = True, peakup = False, numrois = 1):
+                     struck = True, align = False, numrois = 1):
     '''
     invokes hf2dxrf repeatedly with parameters provided separately.
         waittime                [sec]       time to wait between scans
@@ -970,7 +968,7 @@ def hf2dxrf_ioc(waittime = 5, shutter=True, dpc = None, i0map_show=False,itmap_s
         i0map_show              [bool]      show I_0 map
         itmap_show              [bool]      show I_t map
         struck                  [bool]      use scaler for I_0
-        peakup                  [bool]      optimize beam location on each scan
+        align                   [bool]      optimize beam location on each scan
         numrois                 [1,2,3]     number of rois to display on each scan
         
     '''
@@ -998,7 +996,7 @@ def hf2dxrf_ioc(waittime = 5, shutter=True, dpc = None, i0map_show=False,itmap_s
             hf2dxrf_gen = yield from hf2dxrf(xstart=xstart, xnumstep=xnumstep, xstepsize=xstepsize, 
                     ystart=ystart, ynumstep=ynumstep, ystepsize=ystepsize, shutter=shutter, struck=struck,
                     acqtime=acqtime, numrois=numrois, i0map_show=i0map_show, itmap_show = itmap_show, 
-                    dpc = dpc, peakup = peakup)
+                    dpc = dpc, align = align)
             if len(scanlist) is not 0:
                 time.sleep(waittime)
     scanrecord.current_scan.put('')

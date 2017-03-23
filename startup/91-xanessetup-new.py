@@ -85,7 +85,7 @@ def xanes_afterscan_plan(scanid, filename, roinum):
 def xanes_plan(erange = [], estep = [],  
             harmonic = None, correct_c2_x=True, correct_c1_r = False, detune = None,
             acqtime=1., roinum=1, delaytime = 0.00, struck=True, fluor = True,
-            samplename = '', filename = '', shutter = True, peak_up = False):
+            samplename = '', filename = '', shutter = True, align = False):
                 
     '''
     erange (list of floats): energy ranges for XANES in eV, e.g. erange = [7112-50, 7112-20, 7112+50, 7112+120]
@@ -109,7 +109,7 @@ def xanes_plan(erange = [], estep = [],
     filename (string): filename to be added to the scan id as the text output filename
 
     shutter:  instruct the scan to control the B shutter [bool]
-    peak_up:  control the tuning of the DCM pointing before each XANES scan [bool]
+    align:  control the tuning of the DCM pointing before each XANES scan [bool]
     '''                                
                 
     ept = numpy.array([])
@@ -171,7 +171,7 @@ def xanes_plan(erange = [], estep = [],
         yield from abs_set(energy.harmonic,harmonic)
     energy.u_gap.corrfunc_dis.put(1)
     #prepare to peak up DCM at first scan point
-    if peak_up is True:
+    if align is True:
         yield from abs_set(energy, ept[0], wait = True)
     #open b shutter
     if shutter is True:
@@ -179,7 +179,7 @@ def xanes_plan(erange = [], estep = [],
         shut_b.put(1,wait=True)
         #yield from abs_set(shut_b,1,wait=True)
     #peak up DCM at first scan point
-    if peak_up is True:
+    if align is True:
         ps = PeakStats(dcm.c2_pitch.name,'sclr_i0')
         e_value = energy.energy.get()[1]
 #        if e_value < 10.:
@@ -193,7 +193,6 @@ def xanes_plan(erange = [], estep = [],
         else:
             sclr1.preset_time.put(1.)
         peakup = scan([sclr1], dcm.c2_pitch, -19.250, -19.200, 51)
-
         peakup = bp.subs_wrapper(peakup,ps)
         yield from peakup
         yield from abs_set(dcm.c2_pitch, ps.cen, wait = True)
@@ -264,7 +263,7 @@ def xanes_plan(erange = [], estep = [],
 #not up to date, ignore for now
 def xanes_batch_plan(xylist=[], waittime = [2], 
                     samplename = None, filename = None,
-                    erange = [], estep = [], struck = True, peak_up = False, 
+                    erange = [], estep = [], struck = True, align = False, 
                     harmonic = None, correct_c2_x=True, delaytime=0.0, detune = None,            
                     acqtime=None, roinum=1, shutter = True, fluor = True
                     ):
@@ -337,7 +336,7 @@ def xanes_batch_plan(xylist=[], waittime = [2],
         
         yield from xanes_plan(erange = erange, estep = estep,  
             harmonic = harmonic, correct_c2_x= correct_c2_x, detune = detune,              
-            acqtime = acqtime, roinum = roinum, peak_up = peak_up, 
+            acqtime = acqtime, roinum = roinum, align = align, 
             delaytime=delaytime, samplename = pt_samplename, 
             filename = pt_filename, struck=struck, fluor=fluor,
             shutter=shutter)
@@ -354,7 +353,7 @@ def xanes_batch_plan(xylist=[], waittime = [2],
                 pass
 
 def hfxanes_ioc(waittime = None, samplename = None, filename = None,
-                erange = [], estep = [], struck = True, peak_up = False,
+                erange = [], estep = [], struck = True, align = False,
                 harmonic = None, correct_c2_x= True, delaytime=0.0, detune = None,
                 acqtime=None, roinum=1, shutter = True, fluor = True, 
                 ):
@@ -363,7 +362,7 @@ def hfxanes_ioc(waittime = None, samplename = None, filename = None,
         waittime                [sec]       time to wait between scans
         shutter                 [bool]      scan controls shutter
         struck                  [bool]      use scaler for I_0
-        peak_up                  [bool]      optimize beam location on each scan
+        align                   [bool]      optimize beam location on each scan
         roinum                  [1,2,3]     ROI number for data output
 
     '''
@@ -394,7 +393,7 @@ def hfxanes_ioc(waittime = None, samplename = None, filename = None,
 
             hfxanes_gen = yield from xanes_plan(erange = erange, estep = estep,  
                 harmonic = harmonic, correct_c2_x= correct_c2_x,              
-                acqtime = thisscan.acq.get(), roinum = int(thisscan.roi.get()), peak_up = peak_up, 
+                acqtime = thisscan.acq.get(), roinum = int(thisscan.roi.get()), align, 
                 delaytime=delaytime, samplename = thisscan.sampname.get(), 
                 filename = thisscan.filename.get(), struck=struck, fluor=fluor, detune=thisscan.detune.get(),
                 shutter=shutter)
