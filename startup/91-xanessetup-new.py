@@ -176,7 +176,7 @@ def xanes_plan(erange = [], estep = [],
     #open b shutter
     if shutter is True:
         #shut_b.open()
-        shut_b.put(1,wait=True)
+        yield from bp.mv(shut_b, 'Open')
         #yield from abs_set(shut_b,1,wait=True)
     #peak up DCM at first scan point
     if align is True:
@@ -251,7 +251,7 @@ def xanes_plan(erange = [], estep = [],
         yield from abs_set(energy.move_c2_x, True)
         yield from abs_set(energy.harmonic, None)
         if shutter == True:
-            shut_b.put(0, wait = True)
+            yield from bp.mv(shut_b,'Close')
         if detune is not None:
             energy.detune.put(0)
 

@@ -561,7 +561,6 @@ class TwoButtonShutter(Device):
         def shutter_cb(value, timestamp, **kwargs):
             value = enums[int(value)]
             if value == target_val:
-                print('    at target')
                 self._set_st._finished()
                 self._set_st = None
                 self.status.clear_sub(shutter_cb)

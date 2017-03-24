@@ -107,7 +107,7 @@ def peakup_dcm():
     e_value=energy.energy.get()[1]
     det = [sclr1]
     ps = PeakStats(dcm.c2_pitch.name,i0.name)
-    shut_b.put(1)
+    RE(bp.mv(shut_b,'Open'))
     
     #if e_value < 10.:
     #    sclr1.preset_time.put(0.1)
@@ -128,3 +128,33 @@ def peakup_dcm():
 
 def retune_undulator():
     energy.detune.put(0.)
+    energy.move(energy.energy.get()[0])
+
+import skbeam.core.constants.xrf as xrfC
+
+interestinglist = ['Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn', 'Sb', 'Te', 'I', 'Xe', 'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi', 'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U']
+
+elements = dict()
+for i in interestinglist:
+    elements[i] = xrfC.XrfElement(i)
+
+def setroi(roinum, element, edge=None):
+    '''
+    Set energy ROIs for Vortex SDD.  Selects elemental edge given current energy if not provided.
+    roinum      [1,2,3]     ROI number
+    element     <symbol>    element symbol for target energy
+    edge                    optional:  ['ka1','ka2','kb1','la1','la2','lb1','lb2','lg1','ma1']
+    '''
+    cur_element = xrfC.XrfElement(element)
+    if edge == None:
+        for e in ['ka1','ka2','kb1','la1','la2','lb1','lb2','lg1','ma1']:
+            if cur_element.emission_line[e] < energy.energy.get()[1]:
+                edge = 'e' 
+                break
+    else:
+        e = edge
+
+    e_ch = int(cur_element.emission_line[e] * 1000)
+    for d in [xs.channel1,xs.channel2,xs.channel3]:
+        d.set_roi(roinum,e_ch-100,e_ch+100,name=element)
+    print("ROI{} set for {}-{} edge.".format(roinum,element,e))

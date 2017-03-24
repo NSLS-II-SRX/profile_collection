@@ -268,7 +268,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     if shutter is True: 
         yield from abs_set(hf_stage.x,xstart, wait = True)
         yield from abs_set(hf_stage.y,ystart, wait = True)
-        shut_b.put(1)
+        yield from bp.mv(shut_b,'Open')
 
     #peak up monochromator at this energy
     if align == True:
@@ -290,7 +290,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
     #TO-DO: implement fast shutter control (close)    
     if shutter is True:
-        shut_b.put(0)
+        yield from bp.mv(shut_b,'Close')
 
     #write to scan log    
 
@@ -781,7 +781,7 @@ def hf2dxrf_xfm(*, xstart, xnumstep, xstepsize,
 
     #TO-DO: implement fast shutter control (close)    
     if shutter is True:
-        shut_b.put(0)
+        yield from bp.mv(shut_b,'Open') 
 
     #write to scan log    
     logscan('2dxrf_xfm')    
