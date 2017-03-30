@@ -312,6 +312,8 @@ class Kandinskivars(Device):
     meta_enable_sp = Cpt(BoRecord, ":META_ENABLE_SP")
     meta_val_beam_energy_mon = Cpt(VsinRecord, ":META_VAL_BEAM_ENERGY_MON")
     meta_val_beam_energy_sp = Cpt(VsoutRecord, ":META_VAL_BEAM_ENERGY_SP")
+    meta_val_beam_particle_mon = Cpt(VsinRecord, ":META_VAL_BEAM_PARTICLE_MON")
+    meta_val_beam_particle_sp = Cpt(VsoutRecord, ":META_VAL_BEAM_PARTICLE_SP")    
     meta_val_sample_info_mon = Cpt(VsinRecord, ":META_VAL_SAMPLE_INFO_MON")
     meta_val_sample_info_sp = Cpt(VsoutRecord, ":META_VAL_SAMPLE_INFO_SP")
     meta_val_sample_name_mon = Cpt(VsinRecord, ":META_VAL_SAMPLE_NAME_MON")
@@ -422,6 +424,8 @@ class Kandinskivars(Device):
     z_pos_dim_pos = Cpt(AiRecord, ":Z_POS_DIM_POS")
     z_pos_dim_source_sp = Cpt(VsoutRecord, ":Z_POS_DIM_SOURCE_SP")
     z_pos_dim_unit = Cpt(VsinRecord, ":Z_POS_DIM_UNIT")
+
+    
 class Scanparms2pos(Device):
     ...
     scanparms = Cpt(ScanparmRecord, ":scanParms")
