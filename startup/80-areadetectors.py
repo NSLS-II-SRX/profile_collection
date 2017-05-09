@@ -1,7 +1,7 @@
 from ophyd.areadetector import (AreaDetector, PixiradDetectorCam, ImagePlugin,
                                 TIFFPlugin, StatsPlugin, HDF5Plugin,
-                                ProcessPlugin, ROIPlugin, TransformPlugin, 
-                                OverlayPlugin) 
+                                ProcessPlugin, ROIPlugin, TransformPlugin,
+                                OverlayPlugin)
 from ophyd.areadetector.plugins import PluginBase
 from ophyd.areadetector.cam import AreaDetectorCam
 from ophyd.device import BlueskyInterface
@@ -26,7 +26,8 @@ class BPMCam(SingleTrigger, AreaDetector):
 
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
              #write_path_template='/epicsdata/bpm1-cam1/2016/2/24/')
-             write_path_template='/epicsdata/bpm1-cam1/%Y/%m/%d/')
+             write_path_template='/epicsdata/bpm1-cam1/%Y/%m/%d/',
+             root='/epicsdata')
     roi1 = C(ROIPlugin, 'ROI1:')
     roi2 = C(ROIPlugin, 'ROI2:')
     roi3 = C(ROIPlugin, 'ROI3:')
@@ -38,7 +39,7 @@ class BPMCam(SingleTrigger, AreaDetector):
     # this is flakey?
     # stats5 = C(StatsPlugin, 'Stats5:')
     pass
-                               
+
 bpmAD = BPMCam('XF:05IDA-BI:1{BPM:1-Cam:1}', name='bpmAD', read_attrs=['tiff'])
 bpmAD.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
 bpmAD.tiff.read_attrs = []
@@ -116,7 +117,7 @@ class SRXPCOEDGECam(SingleTrigger,AreaDetector):
 ###    read_attrs=['tiff'])
 ##pcoedge.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4', 'stats5', 'cam']
 #pcoedge.read_attrs = ['tiff', 'stats1', 'cam']
-# 
+#
 #pcoedge.tiff.read_attrs = ['file_name']
 ##pcoedge.stats1.read_attrs = ['total','centroid','sigma_x','sigma_y']
 ##pcoedge.stats1.centroid.read_attrs = ['x','y']
@@ -125,7 +126,7 @@ class SRXPCOEDGECam(SingleTrigger,AreaDetector):
 ##pcoedge.stats3.read_attrs = ['total']
 ##pcoedge.stats4.read_attrs = ['total']
 ##pcoedge.stats4.read_attrs = ['total','sigma_x','sigma_y']
- 
+
 from hxntools.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
                                          Xspress3Channel, Xspress3FileStore)
 
