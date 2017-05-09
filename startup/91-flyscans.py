@@ -13,7 +13,7 @@
 #Transverse flyer for SRX: fly X, step Y
 #Aerotech X stage, DC motor need to set desired velocity
 #Zebra staged, data read and written to file, file registered
-#Options:  open and write to Xspress3 HDF5, write to HDF5 and link in 
+#Options:  open and write to Xspress3 HDF5, write to HDF5 and link in
 #   Xspress3 data, write separately in some format and register later
 #
 import numpy
@@ -51,8 +51,8 @@ class SRXFlyer1Axis(Device):
         #pc gate output is 31 for zebra.  use it to trigger xspress3 and I0
         self.stage_sigs[self._encoder.output1.ttl.addr] = 31
         self.stage_sigs[self._encoder.output3.ttl.addr] = 31
-        
-        self.stage_sigs[self._encoder.pc.enc_pos1_sync] = 1 
+
+        self.stage_sigs[self._encoder.pc.enc_pos1_sync] = 1
 
         self._encoder.pc.block_state_reset.put(1)
 
@@ -109,7 +109,7 @@ class SRXFlyer1Axis(Device):
         # this does the same as the above, but also aborts data collection
         self._encoder.pc.block_state_reset.put(1)
         return NullStatus()
-    
+
     def collect(self):
         # Create records in the FileStore database.
         # move this to stage because I thinkt hat describe_collect needs the
@@ -117,7 +117,7 @@ class SRXFlyer1Axis(Device):
         self.__filename = '{}.h5'.format(uuid.uuid4())
         self.__read_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_READ_PATH, self.__filename)
         self.__write_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH, self.__filename)
-        self.__filestore_resource = fs.insert_resource('ZEBRA_HDF51', self.__read_filepath)
+        self.__filestore_resource = fs.insert_resource('ZEBRA_HDF51', self.__read_filepath, root='/')
         time_datum_id = str(uuid.uuid4())
         enc1_datum_id = str(uuid.uuid4())
         xs_datum_id = str(uuid.uuid4())
@@ -140,7 +140,7 @@ class SRXFlyer1Axis(Device):
                               'enc1': time_datum_id,
                               'fluor' : time_datum_id}}
         self._mode = 'idle'
-    
+
     def stop(self):
         pass
 
