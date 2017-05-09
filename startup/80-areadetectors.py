@@ -64,7 +64,8 @@ class SRXPixirad(SingleTrigger,AreaDetector):
     stats3 = C(StatsPlugin, 'Stats3:')
     stats4 = C(StatsPlugin, 'Stats4:')
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
-             write_path_template='/epicsdata/pixirad/%Y/%m/%d/')
+             write_path_template='/epicsdata/pixirad/%Y/%m/%d/',
+             root='/epicsdata')
 
 #pixi = SRXPixirad('XF:05IDD-ES:1{Det:Pixi}', name='pixi', read_attrs=['stats1','stats2','stats3','stats4','tiff'])
 #pixi.stats1.read_attrs = ['total','centroid','sigma_x','sigma_y']
@@ -87,7 +88,8 @@ class SRXHFVLMCam(SingleTrigger,AreaDetector):
     over1 = C(OverlayPlugin, 'Over1:')
     trans1 = C(TransformPlugin, 'Trans1:')
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
-             write_path_template='/epicsdata/hfvlm/%Y/%m/%d/')
+             write_path_template='/epicsdata/hfvlm/%Y/%m/%d/',
+             root='/epicsdata')
 
 hfvlmAD = SRXHFVLMCam('XF:05IDD-BI:1{Mscp:1-Cam:1}', name='hfvlm', read_attrs=['tiff'])
 hfvlmAD.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
@@ -111,7 +113,8 @@ class SRXPCOEDGECam(SingleTrigger,AreaDetector):
     roi4 = C(ROIPlugin, 'ROI4:')
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
             read_path_template='/data/PCOEDGE/2016-3/',
-            write_path_template='C:/epicsdata/pcoedge/2016-3\\')
+             write_path_template='C:/epicsdata/pcoedge/2016-3\\',
+             root='/data')
 
 #pcoedge = SRXPCOEDGECam('XF:05IDD-ES:1{Det:PCO}',name='pcoedge')
 ###    read_attrs=['tiff'])
@@ -146,7 +149,8 @@ class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
 
     hdf5 = Cpt(Xspress3FileStore, 'HDF5:',
                read_path_template='/data/XSPRESS3/2017-1/',
-               write_path_template='/epics/data/2017-1/')
+               write_path_template='/epics/data/2017-1/',
+               root='/data')
 
     def __init__(self, prefix, *, configuration_attrs=None, read_attrs=None,
                  **kwargs):
