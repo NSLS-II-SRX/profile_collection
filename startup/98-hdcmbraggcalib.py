@@ -82,7 +82,8 @@ def braggcalib(scanlogDic = {}, use_xrf = False):
     errfunc = lambda pa, x, y: fitfunc(pa,x) - y
 
     energyDic={'Cu':8.979, 'Se': 12.658, 'Zr':17.998, 'Nb':18.986, 'Fe':7.112, 
-               'Ti':4.966, 'Cr': 5.989, 'Co': 7.709, 'V': 5.465, 'Mn':6.539}
+               'Ti':4.966, 'Cr': 5.989, 'Co': 7.709, 'V': 5.465, 'Mn':6.539,
+               'Ni':8.333}
     BraggRBVDic={}
     fitBragg=[]
     fitEnergy=[]

@@ -162,9 +162,10 @@ def fly_maia(ystart, ystop, ynum,
 
     if ystart > ystop:
         ystop, ytart = ystart, ystop
-        
-    x_pitch = abs(xstop - xstart) / xnum
-    y_pitch = abs(ystop - ystart) / ynum
+
+    # Pitch must match what raster driver uses for pitch ...
+    x_pitch = abs(xstop - xstart) / (xnum - 1)
+    y_pitch = abs(ystop - ystart) / (ynum - 1)
 
     # TODO compute this based on someting
     spd_x = (x_pitch / dwell) 
@@ -234,8 +235,10 @@ def fly_maia(ystart, ystop, ynum,
     
     def _raster_plan():
         yield from bp.kickoff(maia, wait=True)
+        yield from bp.checkpoint()
         # by row
         for i, y_pos in enumerate(np.linspace(ystart, ystop, ynum)):
+            yield from bp.checkpoint()
             # move to the row we want
             yield from bp.mv(hf_stage.y, y_pos)
             if i % 2:

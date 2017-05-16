@@ -62,10 +62,28 @@ saf_num = None
 #PI_lastname = 'Gallaway'
 #saf_num = 301033
 
-proposal_num = 301229
-proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-PI_lastname = 'Thieme'
-saf_num = 301032
+#proposal_num = 301229
+#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+#PI_lastname = 'Thieme'
+#saf_num = 301032
+#proposal_title = 'Outreach'
+#proposal_num = 301445
+#saf_num = 301046
+
+#proposal_num = 301384 
+#proposal_title = 'Insights into the genesis of Ni-Cu-(PGE) supphide depositsby comparing natural analogues...'
+#PI_lastname = 'Le Vaillant'
+#saf_num = 301062
+
+#proposal_num = 300727
+#proposal_title = 'Plant uptake and trophic transfer of polymer coated CeO2 coated nanomaterials'
+#PI_lastname = 'Unrine'
+#saf_num = 301081
+
+#proposal_num = 301631
+#proposal_title = 'In-situ probing local synthesis reactions in preparing battery cathodes via sub-micron resolution spectro-imaging'
+#PI_lastname = 'Wang'
+#saf_num = 301069
 
 
 logfilename_postfix = str(saf_num)
@@ -192,4 +210,5 @@ def scantime_batchoutput(filename = 'scantimelog.txt', scanlist = []):
         starttime_s, endtime_s, starttime, endtime = scantime(i, printresults=False)
         f.write(str(i)+'\t'+str(starttime_s)+'\t'+str(endtime_s)+'\t'+starttime[12::]+'\t'+endtime[12::]+'\n')
     f.close()
+
 

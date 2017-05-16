@@ -60,6 +60,9 @@ class HFSampleStage(Device):
 hf_stage = HFSampleStage('XF:05IDD-ES:1{Stg:Smpl1-Ax:', name='hf_stage')
 relabel_motors(hf_stage)
 
+if 'velocity' not in hf_stage.x.configuration_attrs:
+    hf_stage.x.configuration_attrs.append('velocity')
+    
 #SDD motion
 class SRXUpStreamGantry(Device):
     x = Cpt(EpicsMotor, 'X}Mtr')
