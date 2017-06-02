@@ -113,8 +113,8 @@ class SRXPCOEDGECam(SingleTrigger,AreaDetector):
     roi3 = C(ROIPlugin, 'ROI3:')
     roi4 = C(ROIPlugin, 'ROI4:')
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
-            read_path_template='/data/PCOEDGE/2016-3/',
-             write_path_template='C:/epicsdata/pcoedge/2016-3\\',
+            read_path_template='/data/PCOEDGE/2017-2/',
+             write_path_template='C:/epicsdata/pcoedge/2017-2\\',
              root='/data',
              fs=db.fs)
 
@@ -150,8 +150,8 @@ class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
     channel3 = C(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
 
     hdf5 = Cpt(Xspress3FileStore, 'HDF5:',
-               read_path_template='/data/XSPRESS3/2017-1/',
-               write_path_template='/epics/data/2017-1/',
+               read_path_template='/data/XSPRESS3/2017-2/',
+               write_path_template='/epics/data/2017-2/',
                root='/data',
                fs=db.fs)
 

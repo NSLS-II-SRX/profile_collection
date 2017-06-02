@@ -85,7 +85,7 @@ def xanes_afterscan_plan(scanid, filename, roinum):
 def xanes_plan(erange = [], estep = [],  
             harmonic = None, correct_c2_x=True, correct_c1_r = False, detune = None,
             acqtime=1., roinum=1, delaytime = 0.00, struck=True, fluor = True,
-            samplename = '', filename = '', shutter = True, align = False):
+            samplename = '', filename = '', shutter = True, align = False, align_at = None):
                 
     '''
     erange (list of floats): energy ranges for XANES in eV, e.g. erange = [7112-50, 7112-20, 7112+50, 7112+120]
@@ -110,6 +110,7 @@ def xanes_plan(erange = [], estep = [],
 
     shutter:  instruct the scan to control the B shutter [bool]
     align:  control the tuning of the DCM pointing before each XANES scan [bool]
+    align_at:  energy at which to align, default is the first energy point 
     '''                                
                 
     ept = numpy.array([])
@@ -137,6 +138,7 @@ def xanes_plan(erange = [], estep = [],
     metadata_record()
     #add user meta data
     gs.RE.md['sample']  = {'name': samplename}
+    gs.RE.md['scaninfo']  = {'type': 'XANES','ROI': roinum}
    
     #convert erange and estep to numpy array
     erange = numpy.array(erange)
@@ -169,10 +171,14 @@ def xanes_plan(erange = [], estep = [],
         yield from abs_set(dcm.c1_roll,correct_c1_r)
     if harmonic is not None:        
         yield from abs_set(energy.harmonic,harmonic)
-    energy.u_gap.corrfunc_dis.put(1)
     #prepare to peak up DCM at first scan point
     if align is True:
-        yield from abs_set(energy, ept[0], wait = True)
+        if align_at == None:
+            yield from abs_set(energy, ept[0], wait = True)
+        else:
+            yield from abs_set(energy, align_at, wait = True)
+    yield from abs_set(energy, ept[0], wait = True)
+    energy.u_gap.corrfunc_dis.put(1)
     #open b shutter
     if shutter is True:
         #shut_b.open()
@@ -188,11 +194,11 @@ def xanes_plan(erange = [], estep = [],
 #        else:
 #            yield from abs_set(sclr1.preset_time,1., wait = True)
 #            peakup = scan([sclr1], dcm.c2_pitch, -19.355, -19.320, 36)
-        if e_value < 10.:
+        if e_value < 12.:
             sclr1.preset_time.put(0.1)
         else:
             sclr1.preset_time.put(1.)
-        peakup = scan([sclr1], dcm.c2_pitch, -19.250, -19.200, 51)
+        peakup = scan([sclr1], dcm.c2_pitch, -19.275, -19.315, 41)
         peakup = bp.subs_wrapper(peakup,ps)
         yield from peakup
         yield from abs_set(dcm.c2_pitch, ps.cen, wait = True)
@@ -254,6 +260,8 @@ def xanes_plan(erange = [], estep = [],
             yield from bp.mv(shut_b,'Close')
         if detune is not None:
             energy.detune.put(0)
+        del gs.RE.md['sample']['name']
+        del gs.RE.md['scaninfo']
 
     myscan = AbsListScanPlan(det, energy, list(ept))
     myscan = bp.finalize_wrapper(myscan,finalize_scan)

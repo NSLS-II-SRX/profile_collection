@@ -60,7 +60,8 @@ def find_edge(scanid = -1, use_xrf = False):
         mu = -numpy.log(abs(numpy.array(it[1::])-baseline_it))
 
     else:
-        mu = table.xs_channel2_rois_roi01_value_sum
+        #mu = table.xs_channel2_rois_roi01_value_sum
+        mu = table[table.keys()[12]]
         
     p, xaxis, yaxis, edge = scanderive(numpy.array(braggpoints[1::]), numpy.array(mu[1::]))
 

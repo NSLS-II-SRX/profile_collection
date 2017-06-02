@@ -274,11 +274,11 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     if align == True:
         ps = PeakStats(dcm.c2_pitch.name,i0.name)
         e_value = energy.energy.get()[1]
-        if e_value < 10. and struck==True:
+        if e_value < 12. and struck==True:
             sclr1.preset_time.put(0.1, wait = True)
         elif (struck == True):
             sclr1.preset_time.put(1., wait = True)
-        peakup = scan([sclr1], dcm.c2_pitch, -19.250, -19.200, 51)
+        peakup = scan([sclr1], dcm.c2_pitch, -19.275, -19.315, 41)
         peakup = bp.subs_wrapper(peakup,ps)
         yield from peakup
         yield from abs_set(dcm.c2_pitch, ps.cen, wait = True)

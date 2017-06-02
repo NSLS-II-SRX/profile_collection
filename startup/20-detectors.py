@@ -141,19 +141,21 @@ class SRXScaler(EpicsScaler):
     stop_all = Cpt(EpicsSignal, 'StopAll')
     user_led = Cpt(EpicsSignal, 'UserLED')
     wfrm = Cpt(EpicsSignal, 'Wfrm')
+    mca1 = Cpt(EpicsSignalRO, 'mca1')
+    mca2 = Cpt(EpicsSignalRO, 'mca2')
 
     def __init__(self, prefix, **kwargs):
         super().__init__(prefix, **kwargs)
         self.stage_sigs[self.count_mode] = 'OneShot'
 
 sclr1 = SRXScaler('XF:05IDD-ES:1{Sclr:1}',name='sclr1')
-sclr1.read_attrs = ['channels.chan6','channels.chan5']
-i0_channel = getattr(sclr1.channels,'chan6')
+sclr1.read_attrs = ['channels.chan2','channels.chan3']
+i0_channel = getattr(sclr1.channels,'chan2')
 i0_channel.name = 'sclr_i0'
-it_channel = getattr(sclr1.channels,'chan5')
+it_channel = getattr(sclr1.channels,'chan3')
 it_channel.name = 'sclr_it'
-i0 = sclr1.channels.chan6
-iT = sclr1.channels.chan5
+i0 = sclr1.channels.chan2
+iT = sclr1.channels.chan3
 
 class CurrentPreamp(Device):
     ch0 = Cpt(EpicsSignalRO, 'Cur:I0-I')

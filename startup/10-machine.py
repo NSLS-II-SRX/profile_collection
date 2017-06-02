@@ -513,8 +513,14 @@ cal_data_2017cycle1  ={#'d_111': 3.12988412345, #2017/1/17 (Ti, Cr, Fe, Cu, Se)
                         'xoffset': 25.4253705456081, #2017/1/17 12.6 keV
                         #'C1Rcal': -4.98854110244  #for the record, #2017/1/17
                       }
-
-energy = Energy(prefix='', name='energy', **cal_data_2017cycle1)
+cal_data_2017cycle2 = {
+ 'd_111': 3.12894833524,
+ 'delta_bragg': 0.309484915727, #{'Ti':4843,'Mn':4845,'Cu':4847,'Se':4848} 20170525
+ 'C2Xcal': 3.6,
+ 'T2cal': 15.0347755916,
+ 'xoffset': 24.581644618999363, #value for Ti worked best using the C2 pitch to correct at higher E
+}
+energy = Energy(prefix='', name='energy', **cal_data_2017cycle2)
 energy.synch_with_epics()
 
 

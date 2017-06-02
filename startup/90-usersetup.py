@@ -17,78 +17,14 @@ proposal_title = None
 PI_lastname = None
 saf_num = None
 
-#proposal_num = 300766
-#proposal_title = 'Trace Elements in Fluorite as a Window into Ore Forming Fluids and Igneous Petrogenesis'
-#PI_lastname = 'Acerbo'
-#saf_num = 300846
-
-#proposal_num = 301566
-#proposal_title = 'Study oxidation of nuclear cladding advanced steel alloys'
-#PI_lastname = 'Elbakhshwan'
-#saf_num = 300887
-
-#proposal_num = 300269
-#proposal_title = 'Laser Fabrication of single-crystal architecture in glass'
-#PI_lastname = 'Jain'
-#saf_num = 300828
-
-#proposal_num = 300928
-#proposal_title = 'Elemental Association and Chemical Speciation of Transition Metals in Submicrometer Atmospheric Particles'
-#PI_lastname = 'Moffet'
-#saf_num = 300947
-
-#proposal_num = 301398
-#proposal_title = 'Stoichiometry of detector-grate CdZnTe crystals and its influence on detectors performance'
-#PI_lastname = 'Hossain'
-#saf_num = 300953
-
-#proposal_num = 301373
-#proposal_title = 'Fe redox transformations during serpentinization: Implications for life and planetary-scale oxidation states'
-#PI_lastname = 'Tutolo'
-#saf_num = 300970
-
-#proposal_num = 301387 
-#proposal_title = 'Elemental concentration and size apportionment of combustion particles from wood-fired appliances'
-#PI_lastname = 'Gray-Georges'
-#saf_num = 300994
-
-#proposal_num = 301591 
-#proposal_title = 'Investigation of composition and phase changes during dissolution and carbonation of steelmaking slag and the associated fate of rare earth elements in slag'
-#PI_lastname = 'Park'
-#saf_num = 300940
-
-#proposal_num = 301047 
-#proposal_title = 'Spatial and temporal nano-mapping of electrode-electrode interactions in a novel MnO2 chemical transformation electrode for high energy density batteries'
-#PI_lastname = 'Gallaway'
-#saf_num = 301033
-
-#proposal_num = 301229
-#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Thieme'
-#saf_num = 301032
-#proposal_title = 'Outreach'
-#proposal_num = 301445
-#saf_num = 301046
-
-#proposal_num = 301384 
-#proposal_title = 'Insights into the genesis of Ni-Cu-(PGE) supphide depositsby comparing natural analogues...'
-#PI_lastname = 'Le Vaillant'
-#saf_num = 301062
-
-#proposal_num = 300727
-#proposal_title = 'Plant uptake and trophic transfer of polymer coated CeO2 coated nanomaterials'
-#PI_lastname = 'Unrine'
-#saf_num = 301081
-
-#proposal_num = 301631
-#proposal_title = 'In-situ probing local synthesis reactions in preparing battery cathodes via sub-micron resolution spectro-imaging'
-#PI_lastname = 'Wang'
-#saf_num = 301069
-
+proposal_num = 301918 
+proposal_title = 'u-EXAFS investigation of lithium insertion kinetics in Aggregated Fe3O4 electrodes'
+PI_lastname = 'Bock'
+saf_num = 301146
 
 logfilename_postfix = str(saf_num)
 
-cycle = '2017_cycle1'
+cycle = '2017_cycle2'
 
 gs.RE.md['proposal']  = {  'proposal_num': str(proposal_num), 
                          'proposal_title': str(proposal_title),

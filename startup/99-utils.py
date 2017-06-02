@@ -115,11 +115,11 @@ def peakup_dcm():
     #else:
     #    sclr1.preset_time.put(1.)
     #    RE(scan([sclr1], dcm.c2_pitch, -19.355, -19.310, 46), [ps])
-    if e_value < 10.:
+    if e_value < 12.:
         sclr1.preset_time.put(0.1)
     else:
         sclr1.preset_time.put(1.)
-    RE(scan([sclr1], dcm.c2_pitch, -19.250, -19.200, 51), [ps])
+    RE(scan([sclr1], dcm.c2_pitch, -19.275, -19.315, 41), [ps])
 
 
     #RE(relative_scan([sclr1], dcm.c2_pitch, -0.01, 0.01, 21), [ps])

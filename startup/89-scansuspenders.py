@@ -48,7 +48,8 @@ susp_shut_a = SuspendBoolHigh(shut_a.close_status, sleep = 10,
 #dcm_bragg_temp = EpicsSignal('XF:05IDA-OP:1{Mono:HDCM-Ax:P}T-I', name='dcm_bragg_temp')
 #susp_dcm_bragg_temp = SuspendCeil(dcm_bragg_temp, 120, resume_thresh=70, sleep = 10)
 #susp_dcm_bragg_temp = SuspendCeil(dcm.temp_pitch, 120, resume_thresh=70, sleep = 10)
-susp_dcm_bragg_temp = SuspendCeil(dcm.temp_pitch, 120, resume_thresh=70, sleep = 1)
+#susp_dcm_bragg_temp = SuspendCeil(dcm.temp_pitch, 120, resume_thresh=70, sleep = 1)
+susp_dcm_bragg_temp = SuspendCeil(dcm.temp_pitch, 120, resume_thresh=118, sleep = 1)
 #susp_dcm_bragg_temp = SuspendCeil(dcm.temp_pitch, 100, resume_thresh=98, sleep = 10,
 #                        pre_plan=bp.mv(shut_b, 0), post_plan=bp.mv(shut_b, 1)
 #                       ) 
