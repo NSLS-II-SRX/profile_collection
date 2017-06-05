@@ -137,6 +137,7 @@ class SRXScaler(EpicsScaler):
     set_client_wait = Cpt(EpicsSignal, 'SetClientWait')
     snl_connected = Cpt(EpicsSignal, 'SNL_Connected')
     software_channel_advance = Cpt(EpicsSignal, 'SoftwareChannelAdvance')
+    count_mode=Cpt(EpicsSignal, '.CONT')
     start_all = Cpt(EpicsSignal, 'StartAll')
     stop_all = Cpt(EpicsSignal, 'StopAll')
     user_led = Cpt(EpicsSignal, 'UserLED')

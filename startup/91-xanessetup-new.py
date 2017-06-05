@@ -176,8 +176,8 @@ def xanes_plan(erange = [], estep = [],
         if align_at == None:
             yield from abs_set(energy, ept[0], wait = True)
         else:
-            yield from abs_set(energy, align_at, wait = True)
-    yield from abs_set(energy, ept[0], wait = True)
+            print("aligning at ",align_at)
+            yield from abs_set(energy, float(align_at), wait = True)
     energy.u_gap.corrfunc_dis.put(1)
     #open b shutter
     if shutter is True:

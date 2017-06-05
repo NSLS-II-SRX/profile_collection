@@ -17,10 +17,10 @@ proposal_title = None
 PI_lastname = None
 saf_num = None
 
-proposal_num = 301918 
-proposal_title = 'u-EXAFS investigation of lithium insertion kinetics in Aggregated Fe3O4 electrodes'
-PI_lastname = 'Bock'
-saf_num = 301146
+#proposal_num = 301918 
+#proposal_title = 'u-EXAFS investigation of lithium insertion kinetics in Aggregated Fe3O4 electrodes'
+#PI_lastname = 'Bock'
+#saf_num = 301146
 
 logfilename_postfix = str(saf_num)
 

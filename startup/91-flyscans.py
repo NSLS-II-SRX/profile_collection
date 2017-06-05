@@ -27,6 +27,7 @@ from bluesky.callbacks import LiveTable, LivePlot, CallbackBase, LiveRaster
 from ophyd import Device
 import uuid
 import h5py
+from collections import ChainMap
 
 from hxntools.handlers import register
 register()
@@ -36,12 +37,12 @@ class SRXFlyer1Axis(Device):
     LARGE_FILE_DIRECTORY_READ_PATH = '/tmp/test_data'
     LARGE_FILE_DIRECTORY_WRITE_PATH = '/tmp/test_data'
     "This is the Zebra."
-    def __init__(self, encoder, xs, *, fs=fs):
-#    def __init__(self, encoder, *, fs=fs):
+    def __init__(self, encoder, xs, sclr1, *, fs=fs):
         super().__init__('', parent=None)
         self._mode = 'idle'
         self._encoder = encoder
         self._det = xs
+        self._sis = sclr1
         self._filestore_resource = None
 
         # gating info for encoder capture
@@ -54,7 +55,14 @@ class SRXFlyer1Axis(Device):
 
         self.stage_sigs[self._encoder.pc.enc_pos1_sync] = 1
 
+        #put SIS3820 into single count (not autocount) mode
+        self.stage_sigs[self._sis.count_mode] = 0
+
+        #stop the SIS3820
+        self._sis.stop_all.put(1)
+
         self._encoder.pc.block_state_reset.put(1)
+
 
     def stage(self):
         super().stage()
@@ -76,6 +84,8 @@ class SRXFlyer1Axis(Device):
         for chan in ('time','enc1'):
             desc[chan] = spec
             desc[chan]['source'] = getattr(self._encoder.pc.data, chan).pvname
+        desc['i0'] = spec
+        desc['i0']['source'] = self._sis.mca1.pvname
         desc['fluor'] = spec
         desc['fluor']['source'] = 'FileStore::{!s}'.format(self._det.hdf5._filestore_res['id'])
 
@@ -115,18 +125,25 @@ class SRXFlyer1Axis(Device):
         # move this to stage because I thinkt hat describe_collect needs the
         # resource id
         self.__filename = '{}.h5'.format(uuid.uuid4())
+        self.__filename_sis = '{}.h5'.format(uuid.uuid4())
         self.__read_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_READ_PATH, self.__filename)
+        self.__read_filepath_sis = os.path.join(self.LARGE_FILE_DIRECTORY_READ_PATH, self.__filename_sis)
         self.__write_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH, self.__filename)
+        self.__write_filepath_sis = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH, self.__filename_sis)
         self.__filestore_resource = fs.insert_resource('ZEBRA_HDF51', self.__read_filepath, root='/')
+        self.__filestore_resource_sis = fs.insert_resource('SIS_HDF51', self.__read_filepath_sis, root='/')
         time_datum_id = str(uuid.uuid4())
         enc1_datum_id = str(uuid.uuid4())
         xs_datum_id = str(uuid.uuid4())
+        sis_datum_id = str(uuid.uuid4())
         fs.insert_datum(self.__filestore_resource, time_datum_id, {'column': 'time'})
         fs.insert_datum(self.__filestore_resource, enc1_datum_id, {'column': 'enc1'})
+        fs.insert_datum(self.__filestore_resource_sis, sis_datum_id, {'column': 'i0'})
         fs.insert_datum(self._det.hdf5._filestore_res, xs_datum_id, {})
 
         # Write the file.
         export_zebra_data(self._encoder, self.__write_filepath)
+        export_sis_data(self._sis, self.__write_filepath_sis)
 
         # Yield a (partial) Event document. The RunEngine will put this
         # into metadatastore, as it does all readings.
@@ -134,11 +151,13 @@ class SRXFlyer1Axis(Device):
                'data': {'time': time_datum_id,
 #                        'enc1': enc1_datum_id},
                         'enc1': enc1_datum_id,
-                        'fluor' : xs_datum_id},
+                        'fluor' : xs_datum_id,
+                        'i0': sis_datum_id},
                'timestamps': {'time': time_datum_id,  # not a typo
 #                              'enc1': time_datum_id}}
                               'enc1': time_datum_id,
-                              'fluor' : time_datum_id}}
+                              'fluor' : time_datum_id,
+                              'i0': time_datum_id}}
         self._mode = 'idle'
 
     def stop(self):
@@ -147,6 +166,7 @@ class SRXFlyer1Axis(Device):
     def pause(self):
         "Pausing in the middle of a kickoff nukes the partial dataset."
         self._encoder.pc.arm.put(0)
+        self._sis.stop_all.put(1)
         self._mode = 'idle'
         self.unstage()
 
@@ -154,7 +174,7 @@ class SRXFlyer1Axis(Device):
         self.stage()
 
 
-flying_zebra = SRXFlyer1Axis(zebra,xs)
+flying_zebra = SRXFlyer1Axis(zebra,xs,sclr1)
 #flying_zebra = SRXFlyer1Axis(zebra)
 
 
@@ -166,10 +186,18 @@ def export_zebra_data(zebra, filepath):
         dset0[...] = np.array(data.time)
         dset1 = f.create_dataset("enc1",size,dtype='f')
         dset1[...] = np.array(data.enc1)
-        dset0.flush()
-        dset1.flush()
         f.close()
 
+def export_sis_data(ion,filepath):
+    t = ion.mca1.get()
+    i = ion.mca2.get()
+    size = (len(t),)
+    with h5py.File(filepath, 'w') as f:
+        dset0 = f.create_dataset("time",size,dtype='f')
+        dset0[...] = np.array(t)
+        dset1 = f.create_dataset("i0",size,dtype='f')
+        dset1[...] = np.array(i)
+        f.close()
 
 class ZebraHDF5Handler:
     def __init__(self, resource_fn):
@@ -178,8 +206,14 @@ class ZebraHDF5Handler:
     def __call__(self, *, column):
         return self._handle[column]
 
+class SISHDF5Handler:
+    def __init__(self, resource_fn):
+        self._handle = h5py.File(resource_fn, 'r')
 
-db.fs.register_handler('ZEBRA_HDF51', ZebraHDF5Handler, overwrite=True)
+    def __call__(self, *, column):
+        return self._handle[column]
+
+db.fs.register_handler('SIS_HDF51', SISHDF5Handler, overwrite=True)
 
 
 class LiveZebraPlot(CallbackBase):
@@ -220,11 +254,11 @@ class LiveZebraPlot(CallbackBase):
 def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
                  delta=None,
                  xmotor=hf_stage.x, ymotor=hf_stage.y,
-                 xs=xs, ion=current_preamp.ch2,
+                 xs=xs, ion=sclr1,
                  flying_zebra=flying_zebra, md=None):
     """
 
-    Monitor IO.
+    Read IO from SIS3820.
     Zebra buffers x(t) points as a flyer.
     Xpress3 is our detector.
     The aerotech has the x and y positioners.
@@ -254,26 +288,26 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from abs_set(xmotor.velocity, v)  # set the "stage speed"
         yield from abs_set(xs.hdf5.num_capture, xnum)
         yield from abs_set(xs.settings.num_images, xnum)
+        yield from abs_set(ion.nuse_all,xnum)
         # arm the Zebra (start caching x positions)
         yield from kickoff(flying_zebra, xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell, wait=True)
         yield from abs_set(xs.settings.acquire, 1)  # start acquiring images
+        yield from abs_set(ion.erase_start, 1) # arm SIS3820, note that there is a 1 sec delay in setting X into motion 
+                                               # so the first point *in each row* won't normalize...
 #        xs.trigger()
         yield from abs_set(xmotor, xstop+delta, wait=True)  # move in x
         yield from abs_set(xs.settings.acquire, 0)  # stop acquiring images
+        yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
         yield from complete(flying_zebra)  # tell the Zebra we are done
         yield from collect(flying_zebra)  # extract data from Zebra
         yield from abs_set(xmotor.velocity, 3.)  # set the "stage speed"
 
-    def prime_ic_signal(ion):
-        yield from abs_set(flying_zebra._encoder.output3.ttl.addr, 60, wait = True)
-        yield from abs_set(flying_zebra._encoder.soft_input1, 0, wait = True)
-        yield from abs_set(flying_zebra._encoder.soft_input1, 1, wait = True)
-        yield from abs_set(flying_zebra._encoder.soft_input1, 0, wait = True)
-
-    @subs_decorator([LiveTable([ymotor]), RowBasedLiveRaster((ynum, xnum), ion.name, row_key=ymotor.name), LiveZebraPlot()])
+    #@subs_decorator([LiveTable([ymotor]), RowBasedLiveRaster((ynum, xnum), ion.name, row_key=ymotor.name), LiveZebraPlot()])
+    #@subs_decorator([LiveTable([ymotor]), LiveRaster((ynum, xnum), sclr1.mca1.name)])
+    @subs_decorator([LiveTable([ymotor])])
     @subs_decorator([LiveRaster((ynum, xnum+1), xs.channel1.rois.roi01.value.name)])
-    @monitor_during_decorator([ion], run=False)  # monitor values from ion
-    @monitor_during_decorator([xs.channel1.rois.roi01.value], run=False)  # monitor values from xs
+    #@monitor_during_decorator([ion], run=False)  # monitor values from ion
+    @monitor_during_decorator([xs.channel1.rois.roi01.value])  # monitor values from xs
     #@monitor_during_decorator([xs], run=False)  # monitor values from xs
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
@@ -284,6 +318,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
             yield from fly_each_step([], ymotor, step)
         #yield from abs_set(xs.settings.trigger_mode, 'Internal')
         yield from abs_set(xs.external_trig, False)
+        yield from abs_set(ion.count_mode, 1)
 
 
     return (yield from plan())
