@@ -64,7 +64,7 @@ def undulator_calibration(outfile = 'SRXUgapCalibration.txt', u_gap_start = 9.53
         print('move u_gap to:', u_gap_setpoint)
         print('move bragg energy to:', energy_setpoint)
         
-        #energy.move_c2_x.put(True)
+        energy.move_c2_x.put(False)
         energy.move_u_gap.set(True)
         time.sleep(0.2)    
         energy.move(energy_setpoint)
