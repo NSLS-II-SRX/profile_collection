@@ -187,6 +187,7 @@ class SRXDCM(Device):
     c1_roll = Cpt(EpicsMotor, 'R1}Mtr')
     c2_x = Cpt(EpicsMotor, 'X2}Mtr')
     c2_pitch = Cpt(EpicsMotor, 'P2}Mtr')
+    c2_pitch_kill = Cpt(EpicsSignal, 'P2}Cmd:Kill-Cmd')
     x = Cpt(EpicsMotor, 'X}Mtr')
     y = Cpt(EpicsMotor, 'Y}Mtr')
 
