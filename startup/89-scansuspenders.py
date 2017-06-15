@@ -14,8 +14,8 @@ def shuttergenerator(shutter, value):
 
 #ring current suspender
 susp_rc = SuspendFloor(ring_current, 140, resume_thresh=140, sleep=10*60,
-                       pre_plan=list(shuttergenerator(shut_b, 'Close')),
-                       post_plan=list(shuttergenerator(shut_b, 'Open'))
+                       pre_plan=list(shuttergenerator(shut_a, 'Close')),
+                       post_plan=list(shuttergenerator(shut_a, 'Open'))
                        )
 #susp_rc = SuspendFloor(ring_current, 140, resume_thresh=140, sleep=10*60,
 #                       pre_plan=bp.abs_set(shut_b, 0), post_plan=bp.mv(shut_b, 1)
@@ -32,17 +32,17 @@ susp_cryo = SuspendCeil(cryo_v19, 0.8, resume_thresh=0.2, sleep=15*60,
 #                       ) 
 
 #shutter status suspender
-susp_shut_fe = SuspendBoolHigh(shut_fe.close_status, sleep = 5*60,
-                               pre_plan=list(shuttergenerator(shut_b, 'Close')),
-                               post_plan=list(shuttergenerator(shut_b, 'Open')))
-#susp_shut_a = SuspendBoolHigh(shut_a.close_status, sleep = 10)
 #susp_shut_fe = SuspendBoolHigh(shut_fe.close_status, sleep = 5*60,
+#                               pre_plan=list(shuttergenerator(shut_b, 'Close')),
+#                               post_plan=list(shuttergenerator(shut_b, 'Open')))
+#susp_shut_a = SuspendBoolHigh(shut_a.close_status, sleep = 10)
+susp_shut_fe = SuspendBoolHigh(shut_fe.close_status, sleep = 5*60)
 #                               pre_plan=bp.abs_set(shut_b, 0), post_plan=bp.mv(shut_b, 1)
 #                              ) 
-susp_shut_a = SuspendBoolHigh(shut_a.close_status, sleep = 10,
-                              pre_plan=list(shuttergenerator(shut_b, 'Close')),
-                              post_plan=list(shuttergenerator(shut_b, 'Open'))
-                              ) 
+#susp_shut_a = SuspendBoolHigh(shut_a.close_status, sleep = 10,
+#                              pre_plan=list(shuttergenerator(shut_b, 'Close')),
+#                              post_plan=list(shuttergenerator(shut_b, 'Open'))
+#                              ) 
 
 #HDCM bragg temperature suspender
 #dcm_bragg_temp = EpicsSignal('XF:05IDA-OP:1{Mono:HDCM-Ax:P}T-I', name='dcm_bragg_temp')
@@ -56,7 +56,7 @@ susp_dcm_bragg_temp = SuspendCeil(dcm.temp_pitch, 120, resume_thresh=118, sleep 
 
 RE.install_suspender(susp_rc)
 RE.install_suspender(susp_cryo)
-RE.install_suspender(susp_shut_a)
+#RE.install_suspender(susp_shut_a)
 RE.install_suspender(susp_shut_fe)
 RE.install_suspender(susp_dcm_bragg_temp)
 
