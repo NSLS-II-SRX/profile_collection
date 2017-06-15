@@ -84,10 +84,10 @@ class SRXFlyer1Axis(Device):
         for chan in ('time','enc1'):
             desc[chan] = spec
             desc[chan]['source'] = getattr(self._encoder.pc.data, chan).pvname
-        desc['i0'] = spec
-        desc['i0']['source'] = self._sis.mca1.pvname
         desc['fluor'] = spec
         desc['fluor']['source'] = 'FileStore::{!s}'.format(self._det.hdf5._filestore_res['id'])
+        desc['i0'] = spec
+        desc['i0']['source'] = self._sis.mca1.pvname
 
         return {'stream0':desc}
 
