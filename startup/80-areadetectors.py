@@ -131,9 +131,113 @@ class SRXPCOEDGECam(SingleTrigger,AreaDetector):
 ##pcoedge.stats3.read_attrs = ['total']
 ##pcoedge.stats4.read_attrs = ['total']
 ##pcoedge.stats4.read_attrs = ['total','sigma_x','sigma_y']
-
+from pathlib import PurePath
 from hxntools.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
-                                         Xspress3Channel, Xspress3FileStore)
+                                         Xspress3Channel, Xspress3FileStore, logger)
+from filestore.handlers import Xspress3HDF5Handler, HandlerBase
+
+class BulkXSPRESS(HandlerBase):
+    HANDLER_NAME = 'XPS3_FLY'
+    def __init__(self, resource_fn):
+        self._handle = h5py.File(resource_fn, 'r')
+
+    def __call__(self):
+        return self._handle['entry/instrument/detector/data'][:]
+    
+db.fs.register_handler(BulkXSPRESS.HANDLER_NAME, BulkXSPRESS,
+                       overwrite=True)
+
+class Xspress3FileStoreFlyable(Xspress3FileStore):
+    fly_next = Cpt(Signal, value=False)
+        
+    @property
+    def filestore_res(self):
+        return self._filestore_res
+
+    @property
+    def fs_type(self):
+        if self.fly_next.get():
+            self.fly_next.put(False)
+            return BulkXSPRESS.HANDLER_NAME
+        return Xspress3HDF5Handler.HANDLER_NAME
+
+    def stage(self):
+        # if should external trigger
+        ext_trig = self.parent.external_trig.get()
+
+        logger.debug('Stopping xspress3 acquisition')
+        # really force it to stop acquiring
+        self.settings.acquire.put(0, wait=True)
+
+        total_points = self.parent.total_points.get()
+        spec_per_point = self.parent.spectra_per_point.get()
+        total_capture = total_points * spec_per_point
+
+        # stop previous acquisition
+        self.stage_sigs[self.settings.acquire] = 0
+
+        # re-order the stage signals and disable the calc record which is
+        # interfering with the capture count
+        self.stage_sigs.pop(self.num_capture, None)
+        self.stage_sigs.pop(self.settings.num_images, None)
+        self.stage_sigs[self.num_capture_calc_disable] = 1
+
+        if ext_trig:
+            logger.debug('Setting up external triggering')
+            self.stage_sigs[self.settings.trigger_mode] = 'TTL Veto Only'
+            self.stage_sigs[self.settings.num_images] = total_capture
+        else:
+            logger.debug('Setting up internal triggering')
+            # self.settings.trigger_mode.put('Internal')
+            # self.settings.num_images.put(1)
+            self.stage_sigs[self.settings.trigger_mode] = 'Internal'
+            self.stage_sigs[self.settings.num_images] = spec_per_point
+
+        self.stage_sigs[self.auto_save] = 'No'
+        logger.debug('Configuring other filestore stuff')
+
+        logger.debug('Making the filename')
+        filename, read_path, write_path = self.make_filename()
+
+        logger.debug('Setting up hdf5 plugin: ioc path: %s filename: %s',
+                     write_path, filename)
+
+        logger.debug('Erasing old spectra')
+        self.settings.erase.put(1, wait=True)
+
+        # this must be set after self.settings.num_images because at the Epics
+        # layer  there is a helpful link that sets this equal to that (but
+        # not the other way)
+        self.stage_sigs[self.num_capture] = total_capture
+
+        # actually apply the stage_sigs
+        ret = super().stage()
+
+        self._fn = self.file_template.get() % (self._fp,
+                                               self.file_name.get(),
+                                               self.file_number.get())
+
+        if not self.file_path_exists.value:
+            raise IOError("Path {} does not exits on IOC!! Please Check"
+                          .format(self.file_path.value))
+
+        logger.debug('Inserting the filestore resource: %s', self._fn)
+        fn = PurePath(self._fn).relative_to(self.fs_root)
+        # This change needs to be upstreamed        
+        self._filestore_res = self._fs.insert_resource(
+            self.fs_type, str(fn), {},
+            root=str(self.fs_root))
+
+        # this gets auto turned off at the end
+        self.capture.put(1)
+
+        # Xspress3 needs a bit of time to configure itself...
+        # this does not play nice with the event loop :/
+        time.sleep(self._config_time)
+
+        return ret
+
+
 
 class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
     # TODO: garth, the ioc is missing some PVs?
@@ -149,7 +253,7 @@ class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
     channel2 = C(Xspress3Channel, 'C2_', channel_num=2, read_attrs=['rois'])
     channel3 = C(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
 
-    hdf5 = Cpt(Xspress3FileStore, 'HDF5:',
+    hdf5 = Cpt(Xspress3FileStoreFlyable, 'HDF5:',
                read_path_template='/data/XSPRESS3/2017-2/',
                write_path_template='/epics/data/2017-2/',
                root='/data',

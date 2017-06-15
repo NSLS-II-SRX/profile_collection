@@ -130,8 +130,10 @@ class SRXFlyer1Axis(Device):
         self.__read_filepath_sis = os.path.join(self.LARGE_FILE_DIRECTORY_READ_PATH, self.__filename_sis)
         self.__write_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH, self.__filename)
         self.__write_filepath_sis = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH, self.__filename_sis)
+        
         self.__filestore_resource = fs.insert_resource('ZEBRA_HDF51', self.__read_filepath, root='/')
         self.__filestore_resource_sis = fs.insert_resource('SIS_HDF51', self.__read_filepath_sis, root='/')
+        
         time_datum_id = str(uuid.uuid4())
         enc1_datum_id = str(uuid.uuid4())
         xs_datum_id = str(uuid.uuid4())
@@ -139,6 +141,7 @@ class SRXFlyer1Axis(Device):
         fs.insert_datum(self.__filestore_resource, time_datum_id, {'column': 'time'})
         fs.insert_datum(self.__filestore_resource, enc1_datum_id, {'column': 'enc1'})
         fs.insert_datum(self.__filestore_resource_sis, sis_datum_id, {'column': 'i0'})
+        
         fs.insert_datum(self._det.hdf5._filestore_res, xs_datum_id, {})
 
         # Write the file.
@@ -199,21 +202,25 @@ def export_sis_data(ion,filepath):
         dset1[...] = np.array(i)
         f.close()
 
-class ZebraHDF5Handler:
+class ZebraHDF5Handler(HandlerBase):
+    HANDLER_NAME = 'ZEBRA_HDF51'
     def __init__(self, resource_fn):
         self._handle = h5py.File(resource_fn, 'r')
 
     def __call__(self, *, column):
-        return self._handle[column]
+        return self._handle[column][:]
 
-class SISHDF5Handler:
+class SISHDF5Handler(HandlerBase):
+    HANDLER_NAME = 'SIS_HDF51'
     def __init__(self, resource_fn):
         self._handle = h5py.File(resource_fn, 'r')
 
     def __call__(self, *, column):
-        return self._handle[column]
+        return self._handle[column][:]
+
 
 db.fs.register_handler('SIS_HDF51', SISHDF5Handler, overwrite=True)
+db.fs.register_handler('ZEBRA_HDF51', ZebraHDF5Handler, overwrite=True)
 
 
 class LiveZebraPlot(CallbackBase):
@@ -275,6 +282,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         }
     )
 
+    
     from bluesky.plans import stage, unstage
     @stage_decorator([xs])
     def fly_each_step(detectors, motor, step):
@@ -315,6 +323,9 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         #yield from abs_set(xs.settings.trigger_mode, 'TTL Veto Only')
         yield from abs_set(xs.external_trig, True)
         for step in np.linspace(ystart, ystop, ynum):
+            # 'arm' the xs for outputting fly data
+            yield from abs_set(xs.hdf5.fly_next, True)
+
             yield from fly_each_step([], ymotor, step)
         #yield from abs_set(xs.settings.trigger_mode, 'Internal')
         yield from abs_set(xs.external_trig, False)
