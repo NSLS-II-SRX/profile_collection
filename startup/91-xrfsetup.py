@@ -81,7 +81,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             shutter = True, align = False,
             acqtime, numrois=1, i0map_show=True, itmap_show=False, record_cryo = False,
             dpc = None, struck = True, srecord = None, 
-            setenergy=None, u_detune=None, echange_waittime=10):
+            setenergy=None, u_detune=None, echange_waittime=10,samplename=None):
 
     '''
     input:
@@ -96,9 +96,12 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         energy (float): set energy, use with caution, hdcm might become misaligned
         u_detune (float): amount of undulator to detune in the unit of keV
     '''
+    c2pitch_kill=EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
 
     #record relevant meta data in the Start document, defined in 90-usersetup.py
     md = get_stock_md()
+    md['sample']  = {'name': samplename}
+    md['scaninfo']  = {'type': 'XRF'}
     h=db[-1]
 
     #setup the detector
@@ -278,10 +281,11 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             sclr1.preset_time.put(0.1, wait = True)
         elif (struck == True):
             sclr1.preset_time.put(1., wait = True)
-        peakup = scan([sclr1], dcm.c2_pitch, -19.275, -19.315, 41)
+        peakup = scan([sclr1], dcm.c2_pitch, -19.290, -19.330, 41)
         peakup = bp.subs_wrapper(peakup,ps)
         yield from peakup
         yield from abs_set(dcm.c2_pitch, ps.cen, wait = True)
+        yield from abs_set(c2pitch_kill,1)
 
 
     hf2dxrf_scanplan = OuterProductAbsScanPlan(det, hf_stage.y, ystart, ystop, ynumstep+1, hf_stage.x, xstart, xstop, xnumstep+1, True, md=md)
@@ -959,7 +963,7 @@ def hf2dxrf_xybatch_xfm(batch_dir = None, batch_filename = None, waittime = 5, r
     batchf.close()  
 
 def hf2dxrf_ioc(waittime = 5, shutter=True, dpc = None, i0map_show=False,itmap_show=False, 
-                     struck = True, align = False, numrois = 1):
+                     struck = True, align = False, numrois = 1,samplename=None):
     '''
     invokes hf2dxrf repeatedly with parameters provided separately.
         waittime                [sec]       time to wait between scans
@@ -996,7 +1000,7 @@ def hf2dxrf_ioc(waittime = 5, shutter=True, dpc = None, i0map_show=False,itmap_s
             hf2dxrf_gen = yield from hf2dxrf(xstart=xstart, xnumstep=xnumstep, xstepsize=xstepsize, 
                     ystart=ystart, ynumstep=ynumstep, ystepsize=ystepsize, shutter=shutter, struck=struck,
                     acqtime=acqtime, numrois=numrois, i0map_show=i0map_show, itmap_show = itmap_show, 
-                    dpc = dpc, align = align)
+                    dpc = dpc, align = align, samplename=samplename)
             if len(scanlist) is not 0:
                 time.sleep(waittime)
     scanrecord.current_scan.put('')
