@@ -247,7 +247,8 @@ _undulator_kwargs = dict(name='ivu1_gap', read_attrs=['readback'],
                          calib_path='/nfs/xf05id1/UndulatorCalibration/',
                          #calib_file='SRXUgapCalibration20150411_final.text',
                          #calib_file='SRXUgapCalibration20160608_final.text',                                                  
-                         calib_file='SRXUgapCalibration20170131.txt',                                                  
+                         #calib_file='SRXUgapCalibration20170131.txt',                                                  
+                         calib_file='SRXUgapCalibration20170612.txt',                                                  
                          configuration_attrs=['corrfunc_sta', 'pos', 'girder',
                                               'real_pos', 'elevation'])
 
