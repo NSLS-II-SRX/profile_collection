@@ -108,6 +108,7 @@ def peakup_dcm():
     det = [sclr1]
     ps = PeakStats(dcm.c2_pitch.name,i0.name)
     RE(bp.mv(shut_b,'Open'))
+    c2pitch_kill=EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
     
     #if e_value < 10.:
     #    sclr1.preset_time.put(0.1)
@@ -119,11 +120,13 @@ def peakup_dcm():
         sclr1.preset_time.put(0.1)
     else:
         sclr1.preset_time.put(1.)
-    RE(scan([sclr1], dcm.c2_pitch, -19.275, -19.315, 41), [ps])
+    RE(scan([sclr1], dcm.c2_pitch, -19.290, -19.330, 41), [ps])
 
 
     #RE(relative_scan([sclr1], dcm.c2_pitch, -0.01, 0.01, 21), [ps])
-    dcm.c2_pitch.move(ps.cen)
+    dcm.c2_pitch.move(ps.cen,wait=True)
+    #for some reason we now need to kill the pitch motion to keep it from overheating.  6/8/17
+    c2pitch_kill.put(1)
 
 
 def retune_undulator():
@@ -158,3 +161,24 @@ def setroi(roinum, element, edge=None):
     for d in [xs.channel1,xs.channel2,xs.channel3]:
         d.set_roi(roinum,e_ch-100,e_ch+100,name=element)
     print("ROI{} set for {}-{} edge.".format(roinum,element,e))
+
+def getbindingE(element,edge=None):
+    '''
+    Return edge energy in eV if edge is specified, otherwise return K and L edge energies and yields
+    element     <symbol>        element symbol for target
+    edge        ['k','l1','l2','l3']    return binding energy of this edge
+    '''
+    if edge == None:
+        y = [0.,'k']
+        print("edge\tenergy [eV]\tyield")
+        for i in ['k','l1','l2','l3']:
+            print("{0:s}\t{1:8.2f}\t{2:5.3}".format(i,xrfC.XrayLibWrap(elements[element].Z,'binding_e')[i]*1000.,
+                                                  xrfC.XrayLibWrap(elements[element].Z,'yield')[i]))
+            if (y[0] < xrfC.XrayLibWrap(elements[element].Z,'yield')[i] 
+                and xrfC.XrayLibWrap(elements[element].Z,'binding_e')[i] < 25.):
+                y[0] = xrfC.XrayLibWrap(elements[element].Z,'yield')[i]
+                y[1] = i
+        return xrfC.XrayLibWrap(elements[element].Z,'binding_e')[y[1]]*1000.
+    else:
+       return xrfC.XrayLibWrap(elements[element].Z,'binding_e')[edge]*1000.
+
