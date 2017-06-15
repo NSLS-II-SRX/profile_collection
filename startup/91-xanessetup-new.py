@@ -118,6 +118,7 @@ def xanes_plan(erange = [], estep = [],
     filename=filename
     last_time_pt = time.time()
     ringbuf = collections.deque(maxlen=10)
+    c2pitch_kill=EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
 
     #make sure user provided correct input
     if erange is []:
@@ -198,10 +199,11 @@ def xanes_plan(erange = [], estep = [],
             sclr1.preset_time.put(0.1)
         else:
             sclr1.preset_time.put(1.)
-        peakup = scan([sclr1], dcm.c2_pitch, -19.275, -19.315, 41)
+        peakup = scan([sclr1], dcm.c2_pitch, -19.290, -19.330, 41)
         peakup = bp.subs_wrapper(peakup,ps)
         yield from peakup
         yield from abs_set(dcm.c2_pitch, ps.cen, wait = True)
+        yield from abs_set(c2pitch_kill, 1)
 
     #setup the live callbacks
     livecallbacks = []    
