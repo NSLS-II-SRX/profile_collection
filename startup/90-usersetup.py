@@ -22,6 +22,16 @@ saf_num = None
 #PI_lastname = 'Bock'
 #saf_num = 301146
 
+#proposal_num = 301726
+#proposal_title = 'Evolution of Zn tolerance in symbiotic mycorrhizal fungi'
+#PI_lastname = 'Liao'
+#saf_num = 301188
+
+proposal_num = 301905
+proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+PI_lastname = 'Thieme'
+saf_num = 301259
+
 logfilename_postfix = str(saf_num)
 
 cycle = '2017_cycle2'
