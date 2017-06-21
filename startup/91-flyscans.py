@@ -65,6 +65,7 @@ class SRXFlyer1Axis(Device):
 
 
     def stage(self):
+        ttime.sleep(0.5)
         super().stage()
 
     def describe_collect(self):
@@ -192,8 +193,8 @@ def export_zebra_data(zebra, filepath):
         f.close()
 
 def export_sis_data(ion,filepath):
-    t = ion.mca1.get()
-    i = ion.mca2.get()
+    t = ion.mca1.get(timeout=5.)
+    i = ion.mca2.get(timeout=5.)
     size = (len(t),)
     with h5py.File(filepath, 'w') as f:
         dset0 = f.create_dataset("time",size,dtype='f')
@@ -278,7 +279,8 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         'plan_name': 'scan_and_fly',
         'detectors': [zebra.name,xs.name,ion.name],
         'dwell' : dwell,
-        'shape' : (xnum,ynum)
+        'shape' : (xnum,ynum),
+        'scaninfo' : {'type': 'XRF_fly', 'raster' : False}
         }
     )
 
@@ -302,8 +304,8 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from abs_set(xs.settings.acquire, 1)  # start acquiring images
         yield from abs_set(ion.erase_start, 1) # arm SIS3820, note that there is a 1 sec delay in setting X into motion 
                                                # so the first point *in each row* won't normalize...
-#        xs.trigger()
         yield from abs_set(xmotor, xstop+delta, wait=True)  # move in x
+#        xs.trigger()
         yield from abs_set(xs.settings.acquire, 0)  # stop acquiring images
         yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
         yield from complete(flying_zebra)  # tell the Zebra we are done

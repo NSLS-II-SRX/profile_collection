@@ -288,6 +288,10 @@ xs = SrxXspress3Detector('XF:05IDD-ES{Xsp:1}:', name='xs')
 xs.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
 xs.channel2.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
 xs.channel3.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
+xs.hdf5.num_extra_dims.put(0)
+xs.channel2.vis_enabled.put(1)
+xs.channel3.vis_enabled.put(1)
+xs.settings.num_channels.put(3)
 
 for i in range(1,4):
     ch=getattr(xs.channel1.rois,'roi{:02}.value'.format(i))

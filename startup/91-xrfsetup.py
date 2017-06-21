@@ -101,7 +101,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     #record relevant meta data in the Start document, defined in 90-usersetup.py
     md = get_stock_md()
     md['sample']  = {'name': samplename}
-    md['scaninfo']  = {'type': 'XRF'}
+    md['scaninfo']  = {'type': 'XRF', 'raster' : True}
     h=db[-1]
 
     #setup the detector

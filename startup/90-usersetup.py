@@ -27,10 +27,20 @@ saf_num = None
 #PI_lastname = 'Liao'
 #saf_num = 301188
 
-proposal_num = 301905
-proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
-PI_lastname = 'Thieme'
-saf_num = 301259
+#proposal_num = 301905
+#proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
+#PI_lastname = 'Thieme'
+#saf_num = 301259
+
+#proposal_num = 301815
+#proposal_title = 'Determining the Provenance of Glacial Erratics found on the North Shore of Long Island Based on XRF Geochronology of the Mineral Monazite'
+#PI_lastname = 'Mozer'
+#saf_num = 301267
+
+proposal_num = 302001
+proposal_title = 'Spatial Statistical Modeling of the Heterogeneous Reactivity of Arsenic in Soil Matrices'
+PI_lastname = 'Sharma'
+saf_num = 301225
 
 logfilename_postfix = str(saf_num)
 
