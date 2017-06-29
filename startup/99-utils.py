@@ -181,4 +181,11 @@ def getbindingE(element,edge=None):
         return xrfC.XrayLibWrap(elements[element].Z,'binding_e')[y[1]]*1000.
     else:
        return xrfC.XrayLibWrap(elements[element].Z,'binding_e')[edge]*1000.
-
+def copyscanparam(src_num,dest_num):
+    '''
+    Copy all scan paramaters from scan src_num to scan dest_num
+    wrapper for cp method in python scanrecord object
+    '''
+    src = 'scan{}'.format(src_num-1)
+    dest = 'scan{}'.format(dest_num-1)
+    scanrecord.cp(src,dest)

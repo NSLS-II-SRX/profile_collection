@@ -59,6 +59,46 @@ class SRXScanRecord(Device):
     scan14 = Cpt(OneScan,'Scan14:')
     scan15 = Cpt(OneScan,'Scan15:')
 
+    def cp(self,src,dest):
+        '''
+        Copy all elements of the scan object from src to dest.  
+        src and dest must be the string names of the scans
+        scans are indexed starting at 0
+        '''
+        for i in ['p1s','p2s','p1i','p2i','p1stp','p2stp',\
+                  'p1ena','p2ena','curpt','tpp','ena','acq',\
+                  'e1s','e1i','e1npts','e1e','e2s','e2i','e2npts','e2e','e3s',\
+                  'e3i','e3npts','e3e','efs','Eena','Ewait','filename',
+                  'sampname','roi','detune']:
+            getattr(getattr(self,dest),i).put(getattr(getattr(scanrecord,src),i).value)
+
+    def cp_XANES(self,src_num,dest_num):
+        '''
+        Copy all energy elements of scan number src_num to scan number dest_num
+        scan numbers are indexed starting at 1
+        '''
+        src = 'scan{}'.format(src_num-1)
+        dest = 'scan{}'.format(dest_num-1)
+        for i in ['p1s','p2s','p1i',\
+                  'p1ena','p2ena','curpt','tpp','ena','acq',\
+                  'e1s','e1i','e1npts','e1e','e2s','e2i','e2npts','e2e','e3s',\
+                  'e3i','e3npts','e3e','efs','Eena','Ewait','filename',
+                  'sampname','roi','detune']:
+            pass
+            getattr(getattr(self,dest),i).put(getattr(getattr(scanrecord,src),i).value)
+    def cp_XRF(self,src_num,dest_num):
+        '''
+        Copy all positional elements of scan number src_num to scan number dest_num
+        scan numbers are indexed starting at 1
+        '''
+        src = 'scan{}'.format(src_num-1)
+        dest = 'scan{}'.format(dest_num-1)
+        for i in ['p1s','p2s','p1i','p2i','p1stp','p2stp',\
+                  'p1ena','p2ena','curpt','tpp','ena','acq',\
+                  'sampname']:
+            getattr(getattr(self,dest),i).put(getattr(getattr(scanrecord,src),i).value)
+
+        
     current_scan = Cpt(EpicsSignal,'Scan:CUR')
     time_remaining = Cpt(EpicsSignal,'Scan:REMTIME')
     scanning = Cpt(EpicsSignal, 'Scan:ENA')
