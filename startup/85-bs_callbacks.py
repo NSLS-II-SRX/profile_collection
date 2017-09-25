@@ -12,7 +12,6 @@ from bluesky.callbacks import CallbackBase,LivePlot
 #import time as ttime
 #from databroker import DataBroker as db, get_events
 #from databroker.databroker import fill_event
-import filestore.api as fsapi
 #from metadatastore.commands import run_start_given_uid, descriptors_by_start
 #import matplotlib.pyplot as plt
 from xray_vision.backend.mpl.cross_section_2d import CrossSection
@@ -121,6 +120,6 @@ class SRXLiveImage(CallbackBase):
 
     def event(self, doc):
         uid = doc['data'][self.field]
-        data = fsapi.retrieve(uid)
+        data = db.reg.retrieve(uid)
         self.cs.update_image(data)
         self.cs._fig.canvas.draw_idle()

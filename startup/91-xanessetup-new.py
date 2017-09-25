@@ -1,4 +1,4 @@
-from bluesky.plans import AbsListScanPlan
+from bluesky.plans import list_scan
 import bluesky.plans as bp
 import scanoutput
 import numpy
@@ -268,7 +268,7 @@ def xanes_plan(erange = [], estep = [],
         del gs.RE.md['sample']['name']
         del gs.RE.md['scaninfo']
 
-    myscan = AbsListScanPlan(det, energy, list(ept))
+    myscan = list_scan(det, energy, list(ept))
     myscan = bp.finalize_wrapper(myscan,finalize_scan)
 
     return (yield from bp.subs_wrapper(myscan,{'all':livecallbacks,'stop':after_scan})) 

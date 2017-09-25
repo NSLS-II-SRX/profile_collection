@@ -5,7 +5,7 @@ Created on Wed Mar  2 09:50:38 2016
 @author: xf05id1
 """
 from functools import partial
-
+import queue
 import pyOlog
 
 from io import StringIO
@@ -114,4 +114,26 @@ logbook = pyOlog.SimpleOlogClient()
 
 _olog_log_partial = partial(logbook.log, logbooks=['Data Acquisition'])
 _olog_cb = logbook_cb_factory(_olog_log_partial)
-RE.subscribe('start', _olog_cb)
+
+
+
+def submit_to_olog(queue, cb):
+    while True:
+        name, doc = queue.get()  # waits until document is available
+        try:
+            cb(name, doc)
+        except Exception as exc:
+            warn('This olog is giving errors. This will not be logged.'
+                 'Error:' + str(exc))
+
+olog_queue = queue.Queue(maxsize=100)
+olog_thread = threading.Thread(target=submit_to_olog, args=(olog_queue, _olog_cb), daemon=True)
+olog_thread.start()
+
+def send_to_olog_queue(name, doc):
+    try:
+        olog_queue.put((name, doc), block=False)
+    except queue.Full:
+        warn('The olog queue is full. This will not be logged.')
+
+RE.subscribe(send_to_olog_queue, 'start')

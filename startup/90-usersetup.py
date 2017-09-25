@@ -57,7 +57,7 @@ logfilename_postfix = str(saf_num)
 
 cycle = '2017_cycle3'
 
-gs.RE.md['proposal']  = {  'proposal_num': str(proposal_num), 
+RE.md['proposal']  = {  'proposal_num': str(proposal_num), 
                          'proposal_title': str(proposal_title),
                             'PI_lastname': str(PI_lastname),
                                 'saf_num': str(saf_num),
@@ -107,22 +107,22 @@ def logscan_event0info(scantype, event0info = []):
     userlogf.close()
     
 def metadata_record():
-    gs.RE.md['beamline_status']  = {'energy':  energy.energy.position 
+    RE.md['beamline_status']  = {'energy':  energy.energy.position 
                                 #'slt_wb': str(slt_wb.position),
                                 #'slt_ssa': str(slt_ssa.position)
                                 }
                                 
-    gs.RE.md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
+    RE.md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
                                        'hf_stage_y': hf_stage.y.position,
                                        'hf_stage_z': hf_stage.z.position}
-    gs.RE.md['wb_slits'] = {'v_gap' : slt_wb.v_gap.position,
+    RE.md['wb_slits'] = {'v_gap' : slt_wb.v_gap.position,
                             'h_gap' : slt_wb.h_gap.position,
                             'v_cen' : slt_wb.v_cen.position,
                             'h_cen' : slt_wb.h_cen.position
                             }
-    gs.RE.md['hfm'] = {'y' : hfm.y.position,
+    RE.md['hfm'] = {'y' : hfm.y.position,
                                'bend' : hfm.bend.position} 
-    gs.RE.md['ssa_slits'] = {'v_gap' : slt_ssa.v_gap.position,
+    RE.md['ssa_slits'] = {'v_gap' : slt_ssa.v_gap.position,
                             'h_gap' : slt_ssa.h_gap.position,
                             'v_cen' : slt_ssa.v_cen.position,
                             'h_cen' : slt_ssa.h_cen.position                                      

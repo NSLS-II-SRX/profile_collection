@@ -145,8 +145,4 @@ class SRXSaturn(SaturnSoftTrigger, Saturn):
                          configuration_attrs=configuration_attrs, **kwargs)
 
 
-if __name__ == '__main__':
-    from ophyd.commands import setup_ophyd
-    setup_ophyd()
-
-    saturn = SRXSaturn('dxpSaturn:', name='saturn')
+# saturn = SRXSaturn('dxpSaturn:', name='saturn')

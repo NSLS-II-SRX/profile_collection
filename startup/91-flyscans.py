@@ -22,15 +22,14 @@ from bluesky.plans import (one_1d_step, kickoff, collect, complete, scan, wait,
                            monitor_during_wrapper, stage_decorator, abs_set,
                            run_decorator)
 from bluesky.examples import NullStatus
-import filestore.commands as fs
-from bluesky.callbacks import LiveTable, LivePlot, CallbackBase, LiveRaster
+from bluesky.callbacks import LiveTable, LivePlot, CallbackBase, LiveGrid
 from ophyd import Device
 import uuid
 import h5py
 from collections import ChainMap
 
 from hxntools.handlers import register
-register()
+register(db)
 from hxntools.detectors.xspress3 import Xspress3FileStore
 
 class SRXFlyer1Axis(Device):
@@ -39,7 +38,7 @@ class SRXFlyer1Axis(Device):
 #    LARGE_FILE_DIRECTORY_WRITE_PATH = '/tmp/fly_scan_ancillary'
     LARGE_FILE_DIRECTORY_READ_PATH = '/XF05IDD/data/2017-3/fly_scan_ancillary'
     "This is the Zebra."
-    def __init__(self, encoder, xs, sclr1, *, fs=fs):
+    def __init__(self, encoder, xs, sclr1, *, reg=db.reg):
         super().__init__('', parent=None)
         self._mode = 'idle'
         self._encoder = encoder
@@ -64,7 +63,7 @@ class SRXFlyer1Axis(Device):
         self._sis.stop_all.put(1)
 
         self._encoder.pc.block_state_reset.put(1)
-
+        self.reg = reg
 
     def stage(self):
         super().stage()
@@ -137,23 +136,30 @@ class SRXFlyer1Axis(Device):
         # resource id
         self.__filename = '{}.h5'.format(uuid.uuid4())
         self.__filename_sis = '{}.h5'.format(uuid.uuid4())
-        self.__read_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_READ_PATH, self.__filename)
-        self.__read_filepath_sis = os.path.join(self.LARGE_FILE_DIRECTORY_READ_PATH, self.__filename_sis)
-        self.__write_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH, self.__filename)
-        self.__write_filepath_sis = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH, self.__filename_sis)
+        self.__read_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_READ_PATH,
+                                            self.__filename)
+        self.__read_filepath_sis = os.path.join(self.LARGE_FILE_DIRECTORY_READ_PATH,
+                                                self.__filename_sis)
+        self.__write_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH,
+                                             self.__filename)
+        self.__write_filepath_sis = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH,
+                                                 self.__filename_sis)
         
-        self.__filestore_resource = fs.insert_resource('ZEBRA_HDF51', self.__read_filepath, root='/')
-        self.__filestore_resource_sis = fs.insert_resource('SIS_HDF51', self.__read_filepath_sis, root='/')
+        self.__filestore_resource = self.reg.register_resource('ZEBRA_HDF51', root='/',
+                                                               rpath=self.__read_filepath,
+                                                               rkwargs={})
+        self.__filestore_resource_sis = self.reg.register_resource('SIS_HDF51',root='/',
+                                                                   rpath=self.__read_filepath_sis,
+                                                                   rkwargs={})
         
-        time_datum_id = str(uuid.uuid4())
-        enc1_datum_id = str(uuid.uuid4())
-        xs_datum_id = str(uuid.uuid4())
-        sis_datum_id = str(uuid.uuid4())
-        fs.insert_datum(self.__filestore_resource, time_datum_id, {'column': 'time'})
-        fs.insert_datum(self.__filestore_resource, enc1_datum_id, {'column': 'enc1'})
-        fs.insert_datum(self.__filestore_resource_sis, sis_datum_id, {'column': 'i0'})
+        time_datum_id = self.reg.register_datum(self.__filestore_resource,
+                                                {'column': 'time'})
+        enc1_datum_id = self.reg.register_datum(self.__filestore_resource,
+                                                {'column': 'enc1'})
+        sis_datum_id =  self.reg.register_datum(self.__filestore_resource_sis,
+                                                {'column': 'i0'})
         
-        fs.insert_datum(self._det.hdf5._filestore_res, xs_datum_id, {})
+        xs_datum_id = self.reg.register_datum(self._det.hdf5._filestore_res, {})
 
         # Write the file.
         export_zebra_data(self._encoder, self.__write_filepath)
@@ -189,7 +195,8 @@ class SRXFlyer1Axis(Device):
         self.stage()
 
 
-flying_zebra = SRXFlyer1Axis(zebra,xs,sclr1)
+flying_zebra = SRXFlyer1Axis(zebra, xs, sclr1)
+flying_zebra.name='flying_zebra'
 #flying_zebra = SRXFlyer1Axis(zebra)
 
 
@@ -232,8 +239,8 @@ class SISHDF5Handler(HandlerBase):
         return self._handle[column][:]
 
 
-db.fs.register_handler('SIS_HDF51', SISHDF5Handler, overwrite=True)
-db.fs.register_handler('ZEBRA_HDF51', ZebraHDF5Handler, overwrite=True)
+db.reg.register_handler('SIS_HDF51', SISHDF5Handler, overwrite=True)
+db.reg.register_handler('ZEBRA_HDF51', ZebraHDF5Handler, overwrite=True)
 
 
 class LiveZebraPlot(CallbackBase):
@@ -349,10 +356,10 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from abs_set(xmotor.velocity, 3.)  # set the "stage speed"
 #        print('xmotor v set\t',time.time())
 
-    #@subs_decorator([LiveTable([ymotor]), RowBasedLiveRaster((ynum, xnum), ion.name, row_key=ymotor.name), LiveZebraPlot()])
-    #@subs_decorator([LiveTable([ymotor]), LiveRaster((ynum, xnum), sclr1.mca1.name)])
+    #@subs_decorator([LiveTable([ymotor]), RowBasedLiveGrid((ynum, xnum), ion.name, row_key=ymotor.name), LiveZebraPlot()])
+    #@subs_decorator([LiveTable([ymotor]), LiveGrid((ynum, xnum), sclr1.mca1.name)])
     @subs_decorator([LiveTable([ymotor])])
-    @subs_decorator([LiveRaster((ynum, xnum+1), xs.channel1.rois.roi01.value.name,extent=(xstart,xstop,ystop,ystart))])
+    @subs_decorator([LiveGrid((ynum, xnum+1), xs.channel1.rois.roi01.value.name,extent=(xstart,xstop,ystop,ystart))])
     @monitor_during_decorator([xs.channel1.rois.roi01.value])  # monitor values from xs
     #@monitor_during_decorator([xs], run=False)  # monitor values from xs
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
@@ -379,7 +386,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     return (yield from plan())
 
 
-class RowBasedLiveRaster(LiveRaster):
+class RowBasedLiveGrid(LiveGrid):
     """
     Synthesize info from two event stream here.
 

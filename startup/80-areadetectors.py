@@ -14,7 +14,7 @@ from ophyd import Signal
 from ophyd import Component as C
 
 from hxntools.handlers import register
-register()
+register(db)
 
 class SRXTIFFPlugin(TIFFPlugin, FileStoreTIFF,
                     FileStoreIterativeWrite):
@@ -27,7 +27,7 @@ class BPMCam(SingleTrigger, AreaDetector):
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
              #write_path_template='/epicsdata/bpm1-cam1/2016/2/24/')
              write_path_template='/epicsdata/bpm1-cam1/%Y/%m/%d/',
-             root='/epicsdata', fs=db.fs)
+             root='/epicsdata', reg=db.reg)
     roi1 = C(ROIPlugin, 'ROI1:')
     roi2 = C(ROIPlugin, 'ROI2:')
     roi3 = C(ROIPlugin, 'ROI3:')
@@ -90,7 +90,7 @@ class SRXHFVLMCam(SingleTrigger,AreaDetector):
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
              write_path_template='/epicsdata/hfvlm/%Y/%m/%d/',
              root='/epicsdata',
-             fs=db.fs)
+             reg=db.reg)
 
 hfvlmAD = SRXHFVLMCam('XF:05IDD-BI:1{Mscp:1-Cam:1}', name='hfvlm', read_attrs=['tiff'])
 hfvlmAD.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
@@ -116,7 +116,7 @@ class SRXPCOEDGECam(SingleTrigger,AreaDetector):
             read_path_template='/data/PCOEDGE/2017-3/',
              write_path_template='C:/epicsdata/pcoedge/2017-3\\',
              root='/data',
-             fs=db.fs)
+             reg=db.reg)
 
 pcoedge = SRXPCOEDGECam('XF:05IDD-ES:1{Det:PCO}',name='pcoedge')
 ###    read_attrs=['tiff'])
@@ -133,7 +133,7 @@ pcoedge.stats1.centroid.read_attrs = ['x','y']
 from pathlib import PurePath
 from hxntools.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
                                          Xspress3Channel, Xspress3FileStore, logger)
-from filestore.handlers import Xspress3HDF5Handler, HandlerBase
+from databroker.assets.handlers import Xspress3HDF5Handler, HandlerBase
 
 class BulkXSPRESS(HandlerBase):
     HANDLER_NAME = 'XPS3_FLY'
@@ -143,12 +143,24 @@ class BulkXSPRESS(HandlerBase):
     def __call__(self):
         return self._handle['entry/instrument/detector/data'][:]
     
-db.fs.register_handler(BulkXSPRESS.HANDLER_NAME, BulkXSPRESS,
+db.reg.register_handler(BulkXSPRESS.HANDLER_NAME, BulkXSPRESS,
                        overwrite=True)
 
 class Xspress3FileStoreFlyable(Xspress3FileStore):
     fly_next = Cpt(Signal, value=False)
-        
+
+    #fixing upstream bug
+    def read(self):
+        timestamp = time.time()
+        uids = [self._reg.register_datum(self._filestore_res, kw)
+                for kw in self._get_datum_args(self.parent._abs_trigger_count)]
+
+        return {self.mds_keys[ch]: {'timestamp': timestamp,
+                                    'value': uid,
+                                    }
+                for uid, ch in zip(uids, self.channels)
+                }
+    
     @property
     def filestore_res(self):
         return self._filestore_res
@@ -221,11 +233,11 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
                           .format(self.file_path.value))
 
         logger.debug('Inserting the filestore resource: %s', self._fn)
-        fn = PurePath(self._fn).relative_to(self.fs_root)
+        fn = PurePath(self._fn).relative_to(self.reg_root)
         # This change needs to be upstreamed        
-        self._filestore_res = self._fs.insert_resource(
+        self._filestore_res = self._resource = self._reg.insert_resource(
             self.fs_type, str(fn), {},
-            root=str(self.fs_root))
+            root=str(self.reg_root))
 
         # this gets auto turned off at the end
         self.capture.put(1)
@@ -257,7 +269,7 @@ class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
                write_path_template='/epics/data/2017-3/',
 #               root='/data',
                root='/XF05IDD',
-               fs=db.fs)
+               reg=db.reg)
 
     def __init__(self, prefix, *, configuration_attrs=None, read_attrs=None,
                  **kwargs):

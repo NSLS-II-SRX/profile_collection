@@ -15,9 +15,9 @@ Modified on Wed Wed 02 14:14 to comment out the saturn detector which is not in 
     #4. put x/y axes onto the live plot
     #5. add i0 into the default figure
 
-from bluesky.plans import OuterProductAbsScanPlan, scan
+from bluesky.plans import outer_product_scan, scan
 import bluesky.plans as bp
-from bluesky.callbacks import LiveRaster
+from bluesky.callbacks import LiveGrid
 from bluesky.callbacks.scientific import PeakStats
 import matplotlib
 import time
@@ -188,62 +188,62 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         
     #    livetableitem.append('saturn_mca_rois_roi'+str(roi_idx)+'_net_count')
     #    livetableitem.append('saturn_mca_rois_roi'+str(roi_idx)+'_count')
-    #    #roimap = LiveRaster((xnumstep, ynumstep), 'saturn_mca_rois_roi'+str(roi_idx)+'_net_count', clim=None, cmap='viridis', xlabel='x', ylabel='y', extent=None)
+    #    #roimap = LiveGrid((xnumstep, ynumstep), 'saturn_mca_rois_roi'+str(roi_idx)+'_net_count', clim=None, cmap='viridis', xlabel='x', ylabel='y', extent=None)
         colormap = 'viridis'
-    #    roimap = LiveRaster((ynumstep, xnumstep), 'saturn_mca_rois_roi'+str(roi_idx)+'_count', clim=None, cmap='jet', 
+    #    roimap = LiveGrid((ynumstep, xnumstep), 'saturn_mca_rois_roi'+str(roi_idx)+'_count', clim=None, cmap='jet', 
     #                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
 
-        roimap = LiveRaster((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno', 
+        roimap = LiveGrid((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno', 
                             xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(roimap)
 
     if dpc is not None:
-        dpc_tmap = LiveRaster((ynumstep+1, xnumstep+1), dpc.stats1.total.name, clim=None, cmap='magma',
+        dpc_tmap = LiveGrid((ynumstep+1, xnumstep+1), dpc.stats1.total.name, clim=None, cmap='magma',
                             xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(dpc_tmap)
-#        dpc_hmap = LiveRaster((ynumstep+1, xnumstep+1), dpc.stats1.centroid.x.name, clim=None, cmap='magma',
+#        dpc_hmap = LiveGrid((ynumstep+1, xnumstep+1), dpc.stats1.centroid.x.name, clim=None, cmap='magma',
 #                            xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
 #        livecallbacks.append(dpc_hmap)
-#        dpc_vmap = LiveRaster((ynumstep+1, xnumstep+1), dpc.stats1.centroid.y.name, clim=None, cmap='magma',
+#        dpc_vmap = LiveGrid((ynumstep+1, xnumstep+1), dpc.stats1.centroid.y.name, clim=None, cmap='magma',
 #                            xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
 #        livecallbacks.append(dpc_vmap)
 
 
     if i0map_show is True:
         if struck == False:
-            i0map = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='viridis', 
+            i0map = LiveGrid((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='viridis', 
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         else:
-            i0map = LiveRaster((ynumstep+1, xnumstep+1), i0.name, clim=None, cmap='viridis', 
+            i0map = LiveGrid((ynumstep+1, xnumstep+1), i0.name, clim=None, cmap='viridis', 
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(i0map)
 
     if itmap_show is True:
-        itmap = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='magma', 
+        itmap = LiveGrid((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='magma', 
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(itmap)
     
     #this does not seem to work
     if record_cryo is True:
-        cryo_v19map = LiveRaster((ynumstep+1, xnumstep+1), 'cryo_v19', clim=None, cmap='jet', 
+        cryo_v19map = LiveGrid((ynumstep+1, xnumstep+1), 'cryo_v19', clim=None, cmap='jet', 
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(cryo_v19map)
 
-        cryo_lt19map = LiveRaster((ynumstep+1, xnumstep+1), 'cryo_lt19', clim=None, cmap='jet', 
+        cryo_lt19map = LiveGrid((ynumstep+1, xnumstep+1), 'cryo_lt19', clim=None, cmap='jet', 
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(cryo_lt19map)
 
-        dBPM_hmap = LiveRaster((ynumstep+1, xnumstep+1), 'dBPM_h', clim=None, cmap='jet', 
+        dBPM_hmap = LiveGrid((ynumstep+1, xnumstep+1), 'dBPM_h', clim=None, cmap='jet', 
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(dBPM_hmap)
 
-        dBPM_vmap = LiveRaster((ynumstep+1, xnumstep+1), 'dBPM_v', clim=None, cmap='jet', 
+        dBPM_vmap = LiveGrid((ynumstep+1, xnumstep+1), 'dBPM_v', clim=None, cmap='jet', 
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(dBPM_vmap)
 
 
     #gjw
-    #vlmmap=LiveRaster((ynumstep+1, xnumstep+1), 'hfvlm_stats3_total', clim=None, cmap='inferno',\
+    #vlmmap=LiveGrid((ynumstep+1, xnumstep+1), 'hfvlm_stats3_total', clim=None, cmap='inferno',\
     #    xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
     #livecallbacks.append(vlmmap)
     #gjw
@@ -253,8 +253,8 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
     
     #setup the plan  
-    #OuterProductAbsScanPlan(detectors, *args, pre_run=None, post_run=None)
-    #OuterProductAbsScanPlan(detectors, motor1, start1, stop1, num1, motor2, start2, stop2, num2, snake2, pre_run=None, post_run=None)
+    #outer_product_scan(detectors, *args, pre_run=None, post_run=None)
+    #outer_product_scan(detectors, motor1, start1, stop1, num1, motor2, start2, stop2, num2, snake2, pre_run=None, post_run=None)
 
     if setenergy is not None:
         if u_detune is not None:
@@ -289,7 +289,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         yield from abs_set(c2pitch_kill,1)
 
 
-    hf2dxrf_scanplan = OuterProductAbsScanPlan(det, hf_stage.y, ystart, ystop, ynumstep+1, hf_stage.x, xstart, xstop, xnumstep+1, True, md=md)
+    hf2dxrf_scanplan = outer_product_scan(det, hf_stage.y, ystart, ystop, ynumstep+1, hf_stage.x, xstart, xstop, xnumstep+1, True, md=md)
     hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, livecallbacks)
     scaninfo = yield from hf2dxrf_scanplan
 
@@ -649,18 +649,18 @@ def hr2dxrf_top(*, xstart, xnumstep, xstepsize,
 
         colormap = 'jet' #previous set = 'viridis'
 
-        roimap = LiveRaster((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='jet', 
+        roimap = LiveGrid((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='jet', 
                             xlabel='x (um)', ylabel='y (um)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(roimap)
 
 
     if i0map_show is True:
-        i0map = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='jet', 
+        i0map = LiveGrid((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='jet', 
                         xlabel='x (um)', ylabel='y (um)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(i0map)
 
     if itmap_show is True:
-        itmap = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='jet', 
+        itmap = LiveGrid((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='jet', 
                         xlabel='x (um)', ylabel='y (um)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(itmap)
 
@@ -668,8 +668,8 @@ def hr2dxrf_top(*, xstart, xnumstep, xstepsize,
 
     
     #setup the plan  
-    #OuterProductAbsScanPlan(detectors, *args, pre_run=None, post_run=None)
-    #OuterProductAbsScanPlan(detectors, motor1, start1, stop1, num1, motor2, start2, stop2, num2, snake2, pre_run=None, post_run=None)
+    #outer_product_scan(detectors, *args, pre_run=None, post_run=None)
+    #outer_product_scan(detectors, motor1, start1, stop1, num1, motor2, start2, stop2, num2, snake2, pre_run=None, post_run=None)
 
     if energy is not None:
         if u_detune is not None:
@@ -683,7 +683,7 @@ def hr2dxrf_top(*, xstart, xnumstep, xstepsize,
     #TO-DO: implement suspender for all shutters in genral start up script
     
     
-    hr2dxrf_scanplan = OuterProductAbsScanPlan(det, tomo_stage.finey_top, ystart, ystop, ynumstep+1, tomo_stage.finex_top, xstart, xstop, xnumstep+1, True, md=md)
+    hr2dxrf_scanplan = outer_product_scan(det, tomo_stage.finey_top, ystart, ystop, ynumstep+1, tomo_stage.finex_top, xstart, xstop, xnumstep+1, True, md=md)
     hr2dxrf_scanplan = bp.subs_wrapper(hr2dxrf_scanplan, livecallbacks)
     scaninfo = yield from hr2dxrf_scanplan
 
@@ -746,18 +746,18 @@ def hf2dxrf_xfm(*, xstart, xnumstep, xstepsize,
         livetableitem.append(roi_key)
         cscheme = 'inferno'
         
-        roimap = LiveRaster((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap=cscheme, 
+        roimap = LiveGrid((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap=cscheme, 
                             xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(roimap)
 
 
     if i0map_show is True:
-        i0map = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='viridis', 
+        i0map = LiveGrid((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='viridis', 
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(i0map)
 
     if itmap_show is True:
-        itmap = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='magma', 
+        itmap = LiveGrid((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='magma', 
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(itmap)
 
@@ -780,7 +780,7 @@ def hf2dxrf_xfm(*, xstart, xnumstep, xstepsize,
     if shutter is True: 
         shut_b.put(1)
 
-    hf2dxrf_scanplan = OuterProductAbsScanPlan(det, stage.y, ystart, ystop, ynumstep+1, stage.x, xstart, xstop, xnumstep+1, True, md=md)
+    hf2dxrf_scanplan = outer_product_scan(det, stage.y, ystart, ystop, ynumstep+1, stage.x, xstart, xstop, xnumstep+1, True, md=md)
     hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, livecallbacks)
     scaninfo = yield from hf2dxrf_scanplan
 
