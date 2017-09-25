@@ -138,6 +138,8 @@ import skbeam.core.constants.xrf as xrfC
 interestinglist = ['Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn', 'Sb', 'Te', 'I', 'Xe', 'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi', 'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U']
 
 elements = dict()
+element_edges = ['ka1','ka2','kb1','la1','la2','lb1','lb2','lg1','ma1']
+element_transitions = ['k', 'l1', 'l2', 'l3', 'm1', 'm2', 'm3', 'm4', 'm5']
 for i in interestinglist:
     elements[i] = xrfC.XrfElement(i)
 
@@ -159,8 +161,19 @@ def setroi(roinum, element, edge=None):
 
     e_ch = int(cur_element.emission_line[e] * 1000)
     for d in [xs.channel1,xs.channel2,xs.channel3]:
-        d.set_roi(roinum,e_ch-100,e_ch+100,name=element)
+        d.set_roi(roinum,e_ch-100,e_ch+100,name=element+'_'+e)
     print("ROI{} set for {}-{} edge.".format(roinum,element,e))
+
+def getemissionE(element,edge = None):
+    cur_element = xrfC.XrfElement(element)
+    if edge == None:
+        print("edge\tenergy [keV]")
+        for e in element_edges:
+            if cur_element.emission_line[e] < 25. and cur_element.emission_line[e] > 1.:
+                print("{0:s}\t{1:8.2f}".format(e,cur_element.emission_line[e]))
+    else:
+        return cur_element.emission_line[edge]
+         
 
 def getbindingE(element,edge=None):
     '''
@@ -175,7 +188,7 @@ def getbindingE(element,edge=None):
             print("{0:s}\t{1:8.2f}\t{2:5.3}".format(i,xrfC.XrayLibWrap(elements[element].Z,'binding_e')[i]*1000.,
                                                   xrfC.XrayLibWrap(elements[element].Z,'yield')[i]))
             if (y[0] < xrfC.XrayLibWrap(elements[element].Z,'yield')[i] 
-                and xrfC.XrayLibWrap(elements[element].Z,'binding_e')[i] < 25.):
+             and xrfC.XrayLibWrap(elements[element].Z,'binding_e')[i] < 25.):
                 y[0] = xrfC.XrayLibWrap(elements[element].Z,'yield')[i]
                 y[1] = i
         return xrfC.XrayLibWrap(elements[element].Z,'binding_e')[y[1]]*1000.
@@ -189,3 +202,8 @@ def copyscanparam(src_num,dest_num):
     src = 'scan{}'.format(src_num-1)
     dest = 'scan{}'.format(dest_num-1)
     scanrecord.cp(src,dest)
+
+def printfig():
+    plt.savefig('/home/xf05id1/tmp/temp.png', bbox_inches='tight',
+    pad_inches=4)
+    os.system("lp -d HXN-printer-1 /home/xf05id1/tmp/temp.png")

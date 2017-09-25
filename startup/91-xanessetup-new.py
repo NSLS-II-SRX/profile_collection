@@ -119,6 +119,7 @@ def xanes_plan(erange = [], estep = [],
     last_time_pt = time.time()
     ringbuf = collections.deque(maxlen=10)
     c2pitch_kill=EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
+    xs.external_trig.put(False)
 
     #make sure user provided correct input
     if erange is []:
@@ -173,6 +174,8 @@ def xanes_plan(erange = [], estep = [],
     if harmonic is not None:        
         yield from abs_set(energy.harmonic,harmonic)
     #prepare to peak up DCM at first scan point
+    if align_at is not None:
+        align = True
     if align is True:
         if align_at == None:
             yield from abs_set(energy, ept[0], wait = True)
@@ -273,7 +276,7 @@ def xanes_plan(erange = [], estep = [],
 #not up to date, ignore for now
 def xanes_batch_plan(xylist=[], waittime = [2], 
                     samplename = None, filename = None,
-                    erange = [], estep = [], struck = True, align = False, 
+                    erange = [], estep = [], struck = True, align = False, align_at=None, 
                     harmonic = None, correct_c2_x=True, delaytime=0.0, detune = None,            
                     acqtime=None, roinum=1, shutter = True, fluor = True
                     ):
@@ -304,8 +307,10 @@ def xanes_batch_plan(xylist=[], waittime = [2],
     
     for pt_num, position in enumerate(xylist):
         #move stages to the next point
-        yield from abs_set(hf_stage.x, position[0]) 
-        yield from abs_set(hf_stage.y, position[1])
+        yield from abs_set(hf_stage.x, position[0],wait=True) 
+        yield from abs_set(hf_stage.y, position[1],wait=True)
+        if len(position) == 3:
+            yield from abs_set(hf_stage.z, position[2],wait=True)
 
         #check bragg temperature before start the scan
 #        if dcm.temp_pitch.get() > 110:
@@ -346,7 +351,7 @@ def xanes_batch_plan(xylist=[], waittime = [2],
         
         yield from xanes_plan(erange = erange, estep = estep,  
             harmonic = harmonic, correct_c2_x= correct_c2_x, detune = detune,              
-            acqtime = acqtime, roinum = roinum, align = align, 
+            acqtime = acqtime, roinum = roinum, align = align, align_at = align_at, 
             delaytime=delaytime, samplename = pt_samplename, 
             filename = pt_filename, struck=struck, fluor=fluor,
             shutter=shutter)

@@ -80,7 +80,7 @@ class SRXScanRecord(Device):
         src = 'scan{}'.format(src_num-1)
         dest = 'scan{}'.format(dest_num-1)
         for i in ['p1s','p2s','p1i',\
-                  'p1ena','p2ena','curpt','tpp','ena','acq',\
+                  'p1ena','p2ena','curpt','tpp','acq',\
                   'e1s','e1i','e1npts','e1e','e2s','e2i','e2npts','e2e','e3s',\
                   'e3i','e3npts','e3e','efs','Eena','Ewait','filename',
                   'sampname','roi','detune']:
@@ -98,6 +98,11 @@ class SRXScanRecord(Device):
                   'sampname']:
             getattr(getattr(self,dest),i).put(getattr(getattr(scanrecord,src),i).value)
 
+    def disable_scans(self):
+        for i in range(0,16):
+            scan = 'scan{}'.format(i)
+            getattr(getattr(scanrecord,scan),'ena').put(0)
+            getattr(getattr(scanrecord,scan),'Eena').put(0)
         
     current_scan = Cpt(EpicsSignal,'Scan:CUR')
     time_remaining = Cpt(EpicsSignal,'Scan:REMTIME')

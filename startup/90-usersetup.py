@@ -30,21 +30,32 @@ saf_num = None
 #proposal_num = 301905
 #proposal_title = 'Technical Commissioning of Beamline 5-ID (SRX)'
 #PI_lastname = 'Thieme'
-#saf_num = 301259
+#saf_num = 301344
 
 #proposal_num = 301815
 #proposal_title = 'Determining the Provenance of Glacial Erratics found on the North Shore of Long Island Based on XRF Geochronology of the Mineral Monazite'
 #PI_lastname = 'Mozer'
 #saf_num = 301267
 
-proposal_num = 302001
-proposal_title = 'Spatial Statistical Modeling of the Heterogeneous Reactivity of Arsenic in Soil Matrices'
-PI_lastname = 'Sharma'
-saf_num = 301274
+#proposal_num = 302001
+#proposal_title = 'Spatial Statistical Modeling of the Heterogeneous Reactivity of Arsenic in Soil Matrices'
+#PI_lastname = 'Sharma'
+#saf_num = 301274
+
+#proposal_num = 301826
+#proposal_title = 'Localization and speciation of tungsten in spinal disks'
+#PI_lastname = 'Bohle'
+#saf_num = 301316
+
+#proposal_num = 301039
+#proposal_title = 'Elemental and chemical evolution of FES2 additives in Li-S battery for high energy density storage'
+#PI_lastname = 'Chen-Wiegart'
+#saf_num = 301349
+
 
 logfilename_postfix = str(saf_num)
 
-cycle = '2017_cycle2'
+cycle = '2017_cycle3'
 
 gs.RE.md['proposal']  = {  'proposal_num': str(proposal_num), 
                          'proposal_title': str(proposal_title),

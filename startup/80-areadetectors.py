@@ -113,20 +113,19 @@ class SRXPCOEDGECam(SingleTrigger,AreaDetector):
     roi3 = C(ROIPlugin, 'ROI3:')
     roi4 = C(ROIPlugin, 'ROI4:')
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
-            read_path_template='/data/PCOEDGE/2017-2/',
-             write_path_template='C:/epicsdata/pcoedge/2017-2\\',
+            read_path_template='/data/PCOEDGE/2017-3/',
+             write_path_template='C:/epicsdata/pcoedge/2017-3\\',
              root='/data',
              fs=db.fs)
 
-#pcoedge = SRXPCOEDGECam('XF:05IDD-ES:1{Det:PCO}',name='pcoedge')
+pcoedge = SRXPCOEDGECam('XF:05IDD-ES:1{Det:PCO}',name='pcoedge')
 ###    read_attrs=['tiff'])
 ##pcoedge.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4', 'stats5', 'cam']
-#pcoedge.read_attrs = ['tiff', 'stats1', 'cam']
-#
-#pcoedge.tiff.read_attrs = ['file_name']
-##pcoedge.stats1.read_attrs = ['total','centroid','sigma_x','sigma_y']
-##pcoedge.stats1.centroid.read_attrs = ['x','y']
-#pcoedge.stats1.read_attrs = ['total']
+pcoedge.read_attrs = ['tiff', 'stats1', 'cam']
+pcoedge.tiff.read_attrs = ['file_name']
+pcoedge.stats1.read_attrs = ['total','centroid','sigma_x','sigma_y']
+pcoedge.stats1.centroid.read_attrs = ['x','y']
+##pcoedge.stats1.read_attrs = ['total']
 ##pcoedge.stats2.read_attrs = ['total']
 ##pcoedge.stats3.read_attrs = ['total']
 ##pcoedge.stats4.read_attrs = ['total']
@@ -254,9 +253,10 @@ class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
     channel3 = C(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
 
     hdf5 = Cpt(Xspress3FileStoreFlyable, 'HDF5:',
-               read_path_template='/data/XSPRESS3/2017-2/',
-               write_path_template='/epics/data/2017-2/',
-               root='/data',
+               read_path_template='/XF05IDD/XSPRESS3/2017-3/',
+               write_path_template='/epics/data/2017-3/',
+#               root='/data',
+               root='/XF05IDD',
                fs=db.fs)
 
     def __init__(self, prefix, *, configuration_attrs=None, read_attrs=None,

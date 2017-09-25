@@ -34,8 +34,10 @@ register()
 from hxntools.detectors.xspress3 import Xspress3FileStore
 
 class SRXFlyer1Axis(Device):
-    LARGE_FILE_DIRECTORY_READ_PATH = '/tmp/test_data'
-    LARGE_FILE_DIRECTORY_WRITE_PATH = '/tmp/test_data'
+    LARGE_FILE_DIRECTORY_WRITE_PATH = '/XF05IDD/data/2017-3/fly_scan_ancillary'
+#    LARGE_FILE_DIRECTORY_READ_PATH = '/tmp/test_data'
+#    LARGE_FILE_DIRECTORY_WRITE_PATH = '/tmp/fly_scan_ancillary'
+    LARGE_FILE_DIRECTORY_READ_PATH = '/XF05IDD/data/2017-3/fly_scan_ancillary'
     "This is the Zebra."
     def __init__(self, encoder, xs, sclr1, *, fs=fs):
         super().__init__('', parent=None)
@@ -65,7 +67,6 @@ class SRXFlyer1Axis(Device):
 
 
     def stage(self):
-        ttime.sleep(0.5)
         super().stage()
 
     def describe_collect(self):
@@ -93,15 +94,24 @@ class SRXFlyer1Axis(Device):
         return {'stream0':desc}
 
     def kickoff(self, *, xstart, xstop, xnum, dwell):
+        self._encoder.pc.arm.put(0)
         self._mode = 'kicked off'
         self._npts = int(xnum)
         extent = xstop - xstart
+        pxsize = extent / (xnum-1)
+        #2 ms delay between pulses
+        decrement = ((pxsize / dwell) * 0.002) 
         self._encoder.pc.gate_start.put(xstart)
         self._encoder.pc.gate_step.put(extent)
-        self._encoder.pc.gate_width.put(extent)
+        self._encoder.pc.gate_width.put(extent+0.005)
         self._encoder.pc.pulse_max.put(xnum)
-        self._encoder.pc.pulse_step.put(dwell)
-        self._encoder.pc.pulse_width.put(dwell - 0.005)
+#        self._encoder.pc.pulse_step.put(dwell)
+#        self._encoder.pc.pulse_width.put(dwell - 0.005)
+#        self._encoder.pc.pulse_step.put(extent/xnum)
+#        self._encoder.pc.pulse_width.put(extent/xnum-decrement)
+        self._encoder.pc.pulse_step.put(pxsize)
+        self._encoder.pc.pulse_width.put(pxsize-decrement)
+        self._encoder.pc.pulse_start.put(0.0)
         self._encoder.pc.arm.put(1)
         st = NullStatus()  # TODO Return a status object *first* and do the above asynchronously.
         return st
@@ -171,6 +181,7 @@ class SRXFlyer1Axis(Device):
         "Pausing in the middle of a kickoff nukes the partial dataset."
         self._encoder.pc.arm.put(0)
         self._sis.stop_all.put(1)
+        self._det.settings.acquire.put(0)
         self._mode = 'idle'
         self.unstage()
 
@@ -188,7 +199,7 @@ def export_zebra_data(zebra, filepath):
     with h5py.File(filepath, 'w') as f:
         dset0 = f.create_dataset("time",size,dtype='f')
         dset0[...] = np.array(data.time)
-        dset1 = f.create_dataset("enc1",size,dtype='f')
+        dset1 = f.create_dataset("enc1",(len(data.enc1),),dtype='f')
         dset1[...] = np.array(data.enc1)
         f.close()
 
@@ -196,10 +207,11 @@ def export_sis_data(ion,filepath):
     t = ion.mca1.get(timeout=5.)
     i = ion.mca2.get(timeout=5.)
     size = (len(t),)
+    size2 = (len(i),)
     with h5py.File(filepath, 'w') as f:
         dset0 = f.create_dataset("time",size,dtype='f')
         dset0[...] = np.array(t)
-        dset1 = f.create_dataset("i0",size,dtype='f')
+        dset1 = f.create_dataset("i0",size2,dtype='f')
         dset1[...] = np.array(i)
         f.close()
 
@@ -260,7 +272,7 @@ class LiveZebraPlot(CallbackBase):
 
 
 def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
-                 delta=None,
+                 delta=0.001, shutter = True,
                  xmotor=hf_stage.x, ymotor=hf_stage.y,
                  xs=xs, ion=sclr1,
                  flying_zebra=flying_zebra, md=None):
@@ -270,11 +282,17 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     Zebra buffers x(t) points as a flyer.
     Xpress3 is our detector.
     The aerotech has the x and y positioners.
+    delta should be chosen so that it takes about 0.5 sec to reach the gate??
+    ymotor  slow axis
+    xmotor  fast axis
     """
     if md is None:
         md = {}
     if delta is None:
         delta=0.01
+    yield from abs_set(ymotor, ystart, wait=True) # ready to move
+    yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
+    ttime.sleep(1.)
     md = ChainMap(md, {
         'plan_name': 'scan_and_fly',
         'detectors': [zebra.name,xs.name,ion.name],
@@ -284,39 +302,57 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         }
     )
 
+    if shutter is True:
+        yield from bp.mv(shut_b, 'Open')
     
     from bluesky.plans import stage, unstage
     @stage_decorator([xs])
-    def fly_each_step(detectors, motor, step):
+    def fly_each_step(detectors, motor, step, firststep):
         "See http://nsls-ii.github.io/bluesky/plans.html#the-per-step-hook"
         # First, let 'scan' handle the normal y step, including a checkpoint.
+#        print('ystep\t\t',time.time())
+#        print(detectors,motor,step)
         yield from one_1d_step(detectors, motor, step)
 
         # Now do the x steps.
-        yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
         v = (xstop - xstart) / xnum / dwell  # compute "stage speed"
-        yield from abs_set(xmotor.velocity, v)  # set the "stage speed"
+        yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
+#        print(v)
+        yield from abs_set(xmotor.velocity, v, wait=True)  # set the "stage speed"
+#        print('x config done\t',time.time())
         yield from abs_set(xs.hdf5.num_capture, xnum)
+#        print('h5 config done\t',time.time())
         yield from abs_set(xs.settings.num_images, xnum)
+#        print('xs config done\t',time.time())
         yield from abs_set(ion.nuse_all,xnum)
+#        print('sclr config done\t',time.time())
         # arm the Zebra (start caching x positions)
         yield from kickoff(flying_zebra, xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell, wait=True)
+#        print('kickoff done\t',time.time())
         yield from abs_set(xs.settings.acquire, 1)  # start acquiring images
+#        print('xs armed\t',time.time())
         yield from abs_set(ion.erase_start, 1) # arm SIS3820, note that there is a 1 sec delay in setting X into motion 
                                                # so the first point *in each row* won't normalize...
-        yield from abs_set(xmotor, xstop+delta, wait=True)  # move in x
-#        xs.trigger()
+#        print('sclr armed\t',time.time())
+        if firststep == True:
+            ttime.sleep(1.)
+        yield from abs_set(xmotor, xstop+0.2*delta, wait=True)  # move in x
+#        print('x moved\t',time.time())
         yield from abs_set(xs.settings.acquire, 0)  # stop acquiring images
+#        print('xs stopped\t',time.time())
         yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
+#        print('sclr stopped\t',time.time())
         yield from complete(flying_zebra)  # tell the Zebra we are done
+#        print('zebra stopped\t',time.time())
         yield from collect(flying_zebra)  # extract data from Zebra
+#        print('zebra collected\t',time.time())
         yield from abs_set(xmotor.velocity, 3.)  # set the "stage speed"
+#        print('xmotor v set\t',time.time())
 
     #@subs_decorator([LiveTable([ymotor]), RowBasedLiveRaster((ynum, xnum), ion.name, row_key=ymotor.name), LiveZebraPlot()])
     #@subs_decorator([LiveTable([ymotor]), LiveRaster((ynum, xnum), sclr1.mca1.name)])
     @subs_decorator([LiveTable([ymotor])])
-    @subs_decorator([LiveRaster((ynum, xnum+1), xs.channel1.rois.roi01.value.name)])
-    #@monitor_during_decorator([ion], run=False)  # monitor values from ion
+    @subs_decorator([LiveRaster((ynum, xnum+1), xs.channel1.rois.roi01.value.name,extent=(xstart,xstop,ystop,ystart))])
     @monitor_during_decorator([xs.channel1.rois.roi01.value])  # monitor values from xs
     #@monitor_during_decorator([xs], run=False)  # monitor values from xs
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
@@ -327,11 +363,17 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         for step in np.linspace(ystart, ystop, ynum):
             # 'arm' the xs for outputting fly data
             yield from abs_set(xs.hdf5.fly_next, True)
-
-            yield from fly_each_step([], ymotor, step)
-        #yield from abs_set(xs.settings.trigger_mode, 'Internal')
+#            print('h5 armed\t',time.time())
+            if step == ystart:
+                firststep = True
+            else:
+                firststep = False
+            yield from fly_each_step([], ymotor, step, firststep)
+#            print('return from step\t',time.time())
         yield from abs_set(xs.external_trig, False)
         yield from abs_set(ion.count_mode, 1)
+        if shutter is True:
+            yield from bp.mv(shut_b, 'Close')
 
 
     return (yield from plan())

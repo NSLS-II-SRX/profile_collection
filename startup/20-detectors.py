@@ -1,5 +1,5 @@
 import threading
-from ophyd import ProsilicaDetector, EpicsSignal, Device, EpicsScaler
+from ophyd import ProsilicaDetector, EpicsSignal, Device, EpicsScaler, TetrAMM
 from ophyd import Component as Cpt
 from ophyd.ophydobj import StatusBase
 from ophyd.status import wait
@@ -50,8 +50,10 @@ class BpmDiode(Device):
         return status
 
 
-bpm1 = BpmDiode('xf05bpm03:DataRead', name='bpm1')
-bpm2 = BpmDiode('xf05bpm04:DataRead', name='bpm2')
+#bpm1 = BpmDiode('xf05bpm03:DataRead', name='bpm1')
+#bpm2 = BpmDiode('xf05bpm04:DataRead', name='bpm2')
+bpm1 = TetrAMM('XF:05IDA-BI{BPM:3}',name = 'bpm1')
+bpm2 = TetrAMM('XF:05IDA-BI{BPM:4}',name = 'bpm2')
 
 class DiamondBPM(Device):
     diode_top = Cpt(EpicsSignalRO, 'Current1:MeanValue_RBV')

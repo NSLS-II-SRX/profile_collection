@@ -103,6 +103,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     md['sample']  = {'name': samplename}
     md['scaninfo']  = {'type': 'XRF', 'raster' : True}
     h=db[-1]
+    xs.external_trig.put(False)
 
     #setup the detector
     # TODO do this with configure
