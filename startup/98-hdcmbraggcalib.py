@@ -22,7 +22,6 @@ This program provides functionality to calibrate hdcm energy:
     currently, the xanes needs to be collected on roi1 in xrf mode
 '''
 
-from databroker import DataBroker as db, get_table, get_images, get_events
 
 def scanderive(xaxis,yaxis): 
     
@@ -48,7 +47,7 @@ def scanderive(xaxis,yaxis):
 def find_edge(scanid = -1, use_xrf = False):
     #baseline = -8.5e-10
     baseline_it = 4e-9
-    table = get_table(db[scanid], stream_name='primary')
+    table = db.get_table(db[scanid], stream_name='primary')
     
     braggpoints = table.energy_bragg
 

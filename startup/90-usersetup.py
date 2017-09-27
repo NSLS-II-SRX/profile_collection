@@ -7,7 +7,6 @@ set up all user specific information
 """
 import os
 import scanoutput
-from databroker import DataBroker as db, get_events
 import time
 
 #user experiment will be put into the Start Document for every scan
@@ -99,7 +98,7 @@ def logscan_event0info(scantype, event0info = []):
 
     userlogf = open(userlogfile, 'a')
     userlogf.write(str(scan_id)+'\t'+uid+'\t'+scantype)
-    events = list(get_events(h, stream_name='primary'))
+    events = list(db.get_events(h, stream_name='primary'))
 
     for item in event0info:      
         userlogf.write('\t'+item+'='+str(events[0]['data'][item])+'\t')
@@ -145,7 +144,7 @@ def scantime(scanid, printresults=True):
     start_str = 'scan start: '+time.ctime(db[scanid].start['time'])
     stop_str  = 'scan stop : '+time.ctime(db[scanid].stop['time'])
     totaltime = db[scanid].stop['time'] - db[scanid].start['time']
-    scannumpt = len(list(get_events(db[scanid])))
+    scannumpt = len(list(db.get_events(db[scanid])))
     
     if printresults is True:
         print(start_str)

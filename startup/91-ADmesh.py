@@ -10,7 +10,7 @@ Created on Fri Mar 4 2016
 from bluesky.plans import OuterProductAbsScanPlan
 from bluesky.callbacks import LiveRaster
 from bluesky.callbacks.broker import LiveImage
-from databroker import DataBroker as db
+# from databroker import DataBroker as db
 import matplotlib
 import epics
 

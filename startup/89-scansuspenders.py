@@ -55,12 +55,14 @@ susp_dcm_bragg_temp = SuspendCeil(dcm.temp_pitch, 120, resume_thresh=118, sleep 
 #                        pre_plan=bp.mv(shut_b, 0), post_plan=bp.mv(shut_b, 1)
 #                       ) 
 
-RE.install_suspender(susp_rc)
+# DAN COMMENTED THIS OUT IN DESPERATION
+# RE.install_suspender(susp_rc)
+# RE.install_suspender(susp_shut_fe)
+# RE.install_suspender(susp_dcm_bragg_temp)
+
 #RE.install_suspender(susp_cryo)
 #RE.install_suspender(susp_shut_a)
 #RE.install_suspender(susp_shut_b)
-RE.install_suspender(susp_shut_fe)
-RE.install_suspender(susp_dcm_bragg_temp)
 
 #example:
 #gv = EpicsSignal('XF:05IDA-VA:1{BPM:1-GV:1}Pos-Sts')
