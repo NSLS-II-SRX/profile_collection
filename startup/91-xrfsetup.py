@@ -278,21 +278,30 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     if align == True:
         ps = PeakStats(dcm.c2_pitch.name,i0.name)
         e_value = energy.energy.get()[1]
-        if e_value < 12. and struck==True:
+        if e_value < 14. and struck==True:
             sclr1.preset_time.put(0.1, wait = True)
         elif (struck == True):
             sclr1.preset_time.put(1., wait = True)
-        peakup = scan([sclr1], dcm.c2_pitch, -19.290, -19.330, 41)
+        peakup = scan([sclr1], dcm.c2_pitch, -19.324, -19.358, 35)
         peakup = bp.subs_wrapper(peakup,ps)
         yield from peakup
         yield from abs_set(dcm.c2_pitch, ps.cen, wait = True)
         yield from abs_set(c2pitch_kill,1)
 
+    def at_scan(name, doc):
+        scanrecord.current_scan.put(doc['uid'][:6])
+        scanrecord.current_scan_id.put(str(doc['scan_id']))
+        scanrecord.current_type.put(md['scaninfo']['type'])
+        scanrecord.scanning.put(True)
+
+    def finalize_scan(name, doc):
+        scanrecord.scanning.put(False)
+
 
     hf2dxrf_scanplan = outer_product_scan(det, hf_stage.y, ystart, ystop, ynumstep+1, hf_stage.x, xstart, xstop, xnumstep+1, True, md=md)
-    hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, livecallbacks)
+#    hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, livecallbacks)
+    hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, {'all':livecallbacks,'start':at_scan,'stop':finalize_scan})
     scaninfo = yield from hf2dxrf_scanplan
-
     #TO-DO: implement fast shutter control (close)    
     if shutter is True:
         yield from bp.mv(shut_b,'Close')
@@ -305,6 +314,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         logscan('2dxrf')    
     
     return scaninfo
+#    return yield from bp.subs_wrapper(hf2dxrf_scanplan,{'start':at_scan})
     
     
 def multi_region_h(regions, energy_list=None, **kwargs):

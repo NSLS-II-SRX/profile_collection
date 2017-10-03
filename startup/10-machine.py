@@ -521,6 +521,13 @@ cal_data_2017cycle2 = {
  'T2cal': 15.0347755916,
  'xoffset': 24.581644618999363, #value for Ti worked best using the C2 pitch to correct at higher E
 }
+cal_data_2017cycle3 = {
+ 'd_111': 3.10752771302,
+ 'delta_bragg': 0.352619283445, #{'Ti':7959,'V':7961,'Mn':7963,'Cu':7964,'Se':7965} 201700928
+ 'C2Xcal': 3.6,
+ 'T2cal': 15.0347755916,
+ 'xoffset': 24.581644618999363, #value for Ti worked best using the C2 pitch to correct at higher E
+}
 energy = Energy(prefix='', name='energy', **cal_data_2017cycle2)
 energy.synch_with_epics()
 

@@ -11,10 +11,15 @@ import time
 
 #user experiment will be put into the Start Document for every scan
 
-proposal_num = None 
-proposal_title = None
-PI_lastname = None
-saf_num = None
+#proposal_num = None 
+#proposal_title = None
+#PI_lastname = None
+#saf_num = None
+
+proposal_num = 302100 
+proposal_title = 'Understanding the nature of interface and surface characteristics of transition metal coated and extreme environment exposed silicon carbide'
+PI_lastname = 'Vasudevamurthy'
+saf_num = 301657
 
 #proposal_num = 301918 
 #proposal_title = 'u-EXAFS investigation of lithium insertion kinetics in Aggregated Fe3O4 electrodes'

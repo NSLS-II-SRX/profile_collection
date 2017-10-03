@@ -356,10 +356,22 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from abs_set(xmotor.velocity, 3.)  # set the "stage speed"
 #        print('xmotor v set\t',time.time())
 
+    def at_scan(name, doc):
+        scanrecord.current_scan.put(doc['uid'][:6])
+        scanrecord.current_scan_id.put(str(doc['scan_id']))
+        scanrecord.current_type.put(md['scaninfo']['type'])
+        scanrecord.scanning.put(True)
+        scanrecord.time_remaining.put((dwell*xnum + 3.8)/3600)
+    def finalize_scan(name, doc):
+        scanrecord.scanning.put(False)
+        scanrecord.time_remaining.put(0)
+
     #@subs_decorator([LiveTable([ymotor]), RowBasedLiveGrid((ynum, xnum), ion.name, row_key=ymotor.name), LiveZebraPlot()])
     #@subs_decorator([LiveTable([ymotor]), LiveGrid((ynum, xnum), sclr1.mca1.name)])
     @subs_decorator([LiveTable([ymotor])])
     @subs_decorator([LiveGrid((ynum, xnum+1), xs.channel1.rois.roi01.value.name,extent=(xstart,xstop,ystop,ystart))])
+    @subs_decorator({'start':at_scan})
+    @subs_decorator({'stop':finalize_scan})
     @monitor_during_decorator([xs.channel1.rois.roi01.value])  # monitor values from xs
     #@monitor_during_decorator([xs], run=False)  # monitor values from xs
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
@@ -367,7 +379,10 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     def plan():
         #yield from abs_set(xs.settings.trigger_mode, 'TTL Veto Only')
         yield from abs_set(xs.external_trig, True)
+        ystep = 0
         for step in np.linspace(ystart, ystop, ynum):
+            scanrecord.time_remaining.put( (ynum - ystep) * ( dwell * xnum + 3.8 ) / 3600.)
+            ystep = ystep + 1
             # 'arm' the xs for outputting fly data
             yield from abs_set(xs.hdf5.fly_next, True)
 #            print('h5 armed\t',time.time())

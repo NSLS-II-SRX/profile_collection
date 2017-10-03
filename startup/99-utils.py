@@ -103,10 +103,16 @@ def xybatch_grid(xstart, xstepsize, xnumstep, ystart, ystepsize, ynumstep):
 def gaussian(x, A, sigma, x0):
     return A*np.exp(-(x - x0)**2/(2 * sigma**2))
 
-def peakup_dcm():
+def peakup_dcm(correct_roll=True):
+    '''
+    Scan the HDCM fine pitch and, optionally, roll against the ion chamber in the D Hutch
+
+    correct_roll    <Bool>      If True, align the beam in the vertical (roll)
+    '''
     e_value=energy.energy.get()[1]
     det = [sclr1]
     ps = PeakStats(dcm.c2_pitch.name,i0.name)
+    ps1 = PeakStats(dcm.c1_roll.name,i0.name)
     RE(bp.mv(shut_b,'Open'))
     c2pitch_kill=EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
     
@@ -116,15 +122,15 @@ def peakup_dcm():
     #else:
     #    sclr1.preset_time.put(1.)
     #    RE(scan([sclr1], dcm.c2_pitch, -19.355, -19.310, 46), [ps])
-    if e_value < 12.:
+    if e_value < 14.:
         sclr1.preset_time.put(0.1)
     else:
         sclr1.preset_time.put(1.)
-    RE(scan([sclr1], dcm.c2_pitch, -19.290, -19.330, 41), [ps])
-
-
-    #RE(relative_scan([sclr1], dcm.c2_pitch, -0.01, 0.01, 21), [ps])
-    dcm.c2_pitch.move(ps.cen,wait=True)
+    RE(scan([sclr1], dcm.c2_pitch, -19.324, -19.358, 35), [ps])
+    dcm.c2_pitch.move(ps.max[0],wait=True)
+    if correct_roll == True:
+        RE(scan([sclr1], dcm.c1_roll, -4.870, -5.020, 31), [ps1])
+        dcm.c1_roll.move(ps1.cen,wait=True)
     #for some reason we now need to kill the pitch motion to keep it from overheating.  6/8/17
     c2pitch_kill.put(1)
 

@@ -105,6 +105,8 @@ class SRXScanRecord(Device):
             getattr(getattr(scanrecord,scan),'Eena').put(0)
         
     current_scan = Cpt(EpicsSignal,'Scan:CUR')
+    current_scan_id = Cpt(EpicsSignal,'Scan:CUR_ID')
+    current_type = Cpt(EpicsSignal,'Scan:TYPE')
     time_remaining = Cpt(EpicsSignal,'Scan:REMTIME')
     scanning = Cpt(EpicsSignal, 'Scan:ENA')
 

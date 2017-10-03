@@ -55,12 +55,12 @@ def xanes_afterscan_plan(scanid, filename, roinum):
         datatablenames = datatablenames + [ str(roi) for roi in roi_key]
     if 'sclr1' in  h.start['detectors']:
         datatablenames = datatablenames + ['sclr_i0', 'sclr_it']
-        datatable = get_table(h, datatablenames, stream_name='primary')        
+        datatable = h.table(stream_name='primary',fields=datatablenames)        
         i0_array = numpy.array(datatable['sclr_i0'])
         it_array = numpy.array(datatable['sclr_it'])
     elif 'current_preamp' in h.start['detectors']:
         datatablenames = datatablenames + ['current_preamp_ch2', 'current_preamp_ch0']
-        datatable = get_table(h, datatablenames, stream_name='primary')        
+        datatable = h.table(stream_name='primary',fields=datatablenames)        
         i0_array = numpy.array(datatable['current_preamp_ch2'])
         it_array = numpy.array(datatable['current_preamp_ch0'])
     else:
@@ -139,8 +139,8 @@ def xanes_plan(erange = [], estep = [],
     #record relevant meta data in the Start document, defined in 90-usersetup.py
     metadata_record()
     #add user meta data
-    gs.RE.md['sample']  = {'name': samplename}
-    gs.RE.md['scaninfo']  = {'type': 'XANES','ROI': roinum,'raster' : False}
+    RE.md['sample']  = {'name': samplename}
+    RE.md['scaninfo']  = {'type': 'XANES','ROI': roinum,'raster' : False}
    
     #convert erange and estep to numpy array
     erange = numpy.array(erange)
@@ -198,11 +198,11 @@ def xanes_plan(erange = [], estep = [],
 #        else:
 #            yield from abs_set(sclr1.preset_time,1., wait = True)
 #            peakup = scan([sclr1], dcm.c2_pitch, -19.355, -19.320, 36)
-        if e_value < 12.:
+        if e_value < 14.:
             sclr1.preset_time.put(0.1)
         else:
             sclr1.preset_time.put(1.)
-        peakup = scan([sclr1], dcm.c2_pitch, -19.290, -19.330, 41)
+        peakup = scan([sclr1], dcm.c2_pitch, -19.324, -19.358, 35)
         peakup = bp.subs_wrapper(peakup,ps)
         yield from peakup
         yield from abs_set(dcm.c2_pitch, ps.cen, wait = True)
@@ -257,21 +257,28 @@ def xanes_plan(erange = [], estep = [],
         xanes_afterscan_plan(doc['run_start'], filename, roinum)
         logscan('xanes')
 
+    def at_scan(name, doc):
+        scanrecord.current_scan.put(doc['uid'][:6])
+        scanrecord.current_scan_id.put(str(doc['scan_id']))
+        scanrecord.current_type.put(RE.md['scaninfo']['type'])
+        scanrecord.scanning.put(True)
+
     def finalize_scan():
         yield from abs_set(energy.u_gap.corrfunc_en,1)
         yield from abs_set(energy.move_c2_x, True)
         yield from abs_set(energy.harmonic, None)
+        scanrecord.scanning.put(False)
         if shutter == True:
             yield from bp.mv(shut_b,'Close')
         if detune is not None:
             energy.detune.put(0)
-        del gs.RE.md['sample']['name']
-        del gs.RE.md['scaninfo']
+        del RE.md['sample']['name']
+        del RE.md['scaninfo']
 
     myscan = list_scan(det, energy, list(ept))
     myscan = bp.finalize_wrapper(myscan,finalize_scan)
 
-    return (yield from bp.subs_wrapper(myscan,{'all':livecallbacks,'stop':after_scan})) 
+    return (yield from bp.subs_wrapper(myscan,{'all':livecallbacks,'stop':after_scan,'start':at_scan})) 
 
 #not up to date, ignore for now
 def xanes_batch_plan(xylist=[], waittime = [2], 
