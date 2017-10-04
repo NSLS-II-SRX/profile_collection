@@ -305,7 +305,8 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         'detectors': [zebra.name,xs.name,ion.name],
         'dwell' : dwell,
         'shape' : (xnum,ynum),
-        'scaninfo' : {'type': 'XRF_fly', 'raster' : False}
+        'scaninfo' : {'type': 'XRF_fly', 'raster' : False},
+        'scan_params' : [xstart,xstop,xnum,ystart,ystop,ynum,dwell]
         }
     )
 
@@ -363,6 +364,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         scanrecord.scanning.put(True)
         scanrecord.time_remaining.put((dwell*xnum + 3.8)/3600)
     def finalize_scan(name, doc):
+        logscan_detailed('xrf_fly')
         scanrecord.scanning.put(False)
         scanrecord.time_remaining.put(0)
 
@@ -460,3 +462,20 @@ class SrxXSP3Handler:
     def __call__(self, **kwargs):
         with h5py.File(self._filepath, 'r') as f:
             return np.asarray(f[self.XRF_DATA_KEY])
+
+def batch_fly(paramlist,kwlist=None,zlist=None):
+    '''
+    paramlist   list    list of positional and dwell time arguments to scan_and_fly
+    kwlist      list    list of dicts containing keywords to pass to scan_and_fly
+    '''
+
+    if kwlist == None:
+        kwlist=list()
+        for _ in paramlist:
+            kwlist.append({})
+
+    for i in range(0,len(paramlist)):
+        #this should be made more general
+        if zlist is not None:
+            yield from abs_set(hf_stage.z,zlist[i],wait=True)
+        yield from scan_and_fly(*paramlist[i],**kwlist[i])

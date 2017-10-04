@@ -213,3 +213,32 @@ def printfig():
     plt.savefig('/home/xf05id1/tmp/temp.png', bbox_inches='tight',
     pad_inches=4)
     os.system("lp -d HXN-printer-1 /home/xf05id1/tmp/temp.png")
+
+def estimate_scan_duration(xnum,ynum,dwell,scantype=None,event_delay=None):
+    '''
+    xnum    int     number of steps or points as entered on the command line for the scan in X
+    ynum    int     number of steps or points as entered on the command line for the scan in Y
+    dwell   float   exposure time in seconds as entered on the command line 
+    scantype    string  one of [XRF,XRF_fly,XANES]
+    '''
+    overhead={'xrf':0.7,'xrf_fly':3.8,'xanes':1.6}
+    if event_delay == None:
+        try:
+            delay =  overhead[scantype.casefold()]
+        except KeyError:
+            print("Warning:  scantype is not supported")
+            delay = 0.
+    else:
+        delay = event_delay
+
+    if scantype.casefold() == 'xrf_fly':
+        if delay is not 0.:
+            delay = delay/xnum
+        xnum = xnum - 1
+        ynum = ynum - 1
+
+    result = ( (xnum + 1) * (ynum + 1) ) * ( dwell + delay )
+    div,rem = divmod(result,3600)
+    print("Estimated duration is {0:d} hr {1:.1f} min ({2:.1f} sec).".format(int(div),rem/60,result))
+
+    return result
