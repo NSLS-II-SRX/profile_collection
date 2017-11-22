@@ -126,12 +126,13 @@ def peakup_dcm(correct_roll=True):
         sclr1.preset_time.put(0.1)
     else:
         sclr1.preset_time.put(1.)
-    RE(scan([sclr1], dcm.c2_pitch, -19.324, -19.358, 35), [ps])
+    RE(scan([sclr1], dcm.c2_pitch, -19.314, -19.358, 45), [ps])
     dcm.c2_pitch.move(ps.max[0],wait=True)
     if correct_roll == True:
         RE(scan([sclr1], dcm.c1_roll, -4.870, -5.020, 31), [ps1])
         dcm.c1_roll.move(ps1.cen,wait=True)
     #for some reason we now need to kill the pitch motion to keep it from overheating.  6/8/17
+    time.sleep(5)
     c2pitch_kill.put(1)
 
 

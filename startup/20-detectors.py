@@ -152,13 +152,16 @@ class SRXScaler(EpicsScaler):
         self.stage_sigs[self.count_mode] = 'OneShot'
 
 sclr1 = SRXScaler('XF:05IDD-ES:1{Sclr:1}',name='sclr1')
-sclr1.read_attrs = ['channels.chan2','channels.chan3']
+sclr1.read_attrs = ['channels.chan2','channels.chan3','channels.chan4']
 i0_channel = getattr(sclr1.channels,'chan2')
 i0_channel.name = 'sclr_i0'
-it_channel = getattr(sclr1.channels,'chan3')
+it_channel = getattr(sclr1.channels,'chan4')
 it_channel.name = 'sclr_it'
+im_channel = getattr(sclr1.channels,'chan3')
+im_channel.name = 'sclr_im'
 i0 = sclr1.channels.chan2
-iT = sclr1.channels.chan3
+it = sclr1.channels.chan3
+im = sclr1.channels.chan4
 
 class CurrentPreamp(Device):
     ch0 = Cpt(EpicsSignalRO, 'Cur:I0-I')
@@ -351,6 +354,7 @@ class ZebraPositionCapture(Device):
 
     def unstage(self):
         self.disarm.put(1)
+        self.block_state_reset.put(1)
         
         super().unstage()
     

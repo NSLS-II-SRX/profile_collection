@@ -114,17 +114,17 @@ class SRXPCOEDGECam(SingleTrigger,AreaDetector):
     roi4 = C(ROIPlugin, 'ROI4:')
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
             read_path_template='/data/PCOEDGE/2017-3/',
-             write_path_template='C:/epicsdata/pcoedge/2017-3\\',
+             write_path_template='C:/epicsdata/pcoedge/2017-3',
              root='/data',
              reg=db.reg)
 
-pcoedge = SRXPCOEDGECam('XF:05IDD-ES:1{Det:PCO}',name='pcoedge')
+#pcoedge = SRXPCOEDGECam('XF:05IDD-ES:1{Det:PCO}',name='pcoedge')
 ###    read_attrs=['tiff'])
 ##pcoedge.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4', 'stats5', 'cam']
-pcoedge.read_attrs = ['tiff', 'stats1', 'cam']
-pcoedge.tiff.read_attrs = ['file_name']
-pcoedge.stats1.read_attrs = ['total','centroid','sigma_x','sigma_y']
-pcoedge.stats1.centroid.read_attrs = ['x','y']
+#pcoedge.read_attrs = ['tiff', 'stats1', 'cam']
+#pcoedge.tiff.read_attrs = ['file_name']
+#pcoedge.stats1.read_attrs = ['total','centroid','sigma_x','sigma_y']
+#pcoedge.stats1.centroid.read_attrs = ['x','y']
 ##pcoedge.stats1.read_attrs = ['total']
 ##pcoedge.stats2.read_attrs = ['total']
 ##pcoedge.stats3.read_attrs = ['total']

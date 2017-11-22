@@ -101,7 +101,7 @@ class SRXFlyer1Axis(Device):
         #2 ms delay between pulses
         decrement = ((pxsize / dwell) * 0.002) 
         self._encoder.pc.gate_start.put(xstart)
-        self._encoder.pc.gate_step.put(extent)
+        self._encoder.pc.gate_step.put(extent+0.01)
         self._encoder.pc.gate_width.put(extent+0.005)
         self._encoder.pc.pulse_max.put(xnum)
 #        self._encoder.pc.pulse_step.put(dwell)
@@ -128,6 +128,8 @@ class SRXFlyer1Axis(Device):
         # self._encoder.pc.arm.put(0)  # sanity check; this should happen automatically
         # this does the same as the above, but also aborts data collection
         self._encoder.pc.block_state_reset.put(1)
+        #see triggering errors of the xspress3 on suspension.  This is to test the reset of the xspress3 after a line.
+        self._det.settings.acquire.put(0)
         return NullStatus()
 
     def collect(self):
@@ -181,11 +183,13 @@ class SRXFlyer1Axis(Device):
         self._mode = 'idle'
 
     def stop(self):
+        self._encoder.pc.block_state_reset.put(1)
         pass
 
     def pause(self):
         "Pausing in the middle of a kickoff nukes the partial dataset."
-        self._encoder.pc.arm.put(0)
+        #self._encoder.pc.arm.put(0)
+        self._encoder.pc.block_state_reset.put(1)
         self._sis.stop_all.put(1)
         self._det.settings.acquire.put(0)
         self._mode = 'idle'
@@ -201,6 +205,9 @@ flying_zebra.name='flying_zebra'
 
 
 def export_zebra_data(zebra, filepath):
+    while zebra.pc.data_in_progress.get()==1:
+        ttime.sleep(0.1)
+    ttime.sleep(.5)
     data = zebra.pc.data.get()
     size = (len(data.time),)
     with h5py.File(filepath, 'w') as f:
@@ -213,13 +220,31 @@ def export_zebra_data(zebra, filepath):
 def export_sis_data(ion,filepath):
     t = ion.mca1.get(timeout=5.)
     i = ion.mca2.get(timeout=5.)
+    while zebra.pc.data_in_progress.get()==1:
+        ttime.sleep(0.1)
+    ttime.sleep(.5)
+    correct_length = zebra.pc.data.num_down.get()
     size = (len(t),)
     size2 = (len(i),)
     with h5py.File(filepath, 'w') as f:
-        dset0 = f.create_dataset("time",size,dtype='f')
-        dset0[...] = np.array(t)
-        dset1 = f.create_dataset("i0",size2,dtype='f')
-        dset1[...] = np.array(i)
+        #dset0 = f.create_dataset("time",size,dtype='f')
+        #dset0[...] = np.array(t)
+        #dset1 = f.create_dataset("i0",size2,dtype='f')
+        #dset1[...] = np.array(i)
+        if len(t) != correct_length:
+            correction_factor = (correct_length-len(t))
+            #print(correction_factor,len(t),correct_length)
+            new_t = [k for k in t] + [ 1e10 for _ in range(0,int(correction_factor)) ]
+            new_i = [k for k in i] + [ 1e10 for _ in range(0,int(correction_factor)) ]
+        else:
+            correction_factor = 0
+            #print(correction_factor,len(t),correct_length)
+            new_t = t
+            new_i = i
+        dset0 = f.create_dataset("time",(correct_length,),dtype='f')
+        dset0[...] = np.array(new_t)
+        dset1 = f.create_dataset("i0",(correct_length,),dtype='f')
+        dset1[...] = np.array(new_i)
         f.close()
 
 class ZebraHDF5Handler(HandlerBase):
@@ -281,7 +306,7 @@ class LiveZebraPlot(CallbackBase):
 def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
                  delta=0.001, shutter = True,
                  xmotor=hf_stage.x, ymotor=hf_stage.y,
-                 xs=xs, ion=sclr1,
+                 xs=xs, ion=sclr1, align = False,
                  flying_zebra=flying_zebra, md=None):
     """
 
@@ -293,13 +318,28 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     ymotor  slow axis
     xmotor  fast axis
     """
+    c2pitch_kill=EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
     if md is None:
         md = {}
     if delta is None:
         delta=0.01
     yield from abs_set(ymotor, ystart, wait=True) # ready to move
     yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
-    ttime.sleep(1.)
+    
+    if shutter is True:
+        yield from bp.mv(shut_b, 'Open')
+    
+    if align == True:
+        fly_ps = PeakStats(dcm.c2_pitch.name,i0.name)
+        align_scan = scan([sclr1], dcm.c2_pitch, -19.314, -19.358, 45)
+        align_scan = bp.subs_wrapper(align_scan,fly_ps)
+        yield from align_scan
+        yield from abs_set(dcm.c2_pitch,fly_ps.max[0],wait=True)
+        ttime.sleep(10)
+        yield from abs_set(c2pitch_kill, 1)
+    else:
+        ttime.sleep(1.)
+
     md = ChainMap(md, {
         'plan_name': 'scan_and_fly',
         'detectors': [zebra.name,xs.name,ion.name],
@@ -310,9 +350,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         }
     )
 
-    if shutter is True:
-        yield from bp.mv(shut_b, 'Open')
-    
+
     from bluesky.plans import stage, unstage
     @stage_decorator([xs])
     def fly_each_step(detectors, motor, step, firststep):
@@ -343,7 +381,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
                                                # so the first point *in each row* won't normalize...
 #        print('sclr armed\t',time.time())
         if firststep == True:
-            ttime.sleep(1.)
+            ttime.sleep(0.)
         yield from abs_set(xmotor, xstop+0.2*delta, wait=True)  # move in x
 #        print('x moved\t',time.time())
         yield from abs_set(xs.settings.acquire, 0)  # stop acquiring images
@@ -478,4 +516,26 @@ def batch_fly(paramlist,kwlist=None,zlist=None):
         #this should be made more general
         if zlist is not None:
             yield from abs_set(hf_stage.z,zlist[i],wait=True)
+        yield from scan_and_fly(*paramlist[i],**kwlist[i])
+
+def batch_fly_arb(paramlist,kwlist=None,motlist=None):
+    '''
+    paramlist   list            list of positional and dwell time arguments to scan_and_fly
+    kwlist      list            list of dicts containing keywords to pass to scan_and_fly
+    motlist     list of lists   a list of motor,value pairs that define the prestart condition
+    '''
+
+    if kwlist == None:
+        kwlist=list()
+        for _ in paramlist:
+            kwlist.append({})
+
+#    for i in range(0,len(paramlist)):
+#        if motlist is not None:
+#            yield from abs_set(motlist[i][0],motlist[i][1],wait=True)
+#        yield from scan_and_fly(*paramlist[i],**kwlist[i])
+    for i in range(0,len(paramlist)):
+        if motlist is not None:
+            for pospair in motlist[i]:
+                yield from abs_set(pospair[0],pospair[1],wait=True)
         yield from scan_and_fly(*paramlist[i],**kwlist[i])

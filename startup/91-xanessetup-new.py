@@ -206,6 +206,7 @@ def xanes_plan(erange = [], estep = [],
         peakup = bp.subs_wrapper(peakup,ps)
         yield from peakup
         yield from abs_set(dcm.c2_pitch, ps.cen, wait = True)
+        ttime.sleep(10)
         yield from abs_set(c2pitch_kill, 1)
 
     #setup the live callbacks
@@ -375,7 +376,7 @@ def xanes_batch_plan(xylist=[], waittime = [2],
                 pass
 
 def hfxanes_ioc(waittime = None, samplename = None, filename = None,
-                erange = [], estep = [], struck = True, align = False,
+                erange = [], estep = [], struck = True, align = False, align_at = None,
                 harmonic = None, correct_c2_x= True, delaytime=0.0, detune = None,
                 acqtime=None, roinum=1, shutter = True, fluor = True, 
                 ):
@@ -415,7 +416,7 @@ def hfxanes_ioc(waittime = None, samplename = None, filename = None,
 
             hfxanes_gen = yield from xanes_plan(erange = erange, estep = estep,  
                 harmonic = harmonic, correct_c2_x= correct_c2_x,              
-                acqtime = thisscan.acq.get(), roinum = int(thisscan.roi.get()), align = align, 
+                acqtime = thisscan.acq.get(), roinum = int(thisscan.roi.get()), align = align, align_at = align_at,
                 delaytime=delaytime, samplename = thisscan.sampname.get(), 
                 filename = thisscan.filename.get(), struck=struck, fluor=fluor, detune=thisscan.detune.get(),
                 shutter=shutter)

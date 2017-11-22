@@ -8,18 +8,56 @@ set up all user specific information
 import os
 import scanoutput
 import time
+import shutil
 
 #user experiment will be put into the Start Document for every scan
 
-#proposal_num = None 
-#proposal_title = None
-#PI_lastname = None
-#saf_num = None
+proposal_num = None 
+proposal_title = None
+PI_lastname = None
+saf_num = None
 
-proposal_num = 302100 
-proposal_title = 'Understanding the nature of interface and surface characteristics of transition metal coated and extreme environment exposed silicon carbide'
-PI_lastname = 'Vasudevamurthy'
-saf_num = 301657
+proposal_num = 302306 
+proposal_title = 'Multi-modal microspectroscopy analysis of a complex 2.7 Ga old geological sample recording cyclic changes during the rise of oxygen on earth: 1. SRX'
+PI_lastname = 'Schoonen'
+saf_num = 301893
+
+#proposal_num = 302319  
+#proposal_title = 'The effect of CO2 and H2SO4 exposure on self-healing polymer cement composites'
+#PI_lastname = 'Elbakshwan'
+#saf_num = 301871
+
+
+#proposal_num = 301906  
+#proposal_title = 'Study of localized corrosion phenomena in copper current collectors in Li-ion batteries '
+#PI_lastname = 'Marschilok'
+#saf_num = 301477
+
+
+#proposal_num = 302314 
+#proposal_title = 'Investigation of space-weathered materials'
+#PI_lastname = 'Legett'
+#saf_num = 301797
+
+#proposal_num = 302258 
+#proposal_title = 'Location and Structure Determination of Fission Bubbles in Nuclear Fuel'
+#PI_lastname = 'Sprouster'
+#saf_num = 301712
+
+#proposal_num = 301905 
+#proposal_title = 'Techinical commissioning of Beamline 5-ID (SRX)'
+#PI_lastname = 'Thieme'
+#saf_num = 301661
+
+#proposal_num = 302001 
+#proposal_title = 'Spatial Statistical Modeling of the Heterogeneous Reactivity of Arsenic in Soil Matrices'
+#PI_lastname = 'Sharma'
+#saf_num = 301715
+
+#proposal_num = 302100 
+#proposal_title = 'Understanding the nature of interface and surface characteristics of transition metal coated and extreme environment exposed silicon carbide'
+#PI_lastname = 'Vasudevamurthy'
+#saf_num = 301657
 
 #proposal_num = 301918 
 #proposal_title = 'u-EXAFS investigation of lithium insertion kinetics in Aggregated Fe3O4 electrodes'
@@ -70,6 +108,7 @@ RE.md['proposal']  = {  'proposal_num': str(proposal_num),
                         
 
 userdatadir = '/nfs/xf05id1/userdata/'+str(cycle)+'/'+str(saf_num)+'_'+str(PI_lastname)+'/'
+scriptdir = '/nfs/xf05id1/src/bluesky_scripts/'
 scanoutput._DEFAULT_FILEDIR = userdatadir
 
 try:    
@@ -86,7 +125,16 @@ import os.path
 if not os.path.exists(userlogfile):
     userlogf = open(userlogfile, 'w')
     userlogf.close()
-    
+
+for f in ['simple_batch.py','fly_batch.py']:
+    if not os.path.exists(userdatadir+f):
+        shutil.copyfile(scriptdir+f,userdatadir+f)
+try:
+    os.unlink('/home/xf05id1/current_user_data')
+except FileNotFoundError:
+    print("[W] Previous user data directory link did not exist!")
+
+os.symlink(userdatadir,'/home/xf05id1/current_user_data')
 def logscan(scantype):
     h=db[-1]
     scan_id = h.start['scan_id']
