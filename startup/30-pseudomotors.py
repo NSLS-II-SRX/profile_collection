@@ -70,7 +70,7 @@ tomo_lab = FineSampleLabX('XF:05IDD-ES:1{Stg:Tomo-Ax:', name='tomo_lab')
 tomo_lab.read_attrs = ['lab_x', 'lab_z', 'real_finex_top', 'real_finez_top', 'real_theta']
 #tomox_lab = zplab.tomox_lab
 #tomoz_lab = zplab.tomoz_lab
-relabel_motors(tomo_lab)
+
 #wb=srxslit.nsls2slit(tb='XF:05IDA-OP:1{Slt:1-Ax:T}',bb='XF:05IDA-OP:1{Slt:1-Ax:B}',ib='XF:05IDA-OP:1{Slt:1-Ax:I}',ob='XF:05IDA-OP:1{Slt:1-Ax:O}')
 #pb=srxslit.nsls2slit(ib='XF:05IDA-OP:1{Slt:2-Ax:I}',ob='XF:05IDA-OP:1{Slt:2-Ax:O}')
 #ssa=srxslit.nsls2slit(tb='XF:05IDB-OP:1{Slt:SSA-Ax:T}', bb='XF:05IDB-OP:1{Slt:SSA-Ax:B}', ob='XF:05IDB-OP:1{Slt:SSA-Ax:O}',ib='XF:05IDB-OP:1{Slt:SSA-Ax:I}')

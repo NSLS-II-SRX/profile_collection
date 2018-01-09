@@ -32,8 +32,7 @@ class SRX_M2_All(SRX_M2):
 
 m2 = SRX_M2('XF:05IDD-OP:1{Mir:2-Ax:', name='m2')
 m2_all = SRX_M2_All('XF:05IDD-OP:1{Mir:2-Ax:', name='m2_all')
-relabel_motors(m2)
-relabel_motors(m2_all)
+
 
 class SRX_M3(Device):
     """Class for 
@@ -44,8 +43,8 @@ class SRX_M3(Device):
     xu = Cpt(EpicsMotor, 'XU}Mtr')
     xd = Cpt(EpicsMotor, 'XD}Mtr')
 
+
 m3 = SRX_M3('XF:05IDD-OP:1{Mir:3-Ax:', name='m3')
-relabel_motors(m3)
 
 
 #High flux sample stages
@@ -58,7 +57,6 @@ class HFSampleStage(Device):
     # fine_y = 
 
 hf_stage = HFSampleStage('XF:05IDD-ES:1{Stg:Smpl1-Ax:', name='hf_stage')
-relabel_motors(hf_stage)
 
 if 'velocity' not in hf_stage.x.configuration_attrs:
     hf_stage.x.configuration_attrs.append('velocity')
@@ -69,7 +67,7 @@ class SRXUpStreamGantry(Device):
     z = Cpt(EpicsMotor, 'Z}Mtr')
 
 sdd_pos = SRXUpStreamGantry('XF:05IDD-ES:1{Det:1-Ax:', name='sdd_pos')
-relabel_motors(sdd_pos)
+
 
 # PCOEdge detector motion
 class SRXDownStreamGantry(Device):
@@ -79,7 +77,7 @@ class SRXDownStreamGantry(Device):
     focus = Cpt(EpicsMotor, 'Foc}Mtr')
 
 pcoedge_pos = SRXDownStreamGantry('XF:05IDD-ES:1{Det:3-Ax:', name='pcoedge_pos')
-relabel_motors(pcoedge_pos)
+
 
 class PICOECC100(PVPositionerPC):
     setpoint = Cpt(EpicsSignal,'CMD:TARGET')
@@ -114,4 +112,3 @@ class SRXTomo(Device):
 
 #tomo_stage = SRXTomo('XF:05IDD-ES:1{Stg:Tomo-Ax:', name='tomo_stage')
 tomo_stage = SRXTomo('XF:05IDD-ES', name='tomo_stage')
-relabel_motors(tomo_stage)

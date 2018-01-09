@@ -36,10 +36,10 @@ class SRXSlitsPB(Device):
 #    h_gap = Cpt(FixedPseudoSingle)
 #    v_cen = Cpt(FixedPseudoSingle)
 #    v_gap = Cpt(FixedPseudoSingle)
-    
+
     # real motors
 #    top = Cpt(EpicsMotor, 'T}Mtr')
-#    bot = Cpt(EpicsMotor, 'B}Mtr')    
+#    bot = Cpt(EpicsMotor, 'B}Mtr')
 #    inb = Cpt(EpicsMotor, 'I}Mtr')
 #    out = Cpt(EpicsMotor, 'O}Mtr')
 
@@ -152,9 +152,6 @@ slt_ssa = SRXSSACalc('XF:05IDB-OP:1{Slt:SSA-Ax:',name='slt_ssa')
 #slt_ssa.inb_zero.put(0.0)
 #slt_ssa.out_zero.put(0.0)
 
-relabel_motors(slt_wb)
-#relabel_motors(slt_ssa)
-relabel_motors(slt_pb)
 
 
 # HFM Mirror
@@ -165,7 +162,6 @@ class SRXHFM(Device):
     bend = Cpt(EpicsMotor, 'Bend}Mtr')
 
 hfm = SRXHFM('XF:05IDA-OP:1{Mir:1-Ax:', name='hfm')
-relabel_motors(hfm)
 
 class SRXM2(Device):
     x = Cpt(EpicsMotor, 'X}Mtr')
@@ -174,12 +170,12 @@ class SRXM2(Device):
     roll = Cpt(EpicsMotor, 'R}Mtr')
     yaw = Cpt(EpicsMotor, 'Yaw}Mtr')
 m2 = SRXM2('XF:05IDD-OP:1{Mir:2-Ax:')
-relabel_motors(m2)
+
 class SRXM3(Device):
     x = Cpt(EpicsMotor, 'X}Mtr')
     pitch = Cpt(EpicsMotor, 'P}Mtr')
 m3 = SRXM2('XF:05IDD-OP:1{Mir:3-Ax:')
-relabel_motors(m3)
+
 
 # HDCM
 class SRXDCM(Device):
@@ -194,7 +190,7 @@ class SRXDCM(Device):
     temp_pitch = Cpt(EpicsSignalRO, 'P}T-I')
 
 dcm = SRXDCM('XF:05IDA-OP:1{Mono:HDCM-Ax:' , name='dcm')
-relabel_motors(dcm)
+
 
 
 # BPMs
@@ -206,8 +202,7 @@ class SRXBPM(Device):
 
 bpm1_pos = SRXBPM('XF:05IDA-BI:1{BPM:1-Ax:', name='bpm1_pos')
 bpm2_pos = SRXBPM('XF:05IDB-BI:1{BPM:2-Ax:', name='bpm2_pos')
-relabel_motors(bpm1_pos)
-relabel_motors(bpm2_pos)
+
 
 #fast shutter
 class SRXSOFTINP(Device):
