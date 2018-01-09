@@ -35,7 +35,7 @@ get_ipython().register_magics(BlueskyMagics)
 # RE.subscribe(bec)
 # bec.disable_baseline()                #display only!
 # peaks = bec.peaks  # just as alias for less typing
-# 
+#
 # At the end of every run, verify that files were saved and
 # print a confirmation message.
 from bluesky.callbacks.broker import verify_files_saved
@@ -75,12 +75,6 @@ def print_scan_ids(name, start_doc):
     print("Persistent Unique Scan ID: '{0}'".format(start_doc['uid']))
 
 RE.subscribe(print_scan_ids, 'start')
-
-def relabel_motors(dev):
-    for chld in dev.signal_names:
-        obj = getattr(dev, chld)
-        if hasattr(obj, 'user_readback'):
-            getattr(obj, 'user_readback').name = obj.name
 
 
 from ophyd import PseudoSingle, PseudoPositioner, Signal

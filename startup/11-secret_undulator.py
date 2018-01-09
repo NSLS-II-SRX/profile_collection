@@ -1,5 +1,6 @@
 from ophyd import (EpicsSignal, EpicsSignalRO, EpicsMotor,
-                   Device, Signal, PseudoPositioner, PseudoSingle)
+                   Device, Signal, PseudoPositioner, PseudoSingle,
+                   PVPositioner)
 from ophyd.utils.epics_pvs import set_and_wait
 from ophyd.ophydobj import StatusBase, MoveStatus
 from ophyd import Component as Cpt, Signal
@@ -82,7 +83,7 @@ class UVDoneMOVN(Signal):
 
         # come back and check this threshold value
         # this is 2 microns
-        if not_moving and abs(target - cur_value) < 0.002:       
+        if not_moving and abs(target - cur_value) < 0.002:
             self._put(1)
             self._remove_cbs()
             return
@@ -116,12 +117,12 @@ class UVDoneMOVN(Signal):
         # other callback
         stop = getattr(self.parent, self._stp)
         stop.put(1)
- 
+
     def reset(self, target):
         self.target = target
         self._put(0)
         self._remove_cbs()
- 
+
     def _remove_cbs(self):
         rbv = getattr(self.parent, self._rbv)
         stop = getattr(self.parent, self._stp)

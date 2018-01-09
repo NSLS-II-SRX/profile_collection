@@ -11,18 +11,18 @@ class SRXSlitsWB(Device):
     h_gap = Cpt(EpicsMotor, 'XGap}Mtr')
     v_cen = Cpt(EpicsMotor, 'YCtr}Mtr')
     v_gap = Cpt(EpicsMotor, 'YGap}Mtr')
-    
+
     # real motors
     top = Cpt(EpicsMotor, 'T}Mtr')
-    bot = Cpt(EpicsMotor, 'B}Mtr')    
+    bot = Cpt(EpicsMotor, 'B}Mtr')
     inb = Cpt(EpicsMotor, 'I}Mtr')
     out = Cpt(EpicsMotor, 'O}Mtr')
-    
+
 class SRXSlitsPB(Device):
     # real synthetic axes
     h_cen = Cpt(EpicsMotor, 'XCtr}Mtr')
     h_gap = Cpt(EpicsMotor, 'XGap}Mtr')
-    
+
     # real motors
     inb = Cpt(EpicsMotor, 'I}Mtr')
     out = Cpt(EpicsMotor, 'O}Mtr')
@@ -36,10 +36,10 @@ class SRXSlitsPB(Device):
 #    h_gap = Cpt(FixedPseudoSingle)
 #    v_cen = Cpt(FixedPseudoSingle)
 #    v_gap = Cpt(FixedPseudoSingle)
-    
+
     # real motors
 #    top = Cpt(EpicsMotor, 'T}Mtr')
-#    bot = Cpt(EpicsMotor, 'B}Mtr')    
+#    bot = Cpt(EpicsMotor, 'B}Mtr')
 #    inb = Cpt(EpicsMotor, 'I}Mtr')
 #    out = Cpt(EpicsMotor, 'O}Mtr')
 
@@ -51,7 +51,7 @@ class SRXSlitsPB(Device):
 
 #    def forward(self, p_pos):
 #        h_cen, h_gap, v_cen, v_gap = p_pos
-        
+
 #        zeros_pos = [getattr(self, k).get() for k in ['top_zero', 'bot_zero',
 #                                                      'inb_zero', 'out_zero']]
 #        if any([p is None for p in zeros_pos]):
@@ -60,7 +60,7 @@ class SRXSlitsPB(Device):
 #
 #        top = (v_cen + top_zero) + (v_gap / 2)
 #        bot = (-v_cen + bot_zero) + (v_gap / 2)
-        
+
 #        inb = (-h_cen + inb_zero) + (h_gap / 2)
 #        out = (h_cen + out_zero) + (h_gap / 2)
 
@@ -82,7 +82,7 @@ class SRXSlitsPB(Device):
 
 #        h_cen = ((out - out_zero) - (inb - inb_zero)) / 2
 #        h_gap = ((out - out_zero) + (inb - inb_zero))
-        
+
 #        return self.PseudoPosition(v_cen=v_cen, v_gap=v_gap,
 #                                   h_cen=h_cen, h_gap=h_gap)
 
@@ -135,7 +135,7 @@ class SRXSSACalc(Device):
     h_gap = SRXSSAHG('XF:05IDB-OP:1{Slt:SSA-Ax:')
     v_cen = SRXSSAVC('XF:05IDB-OP:1{Slt:SSA-Ax:')
     v_gap = SRXSSAVG('XF:05IDB-OP:1{Slt:SSA-Ax:')
-    
+
 slt_ssa = SRXSSACalc('XF:05IDB-OP:1{Slt:SSA-Ax:',name='slt_ssa')
 # Pseudo motor for secondary source slits
 #slt_ssa = SRXSlits4SWPM('XF:05IDB-OP:1{Slt:SSA-Ax:', name='slt_ssa')
@@ -152,9 +152,6 @@ slt_ssa = SRXSSACalc('XF:05IDB-OP:1{Slt:SSA-Ax:',name='slt_ssa')
 #slt_ssa.inb_zero.put(0.0)
 #slt_ssa.out_zero.put(0.0)
 
-relabel_motors(slt_wb)
-#relabel_motors(slt_ssa)
-relabel_motors(slt_pb)
 
 
 # HFM Mirror
@@ -165,7 +162,6 @@ class SRXHFM(Device):
     bend = Cpt(EpicsMotor, 'Bend}Mtr')
 
 hfm = SRXHFM('XF:05IDA-OP:1{Mir:1-Ax:', name='hfm')
-relabel_motors(hfm)
 
 class SRXM2(Device):
     x = Cpt(EpicsMotor, 'X}Mtr')
@@ -174,12 +170,12 @@ class SRXM2(Device):
     roll = Cpt(EpicsMotor, 'R}Mtr')
     yaw = Cpt(EpicsMotor, 'Yaw}Mtr')
 m2 = SRXM2('XF:05IDD-OP:1{Mir:2-Ax:')
-relabel_motors(m2)
+
 class SRXM3(Device):
     x = Cpt(EpicsMotor, 'X}Mtr')
     pitch = Cpt(EpicsMotor, 'P}Mtr')
 m3 = SRXM2('XF:05IDD-OP:1{Mir:3-Ax:')
-relabel_motors(m3)
+
 
 # HDCM
 class SRXDCM(Device):
@@ -194,7 +190,7 @@ class SRXDCM(Device):
     temp_pitch = Cpt(EpicsSignalRO, 'P}T-I')
 
 dcm = SRXDCM('XF:05IDA-OP:1{Mono:HDCM-Ax:' , name='dcm')
-relabel_motors(dcm)
+
 
 
 # BPMs
@@ -206,8 +202,7 @@ class SRXBPM(Device):
 
 bpm1_pos = SRXBPM('XF:05IDA-BI:1{BPM:1-Ax:', name='bpm1_pos')
 bpm2_pos = SRXBPM('XF:05IDB-BI:1{BPM:2-Ax:', name='bpm2_pos')
-relabel_motors(bpm1_pos)
-relabel_motors(bpm2_pos)
+
 
 #fast shutter
 class SRXSOFTINP(Device):

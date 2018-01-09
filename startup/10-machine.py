@@ -1,17 +1,18 @@
-import time as ttime
-import datetime
 import os
-import epics
+import numpy as np
 from ophyd import (PVPositioner, EpicsSignal, EpicsSignalRO, EpicsMotor,
                    Device, Signal, PseudoPositioner, PseudoSingle)
 from ophyd.utils.epics_pvs import set_and_wait
-from ophyd.ophydobj import StatusBase, MoveStatus
+from ophyd.ophydobj import MoveStatus
 from ophyd.pseudopos import (pseudo_position_argument, real_position_argument)
 from ophyd import Component as Cpt
 from scipy.interpolate import InterpolatedUnivariateSpline
+import math
+import uuid
 
 ring_current = EpicsSignalRO('SR:C03-BI{DCCT:1}I:Real-I', name='ring_current')
 cryo_v19 = EpicsSignal('XF:05IDA-UT{Cryo:1-IV:19}Sts-Sts', name='cryo_v19')
+
 
 class UVDone(Signal):
     def __init__(self, parent, brake, readback, err, stp, **kwargs):
@@ -82,7 +83,7 @@ class UVDone(Signal):
         self._put(0)
         self._remove_cbs()
         self._started = False
- 
+
     def _remove_cbs(self):
         rbv = getattr(self.parent, self._rbv)
         stop = getattr(self.parent, self._stp)
@@ -95,7 +96,7 @@ class UVDone(Signal):
     def stop(self):
         self.reset(None)
         self._put(1)
-        
+
 
 class URealPos(Device):
     #undulator real position, gap and taper
@@ -127,9 +128,9 @@ class Girder(Device):
 
 
 class Elev(Device):
-    ct_us =     Cpt(EpicsSignalRO, '-LEnc:1}Pos')
+    ct_us = Cpt(EpicsSignalRO, '-LEnc:1}Pos')
     offset_us = Cpt(EpicsSignalRO, '-LEnc:1}Offset:RB')
-    ct_ds =     Cpt(EpicsSignalRO, '-LEnc:6}Pos')
+    ct_ds = Cpt(EpicsSignalRO, '-LEnc:6}Pos')
     offset_ds = Cpt(EpicsSignalRO, '-LEnc:6}Offset:RB')
 
 
@@ -143,7 +144,7 @@ class FixedPVPositioner(PVPositioner):
             self.actuate.put(self.actuate_value, wait=False)
         else:
             self.setpoint.put(position, wait=False)
-    
+
     def move(self, v, *args, **kwargs):
         kwargs['timeout'] = None
         self.done.reset(v)
@@ -154,7 +155,8 @@ class FixedPVPositioner(PVPositioner):
                                 event_type=self.readback.SUB_VALUE)
 
         self.stop_signal.subscribe(self.done._stop_watcher,
-                                   event_type=self.stop_signal.SUB_VALUE, run=False)
+                                   event_type=self.stop_signal.SUB_VALUE,
+                                   run=False)
         return ret
 
 
@@ -243,31 +245,32 @@ class Undulator(FixedPVPositioner):
         self.done.stop()
         return super().stop(success=success)
 
+
 _undulator_kwargs = dict(name='ivu1_gap', read_attrs=['readback'],
                          calib_path='/nfs/xf05id1/UndulatorCalibration/',
-                         #calib_file='SRXUgapCalibration20150411_final.text',
-                         #calib_file='SRXUgapCalibration20160608_final.text',                                                  
-                         #calib_file='SRXUgapCalibration20170131.txt',                                                  
-                         calib_file='SRXUgapCalibration20170612.txt',                                                  
+                         # calib_file='SRXUgapCalibration20150411_final.text',
+                         # calib_file='SRXUgapCalibration20160608_final.text',
+                         # calib_file='SRXUgapCalibration20170131.txt',
+                         calib_file='SRXUgapCalibration20170612.txt',
                          configuration_attrs=['corrfunc_sta', 'pos', 'girder',
                                               'real_pos', 'elevation'])
 
 
 ANG_OVER_EV = 12.3984
 
+
 class Energy(PseudoPositioner):
     # synthetic axis
     energy = Cpt(PseudoSingle)
     # real motors
-    u_gap = Cpt(Undulator, 'SR:C5-ID:G1{IVU21:1', add_prefix=(), **_undulator_kwargs)
+    u_gap = Cpt(Undulator, 'SR:C5-ID:G1{IVU21:1', add_prefix=(),
+                **_undulator_kwargs)
     bragg = Cpt(EpicsMotor, 'XF:05IDA-OP:1{Mono:HDCM-Ax:P}Mtr', add_prefix=(),
                 read_attrs=['user_readback'])
     c2_x = Cpt(EpicsMotor, 'XF:05IDA-OP:1{Mono:HDCM-Ax:X2}Mtr', add_prefix=(),
-                read_attrs=['user_readback'])
-    epics_d_spacing = EpicsSignal('XF:05IDA-CT{IOC:Status01}DCMDspacing.VAL', 
-        name='epics_d_spacing')
-    epics_bragg_offset = EpicsSignal('XF:05IDA-CT{IOC:Status01}BraggOffset.VAL', 
-        name='epics_bragg_offset')
+               read_attrs=['user_readback'])
+    epics_d_spacing = EpicsSignal('XF:05IDA-CT{IOC:Status01}DCMDspacing.VAL')
+    epics_bragg_offset = EpicsSignal('XF:05IDA-CT{IOC:Status01}BraggOffset.VAL')
     # motor enable flags
     move_u_gap = Cpt(Signal, None, add_prefix=(), value=True)
     move_c2_x = Cpt(Signal, None, add_prefix=(), value=True)
@@ -288,13 +291,15 @@ class Energy(PseudoPositioner):
             The harmonic in the undulator to use
 
         uv_mistune : float, optional
-            Amount to 'mistune' the undulator in keV.  Will settings such that the
-            peak of the undulator spectrum will be at `target_energy + uv_mistune`.
+            Amount to 'mistune' the undulator in keV.  Will settings
+            such that the peak of the undulator spectrum will be at
+            `target_energy + uv_mistune`.
 
         Returns
         -------
         bragg : float
              The angle to set the monocromotor
+
         """
         # set up constants
         Xoffset = self._xoffset
@@ -304,19 +309,18 @@ class Energy(PseudoPositioner):
         T2cal = self._t2cal
         etoulookup = self.u_gap.etoulookup
 
-
-        #calculate Bragg RBV
+        # calculate Bragg RBV
         BraggRBV = np.arcsin((ANG_OVER_EV / target_energy)/(2 * d_111))/np.pi*180 - delta_bragg
 
-        #calculate C2X
+        # calculate C2X
         Bragg = BraggRBV + delta_bragg
         T2 = Xoffset * np.sin(Bragg * np.pi / 180)/np.sin(2 * Bragg * np.pi / 180)
         dT2 = T2 - T2cal
         C2X = C2Xcal - dT2
 
-        #calculate undulator gap
-        # TODO make this more sohpisticated to stay a fixed distance off the
-        # peak of the undulator energy
+        # calculate undulator gap
+        #  TODO make this more sohpisticated to stay a fixed distance off the
+        #  peak of the undulator energy
         ugap = float(etoulookup((target_energy + u_detune)/undulator_harmonic))
 
         return BraggRBV, C2X, ugap
@@ -465,14 +469,14 @@ cal_data_2016cycle2  ={ #'d_111': 3.13130245128, #2016/6/9 (Ti, Cr, Fe, Cu, Se)
                         'd_111': 3.12929567478, #2016/8/1 (Ti, Fe, Cu, Se)
                         #'delta_bragg' : 0.309366522013,
                         #'delta_bragg' : 0.32936652201300004,
-                        #'delta_bragg': 0.337124613301, 
+                        #'delta_bragg': 0.337124613301,
                         'delta_bragg': 0.317124613301, #2016/8/16 (Ti, Cr, Fe, Cu, Se)
-                        #'xoffset': 24.864494684263519,                                             
+                        #'xoffset': 24.864494684263519,
                         'C2Xcal': 3.6,  # 2016/1/29
                         'T2cal': 14.2470486188,
                         #'xoffset': 25.941277803299684
                         #'xoffset': 25.921698318063775
-                        #'xoffset': 25.802588306223701 #2016/7/5 17.5 keV 
+                        #'xoffset': 25.802588306223701 #2016/7/5 17.5 keV
                         #'xoffset': 25.542954465467645 #2016/7/6 17.5 keV fullfield
                         #'xoffset': 25.39464922124886 #2016/7/20 13.5/6 keV microscopy
                         #'xoffset': 25.354968816872358 #2016/7/28 12-14 keV microscopy
@@ -539,9 +543,11 @@ class SRXSlitsFE(Device):
     inb = Cpt(EpicsMotor, '3-Ax:I}Mtr')
     out = Cpt(EpicsMotor, '4-Ax:O}Mtr')
 
+
 fe = SRXSlitsFE('FE:C05A-OP{Slt:', name='fe')
 
 _time_fmtstr = '%Y-%m-%d %H:%M:%S'
+
 
 class TwoButtonShutter(Device):
     # TODO this needs to be fixed in EPICS as these names make no sense
@@ -585,6 +591,7 @@ class TwoButtonShutter(Device):
         uid = str(uuid.uuid4())
         cmd_enums = cmd_sig.enum_strs
         count = 0
+
         def cmd_retry_cb(value, timestamp, **kwargs):
             nonlocal count
             value = cmd_enums[int(value)]
@@ -595,6 +602,7 @@ class TwoButtonShutter(Device):
                 st._finished(success=False)
             if value == 'None':
                 if not st.done:
+                    import time
                     time.sleep(1)
                     count += 1
                     cmd_sig.set(1)
@@ -612,8 +620,6 @@ class TwoButtonShutter(Device):
         self.read_attrs = ['status']
 
 
-
 shut_fe = TwoButtonShutter('XF:05ID-PPS{Sh:WB}', name='shut_fe')
 shut_a = TwoButtonShutter('XF:05IDA-PPS:1{PSh:2}', name='shut_a')
 shut_b = TwoButtonShutter('XF:05IDB-PPS:1{PSh:4}', name='shut_b')
-
