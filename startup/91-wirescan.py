@@ -4,7 +4,6 @@ set up for wire scan for HF mode
 
 """
 
-from bluesky.plans import OuterProductAbsScanPlan
 import bluesky.plans as bp
 from bluesky.callbacks import LiveRaster
 import matplotlib
@@ -160,8 +159,11 @@ def hf2dwire(*, xstart, xnumstep, xstepsize,
 #        epics.poll(.5)
 #        shut_b.open_cmd.put(1)    
     
-    hf2dwire_scanplan = OuterProductAbsScanPlan(det, hf_stage.z, zstart, zstop, znumstep+1, hf_stage.x, xstart, xstop, xnumstep+1, True, md=md)
-    hf2dwire_scanplan = bp.subs_wrapper( hf2dwire_scanplan, livecallbacks)
+    hf2dwire_scanplan = bp.grid_scan(det,
+                                     hf_stage.z, zstart, zstop, znumstep+1,
+                                     hf_stage.x, xstart, xstop, xnumstep+1, True,
+                                     md=md)
+    hf2dwire_scanplan = bp.subs_wrapper(hf2dwire_scanplan, livecallbacks)
     scaninfo = yield from hf2dwire_scanplan
 
 #    shut_b.close_cmd.put(1)
@@ -238,6 +240,8 @@ class myLiveRaster(CallbackBase):
             self.im.set_clim(np.nanmin(self._Idata), np.nanmax(self._Idata))
 
         self.im.set_array(self._Idata)
+
+        
 def hf2dwire_y(*, xstart, xnumstep, xstepsize, 
             zstart, znumstep, zstepsize, 
             acqtime, numrois=1, i0map_show=True, itmap_show=False,
@@ -333,7 +337,10 @@ def hf2dwire_y(*, xstart, xnumstep, xstepsize,
 #        epics.poll(.5)
 #        shut_b.open_cmd.put(1)    
     
-    hf2dwire_scanplan = OuterProductAbsScanPlan(det, hf_stage.z, zstart, zstop, znumstep+1, hf_stage.y, xstart, xstop, xnumstep+1, True, md=md)
+    hf2dwire_scanplan = bp.grid_scan(det,
+                                     hf_stage.z, zstart, zstop, znumstep+1,
+                                     hf_stage.y, xstart, xstop, xnumstep+1, True,
+                                     md=md)
     hf2dwire_scanplan = bp.subs_wrapper( hf2dwire_scanplan, livecallbacks)
     scaninfo = yield from hf2dwire_scanplan
 

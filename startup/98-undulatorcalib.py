@@ -51,7 +51,7 @@ def undulator_calibration(outfile = 'SRXUgapCalibration.txt', u_gap_start = 9.53
     #bragg scan setup default
     energy_res = 0.002 #keV
     bragg_scanwidth = 0.1 #keV
-    bragg_scanpoint = bragg_scanwidth*2/energy_res+1 
+    bragg_scanpoint = int(bragg_scanwidth*2/energy_res+1)
     harmonic = 3
 
     energy.harmonic.set(harmonic)
@@ -73,16 +73,18 @@ def undulator_calibration(outfile = 'SRXUgapCalibration.txt', u_gap_start = 9.53
         bpmAD_exposuretime_adjust()    
         
         energy.move_u_gap.set(False)
-        braggscan=AbsScanPlan([bpmAD, pu, ring_current], energy, energy_setpoint-bragg_scanwidth, energy_setpoint+bragg_scanwidth, bragg_scanpoint)
+        braggscan=bp.scan([bpmAD, pu, ring_current],
+                          energy,
+                          energy_setpoint-bragg_scanwidth, energy_setpoint+bragg_scanwidth, bragg_scanpoint)
         liveploty = bpmAD.stats1.total.name
         livetableitem = [energy.energy, bpmAD.stats1.total, ring_current]
         liveplotx = energy.energy.name
         liveplotfig1 = plt.figure()
         plt.show()
         
-        gs.RE(braggscan, [LiveTable(livetableitem),                      
-                          LivePlot(liveploty, x=liveplotx, fig=liveplotfig1),
-                          ps])
+        RE(braggscan, [LiveTable(livetableitem),
+                       LivePlot(liveploty, x=liveplotx, fig=liveplotfig1),
+                       ps])
                           
         maxenergy = ps.max[0]
         maxintensity = ps.max[1]
