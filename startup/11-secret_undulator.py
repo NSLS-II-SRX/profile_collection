@@ -270,7 +270,7 @@ class UTemperatures(Device):
     T15 = Cpt(EpicsSignal, '-Pt:15}T')
     T16 = Cpt(EpicsSignal, '-Pt:16}T')
 
-ut = UTemperatures('SR:C5-ID:G1{IVU21:1')
+ut = UTemperatures('SR:C5-ID:G1{IVU21:1', name='ut')
 
 TILT_LIMIT = 0.090  # 99 microns
 CRAB_LIMIT = 0.050  # 50 microns

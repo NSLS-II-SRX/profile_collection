@@ -169,12 +169,12 @@ class SRXM2(Device):
     pitch = Cpt(EpicsMotor, 'P}Mtr')
     roll = Cpt(EpicsMotor, 'R}Mtr')
     yaw = Cpt(EpicsMotor, 'Yaw}Mtr')
-m2 = SRXM2('XF:05IDD-OP:1{Mir:2-Ax:')
+m2 = SRXM2('XF:05IDD-OP:1{Mir:2-Ax:', name='m2')
 
 class SRXM3(Device):
     x = Cpt(EpicsMotor, 'X}Mtr')
     pitch = Cpt(EpicsMotor, 'P}Mtr')
-m3 = SRXM2('XF:05IDD-OP:1{Mir:3-Ax:')
+m3 = SRXM2('XF:05IDD-OP:1{Mir:3-Ax:', name='m3')
 
 
 # HDCM

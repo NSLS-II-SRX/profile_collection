@@ -41,8 +41,8 @@ class SRXFlyer1Axis(Device):
 #    LARGE_FILE_DIRECTORY_WRITE_PATH = '/tmp/fly_scan_ancillary'
     LARGE_FILE_DIRECTORY_READ_PATH = '/XF05IDD/data/2017-3/fly_scan_ancillary'
     "This is the Zebra."
-    def __init__(self, encoder, xs, sclr1, *, reg=db.reg):
-        super().__init__('', parent=None)
+    def __init__(self, encoder, xs, sclr1, *, reg=db.reg, **kwargs):
+        super().__init__('', parent=None, **kwargs)
         self._mode = 'idle'
         self._encoder = encoder
         self._det = xs
@@ -202,8 +202,7 @@ class SRXFlyer1Axis(Device):
         self.stage()
 
 
-flying_zebra = SRXFlyer1Axis(zebra, xs, sclr1)
-flying_zebra.name='flying_zebra'
+flying_zebra = SRXFlyer1Axis(zebra, xs, sclr1, name='flying_zebra')
 #flying_zebra = SRXFlyer1Axis(zebra)
 
 

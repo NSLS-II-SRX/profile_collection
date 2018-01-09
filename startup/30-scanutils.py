@@ -110,7 +110,7 @@ class SRXScanRecord(Device):
     time_remaining = Cpt(EpicsSignal,'Scan:REMTIME')
     scanning = Cpt(EpicsSignal, 'Scan:ENA')
 
-scanrecord = SRXScanRecord('XF:05IDA-CT{IOC:ScanBroker01}')
+scanrecord = SRXScanRecord('XF:05IDA-CT{IOC:ScanBroker01}', name='scanrecord')
 scanrecord.scan0.p1s.put(25.0)
 scanrecord.scan0.p2s.put(20.0)
 scanrecord.scan0.p1i.put(0.010)
