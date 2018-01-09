@@ -5,9 +5,9 @@ Created on Mon Jun  6 18:48:07 2016
 @author: xf05id1
 """
 
-from bluesky.plans import AbsScanPlan
-from bluesky.callbacks.scientific import PeakStats, plot_peak_stats
-import matplotlib.pylab as plt
+from bluesky.callbacks.fitting import PeakStats
+from bluesky.callbacks.mpl_plotting import plot_peak_stats
+import matplotlib.pyplot as plt
 import time
 
 

@@ -5,7 +5,8 @@ Created on Tue Oct  4 19:08:01 2016
 @author: xf05id1
 #"""
 
-from bluesky.plans import count, subs_wrapper
+from bluesky.plans import count
+from bluesky.preprocessors import subs_wrapper
 import copy
 
 #

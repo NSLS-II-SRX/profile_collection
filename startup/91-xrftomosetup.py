@@ -6,7 +6,8 @@ Created on Tue Jun 14 14:43:13 2016
 """
 
 #for tomography
-from bluesky.plans import scan_nd, subs_wrapper, pchain
+from bluesky.plans import scan_nd
+from bluesky.preprocessors import subs_wrapper, pchain
 from cycler import cycler
 
 def tomo_xrf_proj_realmotor(xcen, zcen, hstepsize, hnumstep,

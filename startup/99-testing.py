@@ -5,7 +5,8 @@ Created on Tue Jun 21 12:22:22 2016
 @author: xf05id1
 """
 
-from bluesky.plans import scan, list_scan, abs_set
+from bluesky.plans import scan, list_scan
+from bluesky.plan_stubs import abs_set
 from bluesky.callbacks import LiveTable
 
 

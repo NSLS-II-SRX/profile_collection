@@ -6,7 +6,8 @@ Created on Tue Jun 14 14:43:13 2016
 """
 
 #for tomography
-from bluesky.plans import subs_wrapper, scan, count, list_scan
+from bluesky.plans import scan, count, list_scan
+from bluesky.preprocessors import subs_wrapper
 import time
   
 def tomo_fullfield(thetastart = -90, thetastop = 90, numproj = 361, ffwait = 2,

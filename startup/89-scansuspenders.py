@@ -8,9 +8,11 @@ Define suspenders that will be loaded
 """
 from bluesky.suspenders import SuspendFloor, SuspendCeil, SuspendBoolHigh, SuspendBoolLow
 import bluesky.plans as bp
+import bluesky.plan_stubs as bps
+import bluesky.preprocessors as bpp
 
 def shuttergenerator(shutter, value):
-    return (yield from bp.rewindable_wrapper(bp.mv(shutter, value), False))
+    return (yield from bpp.rewindable_wrapper(bps.mv(shutter, value), False))
 
 #ring current suspender
 susp_rc = SuspendFloor(ring_current, 140, resume_thresh=160, sleep=10*60,

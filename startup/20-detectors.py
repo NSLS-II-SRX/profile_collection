@@ -4,6 +4,7 @@ from ophyd import Component as Cpt
 from ophyd.ophydobj import StatusBase
 from ophyd.status import wait
 from hxntools.detectors.zebra import Zebra, EpicsSignalWithRBV
+from collections import OrderedDict
 
 import time as ttime
 

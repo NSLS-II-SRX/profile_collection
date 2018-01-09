@@ -18,7 +18,7 @@ Modified on Wed Wed 02 14:14 to comment out the saturn detector which is not in 
 from bluesky.plans import outer_product_scan, scan
 import bluesky.plans as bp
 from bluesky.callbacks import LiveGrid
-from bluesky.callbacks.scientific import PeakStats
+from bluesky.callbacks.fitting import PeakStats
 import matplotlib
 import time
 import epics

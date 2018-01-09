@@ -7,7 +7,7 @@ from ophyd import Component as Cpt, Signal
 import time as ttime
 from cycler import cycler
 from bluesky import Msg
-from bluesky.plans import open_run, close_run, trigger_and_read
+from bluesky.plan_stubs import open_run, close_run, trigger_and_read
 
 #from bluesky.plan_tools import trigger_and_read, wrap_with_decorator, run_wrapper
 

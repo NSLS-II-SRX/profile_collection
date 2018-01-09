@@ -4,7 +4,8 @@ Created on Mon Aug 22 12:40:40 2016
 
 @author: xf05id1
 """
-from bluesky.plans import subs_wrapper, scan, count, list_scan
+from bluesky.plans import scan, count, list_scan
+from bluesky.preprocessors import subs_wrapper
 import numpy as np
 
 def xanes_afterscan_pco(scanid, roinum, filename, i0scale, itscale, roi_key):

@@ -3,7 +3,7 @@ import numpy as np
 from ophyd import EpicsSignal
 from bluesky.plans import relative_scan
 from bluesky.callbacks import LiveFit,LiveFitPlot
-from bluesky.callbacks.scientific import PeakStats
+from bluesky.callbacks.fitting import PeakStats
 import lmfit
 
 def cryofill(wait_time_after_v19_claose = 60*10):
