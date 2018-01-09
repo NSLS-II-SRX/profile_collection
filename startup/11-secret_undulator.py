@@ -1,5 +1,6 @@
 from ophyd import (EpicsSignal, EpicsSignalRO, EpicsMotor,
-                   Device, Signal, PseudoPositioner, PseudoSingle)
+                   Device, Signal, PseudoPositioner, PseudoSingle,
+                   PVPositioner)
 from ophyd.utils.epics_pvs import set_and_wait
 from ophyd.ophydobj import StatusBase, MoveStatus
 from ophyd import Component as Cpt, Signal

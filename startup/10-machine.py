@@ -1,14 +1,14 @@
-import time as ttime
-import datetime
 import os
-import epics
+import numpy as np
 from ophyd import (PVPositioner, EpicsSignal, EpicsSignalRO, EpicsMotor,
                    Device, Signal, PseudoPositioner, PseudoSingle)
 from ophyd.utils.epics_pvs import set_and_wait
-from ophyd.ophydobj import StatusBase, MoveStatus
+from ophyd.ophydobj import MoveStatus
 from ophyd.pseudopos import (pseudo_position_argument, real_position_argument)
 from ophyd import Component as Cpt
 from scipy.interpolate import InterpolatedUnivariateSpline
+import math
+import uuid
 
 ring_current = EpicsSignalRO('SR:C03-BI{DCCT:1}I:Real-I', name='ring_current')
 cryo_v19 = EpicsSignal('XF:05IDA-UT{Cryo:1-IV:19}Sts-Sts', name='cryo_v19')
@@ -602,6 +602,7 @@ class TwoButtonShutter(Device):
                 st._finished(success=False)
             if value == 'None':
                 if not st.done:
+                    import time
                     time.sleep(1)
                     count += 1
                     cmd_sig.set(1)
