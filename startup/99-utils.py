@@ -134,6 +134,16 @@ def peakup_dcm(correct_roll=True):
     #for some reason we now need to kill the pitch motion to keep it from overheating.  6/8/17
     time.sleep(5)
     c2pitch_kill.put(1)
+def ic_energy_batch(estart,estop,npts):
+    ion_chamber_fp=open('/home/xf05id1/current_user_data/ionchamber_readings_'+time.strftime('%Y%m%d%H%M%S')+'.csv','w')
+    ion_chamber_fp.write('#energy,I premirror,I sample,I transmittedi\n')
+    for i in np.linspace(estart,estop,npts):
+        energy.move(i)
+        time.sleep(5)
+        peakup_dcm()
+        time.sleep(5)
+        ion_chamber_fp.write('%8.0f,%d,%d,%d\n'%(i,im.get(),i0.get(),it.get()))
+    ion_chamber_fp.close()
 
 
 def retune_undulator():

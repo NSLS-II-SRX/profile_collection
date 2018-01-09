@@ -371,29 +371,29 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from abs_set(xs.settings.num_images, xnum)
 #        print('xs config done\t',time.time())
         yield from abs_set(ion.nuse_all,xnum)
-#        print('sclr config done\t',time.time())
+ #       print('sclr config done\t',time.time())
         # arm the Zebra (start caching x positions)
         yield from kickoff(flying_zebra, xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell, wait=True)
-#        print('kickoff done\t',time.time())
+ #       print('kickoff done\t',time.time())
         yield from abs_set(xs.settings.acquire, 1)  # start acquiring images
-#        print('xs armed\t',time.time())
+ #       print('xs armed\t',time.time())
         yield from abs_set(ion.erase_start, 1) # arm SIS3820, note that there is a 1 sec delay in setting X into motion 
                                                # so the first point *in each row* won't normalize...
-#        print('sclr armed\t',time.time())
+ #       print('sclr armed\t',time.time())
         if firststep == True:
             ttime.sleep(0.)
         yield from abs_set(xmotor, xstop+0.2*delta, wait=True)  # move in x
-#        print('x moved\t',time.time())
+ #       print('x moved\t',time.time())
         yield from abs_set(xs.settings.acquire, 0)  # stop acquiring images
-#        print('xs stopped\t',time.time())
+ #       print('xs stopped\t',time.time())
         yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
-#        print('sclr stopped\t',time.time())
+ #       print('sclr stopped\t',time.time())
         yield from complete(flying_zebra)  # tell the Zebra we are done
-#        print('zebra stopped\t',time.time())
+ #       print('zebra stopped\t',time.time())
         yield from collect(flying_zebra)  # extract data from Zebra
-#        print('zebra collected\t',time.time())
+ #       print('zebra collected\t',time.time())
         yield from abs_set(xmotor.velocity, 3.)  # set the "stage speed"
-#        print('xmotor v set\t',time.time())
+ #       print('xmotor v set\t',time.time())
 
     def at_scan(name, doc):
         scanrecord.current_scan.put(doc['uid'][:6])

@@ -17,10 +17,15 @@ proposal_title = None
 PI_lastname = None
 saf_num = None
 
-proposal_num = 302306 
-proposal_title = 'Multi-modal microspectroscopy analysis of a complex 2.7 Ga old geological sample recording cyclic changes during the rise of oxygen on earth: 1. SRX'
-PI_lastname = 'Schoonen'
-saf_num = 301893
+#proposal_num = 302315 
+#proposal_title = 'Elucidating nanoparticle-plant leaf interactions, uptake, and mobility for designing highly efficient foliar-applied agrochemicals'
+#PI_lastname = 'Avellan'
+#saf_num = 301869
+
+#proposal_num = 302306 
+#proposal_title = 'Multi-modal microspectroscopy analysis of a complex 2.7 Ga old geological sample recording cyclic changes during the rise of oxygen on earth: 1. SRX'
+#PI_lastname = 'Schoonen'
+#saf_num = 301893
 
 #proposal_num = 302319  
 #proposal_title = 'The effect of CO2 and H2SO4 exposure on self-healing polymer cement composites'
@@ -44,10 +49,10 @@ saf_num = 301893
 #PI_lastname = 'Sprouster'
 #saf_num = 301712
 
-#proposal_num = 301905 
-#proposal_title = 'Techinical commissioning of Beamline 5-ID (SRX)'
-#PI_lastname = 'Thieme'
-#saf_num = 301661
+proposal_num = 301905 
+proposal_title = 'Techinical commissioning of Beamline 5-ID (SRX)'
+PI_lastname = 'Thieme'
+saf_num = 301661
 
 #proposal_num = 302001 
 #proposal_title = 'Spatial Statistical Modeling of the Heterogeneous Reactivity of Arsenic in Soil Matrices'
