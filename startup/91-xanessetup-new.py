@@ -206,8 +206,8 @@ def xanes_plan(erange = [], estep = [],
         peakup = bp.subs_wrapper(peakup,ps)
         yield from peakup
         yield from abs_set(dcm.c2_pitch, ps.cen, wait = True)
-        ttime.sleep(10)
-        yield from abs_set(c2pitch_kill, 1)
+        #ttime.sleep(10)
+        #yield from abs_set(c2pitch_kill, 1)
 
     #setup the live callbacks
     livecallbacks = []    

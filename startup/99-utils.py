@@ -132,8 +132,9 @@ def peakup_dcm(correct_roll=True):
         RE(scan([sclr1], dcm.c1_roll, -4.870, -5.020, 31), [ps1])
         dcm.c1_roll.move(ps1.cen,wait=True)
     #for some reason we now need to kill the pitch motion to keep it from overheating.  6/8/17
-    time.sleep(5)
-    c2pitch_kill.put(1)
+    #this need has disappeared mysteriously after the shutdown - gjw 2018/01/19
+    #time.sleep(5)
+    #c2pitch_kill.put(1)
 def ic_energy_batch(estart,estop,npts):
     ion_chamber_fp=open('/home/xf05id1/current_user_data/ionchamber_readings_'+time.strftime('%Y%m%d%H%M%S')+'.csv','w')
     ion_chamber_fp.write('#energy,I premirror,I sample,I transmittedi\n')

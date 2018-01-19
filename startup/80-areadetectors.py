@@ -113,8 +113,8 @@ class SRXPCOEDGECam(SingleTrigger,AreaDetector):
     roi3 = C(ROIPlugin, 'ROI3:')
     roi4 = C(ROIPlugin, 'ROI4:')
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
-            read_path_template='/data/PCOEDGE/2017-3/',
-             write_path_template='C:/epicsdata/pcoedge/2017-3',
+            read_path_template='/data/PCOEDGE/%Y/%m/%d/',
+             write_path_template='C:/epicsdata/pcoedge/%Y/%m/%d/',
              root='/data',
              reg=db.reg)
 
@@ -244,7 +244,7 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
 
         # Xspress3 needs a bit of time to configure itself...
         # this does not play nice with the event loop :/
-        time.sleep(self._config_time)
+        #time.sleep(self._config_time)
 
         return ret
 
@@ -263,10 +263,12 @@ class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
     channel1 = C(Xspress3Channel, 'C1_', channel_num=1, read_attrs=['rois'])
     channel2 = C(Xspress3Channel, 'C2_', channel_num=2, read_attrs=['rois'])
     channel3 = C(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
+    create_dir = Cpt(EpicsSignal, 'HDF5:FileCreateDir')
 
     hdf5 = Cpt(Xspress3FileStoreFlyable, 'HDF5:',
-               read_path_template='/XF05IDD/XSPRESS3/2017-3/',
-               write_path_template='/epics/data/2017-3/',
+               read_path_template='/XF05IDD/XSPRESS3/2018-1/',
+               #write_path_template='/epics/data/2017-3/',
+               write_path_template='/epics/data/2018-1/',
 #               root='/data',
                root='/XF05IDD',
                reg=db.reg)
@@ -281,6 +283,7 @@ class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
             read_attrs = ['channel1', 'channel2', 'channel3', 'hdf5']
         super().__init__(prefix, configuration_attrs=configuration_attrs,
                          read_attrs=read_attrs, **kwargs)
+        self.create_dir.put(-3)
 
     def stop(self):
         ret = super.stop()

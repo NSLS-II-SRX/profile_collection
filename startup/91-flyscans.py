@@ -20,10 +20,10 @@ import numpy
 import copy
 from bluesky.plans import (scan, )
 from bluesky.plan_stubs import (one_1d_step, kickoff, collect, complete,
-                                wait, abs_set)
+                                wait, abs_set,mv)
 
 from bluesky.preprocessors import (monitor_during_wrapper, stage_decorator,
-                                   run_decorator)
+                                   run_decorator,subs_decorator,monitor_during_decorator)
 from ophyd.sim import NullStatus
 from bluesky.callbacks import LiveTable, LivePlot, CallbackBase, LiveGrid
 from ophyd import Device
@@ -36,10 +36,10 @@ register(db)
 from hxntools.detectors.xspress3 import Xspress3FileStore
 
 class SRXFlyer1Axis(Device):
-    LARGE_FILE_DIRECTORY_WRITE_PATH = '/XF05IDD/data/2017-3/fly_scan_ancillary'
+    LARGE_FILE_DIRECTORY_WRITE_PATH = '/XF05IDD/data/2018-1/fly_scan_ancillary'
 #    LARGE_FILE_DIRECTORY_READ_PATH = '/tmp/test_data'
 #    LARGE_FILE_DIRECTORY_WRITE_PATH = '/tmp/fly_scan_ancillary'
-    LARGE_FILE_DIRECTORY_READ_PATH = '/XF05IDD/data/2017-3/fly_scan_ancillary'
+    LARGE_FILE_DIRECTORY_READ_PATH = '/XF05IDD/data/2018-1/fly_scan_ancillary'
     "This is the Zebra."
     def __init__(self, encoder, xs, sclr1, *, reg=db.reg, **kwargs):
         super().__init__('', parent=None, **kwargs)
@@ -58,6 +58,7 @@ class SRXFlyer1Axis(Device):
         self.stage_sigs[self._encoder.output3.ttl.addr] = 31
 
         self.stage_sigs[self._encoder.pc.enc_pos1_sync] = 1
+        self.stage_sigs[self._encoder.pc.enc_pos2_sync] = 1
 
         #put SIS3820 into single count (not autocount) mode
         self.stage_sigs[self._sis.count_mode] = 0
@@ -329,7 +330,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
     
     if shutter is True:
-        yield from bp.mv(shut_b, 'Open')
+        yield from mv(shut_b, 'Open')
     
     if align == True:
         fly_ps = PeakStats(dcm.c2_pitch.name,i0.name)
@@ -337,8 +338,8 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         align_scan = bp.subs_wrapper(align_scan,fly_ps)
         yield from align_scan
         yield from abs_set(dcm.c2_pitch,fly_ps.max[0],wait=True)
-        ttime.sleep(10)
-        yield from abs_set(c2pitch_kill, 1)
+        #ttime.sleep(10)
+        #yield from abs_set(c2pitch_kill, 1)
     else:
         ttime.sleep(1.)
 
@@ -353,7 +354,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     )
 
 
-    from bluesky.plans import stage, unstage
+    from bluesky.plan_stubs import stage, unstage
     @stage_decorator([xs])
     def fly_each_step(detectors, motor, step, firststep):
         "See http://nsls-ii.github.io/bluesky/plans.html#the-per-step-hook"
@@ -437,7 +438,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from abs_set(xs.external_trig, False)
         yield from abs_set(ion.count_mode, 1)
         if shutter is True:
-            yield from bp.mv(shut_b, 'Close')
+            yield from mv(shut_b, 'Close')
 
 
     return (yield from plan())

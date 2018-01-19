@@ -19,6 +19,7 @@ from bluesky.plans import outer_product_scan, scan
 import bluesky.plans as bp
 from bluesky.callbacks import LiveGrid
 from bluesky.callbacks.fitting import PeakStats
+from bluesky.preprocessors import subs_wrapper
 import matplotlib
 import time
 import epics
@@ -283,10 +284,10 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         elif (struck == True):
             sclr1.preset_time.put(1., wait = True)
         peakup = scan([sclr1], dcm.c2_pitch, -19.324, -19.358, 35)
-        peakup = bp.subs_wrapper(peakup,ps)
+        peakup = subs_wrapper(peakup,ps)
         yield from peakup
         yield from abs_set(dcm.c2_pitch, ps.cen, wait = True)
-        yield from abs_set(c2pitch_kill,1)
+        #yield from abs_set(c2pitch_kill,1)
 
     def at_scan(name, doc):
         scanrecord.current_scan.put(doc['uid'][:6])
@@ -300,7 +301,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
     hf2dxrf_scanplan = outer_product_scan(det, hf_stage.y, ystart, ystop, ynumstep+1, hf_stage.x, xstart, xstop, xnumstep+1, True, md=md)
 #    hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, livecallbacks)
-    hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, {'all':livecallbacks,'start':at_scan,'stop':finalize_scan})
+    hf2dxrf_scanplan = subs_wrapper( hf2dxrf_scanplan, {'all':livecallbacks,'start':at_scan,'stop':finalize_scan})
     scaninfo = yield from hf2dxrf_scanplan
     #TO-DO: implement fast shutter control (close)    
     if shutter is True:
@@ -694,7 +695,7 @@ def hr2dxrf_top(*, xstart, xnumstep, xstepsize,
     
     
     hr2dxrf_scanplan = outer_product_scan(det, tomo_stage.finey_top, ystart, ystop, ynumstep+1, tomo_stage.finex_top, xstart, xstop, xnumstep+1, True, md=md)
-    hr2dxrf_scanplan = bp.subs_wrapper(hr2dxrf_scanplan, livecallbacks)
+    hr2dxrf_scanplan = subs_wrapper(hr2dxrf_scanplan, livecallbacks)
     scaninfo = yield from hr2dxrf_scanplan
 
     #TO-DO: implement fast shutter control (close)    
@@ -791,7 +792,7 @@ def hf2dxrf_xfm(*, xstart, xnumstep, xstepsize,
         shut_b.put(1)
 
     hf2dxrf_scanplan = outer_product_scan(det, stage.y, ystart, ystop, ynumstep+1, stage.x, xstart, xstop, xnumstep+1, True, md=md)
-    hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, livecallbacks)
+    hf2dxrf_scanplan = subs_wrapper( hf2dxrf_scanplan, livecallbacks)
     scaninfo = yield from hf2dxrf_scanplan
 
     #TO-DO: implement fast shutter control (close)    
