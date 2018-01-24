@@ -238,13 +238,13 @@ def export_zebra_data(zebra, filepath):
         dset1[...] = np.array(enc1_d)
         f.close()
 
-def export_sis_data(ion,filepath):
+def export_sis_data(ion, filepath):
     t = ion.mca1.get(timeout=5.)
     i = ion.mca2.get(timeout=5.)
-    while zebra.pc.data_in_progress.get()==1:
-        ttime.sleep(0.1)
-    ttime.sleep(.5)
     correct_length = zebra.pc.data.num_down.get()
+    while len(t) == 0 and len(t) != len(i):
+        t = ion.mca1.get(timeout=5.)
+        i = ion.mca2.get(timeout=5.)
     size = (len(t),)
     size2 = (len(i),)
     with h5py.File(filepath, 'w') as f:
