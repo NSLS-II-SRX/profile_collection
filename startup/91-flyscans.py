@@ -152,14 +152,14 @@ class SRXFlyer1Axis(Device):
                                              self.__filename)
         self.__write_filepath_sis = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH,
                                                  self.__filename_sis)
-        
+
         self.__filestore_resource = self.reg.register_resource('ZEBRA_HDF51', root='/',
                                                                rpath=self.__read_filepath,
                                                                rkwargs={})
         self.__filestore_resource_sis = self.reg.register_resource('SIS_HDF51',root='/',
                                                                    rpath=self.__read_filepath_sis,
                                                                    rkwargs={})
-        
+
         time_datum_id = self.reg.register_datum(self.__filestore_resource,
                                                 {'column': 'time'})
         enc1_datum_id = self.reg.register_datum(self.__filestore_resource,
@@ -214,16 +214,28 @@ flying_zebra = SRXFlyer1Axis(zebra, xs, sclr1, name='flying_zebra')
 
 
 def export_zebra_data(zebra, filepath):
+    j = 0
     while zebra.pc.data_in_progress.get()==1:
+        print('waiting zebra')
         ttime.sleep(0.1)
-    ttime.sleep(.5)
-    data = zebra.pc.data.get()
-    size = (len(data.time),)
+        j += 1
+        if j > 10:
+            print('THE ZEBRA IS BEHAVING BADLY CARRYING ON')
+            break
+
+    #ttime.sleep(.5)
+    time_d = zebra.pc.data.time.get()
+    enc1_d = zebra.pc.data.enc2.get()
+    while len(time_d) == 0 or len(time_d) != len(enc1_d):
+        time_d = zebra.pc.data.time.get()
+        enc1_d = zebra.pc.data.enc2.get()
+
+    size = (len(time_d),)
     with h5py.File(filepath, 'w') as f:
         dset0 = f.create_dataset("time",size,dtype='f')
-        dset0[...] = np.array(data.time)
-        dset1 = f.create_dataset("enc1",(len(data.enc1),),dtype='f')
-        dset1[...] = np.array(data.enc1)
+        dset0[...] = np.array(time_d)
+        dset1 = f.create_dataset("enc1",size,dtype='f')
+        dset1[...] = np.array(enc1_d)
         f.close()
 
 def export_sis_data(ion,filepath):
