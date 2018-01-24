@@ -92,7 +92,9 @@ class SRXFlyer1Axis(Device):
         desc['fluor'] = spec
         desc['fluor']['source'] = 'FileStore::{!s}'.format(self._det.hdf5._filestore_res['id'])
         desc['i0'] = spec
-        desc['i0']['source'] = self._sis.mca1.pvname
+        desc['i0']['source'] = self._sis.mca2.pvname
+        desc['i0_time'] = spec
+        desc['i0_time']['source'] = self._sis.mca1.pvname
 
         return {'stream0':desc}
 
@@ -164,7 +166,9 @@ class SRXFlyer1Axis(Device):
                                                 {'column': 'enc1'})
         sis_datum_id =  self.reg.register_datum(self.__filestore_resource_sis,
                                                 {'column': 'i0'})
-        
+        sis_time_id =  self.reg.register_datum(self.__filestore_resource_sis,
+                                                {'column': 'time'})
+
         xs_datum_id = self.reg.register_datum(self._det.hdf5._filestore_res, {})
 
         # Write the file.
@@ -178,12 +182,14 @@ class SRXFlyer1Axis(Device):
 #                        'enc1': enc1_datum_id},
                         'enc1': enc1_datum_id,
                         'fluor' : xs_datum_id,
-                        'i0': sis_datum_id},
+                        'i0': sis_datum_id,
+                        'i0_time': sis_time_id},
                'timestamps': {'time': time_datum_id,  # not a typo
 #                              'enc1': time_datum_id}}
                               'enc1': time_datum_id,
                               'fluor' : time_datum_id,
-                              'i0': time_datum_id}}
+                              'i0': sis_time_id,
+                              'i0_time': sis_time_id}}
         self._mode = 'idle'
 
     def stop(self):
