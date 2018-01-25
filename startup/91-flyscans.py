@@ -104,11 +104,13 @@ class SRXFlyer1Axis(Device):
         self._npts = int(xnum)
         extent = xstop - xstart
         pxsize = extent / (xnum-1)
-        #2 ms delay between pulses
-        decrement = ((pxsize / dwell) * 0.002) 
+        #1 ms delay between pulses
+        decrement = ((pxsize / dwell) * 0.001)
         self._encoder.pc.gate_start.put(xstart)
-        self._encoder.pc.gate_step.put(extent+0.01)
-        self._encoder.pc.gate_width.put(extent+0.005)
+        #self._encoder.pc.gate_step.put(extent+0.01)
+        #self._encoder.pc.gate_width.put(extent+0.005)
+        self._encoder.pc.gate_step.put(extent+0.0005)
+        self._encoder.pc.gate_width.put(extent+0.0001)
         self._encoder.pc.pulse_max.put(xnum)
 #        self._encoder.pc.pulse_step.put(dwell)
 #        self._encoder.pc.pulse_width.put(dwell - 0.005)
@@ -117,6 +119,8 @@ class SRXFlyer1Axis(Device):
         self._encoder.pc.pulse_step.put(pxsize)
         self._encoder.pc.pulse_width.put(pxsize-decrement)
         self._encoder.pc.pulse_start.put(0.0)
+        #self._encoder.pc.pulse_step.put(dwell)
+        #self._encoder.pc.pulse_width.put(dwell-0.001)
         self._encoder.pc.arm.put(1)
         st = NullStatus()  # TODO Return a status object *first* and do the above asynchronously.
         return st
@@ -346,10 +350,10 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         delta=0.01
     yield from abs_set(ymotor, ystart, wait=True) # ready to move
     yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
-    
+
     if shutter is True:
         yield from mv(shut_b, 'Open')
-    
+
     if align == True:
         fly_ps = PeakStats(dcm.c2_pitch.name,i0.name)
         align_scan = scan([sclr1], dcm.c2_pitch, -19.314, -19.358, 45)
@@ -382,7 +386,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from one_1d_step(detectors, motor, step)
 
         # Now do the x steps.
-        v = (xstop - xstart) / xnum / dwell  # compute "stage speed"
+        v = (xstop - xstart) / (xnum) / dwell  # compute "stage speed"
         yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
 #        print(v)
         yield from abs_set(xmotor.velocity, v, wait=True)  # set the "stage speed"
@@ -398,12 +402,13 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
  #       print('kickoff done\t',time.time())
         yield from abs_set(xs.settings.acquire, 1)  # start acquiring images
  #       print('xs armed\t',time.time())
-        yield from abs_set(ion.erase_start, 1) # arm SIS3820, note that there is a 1 sec delay in setting X into motion 
+        yield from abs_set(ion.erase_start, 1) # arm SIS3820, note that there is a 1 sec delay in setting X into motion
                                                # so the first point *in each row* won't normalize...
  #       print('sclr armed\t',time.time())
-        if firststep == True:
-            ttime.sleep(0.)
-        yield from abs_set(xmotor, xstop+0.2*delta, wait=True)  # move in x
+        #if firststep == True:
+        #    ttime.sleep(0.)
+        ttime.sleep(.5)
+        yield from abs_set(xmotor, xstop+delta, wait=True)  # move in x
  #       print('x moved\t',time.time())
         yield from abs_set(xs.settings.acquire, 0)  # stop acquiring images
  #       print('xs stopped\t',time.time())
