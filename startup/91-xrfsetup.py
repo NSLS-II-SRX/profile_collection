@@ -20,6 +20,7 @@ import bluesky.plans as bp
 from bluesky.callbacks import LiveGrid
 from bluesky.callbacks.fitting import PeakStats
 from bluesky.preprocessors import subs_wrapper
+from bluesky.plan_stubs import mv
 import matplotlib
 import time
 import epics
@@ -273,7 +274,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     if shutter is True: 
         yield from abs_set(hf_stage.x,xstart, wait = True)
         yield from abs_set(hf_stage.y,ystart, wait = True)
-        yield from bp.mv(shut_b,'Open')
+        yield from mv(shut_b,'Open')
 
     #peak up monochromator at this energy
     if align == True:
@@ -283,7 +284,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             sclr1.preset_time.put(0.1, wait = True)
         elif (struck == True):
             sclr1.preset_time.put(1., wait = True)
-        peakup = scan([sclr1], dcm.c2_pitch, -19.324, -19.358, 35)
+        peakup = scan([sclr1], dcm.c2_pitch, -19.320, -19.360, 41)
         peakup = subs_wrapper(peakup,ps)
         yield from peakup
         yield from abs_set(dcm.c2_pitch, ps.cen, wait = True)
@@ -305,7 +306,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     scaninfo = yield from hf2dxrf_scanplan
     #TO-DO: implement fast shutter control (close)    
     if shutter is True:
-        yield from bp.mv(shut_b,'Close')
+        yield from mv(shut_b,'Close')
 
     #write to scan log    
 
@@ -797,7 +798,7 @@ def hf2dxrf_xfm(*, xstart, xnumstep, xstepsize,
 
     #TO-DO: implement fast shutter control (close)    
     if shutter is True:
-        yield from bp.mv(shut_b,'Open') 
+        yield from mv(shut_b,'Open') 
 
     #write to scan log    
     logscan('2dxrf_xfm')    

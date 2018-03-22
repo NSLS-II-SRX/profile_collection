@@ -333,7 +333,9 @@ class Energy(PseudoPositioner):
         harmanic : int, optional
             The harmonic to use, defaults to 3
         """
-        ugap = self.u_gap.get().readback
+#        uga    scanlogDic = {'Fe': 11256, 'Cu':11254, 'Cr': 11258, 'Ti': 11260, 'Se':11251}
+        # scanlogDic = {'Fe':11369, 'Cu':11367, 'Ti':11371, 'Se':11364}        
+        p = self.u_gap.get().readback
         utoelookup = self.u_gap.utoelookup
 
         fundemental = float(utoelookup(ugap))
@@ -458,7 +460,7 @@ cal_data_2016cycle1_2 = {'d_111': 3.12924894907,  # 2016/1/27 (Se, Cu, Fe, Ti)
                        #'xoffset':  24.615016005680289 #2016/4/06 12.8 keV Se
                        #'xoffset': 24.672213516710034
                        #'xoffset': 24.809807128906538
-                       #mono warmed up at 4/12/16
+                       #mono warmed up at 4/12/16 0.494304059171
                        #'xoffset': 24.809838976060604 #17keV
                        #'xoffset': 24.887490886653893 #8.2 keV
                        #'xoffset': 24.770168843970197 #12.5 keV
@@ -532,7 +534,39 @@ cal_data_2017cycle3 = {
  'T2cal': 15.0347755916,
  'xoffset': 24.581644618999363, #value for Ti worked best using the C2 pitch to correct at higher E
 }
-energy = Energy(prefix='', name='energy', **cal_data_2017cycle2)
+"""
+cal_data_2018cycle1 = {
+ 'd_111': 3.03796349212,
+ 'delta_bragg': 0.494304059171, #{'Ti':11371,'Fe':11369,'Cu':11367,'Se':11364} 201800203
+ 'C2Xcal': 3.6,
+ 'T2cal': 15.0347755916,
+ 'xoffset': 24.581644618999363, #value for Ti worked best using the C2 pitch to correct at higher E
+}
+"""
+cal_data_2018cycle1 = {
+ 'd_111': 3.12949171228,
+ 'delta_bragg': 0.309950475093, #{'Ti':11371,'Fe':11369,'Cu':11367,'Se':11364} 201800203
+ 'C2Xcal': 3.6,
+ 'T2cal': 15.0347755916,
+ 'xoffset': 24.581644618999363, #value for Ti worked best using the C2 pitch to correct at higher E
+}
+cal_data_2018cycle1a = {
+ 'd_111': 3.1263, #changed by hand after DCM calibration changed; assume that heating drives this and not angle offset
+ 'delta_bragg': 0.309950475093, #{'Ti':11371,'Fe':11369,'Cu':11367,'Se':11364} 201800203
+ 'C2Xcal': 3.6,
+ 'T2cal': 15.0347755916,
+ 'xoffset': 24.75, #best value for 12 and 5 keV
+}
+cal_data_2018cycle1b = {
+ 'd_111': 3.1291350735, #changed by hand after DCM calibration changed; assume that heating drives this and not angle offset
+ 'delta_bragg': 0.309886328328, #{'Ti':12195,'Fe':12194,'Se':12187} 20180224
+ 'C2Xcal': 3.6,
+ 'T2cal': 15.0347755916,
+ 'xoffset': 24.75, #best value for 12 and 5 keV
+}
+
+
+energy = Energy(prefix='', name='energy', **cal_data_2018cycle1b)
 energy.synch_with_epics()
 
 

@@ -4,8 +4,8 @@ from matplotlib import pyplot
 import subprocess 
 import scipy as sp
 import scipy.optimize
-import x3toAthenaSetup as xa
-import srxpeak
+# import x3toAthenaSetup as xa
+# import srxpeak
 
 '''
     
@@ -23,32 +23,35 @@ This program provides functionality to calibrate hdcm energy:
 '''
 
 
-def scanderive(xaxis,yaxis): 
+def scanderive(xaxis, yaxis): 
     
-    length=len(xaxis)
-    dxaxis=xaxis[0:-1]
-    dyaxis=yaxis[0:-1]
+    # length=len(xaxis)
+    # dxaxis=xaxis[0:-1]
+    # dyaxis=yaxis[0:-1]
     
-    for i in range(0,length-1):
-        dxaxis[i]=(xaxis[i]+xaxis[i+1])/2.
-        dyaxis[i]=(yaxis[i+1]-yaxis[i])/(xaxis[i+1]-xaxis[i])
+    # for i in range(0,length-1):
+    #     dxaxis[i]=(xaxis[i]+xaxis[i+1])/2.
+    #     dyaxis[i]=(yaxis[i+1]-yaxis[i])/(xaxis[i+1]-xaxis[i])
 		#print "Deriv. max value is ",dyaxis.max()," at ", dxaxis[dyaxis.argmax()]
 		#print "Deriv. min value is ",dyaxis.min()," at ", dxaxis[dyaxis.argmin()]
 		#pyplot.plot(dxaxis,dyaxis,'+')
-    p=pyplot.plot(dxaxis,dyaxis*(-1),'-')
+    dyaxis = numpy.gradient(yaxis, xaxis)
+    p = pyplot.plot(xaxis, dyaxis, '-')
+    # p=pyplot.plot(dxaxis,dyaxis*(-1),'-')
     #make the useoffset = False
     ax = pyplot.gca()
     ax.ticklabel_format(useOffset=False)
-    edge = dxaxis[dyaxis.argmin()]
+    edge = xaxis[dyaxis.argmin()]
+    p = pyplot.plot(edge, dyaxis[dyaxis.argmin()], '*r', markersize=25)
     #edge = dxaxis[dyaxis.argmax()]
 
-    return p, dxaxis,dyaxis, edge
+    return p, xaxis,dyaxis, edge
 
-def find_edge(scanid = -1, use_xrf = False):
+def find_edge(scanid = -1, use_xrf = False, element = ''):
     #baseline = -8.5e-10
     baseline_it = 4e-9
     table = db.get_table(db[scanid], stream_name='primary')
-    
+    #bluesky.preprocessors
     braggpoints = table.energy_bragg
 
     if use_xrf is False:
@@ -60,9 +63,20 @@ def find_edge(scanid = -1, use_xrf = False):
 
     else:
         #mu = table.xs_channel2_rois_roi01_value_sum
-        mu = table[table.keys()[12]]
+        # mu = table[table.keys()[12]]
+        # mu = table[table.keys()[10]]
+        if (element is ''):
+            print('Please send the element name')
+        else:
+            ch_name = 'Det1_' + element + '_ka1'
+            mu = table[ch_name]
+            ch_name = 'Det2_' + element + '_ka1'
+            mu = mu + table[ch_name]
+            ch_name = 'Det3_' + element + '_ka1'       
+            mu = mu + table[ch_name]
         
-    p, xaxis, yaxis, edge = scanderive(numpy.array(braggpoints[1::]), numpy.array(mu[1::]))
+        
+    p, xaxis, yaxis, edge = scanderive(numpy.array(braggpoints), numpy.array(mu))
 
     return p, xaxis, yaxis, edge
 
@@ -78,6 +92,11 @@ def braggcalib(scanlogDic = {}, use_xrf = False):
     #2016-3 Oct 3
     #scanlogDic = {'Se':20}
 
+    #2018-1 Jan 26
+    #scanlogDic = {'Fe': 11256, 'Cu':11254, , 'Ti': 11260, 'Se':11251}
+    #2018-1 Feb 24
+    scanlogDic = {'Ti': 12195, 'Fe': 12194, 'Se':12187}
+
     fitfunc = lambda pa, x: 12.3984/(2*pa[0]*numpy.sin((x+pa[1])*numpy.pi/180))  
     errfunc = lambda pa, x, y: fitfunc(pa,x) - y
 
@@ -90,10 +109,11 @@ def braggcalib(scanlogDic = {}, use_xrf = False):
 
     for element in scanlogDic:
         print(scanlogDic[element])
+        
         current_scanid = scanlogDic[element]
-        p, xaxis, yaxis, edge = find_edge(scanid = current_scanid, use_xrf = use_xrf)
+        p, xaxis, yaxis, edge = find_edge(scanid = current_scanid, use_xrf = use_xrf, element = element)
             
-        BraggRBVDic[element] = round(edge,3)
+        BraggRBVDic[element] = round(edge, 6)
         print('Edge position is at Braggg RBV', BraggRBVDic[element])
         pyplot.show(p)
         
@@ -128,4 +148,6 @@ def braggcalib(scanlogDic = {}, use_xrf = False):
     print('(111) d spacing:', fitted_dcm[0])
     print('Bragg RBV offset:', fitted_dcm[1])
 
+
+# braggcalib(use_xrf=True)
 

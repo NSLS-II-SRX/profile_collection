@@ -1,5 +1,8 @@
 from bluesky.plans import list_scan
 import bluesky.plans as bp
+from bluesky.plan_stubs import mv
+from bluesky.preprocessors import finalize_wrapper
+from bluesky.preprocessors import subs_wrapper
 import scanoutput
 import numpy
 import time
@@ -186,7 +189,7 @@ def xanes_plan(erange = [], estep = [],
     #open b shutter
     if shutter is True:
         #shut_b.open()
-        yield from bp.mv(shut_b, 'Open')
+        yield from mv(shut_b, 'Open')
         #yield from abs_set(shut_b,1,wait=True)
     #peak up DCM at first scan point
     if align is True:
@@ -202,8 +205,8 @@ def xanes_plan(erange = [], estep = [],
             sclr1.preset_time.put(0.1)
         else:
             sclr1.preset_time.put(1.)
-        peakup = scan([sclr1], dcm.c2_pitch, -19.324, -19.358, 35)
-        peakup = bp.subs_wrapper(peakup,ps)
+        peakup = scan([sclr1], dcm.c2_pitch, -19.320, -19.360, 41)
+        peakup = subs_wrapper(peakup,ps)
         yield from peakup
         yield from abs_set(dcm.c2_pitch, ps.cen, wait = True)
         #ttime.sleep(10)
@@ -270,16 +273,16 @@ def xanes_plan(erange = [], estep = [],
         yield from abs_set(energy.harmonic, None)
         scanrecord.scanning.put(False)
         if shutter == True:
-            yield from bp.mv(shut_b,'Close')
+            yield from mv(shut_b,'Close')
         if detune is not None:
             energy.detune.put(0)
         del RE.md['sample']['name']
         del RE.md['scaninfo']
 
     myscan = list_scan(det, energy, list(ept))
-    myscan = bp.finalize_wrapper(myscan,finalize_scan)
+    myscan = finalize_wrapper(myscan,finalize_scan)
 
-    return (yield from bp.subs_wrapper(myscan,{'all':livecallbacks,'stop':after_scan,'start':at_scan})) 
+    return (yield from subs_wrapper(myscan,{'all':livecallbacks,'stop':after_scan,'start':at_scan})) 
 
 #not up to date, ignore for now
 def xanes_batch_plan(xylist=[], waittime = [2], 

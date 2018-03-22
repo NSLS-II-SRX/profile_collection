@@ -4,6 +4,7 @@ from ophyd import EpicsSignal
 from bluesky.plans import relative_scan
 from bluesky.callbacks import LiveFit,LiveFitPlot
 from bluesky.callbacks.fitting import PeakStats
+from bluesky.plan_stubs import mv
 import lmfit
 
 def cryofill(wait_time_after_v19_claose = 60*10):
@@ -103,7 +104,7 @@ def xybatch_grid(xstart, xstepsize, xnumstep, ystart, ystepsize, ynumstep):
 def gaussian(x, A, sigma, x0):
     return A*np.exp(-(x - x0)**2/(2 * sigma**2))
 
-def peakup_dcm(correct_roll=True):
+def peakup_dcm(correct_roll=True, debug=False):
     '''
     Scan the HDCM fine pitch and, optionally, roll against the ion chamber in the D Hutch
 
@@ -113,9 +114,14 @@ def peakup_dcm(correct_roll=True):
     det = [sclr1]
     ps = PeakStats(dcm.c2_pitch.name,i0.name)
     ps1 = PeakStats(dcm.c1_roll.name,i0.name)
-    RE(bp.mv(shut_b,'Open'))
+    RE(mv(shut_b,'Open'))
     c2pitch_kill=EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
     
+    pitch_lim = (-19.320, -19.370)
+    pitch_num = 51
+    roll_lim = (-4.9, -5.14)
+    roll_num = 45
+
     #if e_value < 10.:
     #    sclr1.preset_time.put(0.1)
     #    RE(scan([sclr1], dcm.c2_pitch, -19.335, -19.305, 31), [ps])
@@ -126,11 +132,37 @@ def peakup_dcm(correct_roll=True):
         sclr1.preset_time.put(0.1)
     else:
         sclr1.preset_time.put(1.)
-    RE(scan([sclr1], dcm.c2_pitch, -19.314, -19.358, 45), [ps])
-    dcm.c2_pitch.move(ps.max[0],wait=True)
+    
+    if (debug == True):
+        sclr1.preset_time.put(1.0)  # If we are debugging, let's collect a longer scan
+        RE(scan(det, dcm.c2_pitch, pitch_lim[0], pitch_lim[1], pitch_num), [ps])
+        print('Pitch: Maximum flux at %f' % (ps.max[0]))
+        plt.figure()
+        plt.plot(ps.x_data, ps.y_data, label='Data')
+        plt.plot((ps.max[0], ps.max[0]), (np.amin(ps.y_data), np.amax(ps.y_data)), '--k', label='Maximum')
+        plt.xlabel('HDCM C2 PITCH')
+        plt.ylabel('Counts')
+        plt.legend()
+    else:
+        RE(scan(det, dcm.c2_pitch, pitch_lim[0], pitch_lim[1], pitch_num), [ps])
+    dcm.c2_pitch.move(ps.max[0], wait=True)
+
     if correct_roll == True:
-        RE(scan([sclr1], dcm.c1_roll, -4.870, -5.020, 31), [ps1])
+        if (debug == True):
+            sclr1.preset_time.put(1.0)  # If we are debugging, let's collect a longer scan
+            RE(scan(det, dcm.c1_roll, roll_lim[0], roll_lim[1], roll_num), [ps1])
+            print('Roll: Maximum flux at %f' % (ps1.max[0]))
+            print('Roll: Centroid at %f' % (ps1.cen))
+            plt.figure()
+            plt.plot(ps1.x_data, ps1.y_data, label='Data')
+            plt.plot((ps1.cen, ps1.cen), (np.amin(ps1.y_data), np.amax(ps1.y_data)), '--k', label='Centroid')
+            plt.xlabel('HDCM ROLL')
+            plt.ylabel('Counts')
+            plt.legend()
+        else:
+            RE(scan(det, dcm.c1_roll, roll_lim[0], roll_lim[1], roll_num), [ps1])
         dcm.c1_roll.move(ps1.cen,wait=True)
+
     #for some reason we now need to kill the pitch motion to keep it from overheating.  6/8/17
     #this need has disappeared mysteriously after the shutdown - gjw 2018/01/19
     #time.sleep(5)

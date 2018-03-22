@@ -17,11 +17,39 @@ proposal_title = None
 PI_lastname = None
 saf_num = None
 
-proposal_num = 302925 
-proposal_title = 'Routine Setup and Testing for Beamline 5-ID'
-PI_lastname = 'Chu'
-saf_num = 301967
+#proposal_num = 302925 
+#proposal_title = 'Routine Setup and Testing for Beamline 5-ID'
+#PI_lastname = 'Chu'
+#saf_num = 301967
 
+#proposal_num = 301962 
+#proposal_title = 'Characterization of single crystal growth in glass by laser heating'
+#PI_lastname = 'Jain'
+#saf_num = 302040 
+
+#proposal_num = 302659 
+#proposal_title = 'Resolving the Electroactive Interface of CuFe2O4 composite battery electrodes: An Operando XRF mapping / XANES Investigation'
+#PI_lastname = 'Bock'
+#saf_num = 302104 
+
+#proposal_num = 302712  
+#proposal_title = 'Modeling Microscale Arsenic Reactivity in Complex Soil Matrices'
+#PI_lastname = 'Sharma'
+#saf_num = 302059 
+
+proposal_num = 302252   
+proposal_title = 'Spectro-microscopic study of intermetallic particles in aluminum alloys'
+PI_lastname = 'Chou'
+saf_num = 302074
+
+
+
+"""
+proposal_num = 302825 
+proposal_title = 'Use of X-ray spectromicroscopic techniques on understanding the effect of sea-level rise on the production and breakdown of natural organohalogens in coastal wetlands'
+PI_lastname = 'Schlesinger'
+saf_num = 302026 
+"""
 
 logfilename_postfix = str(saf_num)
 

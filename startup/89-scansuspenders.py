@@ -15,6 +15,7 @@ def shuttergenerator(shutter, value):
     return (yield from bpp.rewindable_wrapper(bps.mv(shutter, value), False))
 
 #ring current suspender
+# old values 140, resume=160
 susp_rc = SuspendFloor(ring_current, 140, resume_thresh=160, sleep=10*60,
                        pre_plan=list(shuttergenerator(shut_b, 'Close')),
                        post_plan=list(shuttergenerator(shut_b, 'Open'))

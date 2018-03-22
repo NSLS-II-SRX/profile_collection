@@ -41,13 +41,24 @@ class SRXFlyer1Axis(Device):
 #    LARGE_FILE_DIRECTORY_WRITE_PATH = '/tmp/fly_scan_ancillary'
     LARGE_FILE_DIRECTORY_READ_PATH = '/XF05IDD/data/2018-1/fly_scan_ancillary'
     "This is the Zebra."
-    def __init__(self, encoder, xs, sclr1, *, reg=db.reg, **kwargs):
+    def __init__(self, encoder, xs, sclr1, fast_axis, *, reg=db.reg, **kwargs):
         super().__init__('', parent=None, **kwargs)
         self._mode = 'idle'
         self._encoder = encoder
         self._det = xs
         self._sis = sclr1
         self._filestore_resource = None
+        
+        self._fast_axis = fast_axis
+
+        if self._fast_axis == 'HOR':
+            self.stage_sigs[self._encoder.pc.enc] = 'Enc2'
+            self.stage_sigs[self._encoder.pc.dir] = 'Positive'
+            self.stage_sigs[self._encoder.pc.enc_res2] = 5E-6
+        elif self._fast_axis == 'VER':
+            self.stage_sigs[self._encoder.pc.enc] = 'Enc1'
+            self.stage_sigs[self._encoder.pc.dir] = 'Positive'
+            self.stage_sigs[self._encoder.pc.enc_res1] = -5E-6
 
         # gating info for encoder capture
         self.stage_sigs[self._encoder.pc.gate_num] = 1
@@ -105,7 +116,7 @@ class SRXFlyer1Axis(Device):
         extent = xstop - xstart
         pxsize = extent / (xnum-1)
         #1 ms delay between pulses
-        decrement = ((pxsize / dwell) * 0.001)
+        decrement = ((pxsize / dwell) * 0.002)
         self._encoder.pc.gate_start.put(xstart)
         #self._encoder.pc.gate_step.put(extent+0.01)
         #self._encoder.pc.gate_width.put(extent+0.005)
@@ -122,6 +133,14 @@ class SRXFlyer1Axis(Device):
         #self._encoder.pc.pulse_step.put(dwell)
         #self._encoder.pc.pulse_width.put(dwell-0.001)
         self._encoder.pc.arm.put(1)
+        #THIS MUST CHANGE!!!!
+        if self._fast_axis == 'VER':
+            self._encoder.pc.enc_res1.put(-5e-6)
+            self._encoder.pc.enc_pos1_sync.put(1)
+        elif self._fast_axis == 'HOR':
+            self._encoder.pc.enc_res2.put(5e-6)
+            self._encoder.pc.enc_pos2_sync.put(1)
+
         st = NullStatus()  # TODO Return a status object *first* and do the above asynchronously.
         return st
 
@@ -176,7 +195,7 @@ class SRXFlyer1Axis(Device):
         xs_datum_id = self.reg.register_datum(self._det.hdf5._filestore_res, {})
 
         # Write the file.
-        export_zebra_data(self._encoder, self.__write_filepath)
+        export_zebra_data(self._encoder, self.__write_filepath,self._fast_axis)
         export_sis_data(self._sis, self.__write_filepath_sis)
 
         # Yield a (partial) Event document. The RunEngine will put this
@@ -213,11 +232,12 @@ class SRXFlyer1Axis(Device):
         self.stage()
 
 
-flying_zebra = SRXFlyer1Axis(zebra, xs, sclr1, name='flying_zebra')
+flying_zebra = SRXFlyer1Axis(zebra, xs, sclr1, 'HOR', name='flying_zebra')
+flying_zebra_y = SRXFlyer1Axis(zebra, xs, sclr1, 'VER', name='flying_zebra')
 #flying_zebra = SRXFlyer1Axis(zebra)
 
 
-def export_zebra_data(zebra, filepath):
+def export_zebra_data(zebra, filepath, fast_axis):
     j = 0
     while zebra.pc.data_in_progress.get()==1:
         print('waiting zebra')
@@ -229,10 +249,18 @@ def export_zebra_data(zebra, filepath):
 
     #ttime.sleep(.5)
     time_d = zebra.pc.data.time.get()
-    enc1_d = zebra.pc.data.enc2.get()
+    if fast_axis == 'HOR':
+        enc1_d = zebra.pc.data.enc2.get()
+    else:
+        enc1_d = zebra.pc.data.enc1.get()
+        
     while len(time_d) == 0 or len(time_d) != len(enc1_d):
         time_d = zebra.pc.data.time.get()
-        enc1_d = zebra.pc.data.enc2.get()
+        #enc1_d = zebra.pc.data.enc2.get()
+        if fast_axis == 'HOR':
+            enc1_d = zebra.pc.data.enc2.get()
+        else:
+            enc1_d = zebra.pc.data.enc1.get()
 
     size = (len(time_d),)
     with h5py.File(filepath, 'w') as f:
@@ -327,9 +355,10 @@ class LiveZebraPlot(CallbackBase):
         self._uid = None
         self._desc_uid = None
 
-
+#changed the flyer device to be aware of fast vs slow axis in a 2D scan
+#should abstract this method to use fast and slow axes, rather than x and y
 def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
-                 delta=0.001, shutter = True,
+                 delta=0.002, shutter = True,
                  xmotor=hf_stage.x, ymotor=hf_stage.y,
                  xs=xs, ion=sclr1, align = False,
                  flying_zebra=flying_zebra, md=None):
@@ -347,7 +376,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     if md is None:
         md = {}
     if delta is None:
-        delta=0.01
+        delta=0.002
     yield from abs_set(ymotor, ystart, wait=True) # ready to move
     yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
 
@@ -356,21 +385,21 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
 
     if align == True:
         fly_ps = PeakStats(dcm.c2_pitch.name,i0.name)
-        align_scan = scan([sclr1], dcm.c2_pitch, -19.314, -19.358, 45)
+        align_scan = scan([sclr1], dcm.c2_pitch, -19.320, -19.360, 41)
         align_scan = bp.subs_wrapper(align_scan,fly_ps)
         yield from align_scan
         yield from abs_set(dcm.c2_pitch,fly_ps.max[0],wait=True)
         #ttime.sleep(10)
         #yield from abs_set(c2pitch_kill, 1)
     else:
-        ttime.sleep(1.)
+        ttime.sleep(0.)
 
     md = ChainMap(md, {
         'plan_name': 'scan_and_fly',
         'detectors': [zebra.name,xs.name,ion.name],
         'dwell' : dwell,
         'shape' : (xnum,ynum),
-        'scaninfo' : {'type': 'XRF_fly', 'raster' : False},
+        'scaninfo' : {'type': 'XRF_fly', 'raster' : False, 'fast_axis':flying_zebra._fast_axis},
         'scan_params' : [xstart,xstop,xnum,ystart,ystop,ynum,dwell]
         }
     )
@@ -381,45 +410,29 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     def fly_each_step(detectors, motor, step, firststep):
         "See http://nsls-ii.github.io/bluesky/plans.html#the-per-step-hook"
         # First, let 'scan' handle the normal y step, including a checkpoint.
-#        print('ystep\t\t',time.time())
-#        print(detectors,motor,step)
         yield from one_1d_step(detectors, motor, step)
 
         # Now do the x steps.
-        v = (xstop - xstart) / (xnum) / dwell  # compute "stage speed"
+        v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
         yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
-#        print(v)
         yield from abs_set(xmotor.velocity, v, wait=True)  # set the "stage speed"
-#        print('x config done\t',time.time())
         yield from abs_set(xs.hdf5.num_capture, xnum)
-#        print('h5 config done\t',time.time())
         yield from abs_set(xs.settings.num_images, xnum)
-#        print('xs config done\t',time.time())
         yield from abs_set(ion.nuse_all,xnum)
- #       print('sclr config done\t',time.time())
         # arm the Zebra (start caching x positions)
         yield from kickoff(flying_zebra, xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell, wait=True)
- #       print('kickoff done\t',time.time())
         yield from abs_set(xs.settings.acquire, 1)  # start acquiring images
- #       print('xs armed\t',time.time())
         yield from abs_set(ion.erase_start, 1) # arm SIS3820, note that there is a 1 sec delay in setting X into motion
                                                # so the first point *in each row* won't normalize...
- #       print('sclr armed\t',time.time())
         #if firststep == True:
         #    ttime.sleep(0.)
-        ttime.sleep(.5)
-        yield from abs_set(xmotor, xstop+delta, wait=True)  # move in x
- #       print('x moved\t',time.time())
+        ttime.sleep(1.5)
+        yield from abs_set(xmotor, xstop+1*delta, wait=True)  # move in x
         yield from abs_set(xs.settings.acquire, 0)  # stop acquiring images
- #       print('xs stopped\t',time.time())
         yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
- #       print('sclr stopped\t',time.time())
         yield from complete(flying_zebra)  # tell the Zebra we are done
- #       print('zebra stopped\t',time.time())
         yield from collect(flying_zebra)  # extract data from Zebra
- #       print('zebra collected\t',time.time())
-        yield from abs_set(xmotor.velocity, 3.)  # set the "stage speed"
- #       print('xmotor v set\t',time.time())
+        yield from abs_set(xmotor.velocity, 1.,wait=True)  # set the "stage speed"
 
     def at_scan(name, doc):
         scanrecord.current_scan.put(doc['uid'][:6])
@@ -565,3 +578,15 @@ def batch_fly_arb(paramlist,kwlist=None,motlist=None):
             for pospair in motlist[i]:
                 yield from abs_set(pospair[0],pospair[1],wait=True)
         yield from scan_and_fly(*paramlist[i],**kwlist[i])
+
+def y_scan_and_fly(*args,**kwargs):
+    '''
+    convenience wrapper for scanning Y as the fast axis.
+    call scan_and_fly, forcing slow and fast axes to be X and Y.
+    in this function, the first three scan parameters are for the *fast axis*, 
+    i.e., the vertical, and the second three for the *slow axis*, horizontal.
+    '''
+    if 'delta' in kwargs.keys():
+        if kwargs['delta'] is not None:
+            kwargs['delta'] = 0.004
+    yield from scan_and_fly(*args,**kwargs,xmotor=hf_stage.y,ymotor=hf_stage.x,flying_zebra=flying_zebra_y)
