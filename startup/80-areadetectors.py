@@ -16,6 +16,7 @@ from ophyd import Component as C
 from hxntools.handlers import register
 register(db)
 
+
 class SRXTIFFPlugin(TIFFPlugin, FileStoreTIFF,
                     FileStoreIterativeWrite):
     file_number_sync = None
@@ -26,8 +27,10 @@ class BPMCam(SingleTrigger, AreaDetector):
 
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
              #write_path_template='/epicsdata/bpm1-cam1/2016/2/24/')
-             write_path_template='/epicsdata/bpm1-cam1/%Y/%m/%d/',
-             root='/epicsdata', reg=db.reg)
+             #write_path_template='/epicsdata/bpm1-cam1/%Y/%m/%d/',
+             #root='/epicsdata', reg=db.reg)
+             write_path_template='/nsls2/xf05id1/data/bpm1-cam1/%Y/%m/%d/',
+             root='/nsls2/xf05id1', reg=db.reg)
     roi1 = C(ROIPlugin, 'ROI1:')
     roi2 = C(ROIPlugin, 'ROI2:')
     roi3 = C(ROIPlugin, 'ROI3:')
@@ -64,8 +67,10 @@ class SRXPixirad(SingleTrigger,AreaDetector):
     stats3 = C(StatsPlugin, 'Stats3:')
     stats4 = C(StatsPlugin, 'Stats4:')
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
-             write_path_template='/epicsdata/pixirad/%Y/%m/%d/',
-             root='/epicsdata')
+             #write_path_template='/epicsdata/pixirad/%Y/%m/%d/',
+             #root='/epicsdata')
+             write_path_template='/nsls2/xf05id1/data/pixirad/%Y/%m/%d/',
+             root='/nsls2/xf05id1')
 
 #pixi = SRXPixirad('XF:05IDD-ES:1{Det:Pixi}', name='pixi', read_attrs=['stats1','stats2','stats3','stats4','tiff'])
 #pixi.stats1.read_attrs = ['total','centroid','sigma_x','sigma_y']
@@ -88,8 +93,10 @@ class SRXHFVLMCam(SingleTrigger,AreaDetector):
     over1 = C(OverlayPlugin, 'Over1:')
     trans1 = C(TransformPlugin, 'Trans1:')
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
-             write_path_template='/epicsdata/hfvlm/%Y/%m/%d/',
-             root='/epicsdata',
+             #write_path_template='/epicsdata/hfvlm/%Y/%m/%d/',
+             #root='/epicsdata',
+             write_path_template='/nsls2/xf05id1/data/hfvlm/%Y/%m/%d/',
+             root='/nsls2/xf05id1',
              reg=db.reg)
 
 hfvlmAD = SRXHFVLMCam('XF:05IDD-BI:1{Mscp:1-Cam:1}', name='hfvlm', read_attrs=['tiff'])
@@ -269,8 +276,11 @@ class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
                read_path_template='/XF05IDD/XSPRESS3/2018-1/',
                #write_path_template='/epics/data/2017-3/',
                write_path_template='/epics/data/2018-1/',
+               #write_path_template='/nsls2/xf05id1/XF05ID1/XSPRESS3/2018-1',
+               #write_path_template='/nsls2/xf05id1/data/xspress3/%Y/%M/',
 #               root='/data',
                root='/XF05IDD',
+               #root='/nsls2/xf05id1',
                reg=db.reg)
 
     def __init__(self, prefix, *, configuration_attrs=None, read_attrs=None,

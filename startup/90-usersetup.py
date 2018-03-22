@@ -17,10 +17,17 @@ proposal_title = None
 PI_lastname = None
 saf_num = None
 
-#proposal_num = 302925 
-#proposal_title = 'Routine Setup and Testing for Beamline 5-ID'
-#PI_lastname = 'Chu'
-#saf_num = 301967
+proposal_num = 302249
+proposal_title = 'Fast in-situ Probing Local Synthesis Reactions using X-ray Fluorescence Microscopy'
+PI_lastname = 'Wang'
+saf_num = 302307
+
+"""
+proposal_num = 302925 
+proposal_title = 'Routine Setup and Testing for Beamline 5-ID'
+PI_lastname = 'Chu'
+saf_num = 301967
+"""
 
 #proposal_num = 301962 
 #proposal_title = 'Characterization of single crystal growth in glass by laser heating'
@@ -37,12 +44,12 @@ saf_num = None
 #PI_lastname = 'Sharma'
 #saf_num = 302059 
 
+"""
 proposal_num = 302252   
 proposal_title = 'Spectro-microscopic study of intermetallic particles in aluminum alloys'
 PI_lastname = 'Chou'
 saf_num = 302074
-
-
+"""
 
 """
 proposal_num = 302825 

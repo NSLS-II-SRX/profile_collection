@@ -36,10 +36,10 @@ register(db)
 from hxntools.detectors.xspress3 import Xspress3FileStore
 
 class SRXFlyer1Axis(Device):
-    LARGE_FILE_DIRECTORY_WRITE_PATH = '/XF05IDD/data/2018-1/fly_scan_ancillary'
+    LARGE_FILE_DIRECTORY_WRITE_PATH = '/nsls2/xf05id1/XF05ID1/data/2018-1/fly_scan_ancillary/'
 #    LARGE_FILE_DIRECTORY_READ_PATH = '/tmp/test_data'
 #    LARGE_FILE_DIRECTORY_WRITE_PATH = '/tmp/fly_scan_ancillary'
-    LARGE_FILE_DIRECTORY_READ_PATH = '/XF05IDD/data/2018-1/fly_scan_ancillary'
+    LARGE_FILE_DIRECTORY_READ_PATH = '/nsls2/xf05id1/XF05ID1/data/2018-1/fly_scan_ancillary/'
     "This is the Zebra."
     def __init__(self, encoder, xs, sclr1, fast_axis, *, reg=db.reg, **kwargs):
         super().__init__('', parent=None, **kwargs)
