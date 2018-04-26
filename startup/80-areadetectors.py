@@ -318,6 +318,51 @@ xs.channel2.vis_enabled.put(1)
 xs.channel3.vis_enabled.put(1)
 xs.settings.num_channels.put(3)
 
+class SrxXspress3Detector2(XspressTrigger, Xspress3Detector):
+    # TODO: garth, the ioc is missing some PVs?
+    #   det_settings.erase_array_counters
+    #       (XF:05IDD-ES{Xsp:1}:ERASE_ArrayCounters)
+    #   det_settings.erase_attr_reset (XF:05IDD-ES{Xsp:1}:ERASE_AttrReset)
+    #   det_settings.erase_proc_reset_filter
+    #       (XF:05IDD-ES{Xsp:1}:ERASE_PROC_ResetFilter)
+    #   det_settings.update_attr (XF:05IDD-ES{Xsp:1}:UPDATE_AttrUpdate)
+    #   det_settings.update (XF:05IDD-ES{Xsp:1}:UPDATE)
+    roi_data = Cpt(PluginBase, 'ROIDATA:')
+    channel1 = C(Xspress3Channel, 'C1_', channel_num=1, read_attrs=['rois'])
+
+    hdf5 = Cpt(Xspress3FileStoreFlyable, 'HDF5:',
+               read_path_template='/nsls2/xf05id1/data/2018-1/XS3MINI',
+               # read_path_template='/XF05IDD/XSPRESS3-2/2018-1/',
+               # write_path_template='/epics/data/2017-3/',
+               # write_path_template='/nsls2/xf05id1/data/2018-1/XS3MINI',
+               write_path_template='/home/xspress3/data/SRX/2018-1',
+               #write_path_template='/nsls2/xf05id1/XF05ID1/XSPRESS3/2018-1',
+               #write_path_template='/nsls2/xf05id1/data/xspress3/%Y/%M/',
+#               root='/data',
+               # root='/',
+               root='/nsls2/xf05id1',
+               reg=db.reg)
+
+    def __init__(self, prefix, *, configuration_attrs=None, read_attrs=None,
+                 **kwargs):
+        if configuration_attrs is None:
+            configuration_attrs = ['external_trig', 'total_points',
+                                   'spectra_per_point', 'settings',
+                                   'rewindable']
+        if read_attrs is None:
+            read_attrs = ['channel1', 'hdf5']
+        super().__init__(prefix, configuration_attrs=configuration_attrs,
+                         read_attrs=read_attrs, **kwargs)
+
+    def stop(self):
+        ret = super.stop()
+        self.hdf52.stop()
+        return ret
+
+xs2 = SrxXspress3Detector2('XF:05IDD-ES{Xsp:2}:', name='xs2')
+xs2.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
+xs2.hdf5.num_extra_dims.put(0)
+
 for i in range(1,4):
     ch=getattr(xs.channel1.rois,'roi{:02}.value'.format(i))
     ch.name = 'ROI_{:02}'.format(i)

@@ -51,15 +51,23 @@ m3 = SRX_M3('XF:05IDD-OP:1{Mir:3-Ax:', name='m3')
 
 # High flux sample stages
 class HFSampleStage(Device):
-    x = Cpt(EpicsMotor, 'X}Mtr')
-    y = Cpt(EpicsMotor, 'Y}Mtr')
-    z = Cpt(EpicsMotor, 'Z}Mtr')
+    x = Cpt(EpicsMotor, '{Stg:Smpl1-Ax:X}Mtr')
+    #y = Cpt(EpicsMotor, 'Y}Mtr')
+    y = Cpt(EpicsMotor, '{Stg:Smpl1-Ax:Y}Mtr')
+    z = Cpt(EpicsMotor, '{Stg:Smpl1-Ax:Z}Mtr')
+    th = Cpt(EpicsMotor, '{Smpl:1-Ax:Rot}Mtr')
     # for NPoint
     # fine_x =
     # fine_y =
 
+#hf_stage = HFSampleStage('XF:05IDD-ES:1{Stg:Smpl1-Ax:', name='hf_stage')
+hf_stage = HFSampleStage('XF:05IDD-ES:1', name='hf_stage')
 
-hf_stage = HFSampleStage('XF:05IDD-ES:1{Stg:Smpl1-Ax:', name='hf_stage')
+
+class HFETomoStage(Device):
+    x = Cpt(EpicsMotor, 'X}Mtr')
+    y = Cpt(EpicsMotor, 'Y}Mtr')
+e_tomo = HFETomoStage('XF:05IDD-ES:1{Stg:Det2-Ax:', name = 'e_tomo')
 
 if 'velocity' not in hf_stage.x.configuration_attrs:
     hf_stage.x.configuration_attrs.append('velocity')

@@ -143,7 +143,7 @@ def xanes_plan(erange = [], estep = [],
     metadata_record()
     #add user meta data
     RE.md['sample']  = {'name': samplename}
-    RE.md['scaninfo']  = {'type': 'XANES','ROI': roinum,'raster' : False}
+    RE.md['scaninfo']  = {'type': 'XANES','ROI': roinum,'raster' : False, 'dwell':dwell}
    
     #convert erange and estep to numpy array
     erange = numpy.array(erange)
@@ -289,6 +289,7 @@ def xanes_batch_plan(xylist=[], waittime = [2],
                     samplename = None, filename = None,
                     erange = [], estep = [], struck = True, align = False, align_at=None, 
                     harmonic = None, correct_c2_x=True, delaytime=0.0, detune = None,            
+                    xmotor=hf_stage.x, ymotor=hf_stage.y, zmotor=hf_stage.z,
                     acqtime=None, roinum=1, shutter = True, fluor = True
                     ):
                         
@@ -318,10 +319,14 @@ def xanes_batch_plan(xylist=[], waittime = [2],
     
     for pt_num, position in enumerate(xylist):
         #move stages to the next point
-        yield from abs_set(hf_stage.x, position[0],wait=True) 
-        yield from abs_set(hf_stage.y, position[1],wait=True)
+        #yield from abs_set(hf_stage.x, position[0],wait=True) 
+        #yield from abs_set(hf_stage.y, position[1],wait=True)
+        #if len(position) == 3:
+        #    yield from abs_set(hf_stage.z, position[2],wait=True)
+        yield from abs_set(xmotor, position[0],wait=True) 
+        yield from abs_set(ymotor, position[1],wait=True)
         if len(position) == 3:
-            yield from abs_set(hf_stage.z, position[2],wait=True)
+            yield from abs_set(zmotor, position[2],wait=True)
 
         #check bragg temperature before start the scan
 #        if dcm.temp_pitch.get() > 110:

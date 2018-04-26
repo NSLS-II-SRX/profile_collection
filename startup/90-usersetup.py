@@ -17,17 +17,18 @@ proposal_title = None
 PI_lastname = None
 saf_num = None
 
-proposal_num = 302249
-proposal_title = 'Fast in-situ Probing Local Synthesis Reactions using X-ray Fluorescence Microscopy'
-PI_lastname = 'Wang'
-saf_num = 302307
 
-"""
+#proposal_num = 302249
+#proposal_title = 'Fast in-situ Probing Local Synthesis Reactions using X-ray Fluorescence Microscopy'
+#PI_lastname = 'Wang'
+#saf_num = 302307
+
+
 proposal_num = 302925 
 proposal_title = 'Routine Setup and Testing for Beamline 5-ID'
 PI_lastname = 'Chu'
 saf_num = 301967
-"""
+
 
 #proposal_num = 301962 
 #proposal_title = 'Characterization of single crystal growth in glass by laser heating'
@@ -44,19 +45,28 @@ saf_num = 301967
 #PI_lastname = 'Sharma'
 #saf_num = 302059 
 
-"""
-proposal_num = 302252   
-proposal_title = 'Spectro-microscopic study of intermetallic particles in aluminum alloys'
-PI_lastname = 'Chou'
-saf_num = 302074
-"""
+#proposal_num = 302252   
+#proposal_title = 'Spectro-microscopic study of intermetallic particles in aluminum alloys'
+#PI_lastname = 'Chou'
+#saf_num = 302074
+
+#proposal_num = 302825 
+#proposal_title = 'Use of X-ray spectromicroscopic techniques on understanding the effect of sea-level rise on the production and breakdown of natural organohalogens in coastal wetlands'
+#PI_lastname = 'Schlesinger'
+#saf_num = 302026 
 
 """
-proposal_num = 302825 
-proposal_title = 'Use of X-ray spectromicroscopic techniques on understanding the effect of sea-level rise on the production and breakdown of natural organohalogens in coastal wetlands'
-PI_lastname = 'Schlesinger'
-saf_num = 302026 
+proposal_num = 302315
+proposal_title = 'Elucidating nanoparticle-plant leaf interactions, uptake, and mobility for designing highly efficient foliar-applied agrochemicals'
+PI_lastname = 'Avellan'
+saf_num = 302330
 """
+
+#proposal_num = 302773 
+#proposal_title = 'Understanding Copper Speciation in Brain Amyloid Deposits Involved in Cognitive Impairment'
+#PI_lastname = 'Miller'
+#saf_num = 302361
+
 
 logfilename_postfix = str(saf_num)
 

@@ -37,8 +37,8 @@ def get_stock_md():
                                 }
                                 
     md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
-                                       'hf_stage_y': hf_stage.y.position,
-                                       'hf_stage_z': hf_stage.z.position}
+                                     'hf_stage_y': hf_stage.y.position,
+                                     'hf_stage_z': hf_stage.z.position}
     md['wb_slits'] = {'v_gap' : slt_wb.v_gap.position,
                             'h_gap' : slt_wb.h_gap.position,
                             'v_cen' : slt_wb.v_cen.position,
@@ -80,9 +80,9 @@ def get_stock_md_xfm():
 def hf2dxrf(*, xstart, xnumstep, xstepsize, 
             ystart, ynumstep, ystepsize, 
             #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
-            shutter = True, align = False,
+            shutter = True, align = False, xmotor = hf_stage.x, ymotor = hf_stage.y,
             acqtime, numrois=1, i0map_show=True, itmap_show=False, record_cryo = False,
-            dpc = None, struck = True, srecord = None, 
+            dpc = None, e_tomo=None, struck = True, srecord = None, 
             setenergy=None, u_detune=None, echange_waittime=10,samplename=None):
 
     '''
@@ -104,6 +104,8 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     md = get_stock_md()
     md['sample']  = {'name': samplename}
     md['scaninfo']  = {'type': 'XRF', 'raster' : True}
+    if e_tomo is not None:
+        md['scaninfo']  = {'type': 'E_Tomo', 'raster' : True}
     h=db[-1]
     xs.external_trig.put(False)
 
@@ -149,6 +151,13 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         dpc.cam.image_mode.put(0)
         #dpc.cam.acquire_time.put(acqtime)
         dpc.cam.acquire_time.put(acqtime*0.2)
+    if e_tomo is not None:
+        md = ChainMap( md, {'hf_stage_th': hf_stage.th.position})
+        det.append(e_tomo)
+        e_tomo.external_trig.put(False)
+        e_tomo.settings.acquire_time.put(acqtime)
+        e_tomo.total_points.put((xnumstep+1)*(ynumstep+1))
+
 
 
     #setup the live callbacks
@@ -171,9 +180,9 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     livecallbacks.append(time_per_point)
                                 
     if struck == False:
-        livetableitem = [hf_stage.x.name, hf_stage.y.name, 'current_preamp_ch0', 'current_preamp_ch2']
+        livetableitem = [xmotor.name, ymotor.name, 'current_preamp_ch0', 'current_preamp_ch2']
     else:
-        livetableitem = [hf_stage.x.name, hf_stage.y.name, i0.name]
+        livetableitem = [xmotor.name, ymotor.name, i0.name]
 
     xstop = xstart + xnumstep*xstepsize
     ystop = ystart + ynumstep*ystepsize  
@@ -188,16 +197,23 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         roi_key = getattr(xs.channel1.rois, roi_name).value.name
         livetableitem.append(roi_key)
         
-    #    livetableitem.append('saturn_mca_rois_roi'+str(roi_idx)+'_net_count')
-    #    livetableitem.append('saturn_mca_rois_roi'+str(roi_idx)+'_count')
-    #    #roimap = LiveGrid((xnumstep, ynumstep), 'saturn_mca_rois_roi'+str(roi_idx)+'_net_count', clim=None, cmap='viridis', xlabel='x', ylabel='y', extent=None)
-        colormap = 'viridis'
-    #    roimap = LiveGrid((ynumstep, xnumstep), 'saturn_mca_rois_roi'+str(roi_idx)+'_count', clim=None, cmap='jet', 
-    #                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
 
-        roimap = LiveGrid((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno', 
+        if e_tomo is None:
+            roimap = LiveGrid((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno', 
                             xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
-        livecallbacks.append(roimap)
+            livecallbacks.append(roimap)
+
+    if e_tomo is not None:
+        #livecallbacks.remove(roimap)
+        for roi_idx in range(numrois):
+            roi_name = 'roi{:02}'.format(roi_idx+1)
+        
+            roi_key = getattr(xs2.channel1.rois, roi_name).value.name
+            livetableitem.append(roi_key)
+        
+            roimap2 = LiveGrid((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno', 
+                                xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+            livecallbacks.append(roimap2)
 
     if dpc is not None:
         dpc_tmap = LiveGrid((ynumstep+1, xnumstep+1), dpc.stats1.total.name, clim=None, cmap='magma',
@@ -272,8 +288,8 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     #TO-DO: implement fast shutter control (open)
     #TO-DO: implement suspender for all shutters in genral start up script
     if shutter is True: 
-        yield from abs_set(hf_stage.x,xstart, wait = True)
-        yield from abs_set(hf_stage.y,ystart, wait = True)
+        yield from abs_set(xmotor,xstart, wait = True)
+        yield from abs_set(ymotor,ystart, wait = True)
         yield from mv(shut_b,'Open')
 
     #peak up monochromator at this energy
@@ -300,7 +316,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         scanrecord.scanning.put(False)
 
 
-    hf2dxrf_scanplan = outer_product_scan(det, hf_stage.y, ystart, ystop, ynumstep+1, hf_stage.x, xstart, xstop, xnumstep+1, True, md=md)
+    hf2dxrf_scanplan = outer_product_scan(det, ymotor, ystart, ystop, ynumstep+1, xmotor, xstart, xstop, xnumstep+1, True, md=md)
 #    hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, livecallbacks)
     hf2dxrf_scanplan = subs_wrapper( hf2dxrf_scanplan, {'all':livecallbacks,'start':at_scan,'stop':finalize_scan})
     scaninfo = yield from hf2dxrf_scanplan
@@ -712,7 +728,7 @@ def hf2dxrf_xfm(*, xstart, xnumstep, xstepsize,
             shutter = True, struck = True, align = False,
             #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
             acqtime, numrois=1, i0map_show=True, itmap_show=False,
-            energy=None, u_detune=None):
+            energy=None, u_detune=None,samplename=None):
 
     '''
     input:
@@ -730,19 +746,24 @@ def hf2dxrf_xfm(*, xstart, xnumstep, xstepsize,
 
     #record relevant meta data in the Start document, defined in 90-usersetup.py
     md = get_stock_md_xfm()
+    md['sample']  = {'name': samplename}
+    md['scaninfo']  = {'type': 'XRF', 'raster' : True}
 
     #setup the detector
     # TODO do this with configure
-    current_preamp.exp_time.put(acqtime)
+    # current_preamp.exp_time.put(acqtime)
+    sclr1.preset_time.put(acqtime)
     xs.settings.acquire_time.put(acqtime)
     xs.total_points.put((xnumstep+1)*(ynumstep+1))
 
-    det = [current_preamp, xs]        
+    # det = [current_preamp, xs]
+    det = [sclr1, xs]
 
     #setup the live callbacks
     livecallbacks = []
     
-    livetableitem = [stage.x, stage.y, 'current_preamp_ch0', 'current_preamp_ch2']
+    # livetableitem = [stage.x, stage.y, 'current_preamp_ch0', 'current_preamp_ch2']
+    livetableitem = [stage.x, stage.y, i0.name]
 
     xstop = xstart + xnumstep*xstepsize
     ystop = ystart + ynumstep*ystepsize  
@@ -764,8 +785,10 @@ def hf2dxrf_xfm(*, xstart, xnumstep, xstepsize,
 
 
     if i0map_show is True:
-        i0map = LiveGrid((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='viridis', 
-                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+        # i0map = LiveGrid((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='viridis', 
+        #                 xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+        i0map = LiveGrid((ynumstep+1, xnumstep+1), i0.name, clim=None, cmap='viridis', 
+                                xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(i0map)
 
     if itmap_show is True:
@@ -788,17 +811,23 @@ def hf2dxrf_xfm(*, xstart, xnumstep, xstepsize,
 
     #TO-DO: implement fast shutter control (open)
     #TO-DO: implement suspender for all shutters in genral start up script
-    
-    if shutter is True: 
-        shut_b.put(1)
+    # if shutter is True: 
+    #     shut_b.put(1)
+    if shutter is True:
+       yield from abs_set(stage.x,xstart, wait = True)
+       yield from abs_set(stage.y,ystart, wait = True)
+       yield from mv(shut_b,'Open')
 
-    hf2dxrf_scanplan = outer_product_scan(det, stage.y, ystart, ystop, ynumstep+1, stage.x, xstart, xstop, xnumstep+1, True, md=md)
+    # Snake option is set to False
+    hf2dxrf_scanplan = outer_product_scan(det, stage.y, ystart, ystop, ynumstep+1, stage.x, xstart, xstop, xnumstep+1, False, md=md)
     hf2dxrf_scanplan = subs_wrapper( hf2dxrf_scanplan, livecallbacks)
     scaninfo = yield from hf2dxrf_scanplan
 
     #TO-DO: implement fast shutter control (close)    
     if shutter is True:
-        yield from mv(shut_b,'Open') 
+        yield from abs_set(stage.x, xstart, wait=True)
+        yield from abs_set(stage.y, ystart, wait=True)
+        yield from mv(shut_b,'Close') 
 
     #write to scan log    
     logscan('2dxrf_xfm')    

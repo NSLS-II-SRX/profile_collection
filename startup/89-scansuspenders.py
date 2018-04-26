@@ -42,7 +42,7 @@ susp_shut_a = SuspendBoolHigh(shut_a.close_status, sleep = 10)
 susp_shut_b = SuspendBoolHigh(shut_b.close_status, sleep = 10)
 #susp_shut_fe = SuspendBoolHigh(shut_fe.close_status, sleep = 10)
 
-susp_shut_fe = SuspendBoolHigh(shut_fe.close_status, sleep = 10,
+susp_shut_fe = SuspendBoolHigh(shut_fe.close_status, sleep = 0,
                             pre_plan=list(shuttergenerator(shut_a, 'Close')),
                             post_plan=list(shuttergenerator(shut_a, 'Open'))
 )

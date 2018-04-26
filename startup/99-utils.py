@@ -163,6 +163,8 @@ def peakup_dcm(correct_roll=True, debug=False):
             RE(scan(det, dcm.c1_roll, roll_lim[0], roll_lim[1], roll_num), [ps1])
         dcm.c1_roll.move(ps1.cen,wait=True)
 
+    RE(mv(shut_b,'Close'))
+
     #for some reason we now need to kill the pitch motion to keep it from overheating.  6/8/17
     #this need has disappeared mysteriously after the shutdown - gjw 2018/01/19
     #time.sleep(5)
@@ -193,7 +195,7 @@ element_transitions = ['k', 'l1', 'l2', 'l3', 'm1', 'm2', 'm3', 'm4', 'm5']
 for i in interestinglist:
     elements[i] = xrfC.XrfElement(i)
 
-def setroi(roinum, element, edge=None):
+def setroi(roinum, element, edge=None, det=None):
     '''
     Set energy ROIs for Vortex SDD.  Selects elemental edge given current energy if not provided.
     roinum      [1,2,3]     ROI number
@@ -210,8 +212,11 @@ def setroi(roinum, element, edge=None):
         e = edge
 
     e_ch = int(cur_element.emission_line[e] * 1000)
-    for d in [xs.channel1,xs.channel2,xs.channel3]:
-        d.set_roi(roinum,e_ch-100,e_ch+100,name=element+'_'+e)
+    if det is not None:
+        det.channel1.set_roi(roinum, e_ch-100, e_ch+100, name=element + '_' + e)
+    else:
+        for d in [xs.channel1,xs.channel2,xs.channel3]:
+            d.set_roi(roinum,e_ch-100,e_ch+100,name=element+'_'+e)
     print("ROI{} set for {}-{} edge.".format(roinum,element,e))
 
 def getemissionE(element,edge = None):
