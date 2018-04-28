@@ -167,11 +167,25 @@ def prime_plan(N, acqtime=.001):
     yield from bps.abs_set(xs.external_trig, False)
     yield from bps.abs_set(xs.settings.acquire_time, acqtime)
     yield from bps.abs_set(xs.total_points, N)
+    yield from bps.stage(xs.hdf5)
+    #for i in range(N):
+        #yield from bps.trigger(xs)
+    yield from bps.unstage(xs.hdf5)
+
+'''
+def prime_plan(N, acqtime=.001):
+    '''
+        This fixes the issue
+    '''
+    # N : number of points you want to count up to
+    yield from bps.abs_set(xs.external_trig, False)
+    yield from bps.abs_set(xs.settings.acquire_time, acqtime)
+    yield from bps.abs_set(xs.total_points, N)
     yield from bps.stage(xs)
     #for i in range(N):
         #yield from bps.trigger(xs)
     yield from bps.unstage(xs)
-
+'''
 
 # to reset the zebra?
 #zebra.pc.block_state_reset.put(1)
