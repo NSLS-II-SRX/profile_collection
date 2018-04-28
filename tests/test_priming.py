@@ -142,7 +142,7 @@ ymotor.velocity = Signal(name="ymotor_velocity")
 # fast motor
 xstart = 0
 xstop = 10
-xnum = 1001
+xnum = 100
 
 # slow motor : dummy values
 # ynum will be the number of times to move in slow axis
@@ -151,7 +151,7 @@ ystop= 1
 ynum = 1
 
 # dwell time?
-dwell = .01
+dwell = .1
 
 from functools import partial
 plan_test=partial(scan_and_fly_test,xstart=xstart, xstop=xstop, xnum=xnum, ystart=ystart, ystop=ystop, ynum=ynum, dwell=dwell,
@@ -168,15 +168,13 @@ def prime_plan(N, acqtime=.001):
     yield from bps.abs_set(xs.settings.acquire_time, acqtime)
     yield from bps.abs_set(xs.total_points, N)
     yield from bps.stage(xs.hdf5)
-    #for i in range(N):
-        #yield from bps.trigger(xs)
+    # unset capture so that unstage doesn't hang a bit
+    yield from bps.abs_set(xs.hdf5.capture, 0)
     yield from bps.unstage(xs.hdf5)
 
 '''
+old
 def prime_plan(N, acqtime=.001):
-    '''
-        This fixes the issue
-    '''
     # N : number of points you want to count up to
     yield from bps.abs_set(xs.external_trig, False)
     yield from bps.abs_set(xs.settings.acquire_time, acqtime)
