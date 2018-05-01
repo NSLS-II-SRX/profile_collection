@@ -1,4 +1,6 @@
 from functools import partial
+from ophyd.sim import motor1, motor2
+RE.clear_suspenders()
 
 # here is what we used to figure out how to prime the detector before we
 # stripped it down
@@ -110,8 +112,8 @@ ymotor.velocity = Signal(name="ymotor_velocity")
 
 # fast motor
 xstart = 0
-xnumstep= 100
-xstepsize = .01
+xnumstep= 1000
+xstepsize = .1
 
 # slow motor : dummy values
 # ynum will be the number of times to move in slow axis
@@ -120,7 +122,7 @@ ynumstep = 0
 ystepsize = .1
 
 # dwell time?
-dwell = .1
+dwell = .01
 acqtime = .001
 
 prime_plan = partial(hf2dxrf_test, xstart=xstart, xnumstep=xnumstep, xstepsize=xstepsize, 

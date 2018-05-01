@@ -151,8 +151,11 @@ class SRXFlyer1Axis(Device):
         up to the caller to ensure that the motion is actually complete.
         """
         # Our acquisition complete PV is : XF:05IDD-ES:1{Dev:Zebra1}:ARRAY_ACQ
-        while self._encoder.pc.data_in_progress is 1:
-            poll()
+        while self._encoder.pc.data_in_progress.get() == 1:
+            print("here")
+            ttime.sleep(.1)
+            #poll()
+        ttime.sleep(.1)
         self._mode = 'complete'
         # self._encoder.pc.arm.put(0)  # sanity check; this should happen automatically
         # this does the same as the above, but also aborts data collection
@@ -273,10 +276,10 @@ def export_zebra_data(zebra, filepath, fast_axis):
 def export_sis_data(ion, filepath):
     t = ion.mca1.get(timeout=5.)
     i = ion.mca2.get(timeout=5.)
-    correct_length = zebra.pc.data.num_down.get()
     while len(t) == 0 and len(t) != len(i):
         t = ion.mca1.get(timeout=5.)
         i = ion.mca2.get(timeout=5.)
+    correct_length = zebra.pc.data.num_down.get()
     size = (len(t),)
     size2 = (len(i),)
     with h5py.File(filepath, 'w') as f:
@@ -354,6 +357,8 @@ class LiveZebraPlot(CallbackBase):
     def stop(self, doc):
         self._uid = None
         self._desc_uid = None
+
+
 
 #changed the flyer device to be aware of fast vs slow axis in a 2D scan
 #should abstract this method to use fast and slow axes, rather than x and y
@@ -456,6 +461,8 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
     def plan():
+        yield from bps.mov(xs.total_points, xnum)
+        # added to "prime" the detector
         #yield from abs_set(xs.settings.trigger_mode, 'TTL Veto Only')
         yield from abs_set(xs.external_trig, True)
         ystep = 0
@@ -590,4 +597,3 @@ def y_scan_and_fly(*args,**kwargs):
         if kwargs['delta'] is not None:
             kwargs['delta'] = 0.004
     yield from scan_and_fly(*args,**kwargs,xmotor=hf_stage.y,ymotor=hf_stage.x,flying_zebra=flying_zebra_y)
-

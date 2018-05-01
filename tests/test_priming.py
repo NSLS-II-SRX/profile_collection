@@ -75,7 +75,7 @@ def scan_and_fly_test(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
                                                # so the first point *in each row* won't normalize...
         #if firststep == True:
         #    ttime.sleep(0.)
-        ttime.sleep(1.5)
+        ttime.sleep(10)
         yield from abs_set(xmotor, xstop+1*delta, wait=True)  # move in x
         yield from abs_set(xs.settings.acquire, 0)  # stop acquiring images
         yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
@@ -105,6 +105,7 @@ def scan_and_fly_test(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
     def plan():
+        yield from bps.mov(xs.total_points, xnum)
         #yield from abs_set(xs.settings.trigger_mode, 'TTL Veto Only')
         yield from abs_set(xs.external_trig, True)
         ystep = 0
@@ -141,8 +142,10 @@ ymotor.velocity = Signal(name="ymotor_velocity")
 
 # fast motor
 xstart = 0
-xstop = 10
-xnum = 100
+xstop = 1
+xnum = 2001
+# dwell time?
+dwell = .01
 
 # slow motor : dummy values
 # ynum will be the number of times to move in slow axis
@@ -150,8 +153,6 @@ ystart = 0
 ystop= 1
 ynum = 1
 
-# dwell time?
-dwell = .1
 
 from functools import partial
 plan_test=partial(scan_and_fly_test,xstart=xstart, xstop=xstop, xnum=xnum, ystart=ystart, ystop=ystop, ynum=ynum, dwell=dwell,
@@ -172,6 +173,23 @@ def prime_plan(N, acqtime=.001):
     yield from bps.abs_set(xs.hdf5.capture, 0)
     yield from bps.unstage(xs.hdf5)
 
+def prime_xs_hdf5(N):
+    print(f"Priming the hdf5 plugin to capture at least {N} images")
+    xs.external_trig.put(False)
+    xs.settings.acquire_time.put(acqtime)
+    xs.total_points.put(N)
+    xs.hdf5.stage()
+    # unset capture so that unstage doesn't hang a bit
+    xs.hdf5.capture.pu(0)
+    xs.hdf5.unstage()
+
+def init_hdf5_plugin():
+    xs.hdf5.file_name.put("deleteme")
+    xs.hdf5.capture.put(1)
+    xs.hdf5.capture.put(0)
+    # we usually expect 1000 frames
+    prime_xs_hdf5(1000)
+
 '''
 old
 def prime_plan(N, acqtime=.001):
@@ -188,6 +206,23 @@ def prime_plan(N, acqtime=.001):
 # to reset the zebra?
 #zebra.pc.block_state_reset.put(1)
 
+# testing the warmup
+def init_hdf5_plugin():
+    '''
+        We need to save a file once
+        Not using this right now; it doesn't work
+        We need to manually do this for now.
+    '''
+    xs.external_trig.put(False)
+    xs.stage()
+    ttime.sleep(.2)
+    xs.hdf5.capture.put(1)
+    xs.hdf5.capture.put(0)
+    xs.unstage()
+    xs.hdf5.file_name.put("deleteme")
+    #ttime.sleep(.1)
+    #xs.hdf5.capture.put(0)
+    # we usually expect 1000 frames
 
 '''
 Start a flyer:
@@ -213,5 +248,8 @@ complete:
 zebra.pc.armed
 
 collect
+
+
+# detector:
 
 '''
