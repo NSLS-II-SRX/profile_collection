@@ -149,7 +149,7 @@ class BulkXSPRESS(HandlerBase):
 
     def __call__(self):
         return self._handle['entry/instrument/detector/data'][:]
-    
+
 db.reg.register_handler(BulkXSPRESS.HANDLER_NAME, BulkXSPRESS,
                        overwrite=True)
 
@@ -167,7 +167,7 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
                                     }
                 for uid, ch in zip(uids, self.channels)
                 }
-    
+
     @property
     def filestore_res(self):
         return self._filestore_res
@@ -241,7 +241,7 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
 
         logger.debug('Inserting the filestore resource: %s', self._fn)
         fn = PurePath(self._fn).relative_to(self.reg_root)
-        # This change needs to be upstreamed        
+        # This change needs to be upstreamed
         self._filestore_res = self._resource = self._reg.insert_resource(
             self.fs_type, str(fn), {},
             root=str(self.reg_root))
@@ -254,6 +254,41 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
         #time.sleep(self._config_time)
 
         return ret
+
+    def warmup(self):
+        """
+        A convenience method for 'priming' the plugin.
+        The plugin has to 'see' one acquisition before it is ready to capture.
+        This sets the array size, etc.
+
+        NOTE : this comes from:
+            https://github.com/NSLS-II/ophyd/blob/master/ophyd/areadetector/plugins.py
+        We had to replace "cam" with "settings" here.
+        Also modified the stage sigs.
+
+        """
+        print("warming up the hdf5 plugin...")
+        set_and_wait(self.enable, 1)
+        sigs = OrderedDict([(self.parent.settings.array_callbacks, 1),
+                            (self.parent.settings.image_mode, 'Single'),
+                            (self.parent.settings.trigger_mode, 'Internal'),
+                            # just in case tha acquisition time is set very long...
+                            (self.parent.settings.acquire_time , 1),
+                            #(self.parent.settings.acquire_period, 1),
+                            (self.parent.settings.acquire, 1)])
+
+        original_vals = {sig: sig.get() for sig in sigs}
+
+        for sig, val in sigs.items():
+            ttime.sleep(0.1)  # abundance of caution
+            set_and_wait(sig, val)
+
+        ttime.sleep(2)  # wait for acquisition
+
+        for sig, val in reversed(list(original_vals.items())):
+            ttime.sleep(0.1)
+            set_and_wait(sig, val)
+        print("done")
 
 
 
@@ -318,6 +353,12 @@ xs.channel2.vis_enabled.put(1)
 xs.channel3.vis_enabled.put(1)
 xs.settings.num_channels.put(3)
 
+# This is necessary for when the ioc restarts
+# we have to trigger one image for the hdf5 plugin to work correclty
+# else, we get file writing errors
+xs.hdf5.warmup()
+
+
 class SrxXspress3Detector2(XspressTrigger, Xspress3Detector):
     # TODO: garth, the ioc is missing some PVs?
     #   det_settings.erase_array_counters
@@ -359,10 +400,12 @@ class SrxXspress3Detector2(XspressTrigger, Xspress3Detector):
         self.hdf52.stop()
         return ret
 
-xs2 = SrxXspress3Detector2('XF:05IDD-ES{Xsp:2}:', name='xs2')
-xs2.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
-xs2.hdf5.num_extra_dims.put(0)
+#xs2 = SrxXspress3Detector2('XF:05IDD-ES{Xsp:2}:', name='xs2')
+#xs2.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
+#xs2.hdf5.num_extra_dims.put(0)
+#xs2.hdf5.warmup()
 
 for i in range(1,4):
     ch=getattr(xs.channel1.rois,'roi{:02}.value'.format(i))
     ch.name = 'ROI_{:02}'.format(i)
+
