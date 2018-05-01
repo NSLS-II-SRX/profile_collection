@@ -1,3 +1,5 @@
+# these are mainly notes of what we tried to test the hdf5 detector priming
+# issue
 from ophyd.sim import motor1, motor2
 
 
@@ -180,7 +182,7 @@ def prime_xs_hdf5(N):
     xs.total_points.put(N)
     xs.hdf5.stage()
     # unset capture so that unstage doesn't hang a bit
-    xs.hdf5.capture.pu(0)
+    xs.hdf5.capture.put(0)
     xs.hdf5.unstage()
 
 def init_hdf5_plugin():
