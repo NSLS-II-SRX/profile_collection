@@ -380,4 +380,4 @@ class SRXZebra(Zebra):
                         configuration_attrs=configuration_attrs, **kwargs)
     
 zebra = SRXZebra('XF:05IDD-ES:1{Dev:Zebra1}:', name='zebra')
-zebra.read_attrs =['zebra_pc_data_enc1','zebra_pc_data_time']
+zebra.read_attrs = ['pc.data.enc1', 'pc.data.time']
