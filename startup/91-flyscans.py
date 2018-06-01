@@ -58,7 +58,7 @@ class SRXFlyer1Axis(Device):
         elif self._fast_axis == 'VER':
             self.stage_sigs[self._encoder.pc.enc] = 'Enc1'
             self.stage_sigs[self._encoder.pc.dir] = 'Positive'
-            self.stage_sigs[self._encoder.pc.enc_res1] = -5E-6
+            self.stage_sigs[self._encoder.pc.enc_res1] = 5E-6
 
         # gating info for encoder capture
         self.stage_sigs[self._encoder.pc.gate_num] = 1
@@ -101,7 +101,7 @@ class SRXFlyer1Axis(Device):
             desc[chan] = spec
             desc[chan]['source'] = getattr(self._encoder.pc.data, chan).pvname
         desc['fluor'] = spec
-        desc['fluor']['source'] = 'FileStore::{!s}'.format(self._det.hdf5._filestore_res['id'])
+        desc['fluor']['source'] = 'FileStore::{!s}'.format(self._det.hdf5._filestore_res['uid'])
         desc['i0'] = spec
         desc['i0']['source'] = self._sis.mca2.pvname
         desc['i0_time'] = spec
@@ -135,10 +135,8 @@ class SRXFlyer1Axis(Device):
         self._encoder.pc.arm.put(1)
         #THIS MUST CHANGE!!!!
         if self._fast_axis == 'VER':
-            self._encoder.pc.enc_res1.put(-5e-6)
             self._encoder.pc.enc_pos1_sync.put(1)
         elif self._fast_axis == 'HOR':
-            self._encoder.pc.enc_res2.put(5e-6)
             self._encoder.pc.enc_pos2_sync.put(1)
 
         st = NullStatus()  # TODO Return a status object *first* and do the above asynchronously.
@@ -152,7 +150,6 @@ class SRXFlyer1Axis(Device):
         """
         # Our acquisition complete PV is : XF:05IDD-ES:1{Dev:Zebra1}:ARRAY_ACQ
         while self._encoder.pc.data_in_progress.get() == 1:
-            print("here")
             ttime.sleep(.1)
             #poll()
         ttime.sleep(.1)
@@ -452,7 +449,6 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
 
     #@subs_decorator([LiveTable([ymotor]), RowBasedLiveGrid((ynum, xnum), ion.name, row_key=ymotor.name), LiveZebraPlot()])
     #@subs_decorator([LiveTable([ymotor]), LiveGrid((ynum, xnum), sclr1.mca1.name)])
-    @subs_decorator([LiveTable([ymotor])])
     @subs_decorator([LiveGrid((ynum, xnum+1), xs.channel1.rois.roi01.value.name,extent=(xstart,xstop,ystop,ystart))])
     @subs_decorator({'start':at_scan})
     @subs_decorator({'stop':finalize_scan})

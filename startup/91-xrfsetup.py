@@ -267,7 +267,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     #gjw
 
 #    commented out liveTable in 2D scan for now until the prolonged time issue is resolved
-    livecallbacks.append(LiveTable(livetableitem)) 
+    # livecallbacks.append(LiveTable(livetableitem)) 
 
     
     #setup the plan  
@@ -692,7 +692,7 @@ def hr2dxrf_top(*, xstart, xnumstep, xstepsize,
                         xlabel='x (um)', ylabel='y (um)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(itmap)
 
-    livecallbacks.append(LiveTable(livetableitem)) 
+    # livecallbacks.append(LiveTable(livetableitem)) 
 
     
     #setup the plan  
