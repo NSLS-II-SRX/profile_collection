@@ -30,7 +30,7 @@ class BPMCam(SingleTrigger, AreaDetector):
              #write_path_template='/epicsdata/bpm1-cam1/%Y/%m/%d/',
              #root='/epicsdata', reg=db.reg)
              write_path_template='/nsls2/xf05id1/data/bpm1-cam1/%Y/%m/%d/',
-             root='/nsls2/xf05id1', reg=db.reg)
+             root='/nsls2/xf05id1')
     roi1 = C(ROIPlugin, 'ROI1:')
     roi2 = C(ROIPlugin, 'ROI2:')
     roi3 = C(ROIPlugin, 'ROI3:')
@@ -96,8 +96,7 @@ class SRXHFVLMCam(SingleTrigger,AreaDetector):
              #write_path_template='/epicsdata/hfvlm/%Y/%m/%d/',
              #root='/epicsdata',
              write_path_template='/nsls2/xf05id1/data/hfvlm/%Y/%m/%d/',
-             root='/nsls2/xf05id1',
-             reg=db.reg)
+             root='/nsls2/xf05id1')
 
 hfvlmAD = SRXHFVLMCam('XF:05IDD-BI:1{Mscp:1-Cam:1}', name='hfvlm', read_attrs=['tiff'])
 hfvlmAD.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
@@ -122,8 +121,7 @@ class SRXPCOEDGECam(SingleTrigger,AreaDetector):
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
             read_path_template='/data/PCOEDGE/%Y/%m/%d/',
              write_path_template='C:/epicsdata/pcoedge/%Y/%m/%d/',
-             root='/data',
-             reg=db.reg)
+             root='/data')
 
 #pcoedge = SRXPCOEDGECam('XF:05IDD-ES:1{Det:PCO}',name='pcoedge')
 ###    read_attrs=['tiff'])
@@ -151,22 +149,10 @@ class BulkXSPRESS(HandlerBase):
         return self._handle['entry/instrument/detector/data'][:]
 
 db.reg.register_handler(BulkXSPRESS.HANDLER_NAME, BulkXSPRESS,
-                       overwrite=True)
+                        overwrite=True)
 
 class Xspress3FileStoreFlyable(Xspress3FileStore):
     fly_next = Cpt(Signal, value=False)
-
-    #fixing upstream bug
-    def read(self):
-        timestamp = time.time()
-        uids = [self._reg.register_datum(self._filestore_res, kw)
-                for kw in self._get_datum_args(self.parent._abs_trigger_count)]
-
-        return {self.mds_keys[ch]: {'timestamp': timestamp,
-                                    'value': uid,
-                                    }
-                for uid, ch in zip(uids, self.channels)
-                }
 
     @property
     def filestore_res(self):
@@ -178,82 +164,6 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
             self.fly_next.put(False)
             return BulkXSPRESS.HANDLER_NAME
         return Xspress3HDF5Handler.HANDLER_NAME
-
-    def stage(self):
-        # if should external trigger
-        ext_trig = self.parent.external_trig.get()
-
-        logger.debug('Stopping xspress3 acquisition')
-        # really force it to stop acquiring
-        self.settings.acquire.put(0, wait=True)
-
-        total_points = self.parent.total_points.get()
-        spec_per_point = self.parent.spectra_per_point.get()
-        total_capture = total_points * spec_per_point
-
-        # stop previous acquisition
-        self.stage_sigs[self.settings.acquire] = 0
-
-        # re-order the stage signals and disable the calc record which is
-        # interfering with the capture count
-        self.stage_sigs.pop(self.num_capture, None)
-        self.stage_sigs.pop(self.settings.num_images, None)
-        self.stage_sigs[self.num_capture_calc_disable] = 1
-
-        if ext_trig:
-            logger.debug('Setting up external triggering')
-            self.stage_sigs[self.settings.trigger_mode] = 'TTL Veto Only'
-            self.stage_sigs[self.settings.num_images] = total_capture
-        else:
-            logger.debug('Setting up internal triggering')
-            # self.settings.trigger_mode.put('Internal')
-            # self.settings.num_images.put(1)
-            self.stage_sigs[self.settings.trigger_mode] = 'Internal'
-            self.stage_sigs[self.settings.num_images] = spec_per_point
-
-        self.stage_sigs[self.auto_save] = 'No'
-        logger.debug('Configuring other filestore stuff')
-
-        logger.debug('Making the filename')
-        filename, read_path, write_path = self.make_filename()
-
-        logger.debug('Setting up hdf5 plugin: ioc path: %s filename: %s',
-                     write_path, filename)
-
-        logger.debug('Erasing old spectra')
-        self.settings.erase.put(1, wait=True)
-
-        # this must be set after self.settings.num_images because at the Epics
-        # layer  there is a helpful link that sets this equal to that (but
-        # not the other way)
-        self.stage_sigs[self.num_capture] = total_capture
-
-        # actually apply the stage_sigs
-        ret = super().stage()
-
-        self._fn = self.file_template.get() % (self._fp,
-                                               self.file_name.get(),
-                                               self.file_number.get())
-
-        if not self.file_path_exists.value:
-            raise IOError("Path {} does not exits on IOC!! Please Check"
-                          .format(self.file_path.value))
-
-        logger.debug('Inserting the filestore resource: %s', self._fn)
-        fn = PurePath(self._fn).relative_to(self.reg_root)
-        # This change needs to be upstreamed
-        self._filestore_res = self._resource = self._reg.insert_resource(
-            self.fs_type, str(fn), {},
-            root=str(self.reg_root))
-
-        # this gets auto turned off at the end
-        self.capture.put(1)
-
-        # Xspress3 needs a bit of time to configure itself...
-        # this does not play nice with the event loop :/
-        #time.sleep(self._config_time)
-
-        return ret
 
     def warmup(self):
         """
@@ -308,15 +218,9 @@ class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
     create_dir = Cpt(EpicsSignal, 'HDF5:FileCreateDir')
 
     hdf5 = Cpt(Xspress3FileStoreFlyable, 'HDF5:',
-               read_path_template='/XF05IDD/XSPRESS3/2018-1/',
-               #write_path_template='/epics/data/2017-3/',
-               write_path_template='/epics/data/2018-1/',
-               #write_path_template='/nsls2/xf05id1/XF05ID1/XSPRESS3/2018-1',
-               #write_path_template='/nsls2/xf05id1/data/xspress3/%Y/%M/',
-#               root='/data',
-               root='/XF05IDD',
-               #root='/nsls2/xf05id1',
-               reg=db.reg)
+               read_path_template='/XF05IDD/XSPRESS3/%Y/%m/%d/',
+               write_path_template='/epics/data/%Y/%m/%d/',
+               root='/XF05IDD')
 
     def __init__(self, prefix, *, configuration_attrs=None, read_attrs=None,
                  **kwargs):
@@ -381,8 +285,7 @@ class SrxXspress3Detector2(XspressTrigger, Xspress3Detector):
                #write_path_template='/nsls2/xf05id1/data/xspress3/%Y/%M/',
 #               root='/data',
                # root='/',
-               root='/nsls2/xf05id1',
-               reg=db.reg)
+               root='/nsls2/xf05id1')
 
     def __init__(self, prefix, *, configuration_attrs=None, read_attrs=None,
                  **kwargs):
