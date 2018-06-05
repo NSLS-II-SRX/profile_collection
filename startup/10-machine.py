@@ -79,7 +79,10 @@ class UVDone(Signal):
         stop.put(1)
 
     def reset(self, target):
-        self.target = float(target)
+        try:
+            self.target = float(target)
+        except TypeError:
+            self.target = target
         self._put(0)
         self._remove_cbs()
         self._started = False
