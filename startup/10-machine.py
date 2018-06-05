@@ -568,8 +568,15 @@ cal_data_2018cycle1b = {
  'xoffset': 24.75, #best value for 12 and 5 keV
 }
 
+cal_data_2018cycle2 = {
+ 'd_111': 3.128549107739033,
+ 'delta_bragg': 0.3139487894740349, # {'Fe':14476, 'V':14477, 'Cr':14478, 'Cu':14480, 'Se':14481, 'Zr':14482} 
+ 'C2Xcal': 3.6,
+ 'T2cal': 15.0347755916,
+ 'xoffset': 24.75, #best value for 12 and 5 keV
+}
 
-energy = Energy(prefix='', name='energy', **cal_data_2018cycle1b)
+energy = Energy(prefix='', name='energy', **cal_data_2018cycle2)
 energy.synch_with_epics()
 
 

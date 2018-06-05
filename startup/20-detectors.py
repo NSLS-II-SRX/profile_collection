@@ -161,8 +161,8 @@ it_channel.name = 'sclr_it'
 im_channel = getattr(sclr1.channels,'chan3')
 im_channel.name = 'sclr_im'
 i0 = sclr1.channels.chan2
-it = sclr1.channels.chan3
-im = sclr1.channels.chan4
+it = sclr1.channels.chan4
+im = sclr1.channels.chan3
 
 class CurrentPreamp(Device):
     ch0 = Cpt(EpicsSignalRO, 'Cur:I0-I')

@@ -56,7 +56,7 @@ def find_edge(scanid = -1, use_xrf = False, element = ''):
 
     if use_xrf is False:
         #it = table.current_preamp_ch0
-        it = table.current_preamp_ch0
+        it = table.sclr_it
         #i0 = table.current_preamp_ch2        
         #normliazedit = -numpy.log(numpy.array(it[1::])/abs(numpy.array((i0[1::])-baseline)))
         mu = -numpy.log(abs(numpy.array(it[1::])-baseline_it))
@@ -94,8 +94,17 @@ def braggcalib(scanlogDic = {}, use_xrf = False):
 
     #2018-1 Jan 26
     #scanlogDic = {'Fe': 11256, 'Cu':11254, , 'Ti': 11260, 'Se':11251}
-    #2018-1 Feb 24
-    scanlogDic = {'Ti': 12195, 'Fe': 12194, 'Se':12187}
+    # 2018-1 Feb 24
+    # scanlogDic = {'Ti': 12195, 'Fe': 12194, 'Se':12187}
+
+    # 2018-2 Jun 5
+    scanlogDic = {'Fe' : 14476,
+                  'V'  : 14477,
+                  'Cr' : 14478,
+                  'Cu' : 14480,
+                  'Se' : 14481,
+                  'Zr' : 14482}
+
 
     fitfunc = lambda pa, x: 12.3984/(2*pa[0]*numpy.sin((x+pa[1])*numpy.pi/180))  
     errfunc = lambda pa, x, y: fitfunc(pa,x) - y

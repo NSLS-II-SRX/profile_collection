@@ -143,7 +143,7 @@ def xanes_plan(erange = [], estep = [],
     metadata_record()
     #add user meta data
     RE.md['sample']  = {'name': samplename}
-    RE.md['scaninfo']  = {'type': 'XANES','ROI': roinum,'raster' : False, 'dwell':dwell}
+    RE.md['scaninfo']  = {'type': 'XANES','ROI': roinum,'raster' : False, 'dwell':acqtime}
    
     #convert erange and estep to numpy array
     erange = numpy.array(erange)
