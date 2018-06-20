@@ -23,12 +23,25 @@ saf_num = None
 #PI_lastname = 'Wang'
 #saf_num = 302307
 
-
-proposal_num = 302925 
+proposal_num = 302925
 proposal_title = 'Routine Setup and Testing for Beamline 5-ID'
 PI_lastname = 'Chu'
 saf_num = 301967
+"""
+proposal_num = 302204
+proposal_title = 'Determining the Provenance of Glacial Erratics found on the North Shore of Long Island Based on XRF Geochronology of he Mineral Monazite'
+PI_lastname = 'Mozer'
+saf_num = 302185
+"""
+#proposal_num = 302217
+#proposal_title = 'Using X-Ray Fluorescence and Absorption Spectroscopy to Analyze Heavy Element and Metal Contaminants in the Tissues of #Predatory Arachnids Residing Near the Forge River Polluted Water System in Shirley, New York'
+#PI_lastname = 'DAmbrosia'
+#saf_num = 302142
 
+#proposal_num = 303121
+#proposal_title = 'In-situ studies of the local phase transformation dynamics within single particles during the calcination of layered Ni-#rich oxides'
+#PI_lastname = 'Zhang'
+#saf_num = 302608
 
 #proposal_num = 301962
 #proposal_title = 'Characterization of single crystal growth in glass by laser heating'
@@ -55,14 +68,12 @@ saf_num = 301967
 #PI_lastname = 'Schlesinger'
 #saf_num = 302026
 
-"""
-proposal_num = 302315
-proposal_title = 'Elucidating nanoparticle-plant leaf interactions, uptake, and mobility for designing highly efficient foliar-applied agrochemicals'
-PI_lastname = 'Avellan'
-saf_num = 302330
-"""
+#proposal_num = 302315
+#proposal_title = 'Elucidating nanoparticle-plant leaf interactions, uptake, and mobility for designing highly efficient foliar-applied #agrochemicals'
+#PI_lastname = 'Avellan'
+#saf_num = 302330
 
-#proposal_num = 302773 
+#proposal_num = 302773
 #proposal_title = 'Understanding Copper Speciation in Brain Amyloid Deposits Involved in Cognitive Impairment'
 #PI_lastname = 'Miller'
 #saf_num = 302361
@@ -70,7 +81,7 @@ saf_num = 302330
 
 logfilename_postfix = str(saf_num)
 
-cycle = '2018_cycle1'
+cycle = '2018_cycle2'
 
 RE.md['proposal']  = {  'proposal_num': str(proposal_num),
                          'proposal_title': str(proposal_title),
