@@ -154,20 +154,34 @@ class BulkXSPRESS(HandlerBase):
 db.reg.register_handler(BulkXSPRESS.HANDLER_NAME, BulkXSPRESS,
                         overwrite=True)
 
+from enum import Enum
+class X3Mode(Enum):
+    step = 1
+    fly = 2
 
+from ophyd.areadetector.filestore_mixins import FileStorePluginBase
 class Xspress3FileStoreFlyable(Xspress3FileStore):
-    fly_next = Cpt(Signal, value=False)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     @property
     def filestore_res(self):
+        raise Exception("don't want to be here")
         return self._filestore_res
 
     @property
-    def fs_type(self):
-        if self.fly_next.get():
-            self.fly_next.put(False)
-            return BulkXSPRESS.HANDLER_NAME
+    def filestore_spec(self):
+        if self.parent._mode is X3Mode.fly:
+           return BulkXSPRESS.HANDLER_NAME
         return Xspress3HDF5Handler.HANDLER_NAME
+
+    def generate_datum(self, key, timestamp, datum_kwargs):
+        if self.parent._mode is X3Mode.step:
+            return super().generate_datum(key, timestamp, datum_kwargs)
+        elif self.parent._mode is X3Mode.fly:
+            # we are doing something _very_ dirty here to skip a level of the inheritance
+            # this is brittle is if the MRO changes we may not hit all the level we expect to
+            return FileStorePluginBase.generate_datum(self, key, timestamp, datum_kwargs)
 
     def warmup(self):
         """
@@ -204,9 +218,29 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
             set_and_wait(sig, val)
         print("done")
 
+class SRXXspressTrigger(XspressTrigger):
+    def trigger(self):
+        print(f'triggering in mode {self._mode}')
+        if self._staged != Staged.yes:
+            raise RuntimeError("not staged")
 
+        self._status = DeviceStatus(self)
+        self.settings.erase.put(1)
+        self._acquisition_signal.put(1, wait=False)
+        trigger_time = ttime.time()
+        if self._mode is X3Mode.step:
+            for sn in self.read_attrs:
+                if sn.startswith('channel') and '.' not in sn:
+                    ch = getattr(self, sn)
+                    self.dispatch(ch.name, trigger_time)
+        elif self._mode is X3Mode.fly:
+            self.dispatch('fluor', trigger_time)
+        else:
+            raise Exception(f"unexpected mode {self._mode}")
+        self._abs_trigger_count += 1
+        return self._status
 
-class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
+class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
     # TODO: garth, the ioc is missing some PVs?
     #   det_settings.erase_array_counters
     #       (XF:05IDD-ES{Xsp:1}:ERASE_ArrayCounters)
@@ -216,16 +250,30 @@ class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
     #   det_settings.update_attr (XF:05IDD-ES{Xsp:1}:UPDATE_AttrUpdate)
     #   det_settings.update (XF:05IDD-ES{Xsp:1}:UPDATE)
     roi_data = Cpt(PluginBase, 'ROIDATA:')
+
+    # Currently only using three channels. Uncomment these to enable more
     channel1 = C(Xspress3Channel, 'C1_', channel_num=1, read_attrs=['rois'])
     channel2 = C(Xspress3Channel, 'C2_', channel_num=2, read_attrs=['rois'])
     channel3 = C(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
+    # channels:
+    # channel4 = C(Xspress3Channel, 'C4_', channel_num=4)
+    # channel5 = C(Xspress3Channel, 'C5_', channel_num=5)
+    # channel6 = C(Xspress3Channel, 'C6_', channel_num=6)
+    # channel7 = C(Xspress3Channel, 'C7_', channel_num=7)
+    # channel8 = C(Xspress3Channel, 'C8_', channel_num=8)
+
     create_dir = Cpt(EpicsSignal, 'HDF5:FileCreateDir')
 
     hdf5 = Cpt(Xspress3FileStoreFlyable, 'HDF5:',
                read_path_template='/XF05IDD/XSPRESS3/%Y/%m/%d/',
                write_path_template='/epics/data/%Y/%m/%d/',
-               root='/XF05IDD',
-               reg=db.reg)
+               root='/XF05IDD')
+
+    # this is used as a latch to put the xspress3 into 'bulk' mode
+    # for fly scanning.  Do this is a signal (rather than as a local variable
+    # or as a method so we can modify this as part of a plan
+    fly_next = Cpt(Signal, value=False)
+
 
     def __init__(self, prefix, *, configuration_attrs=None, read_attrs=None,
                  **kwargs):
@@ -237,21 +285,30 @@ class SrxXspress3Detector(XspressTrigger, Xspress3Detector):
             read_attrs = ['channel1', 'channel2', 'channel3', 'hdf5']
         super().__init__(prefix, configuration_attrs=configuration_attrs,
                          read_attrs=read_attrs, **kwargs)
+        # this is possiblely one too many places to store this
+        # in the parent class it looks at if the extrenal_trig signal is high
+        self._mode = X3Mode.step
+
         self.create_dir.put(-3)
 
     def stop(self):
-        ret = super.stop()
+        ret = super().stop()
         self.hdf5.stop()
         return ret
 
-    # Currently only using three channels. Uncomment these to enable more
-    # channels:
-    # channel4 = C(Xspress3Channel, 'C4_', channel_num=4)
-    # channel5 = C(Xspress3Channel, 'C5_', channel_num=5)
-    # channel6 = C(Xspress3Channel, 'C6_', channel_num=6)
-    # channel7 = C(Xspress3Channel, 'C7_', channel_num=7)
-    # channel8 = C(Xspress3Channel, 'C8_', channel_num=8)
+    def stage(self):
+        # do the latching
+        if self.fly_next.get():
+            self.fly_next.put(False)
+            self._mode = X3Mode.fly
+        return super().stage()
 
+    def unstage(self):
+        try:
+            ret = super().unstage()
+        finally:
+            self._mode = X3Mode.step
+        return ret
 
 xs = SrxXspress3Detector('XF:05IDD-ES{Xsp:1}:', name='xs')
 xs.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
@@ -304,8 +361,8 @@ class SrxXspress3Detector2(XspressTrigger, Xspress3Detector):
                          read_attrs=read_attrs, **kwargs)
 
     def stop(self):
-        ret = super.stop()
-        self.hdf52.stop()
+        ret = super().stop()
+        self.hdf5.stop()
         return ret
 
 #xs2 = SrxXspress3Detector2('XF:05IDD-ES{Xsp:2}:', name='xs2')

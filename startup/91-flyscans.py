@@ -34,6 +34,7 @@ from ophyd import Device
 import uuid
 import h5py
 from collections import ChainMap
+from ophyd.areadetector.filestore_mixins import resource_factory
 
 from hxntools.handlers import register
 register(db)
@@ -83,16 +84,14 @@ class SRXFlyer1Axis(Device):
 
         self._encoder.pc.block_state_reset.put(1)
         self.reg = reg
+        self._document_cache = []
 
     def stage(self):
         super().stage()
 
     def describe_collect(self):
 
-        if self._filestore_resource is not None:
-            ext_spec = 'FileStore::{!s}'.format(self._filestore_resource['id'])
-        else:
-            ext_spec = 'FileStore:'
+        ext_spec = 'FileStore:'
 
         spec = {'external': ext_spec,
             'dtype' : 'array',
@@ -101,17 +100,18 @@ class SRXFlyer1Axis(Device):
         }
 
         desc = OrderedDict()
-        for chan in ('time','enc1'):
+        for chan in ('time', 'enc1'):
             desc[chan] = spec
             desc[chan]['source'] = getattr(self._encoder.pc.data, chan).pvname
         desc['fluor'] = spec
-        desc['fluor']['source'] = 'FileStore::{!s}'.format(self._det.hdf5._filestore_res['uid'])
+        desc['fluor']['source'] = self._det.prefix
         desc['i0'] = spec
         desc['i0']['source'] = self._sis.mca2.pvname
         desc['i0_time'] = spec
         desc['i0_time']['source'] = self._sis.mca1.pvname
 
-        return {'stream0':desc}
+        return {'stream0': desc}
+
 
     def kickoff(self, *, xstart, xstop, xnum, dwell):
         self._encoder.pc.arm.put(0)
@@ -169,6 +169,8 @@ class SRXFlyer1Axis(Device):
         # Create records in the FileStore database.
         # move this to stage because I thinkt hat describe_collect needs the
         # resource id
+        # TODO use ophyd.areadectector.filestoer_mixins.resllource_factory here
+
         self.__filename = '{}.h5'.format(uuid.uuid4())
         self.__filename_sis = '{}.h5'.format(uuid.uuid4())
         self.__read_filepath = os.path.join(self.LARGE_FILE_DIRECTORY_READ_PATH,
@@ -180,24 +182,31 @@ class SRXFlyer1Axis(Device):
         self.__write_filepath_sis = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH,
                                                  self.__filename_sis)
 
-        self.__filestore_resource = self.reg.register_resource('ZEBRA_HDF51', root='/',
-                                                               rpath=self.__read_filepath,
-                                                               rkwargs={})
-        self.__filestore_resource_sis = self.reg.register_resource('SIS_HDF51',root='/',
-                                                                   rpath=self.__read_filepath_sis,
-                                                                   rkwargs={})
 
-        time_datum_id = self.reg.register_datum(self.__filestore_resource,
-                                                {'column': 'time'})
-        enc1_datum_id = self.reg.register_datum(self.__filestore_resource,
-                                                {'column': 'enc1'})
-        sis_datum_id =  self.reg.register_datum(self.__filestore_resource_sis,
-                                                {'column': 'i0'})
-        sis_time_id =  self.reg.register_datum(self.__filestore_resource_sis,
-                                                {'column': 'time'})
+        self.__filestore_resource, datum_factory_z = resource_factory(
+            'ZEBRA_HDF51', root='/',
+            resource_path=self.__read_filepath,
+            resource_kwargs={}, path_semantics='posix')
+        self.__filestore_resource_sis, datum_factory_sis = resource_factory(
+            'SIS_HDF51',root='/',
+            resource_path=self.__read_filepath_sis,
+            resource_kwargs={},
+            path_semantics='posix')
 
-        xs_datum_id = self.reg.register_datum(self._det.hdf5._filestore_res, {})
+        time_datum = datum_factory_z({'column': 'time'})
+        enc1_datum = datum_factory_z({'column': 'enc1'})
+        sis_datum =  datum_factory_sis({'column': 'i0'})
+        sis_time =  datum_factory_sis({'column': 'time'})
 
+        self._document_cache.extend(('resource', d) for d in (self.__filestore_resource,
+                                                             self.__filestore_resource_sis))
+        self._document_cache.extend(('datum', d) for d in (time_datum, enc1_datum,
+                                                          sis_datum, sis_time))
+        self._document_cache.extend(self._det.collect_asset_docs())
+
+        # TODO call 'read' on the detector instead
+        # xs_datum_id = self.reg.register_datum(self._det.hdf5._filestore_res, {})
+        xs_reading = self._det.read()
         # Write the file.
         export_zebra_data(self._encoder, self.__write_filepath,self._fast_axis)
         export_sis_data(self._sis, self.__write_filepath_sis)
@@ -205,19 +214,23 @@ class SRXFlyer1Axis(Device):
         # Yield a (partial) Event document. The RunEngine will put this
         # into metadatastore, as it does all readings.
         yield {'time': time.time(), 'seq_num': 1,
-               'data': {'time': time_datum_id,
+               'data': {'time': time_datum['datum_id'],
 #                        'enc1': enc1_datum_id},
-                        'enc1': enc1_datum_id,
-                        'fluor': xs_datum_id,
-                        'i0': sis_datum_id,
-                        'i0_time': sis_time_id},
-               'timestamps': {'time': time_datum_id,  # not a typo
-#                              'enc1': time_datum_id}}
-                              'enc1': time_datum_id,
-                              'fluor': time_datum_id,
-                              'i0': sis_time_id,
-                              'i0_time': sis_time_id}}
+                        'enc1': enc1_datum['datum_id'],
+                        'fluor': xs_reading['fluor']['value'],
+                        'i0': sis_datum['datum_id'],
+                        'i0_time': sis_time['datum_id']},
+               'timestamps': {'time': time_datum['datum_id'],  # not a typo#
+                              'enc1': time_datum['datum_id'],
+                              'fluor': xs_reading['fluor']['timestamp'],
+                              'i0': sis_time['datum_id'],
+                              'i0_time': sis_time['datum_id']}}
         self._mode = 'idle'
+
+    def collect_asset_docs(self):
+        # TODO write this!
+        yield from iter(list(self._document_cache))
+        self._document_cache.clear()
 
     def stop(self):
         self._encoder.pc.block_state_reset.put(1)
@@ -423,20 +436,22 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from abs_set(xs.settings.num_images, xnum)
         yield from abs_set(ion.nuse_all,xnum)
         # arm the Zebra (start caching x positions)
+
+
         yield from kickoff(flying_zebra, xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell, wait=True)
-        yield from bps.trigger(xs, group='row')
         yield from abs_set(ion.erase_start, 1) # arm SIS3820, note that there is a 1 sec delay in setting X into motion
                                                # so the first point *in each row* won't normalize...
+        yield from bps.trigger(xs, group='row')
         #if firststep == True:
         #    ttime.sleep(0.)
         yield from bps.sleep(1.5)
         yield from abs_set(xmotor, xstop+1*delta, group='row')  # move in x
         yield from bps.wait(group='row')
-        yield from abs_set(xs.settings.acquire, 0)  # stop acquiring images
+        # yield from abs_set(xs.settings.acquire, 0)  # stop acquiring images
         yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
         yield from complete(flying_zebra)  # tell the Zebra we are done
         yield from collect(flying_zebra)  # extract data from Zebra
-        yield from abs_set(xmotor.velocity, 1.,wait=True)  # set the "stage speed"
+        yield from abs_set(xmotor.velocity, 1.0, wait=True)  # set the "stage speed"
 
     def at_scan(name, doc):
         scanrecord.current_scan.put(doc['uid'][:6])
@@ -475,7 +490,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
                                (ynum - ystep) * ( dwell * xnum + 3.8 ) / 3600.)
             ystep = ystep + 1
             # 'arm' the xs for outputting fly data
-            yield from abs_set(xs.hdf5.fly_next, True)
+            yield from abs_set(xs.fly_next, True)
 #            print('h5 armed\t',time.time())
             if step == ystart:
                 firststep = True
