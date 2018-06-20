@@ -1,4 +1,4 @@
-from ophyd import EpicsMotor
+from ophyd import EpicsMotor, EpicsSignal, EpicsSignalRO
 from ophyd import Device
 from ophyd import Component as Cpt
 from ophyd import PVPositionerPC
@@ -17,6 +17,7 @@ class SRXSlitsWB(Device):
     bot = Cpt(EpicsMotor, 'B}Mtr')
     inb = Cpt(EpicsMotor, 'I}Mtr')
     out = Cpt(EpicsMotor, 'O}Mtr')
+
 
 class SRXSlitsPB(Device):
     # real synthetic axes
@@ -94,47 +95,57 @@ class SRXSlits2(Device):
     inb = Cpt(EpicsMotor, 'I}Mtr')
     out = Cpt(EpicsMotor, 'O}Mtr')
 
-## Pseudo motor for white beam slits
-#slt_wb = SRXSlits4SWPM('XF:05IDA-OP:1{Slt:1-Ax:', name='slt_wb')
-#slt_wb.top_zero.put(-5.775)
-#slt_wb.bot_zero.put(-4.905)
-#slt_wb.inb_zero.put(-6.705)
-#slt_wb.out_zero.put(-4.345)
+
+# # Pseudo motor for white beam slits
+# slt_wb = SRXSlits4SWPM('XF:05IDA-OP:1{Slt:1-Ax:', name='slt_wb')
+# slt_wb.top_zero.put(-5.775)
+# slt_wb.bot_zero.put(-4.905)
+# slt_wb.inb_zero.put(-6.705)
+# slt_wb.out_zero.put(-4.345)
 slt_wb = SRXSlitsWB('XF:05IDA-OP:1{Slt:1-Ax:', name='slt_wb')
 
-## Pseudo motor for pink beam slits
-#slt_pb = SRXSlits2('XF:05IDA-OP:1{Slt:2-Ax:', name='slt_pb')
+# # Pseudo motor for pink beam slits
+# slt_pb = SRXSlits2('XF:05IDA-OP:1{Slt:2-Ax:', name='slt_pb')
 slt_pb = SRXSlitsPB('XF:05IDA-OP:1{Slt:2-Ax:', name='slt_pb')
 
-#class SRXSSAH(PVPositioner):
-#    setpoint = Cpt(EpicsSignal,'X}size')
-#    readback = Cpt(EpicsSignalRO, 'X}t2.C')
-#    out = Cpt(EpicsMotor,'O}Mtr')
-#    inb = Cpt(EpicsMotor,'I}Mtr')
-#class SRXSSAV(PVPositioner):
-#    setpoint = Cpt(EpicsSignal,'Y}size')
-#    readback = Cpt(EpicsSignalRO, 'Y}t2.C')
-#    top = Cpt(EpicsMotor,'T}Mtr')
-#    bot = Cpt(EpicsMotor,'B}Mtr')
+# class SRXSSAH(PVPositioner):
+#     setpoint = Cpt(EpicsSignal,'X}size')
+#     readback = Cpt(EpicsSignalRO, 'X}t2.C')
+#     out = Cpt(EpicsMotor,'O}Mtr')
+#     inb = Cpt(EpicsMotor,'I}Mtr')
+# class SRXSSAV(PVPositioner):
+#     setpoint = Cpt(EpicsSignal,'Y}size')
+#     readback = Cpt(EpicsSignalRO, 'Y}t2.C')
+#     top = Cpt(EpicsMotor,'T}Mtr')
+#     bot = Cpt(EpicsMotor,'B}Mtr')
+
 
 class SRXSSAHG(PVPositionerPC):
-    setpoint = Cpt(EpicsSignal,'X}size')
+    setpoint = Cpt(EpicsSignal, 'X}size')
     readback = Cpt(EpicsSignalRO, 'X}t2.C')
+
+
 class SRXSSAHC(PVPositionerPC):
-    setpoint = Cpt(EpicsSignal,'X}center')
+    setpoint = Cpt(EpicsSignal, 'X}center')
     readback = Cpt(EpicsSignalRO, 'X}t2.D')
+
+
 class SRXSSAVG(PVPositionerPC):
-    setpoint = Cpt(EpicsSignal,'Y}size')
+    setpoint = Cpt(EpicsSignal, 'Y}size')
     readback = Cpt(EpicsSignalRO, 'Y}t2.C')
+
+
 class SRXSSAVC(PVPositionerPC):
-    setpoint = Cpt(EpicsSignal,'Y}center')
+    setpoint = Cpt(EpicsSignal, 'Y}center')
     readback = Cpt(EpicsSignalRO, 'Y}t2.D')
+
 
 class SRXSSACalc(Device):
     h_cen = SRXSSAHC('XF:05IDB-OP:1{Slt:SSA-Ax:')
     h_gap = SRXSSAHG('XF:05IDB-OP:1{Slt:SSA-Ax:')
     v_cen = SRXSSAVC('XF:05IDB-OP:1{Slt:SSA-Ax:')
     v_gap = SRXSSAVG('XF:05IDB-OP:1{Slt:SSA-Ax:')
+
 
 slt_ssa = SRXSSACalc('XF:05IDB-OP:1{Slt:SSA-Ax:',name='slt_ssa')
 # Pseudo motor for secondary source slits

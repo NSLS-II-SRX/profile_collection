@@ -1,5 +1,5 @@
 import threading
-from ophyd import ProsilicaDetector, EpicsSignal, Device, EpicsScaler, TetrAMM
+from ophyd import ProsilicaDetector, EpicsSignal, Device, EpicsScaler, TetrAMM, EpicsSignalRO
 from ophyd import Component as Cpt
 from ophyd.ophydobj import StatusBase
 from ophyd.status import wait
@@ -65,10 +65,10 @@ class DiamondBPM(Device):
     sigma_inb = Cpt(EpicsSignalRO, 'Current2:Sigma_RBV')
     sigma_out = Cpt(EpicsSignalRO, 'Current3:Sigma_RBV')
     sigma_bot = Cpt(EpicsSignalRO, 'Current4:Sigma_RBV')
-    x_pos = Cpt(EpicsSignalRO, 'PosX:MeanValue_RBV') 
-    y_pos = Cpt(EpicsSignalRO, 'PosY:MeanValue_RBV') 
-    x_sigma = Cpt(EpicsSignalRO, 'PosX:Sigma_RBV') 
-    y_sigma = Cpt(EpicsSignalRO, 'PosY:Sigma_RBV') 
+    x_pos = Cpt(EpicsSignalRO, 'PosX:MeanValue_RBV')
+    y_pos = Cpt(EpicsSignalRO, 'PosY:MeanValue_RBV')
+    x_sigma = Cpt(EpicsSignalRO, 'PosX:Sigma_RBV')
+    y_sigma = Cpt(EpicsSignalRO, 'PosY:Sigma_RBV')
 
 dbpm = DiamondBPM('XF:05ID-BI:1{BPM:01}:', name='dbpm')
 
@@ -226,7 +226,7 @@ class CurrentPreampZebra(Device):
     initi_trigger = Cpt(EpicsSignal, 'Cmd:Init')
     zebra_trigger = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:SOFT_IN:B0',
                         add_prefix=())
-    zebra_pulse_3_source = Cpt(EpicsSignal, 
+    zebra_pulse_3_source = Cpt(EpicsSignal,
                             'XF:05IDD-ES:1{Dev:Zebra1}:PULSE3_INP',
                             add_prefix=())
 
@@ -303,16 +303,16 @@ class ZebraPositionCaptureData(Device):
     num_cap = Cpt(EpicsSignal, 'PC_NUM_CAP')
     num_down = Cpt(EpicsSignal, 'PC_NUM_DOWN')
     #BOOLs to denote arrays with data
-    cap_enc1_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B0') 
-    cap_enc2_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B1') 
-    cap_enc3_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B2') 
-    cap_enc4_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B3') 
-    cap_filt1_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B4') 
-    cap_filt2_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B5') 
-    cap_div1_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B6') 
-    cap_div2_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B7') 
-    cap_div3_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B8') 
-    cap_div4_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B9') 
+    cap_enc1_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B0')
+    cap_enc2_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B1')
+    cap_enc3_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B2')
+    cap_enc4_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B3')
+    cap_filt1_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B4')
+    cap_filt2_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B5')
+    cap_div1_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B6')
+    cap_div2_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B7')
+    cap_div3_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B8')
+    cap_div4_bool = Cpt(EpicsSignal, 'PC_BIT_CAP:B9')
 
 class ZebraPositionCapture(Device):
     '''Signals for the position capture function of the Zebra
@@ -348,7 +348,7 @@ class ZebraPositionCapture(Device):
     data_in_progress = Cpt(EpicsSignalRO, 'ARRAY_ACQ')
 
     block_state_reset = Cpt(EpicsSignal, 'SYS_RESET.PROC')
-    
+
     data=Cpt(ZebraPositionCaptureData,'')
 
 
@@ -360,9 +360,9 @@ class ZebraPositionCapture(Device):
     def unstage(self):
         self.disarm.put(1)
         self.block_state_reset.put(1)
-        
+
         super().unstage()
-    
+
 class SRXZebra(Zebra):
     '''SRX Zebra device.
     '''
@@ -374,10 +374,10 @@ class SRXZebra(Zebra):
         if read_attrs is None:
             read_attrs = []
         if configuration_attrs is None:
-            configuration_attrs = [] 
+            configuration_attrs = []
 
         super().__init__(prefix, read_attrs=read_attrs,
-                        configuration_attrs=configuration_attrs, **kwargs)
-    
+                         configuration_attrs=configuration_attrs, **kwargs)
+
 zebra = SRXZebra('XF:05IDD-ES:1{Dev:Zebra1}:', name='zebra')
 zebra.read_attrs = ['pc.data.enc1', 'pc.data.time']

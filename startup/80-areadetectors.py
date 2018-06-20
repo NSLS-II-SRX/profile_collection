@@ -137,8 +137,10 @@ class SRXPCOEDGECam(SingleTrigger,AreaDetector):
 ##pcoedge.stats4.read_attrs = ['total','sigma_x','sigma_y']
 from pathlib import PurePath
 from hxntools.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
-                                         Xspress3Channel, Xspress3FileStore, logger)
+                                         Xspress3Channel, Xspress3FileStore,
+                                         logger)
 from databroker.assets.handlers import Xspress3HDF5Handler, HandlerBase
+
 
 class BulkXSPRESS(HandlerBase):
     HANDLER_NAME = 'XPS3_FLY'
@@ -148,8 +150,10 @@ class BulkXSPRESS(HandlerBase):
     def __call__(self):
         return self._handle['entry/instrument/detector/data'][:]
 
+
 db.reg.register_handler(BulkXSPRESS.HANDLER_NAME, BulkXSPRESS,
                         overwrite=True)
+
 
 class Xspress3FileStoreFlyable(Xspress3FileStore):
     fly_next = Cpt(Signal, value=False)
@@ -312,4 +316,3 @@ class SrxXspress3Detector2(XspressTrigger, Xspress3Detector):
 for i in range(1,4):
     ch=getattr(xs.channel1.rois,'roi{:02}.value'.format(i))
     ch.name = 'ROI_{:02}'.format(i)
-
