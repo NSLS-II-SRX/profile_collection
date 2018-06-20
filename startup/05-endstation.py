@@ -59,6 +59,10 @@ class HFSampleStage(Device):
     # for NPoint
     # fine_x =
     # fine_y =
+    # for topx/topz
+    topx = Cpt(EpicsMotor, '{Smpl:1-Ax:XF}Mtr')
+    topz = Cpt(EpicsMotor, '{Smpl:1-Ax:ZF}Mtr')
+
 
 #hf_stage = HFSampleStage('XF:05IDD-ES:1{Stg:Smpl1-Ax:', name='hf_stage')
 hf_stage = HFSampleStage('XF:05IDD-ES:1', name='hf_stage')
