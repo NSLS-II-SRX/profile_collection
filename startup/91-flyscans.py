@@ -17,16 +17,19 @@
 #Options:  open and write to Xspress3 HDF5, write to HDF5 and link in
 #   Xspress3 data, write separately in some format and register later
 #
-import numpy
-import copy
+import numpy as np
 from bluesky.plans import (scan, )
 from bluesky.plan_stubs import (one_1d_step, kickoff, collect, complete,
-                                wait, abs_set,mv)
+                                abs_set, mv)
 
-from bluesky.preprocessors import (monitor_during_wrapper, stage_decorator,
-                                   run_decorator,subs_decorator,monitor_during_decorator)
+import bluesky.plan_stubs as bps
+
+
+from bluesky.preprocessors import (stage_decorator,
+                                   run_decorator, subs_decorator,
+                                   monitor_during_decorator)
 from ophyd.sim import NullStatus
-from bluesky.callbacks import LiveTable, LivePlot, CallbackBase, LiveGrid
+from bluesky.callbacks import CallbackBase, LiveGrid
 from ophyd import Device
 import uuid
 import h5py
@@ -34,7 +37,7 @@ from collections import ChainMap
 
 from hxntools.handlers import register
 register(db)
-from hxntools.detectors.xspress3 import Xspress3FileStore
+
 
 class SRXFlyer1Axis(Device):
     LARGE_FILE_DIRECTORY_WRITE_PATH = '/nsls2/xf05id1/XF05ID1/data/2018-1/fly_scan_ancillary/'
@@ -205,13 +208,13 @@ class SRXFlyer1Axis(Device):
                'data': {'time': time_datum_id,
 #                        'enc1': enc1_datum_id},
                         'enc1': enc1_datum_id,
-                        'fluor' : xs_datum_id,
+                        'fluor': xs_datum_id,
                         'i0': sis_datum_id,
                         'i0_time': sis_time_id},
                'timestamps': {'time': time_datum_id,  # not a typo
 #                              'enc1': time_datum_id}}
                               'enc1': time_datum_id,
-                              'fluor' : time_datum_id,
+                              'fluor': time_datum_id,
                               'i0': sis_time_id,
                               'i0_time': sis_time_id}}
         self._mode = 'idle'
@@ -357,13 +360,12 @@ class LiveZebraPlot(CallbackBase):
         self._desc_uid = None
 
 
-
-#changed the flyer device to be aware of fast vs slow axis in a 2D scan
-#should abstract this method to use fast and slow axes, rather than x and y
+# changed the flyer device to be aware of fast vs slow axis in a 2D scan
+# should abstract this method to use fast and slow axes, rather than x and y
 def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
-                 delta=0.002, shutter = True,
+                 delta=0.002, shutter=True,
                  xmotor=hf_stage.x, ymotor=hf_stage.y,
-                 xs=xs, ion=sclr1, align = False,
+                 xs=xs, ion=sclr1, align=False,
                  flying_zebra=flying_zebra, md=None):
     """
 
@@ -375,40 +377,38 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     ymotor  slow axis
     xmotor  fast axis
     """
-    c2pitch_kill=EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
+    c2pitch_kill = EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
     if md is None:
         md = {}
     if delta is None:
-        delta=0.002
+        delta = 0.002
     yield from abs_set(ymotor, ystart, wait=True) # ready to move
     yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
 
     if shutter is True:
         yield from mv(shut_b, 'Open')
 
-    if align == True:
-        fly_ps = PeakStats(dcm.c2_pitch.name,i0.name)
+    if align:
+        fly_ps = PeakStats(dcm.c2_pitch.name, i0.name)
         align_scan = scan([sclr1], dcm.c2_pitch, -19.320, -19.360, 41)
-        align_scan = bp.subs_wrapper(align_scan,fly_ps)
+        align_scan = bp.subs_wrapper(align_scan, fly_ps)
         yield from align_scan
-        yield from abs_set(dcm.c2_pitch,fly_ps.max[0],wait=True)
+        yield from abs_set(dcm.c2_pitch, fly_ps.max[0], wait=True)
         #ttime.sleep(10)
         #yield from abs_set(c2pitch_kill, 1)
-    else:
-        ttime.sleep(0.)
 
     md = ChainMap(md, {
         'plan_name': 'scan_and_fly',
-        'detectors': [zebra.name,xs.name,ion.name],
-        'dwell' : dwell,
-        'shape' : (xnum,ynum),
-        'scaninfo' : {'type': 'XRF_fly', 'raster' : False, 'fast_axis':flying_zebra._fast_axis},
-        'scan_params' : [xstart,xstop,xnum,ystart,ystop,ynum,dwell]
+        'detectors': [zebra.name, xs.name, ion.name],
+        'dwell': dwell,
+        'shape': (xnum, ynum),
+        'scaninfo': {'type': 'XRF_fly',
+                     'raster': False,
+                     'fast_axis': flying_zebra._fast_axis},
+        'scan_params': [xstart, xstop, xnum, ystart, ystop, ynum, dwell]
         }
     )
 
-
-    from bluesky.plan_stubs import stage, unstage
     @stage_decorator([xs])
     def fly_each_step(detectors, motor, step, firststep):
         "See http://nsls-ii.github.io/bluesky/plans.html#the-per-step-hook"
@@ -424,13 +424,14 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from abs_set(ion.nuse_all,xnum)
         # arm the Zebra (start caching x positions)
         yield from kickoff(flying_zebra, xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell, wait=True)
-        yield from abs_set(xs.settings.acquire, 1)  # start acquiring images
+        yield from bps.trigger(xs, group='row')
         yield from abs_set(ion.erase_start, 1) # arm SIS3820, note that there is a 1 sec delay in setting X into motion
                                                # so the first point *in each row* won't normalize...
         #if firststep == True:
         #    ttime.sleep(0.)
-        ttime.sleep(1.5)
-        yield from abs_set(xmotor, xstop+1*delta, wait=True)  # move in x
+        yield from bps.sleep(1.5)
+        yield from abs_set(xmotor, xstop+1*delta, group='row')  # move in x
+        yield from bps.wait(group='row')
         yield from abs_set(xs.settings.acquire, 0)  # stop acquiring images
         yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
         yield from complete(flying_zebra)  # tell the Zebra we are done
@@ -443,6 +444,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         scanrecord.current_type.put(md['scaninfo']['type'])
         scanrecord.scanning.put(True)
         scanrecord.time_remaining.put((dwell*xnum + 3.8)/3600)
+
     def finalize_scan(name, doc):
         logscan_detailed('xrf_fly')
         scanrecord.scanning.put(False)
@@ -450,10 +452,13 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
 
     #@subs_decorator([LiveTable([ymotor]), RowBasedLiveGrid((ynum, xnum), ion.name, row_key=ymotor.name), LiveZebraPlot()])
     #@subs_decorator([LiveTable([ymotor]), LiveGrid((ynum, xnum), sclr1.mca1.name)])
-    @subs_decorator([LiveGrid((ynum, xnum+1), xs.channel1.rois.roi01.value.name,extent=(xstart,xstop,ystop,ystart))])
-    @subs_decorator({'start':at_scan})
-    @subs_decorator({'stop':finalize_scan})
-    @monitor_during_decorator([xs.channel1.rois.roi01.value])  # monitor values from xs
+    @subs_decorator([LiveGrid((ynum, xnum+1),
+                              xs.channel1.rois.roi01.value.name,
+                              extent=(xstart, xstop, ystop, ystart))])
+    @subs_decorator({'start': at_scan})
+    @subs_decorator({'stop': finalize_scan})
+    # monitor values from xs
+    @monitor_during_decorator([xs.channel1.rois.roi01.value])
     #@monitor_during_decorator([xs], run=False)  # monitor values from xs
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
@@ -461,10 +466,13 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from bps.mov(xs.total_points, xnum)
         # added to "prime" the detector
         #yield from abs_set(xs.settings.trigger_mode, 'TTL Veto Only')
+
         yield from abs_set(xs.external_trig, True)
         ystep = 0
+
         for step in np.linspace(ystart, ystop, ynum):
-            scanrecord.time_remaining.put( (ynum - ystep) * ( dwell * xnum + 3.8 ) / 3600.)
+            yield from abs_set(scanrecord.time_remaining,
+                               (ynum - ystep) * ( dwell * xnum + 3.8 ) / 3600.)
             ystep = ystep + 1
             # 'arm' the xs for outputting fly data
             yield from abs_set(xs.hdf5.fly_next, True)
@@ -479,7 +487,6 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from abs_set(ion.count_mode, 1)
         if shutter is True:
             yield from mv(shut_b, 'Close')
-
 
     return (yield from plan())
 
@@ -544,7 +551,8 @@ class SrxXSP3Handler:
         with h5py.File(self._filepath, 'r') as f:
             return np.asarray(f[self.XRF_DATA_KEY])
 
-def batch_fly(paramlist,kwlist=None,zlist=None):
+
+def batch_fly(paramlist, kwlist=None, zlist=None):
     '''
     paramlist   list    list of positional and dwell time arguments to scan_and_fly
     kwlist      list    list of dicts containing keywords to pass to scan_and_fly
@@ -561,15 +569,16 @@ def batch_fly(paramlist,kwlist=None,zlist=None):
             yield from abs_set(hf_stage.z,zlist[i],wait=True)
         yield from scan_and_fly(*paramlist[i],**kwlist[i])
 
-def batch_fly_arb(paramlist,kwlist=None,motlist=None):
+
+def batch_fly_arb(paramlist, kwlist=None, motlist=None):
     '''
     paramlist   list            list of positional and dwell time arguments to scan_and_fly
     kwlist      list            list of dicts containing keywords to pass to scan_and_fly
     motlist     list of lists   a list of motor,value pairs that define the prestart condition
     '''
 
-    if kwlist == None:
-        kwlist=list()
+    if kwlist is None:
+        kwlist = list()
         for _ in paramlist:
             kwlist.append({})
 
@@ -577,13 +586,14 @@ def batch_fly_arb(paramlist,kwlist=None,motlist=None):
 #        if motlist is not None:
 #            yield from abs_set(motlist[i][0],motlist[i][1],wait=True)
 #        yield from scan_and_fly(*paramlist[i],**kwlist[i])
-    for i in range(0,len(paramlist)):
+    for i in range(0, len(paramlist)):
         if motlist is not None:
             for pospair in motlist[i]:
-                yield from abs_set(pospair[0],pospair[1],wait=True)
-        yield from scan_and_fly(*paramlist[i],**kwlist[i])
+                yield from abs_set(pospair[0], pospair[1], wait=True)
+        yield from scan_and_fly(*paramlist[i], **kwlist[i])
 
-def y_scan_and_fly(*args,**kwargs):
+
+def y_scan_and_fly(*args, **kwargs):
     '''
     convenience wrapper for scanning Y as the fast axis.
     call scan_and_fly, forcing slow and fast axes to be X and Y.
@@ -593,4 +603,7 @@ def y_scan_and_fly(*args,**kwargs):
     if 'delta' in kwargs.keys():
         if kwargs['delta'] is not None:
             kwargs['delta'] = 0.004
-    yield from scan_and_fly(*args,**kwargs,xmotor=hf_stage.y,ymotor=hf_stage.x,flying_zebra=flying_zebra_y)
+    yield from scan_and_fly(*args, **kwargs,
+                            xmotor=hf_stage.y,
+                            ymotor=hf_stage.x,
+                            flying_zebra=flying_zebra_y)
