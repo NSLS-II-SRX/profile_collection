@@ -1,3 +1,4 @@
+
 #####
 # Pseudocode for fly scanning
 # User supplies:
@@ -48,7 +49,7 @@ class SRXFlyer1Axis(Device):
         self._det = xs
         self._sis = sclr1
         self._filestore_resource = None
-        
+
         self._fast_axis = fast_axis
 
         if self._fast_axis == 'HOR':
@@ -253,7 +254,7 @@ def export_zebra_data(zebra, filepath, fast_axis):
         enc1_d = zebra.pc.data.enc2.get()
     else:
         enc1_d = zebra.pc.data.enc1.get()
-        
+
     while len(time_d) == 0 or len(time_d) != len(enc1_d):
         time_d = zebra.pc.data.time.get()
         #enc1_d = zebra.pc.data.enc2.get()
@@ -586,7 +587,7 @@ def y_scan_and_fly(*args,**kwargs):
     '''
     convenience wrapper for scanning Y as the fast axis.
     call scan_and_fly, forcing slow and fast axes to be X and Y.
-    in this function, the first three scan parameters are for the *fast axis*, 
+    in this function, the first three scan parameters are for the *fast axis*,
     i.e., the vertical, and the second three for the *slow axis*, horizontal.
     '''
     if 'delta' in kwargs.keys():

@@ -13,14 +13,14 @@ def cryofill(wait_time_after_v19_claose = 60*10):
     while abs(cryo_v19.get() - 1) > 0.05:
         cryo_v19_possp.set(100)
         time.sleep(2)
-    
+
     time.sleep(5)
     while (cryo_v19.get() - 0) > 0.05:
         print('cryo cooler still refilling')
         time.sleep(5)
     cryo_v19_possp.set(0)
     print('waiting for', wait_time_after_v19_claose, 's', 'before taking data...')
-    time.sleep(wait_time_after_v19_claose)    
+    time.sleep(wait_time_after_v19_claose)
 
 def breakdown(batch_dir=None, batch_filename=None,xstart=None,ystart=None,\
     xsteps=None,ysteps=None,xstepsize=None,ystepsize=None,zposition=None,\
@@ -72,7 +72,7 @@ def breakdown(batch_dir=None, batch_filename=None,xstart=None,ystart=None,\
                         xsteps=xoverflow
                     else:
                         xsteps=xbasestep
-                
+
                 mylist.append([k,xs,xsteps,xstepsize,ys,ysteps,ystepsize,\
                 acqtime,numrois])
     if batch_dir is None:
@@ -86,7 +86,7 @@ def breakdown(batch_dir=None, batch_filename=None,xstart=None,ystart=None,\
         raise Exception(\
         "Please provide a batch file name, e.g. batch_file = 'xrf_batch_test.txt'.")
     batchfile = batch_dir+'/'+batch_filename
-                                                                           
+
     with open(batchfile, 'w') as batchf:
         for item in mylist:
             for entry in item:
@@ -112,8 +112,10 @@ def peakup_dcm(correct_roll=True, debug=False):
     '''
     e_value=energy.energy.get()[1]
     det = [sclr1]
-    ps = PeakStats(dcm.c2_pitch.name,i0.name)
-    ps1 = PeakStats(dcm.c1_roll.name,i0.name)
+
+    ps = PeakStats(dcm.c2_pitch.name, i0.name)
+    ps1 = PeakStats(dcm.c1_roll.name, i0.name)
+
     RE(mv(shut_b,'Open'))
     c2pitch_kill=EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
     
@@ -228,7 +230,7 @@ def getemissionE(element,edge = None):
                 print("{0:s}\t{1:8.2f}".format(e,cur_element.emission_line[e]))
     else:
         return cur_element.emission_line[edge]
-         
+
 
 def getbindingE(element,edge=None):
     '''
@@ -242,7 +244,7 @@ def getbindingE(element,edge=None):
         for i in ['k','l1','l2','l3']:
             print("{0:s}\t{1:8.2f}\t{2:5.3}".format(i,xrfC.XrayLibWrap(elements[element].Z,'binding_e')[i]*1000.,
                                                   xrfC.XrayLibWrap(elements[element].Z,'yield')[i]))
-            if (y[0] < xrfC.XrayLibWrap(elements[element].Z,'yield')[i] 
+            if (y[0] < xrfC.XrayLibWrap(elements[element].Z,'yield')[i]
              and xrfC.XrayLibWrap(elements[element].Z,'binding_e')[i] < 25.):
                 y[0] = xrfC.XrayLibWrap(elements[element].Z,'yield')[i]
                 y[1] = i
@@ -263,11 +265,11 @@ def printfig():
     pad_inches=4)
     os.system("lp -d HXN-printer-1 /home/xf05id1/tmp/temp.png")
 
-def estimate_scan_duration(xnum,ynum,dwell,scantype=None,event_delay=None):
+def estimate_scan_duration(xnum, ynum, dwell, scantype=None, event_delay=None):
     '''
     xnum    int     number of steps or points as entered on the command line for the scan in X
     ynum    int     number of steps or points as entered on the command line for the scan in Y
-    dwell   float   exposure time in seconds as entered on the command line 
+    dwell   float   exposure time in seconds as entered on the command line
     scantype    string  one of [XRF,XRF_fly,XANES]
     '''
     overhead={'xrf':0.7,'xrf_fly':3.8,'xanes':1.6}
