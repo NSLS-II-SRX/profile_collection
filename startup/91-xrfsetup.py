@@ -210,14 +210,14 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
             roi_key = getattr(xs2.channel1.rois, roi_name).value.name
             livetableitem.append(roi_key)
-        
-            roimap2 = LiveGrid((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno', 
-                                xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+
+            roimap2 = LiveGrid((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno',
+                                xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop])
             livecallbacks.append(roimap2)
 
     if dpc is not None:
         dpc_tmap = LiveGrid((ynumstep+1, xnumstep+1), dpc.stats1.total.name, clim=None, cmap='magma',
-                            xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+                            xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop])
         livecallbacks.append(dpc_tmap)
 #        dpc_hmap = LiveGrid((ynumstep+1, xnumstep+1), dpc.stats1.centroid.x.name, clim=None, cmap='magma',
 #                            xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
@@ -229,34 +229,37 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
     if i0map_show is True:
         if struck == False:
-            i0map = LiveGrid((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='viridis', 
-                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+            i0map = LiveGrid((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='viridis',
+                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop])
         else:
-            i0map = LiveGrid((ynumstep+1, xnumstep+1), i0.name, clim=None, cmap='viridis', 
+            i0map = LiveGrid((ynumstep+1, xnumstep+1), i0.name, clim=None, cmap='viridis',
+                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+            immap = LiveGrid((ynumstep+1, xnumstep+1), im.name, clim=None, cmap='viridis',
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
         livecallbacks.append(i0map)
+        livecallbacks.append(immap)
 
     if itmap_show is True:
-        itmap = LiveGrid((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='magma', 
-                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+        itmap = LiveGrid((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='magma',
+                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop])
         livecallbacks.append(itmap)
-    
+
     #this does not seem to work
     if record_cryo is True:
-        cryo_v19map = LiveGrid((ynumstep+1, xnumstep+1), 'cryo_v19', clim=None, cmap='jet', 
-                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+        cryo_v19map = LiveGrid((ynumstep+1, xnumstep+1), 'cryo_v19', clim=None, cmap='jet',
+                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop])
         livecallbacks.append(cryo_v19map)
 
-        cryo_lt19map = LiveGrid((ynumstep+1, xnumstep+1), 'cryo_lt19', clim=None, cmap='jet', 
-                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+        cryo_lt19map = LiveGrid((ynumstep+1, xnumstep+1), 'cryo_lt19', clim=None, cmap='jet',
+                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop])
         livecallbacks.append(cryo_lt19map)
 
-        dBPM_hmap = LiveGrid((ynumstep+1, xnumstep+1), 'dBPM_h', clim=None, cmap='jet', 
-                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+        dBPM_hmap = LiveGrid((ynumstep+1, xnumstep+1), 'dBPM_h', clim=None, cmap='jet',
+                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop])
         livecallbacks.append(dBPM_hmap)
 
-        dBPM_vmap = LiveGrid((ynumstep+1, xnumstep+1), 'dBPM_v', clim=None, cmap='jet', 
-                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+        dBPM_vmap = LiveGrid((ynumstep+1, xnumstep+1), 'dBPM_v', clim=None, cmap='jet',
+                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop])
         livecallbacks.append(dBPM_vmap)
 
 
