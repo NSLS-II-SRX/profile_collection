@@ -6,6 +6,7 @@ from bluesky.callbacks import LiveFit,LiveFitPlot
 from bluesky.callbacks.fitting import PeakStats
 from bluesky.plan_stubs import mv
 import lmfit
+import time
 
 def cryofill(wait_time_after_v19_claose = 60*10):
     cryo_v19_possp = EpicsSignal('XF:05IDA-UT{Cryo:1-IV:19}Pos-SP', name='cryov19_possp')
@@ -104,13 +105,16 @@ def xybatch_grid(xstart, xstepsize, xnumstep, ystart, ystepsize, ynumstep):
 def gaussian(x, A, sigma, x0):
     return A*np.exp(-(x - x0)**2/(2 * sigma**2))
 
-def peakup_dcm(correct_roll=True, debug=False):
+def peakup_dcm(correct_roll=True, plot=False):
     '''
     Scan the HDCM fine pitch and, optionally, roll against the ion chamber in the D Hutch
 
     correct_roll    <Bool>      If True, align the beam in the vertical (roll)
     '''
     e_value=energy.energy.get()[1]
+    pitch_old = dcm.c2_pitch.position
+    roll_old = dcm.c1_roll.position
+
     det = [sclr1]
 
     ps = PeakStats(dcm.c2_pitch.name, i0.name)
@@ -118,11 +122,16 @@ def peakup_dcm(correct_roll=True, debug=False):
 
     RE(mv(shut_b,'Open'))
     c2pitch_kill=EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
-    
-    pitch_lim = (-19.320, -19.370)
+
+    # pitch_lim = (-19.320, -19.370)
+    # pitch_num = 51
+    # roll_lim = (-4.9, -5.14)
+    # roll_num = 45
+
+    pitch_lim = (-19.375, -19.425)
     pitch_num = 51
-    roll_lim = (-4.9, -5.14)
-    roll_num = 45
+    roll_lim = (-4.9, -5.6)
+    roll_num = 51
 
     #if e_value < 10.:
     #    sclr1.preset_time.put(0.1)
@@ -134,27 +143,37 @@ def peakup_dcm(correct_roll=True, debug=False):
         sclr1.preset_time.put(0.1)
     else:
         sclr1.preset_time.put(1.)
-    
-    if (debug == True):
+
+    if (plot == True):
         sclr1.preset_time.put(1.0)  # If we are debugging, let's collect a longer scan
         RE(scan(det, dcm.c2_pitch, pitch_lim[0], pitch_lim[1], pitch_num), [ps])
-        print('Pitch: Maximum flux at %f' % (ps.max[0]))
+        print('Pitch: Centroid at %f\n\n' % (ps.cen))
         plt.figure()
         plt.plot(ps.x_data, ps.y_data, label='Data')
-        plt.plot((ps.max[0], ps.max[0]), (np.amin(ps.y_data), np.amax(ps.y_data)), '--k', label='Maximum')
+        plt.plot((ps.cen, ps.cen), (np.amin(ps.y_data), np.amax(ps.y_data)), '--k', label='Centroid')
         plt.xlabel('HDCM C2 PITCH')
         plt.ylabel('Counts')
         plt.legend()
     else:
         RE(scan(det, dcm.c2_pitch, pitch_lim[0], pitch_lim[1], pitch_num), [ps])
-    dcm.c2_pitch.move(ps.max[0], wait=True)
+
+    time.sleep(0.5)
+    dcm.c2_pitch.move(ps.cen, wait=True)
+    time.sleep(0.5)
+    if (np.abs(dcm.c2_pitch.position - ps.cen) > 0.001):
+        print('The pitch motor did not move on the first try. Trying again...', end='')
+        dcm.c2_pitch.move(ps.cen, wait=True)
+        if (np.abs(dcm.c2_pitch.position - ps.cen) > 0.001):
+            print('FAIL! Check motor location.\n')
+        else:
+            print('OK\n')
 
     if correct_roll == True:
-        if (debug == True):
+        if (plot == True):
             sclr1.preset_time.put(1.0)  # If we are debugging, let's collect a longer scan
             RE(scan(det, dcm.c1_roll, roll_lim[0], roll_lim[1], roll_num), [ps1])
-            print('Roll: Maximum flux at %f' % (ps1.max[0]))
-            print('Roll: Centroid at %f' % (ps1.cen))
+            # print('Roll: Maximum flux at %f' % (ps1.max[0]))
+            print('Roll: Centroid at %f\n\n' % (ps1.cen))
             plt.figure()
             plt.plot(ps1.x_data, ps1.y_data, label='Data')
             plt.plot((ps1.cen, ps1.cen), (np.amin(ps1.y_data), np.amax(ps1.y_data)), '--k', label='Centroid')
@@ -163,14 +182,36 @@ def peakup_dcm(correct_roll=True, debug=False):
             plt.legend()
         else:
             RE(scan(det, dcm.c1_roll, roll_lim[0], roll_lim[1], roll_num), [ps1])
+
+        time.sleep(0.5)
         dcm.c1_roll.move(ps1.cen,wait=True)
+        time.sleep(0.5)
+        if (np.abs(dcm.c1_roll.position - ps1.cen) > 0.001):
+            print('The roll motor did not move on the first try. Trying again...', end='')
+            dcm.c1_roll.move(ps1.cen, wait=True)
+            if (np.abs(dcm.c1_roll.position - ps1.cen) > 0.001):
+                print('FAIL! Check motor location.\n')
+            else:
+                print('OK\n')
+
+
+    # Output old/new values
+    print('Old pitch value:\t%f' % pitch_old)
+    print('New pitch value:\t%f' % ps.cen)
+    print('Current pitch value:\t%f' % dcm.c2_pitch.position)
+    print('Old roll value: \t%f' % roll_old)
+    print('New roll value: \t%f\n' % ps1.cen)
+    print('Current roll value: \t%f\n' % dcm.c1_roll.position)
 
     RE(mv(shut_b,'Close'))
 
     #for some reason we now need to kill the pitch motion to keep it from overheating.  6/8/17
     #this need has disappeared mysteriously after the shutdown - gjw 2018/01/19
-    #time.sleep(5)
-    #c2pitch_kill.put(1)
+    # This has now reappeared - amk 2018/06/06
+    time.sleep(1)
+    c2pitch_kill.put(1)
+
+
 def ic_energy_batch(estart,estop,npts):
     ion_chamber_fp=open('/home/xf05id1/current_user_data/ionchamber_readings_'+time.strftime('%Y%m%d%H%M%S')+'.csv','w')
     ion_chamber_fp.write('#energy,I premirror,I sample,I transmittedi\n')
@@ -208,7 +249,7 @@ def setroi(roinum, element, edge=None, det=None):
     if edge == None:
         for e in ['ka1','ka2','kb1','la1','la2','lb1','lb2','lg1','ma1']:
             if cur_element.emission_line[e] < energy.energy.get()[1]:
-                edge = 'e' 
+                edge = 'e'
                 break
     else:
         e = edge
@@ -220,6 +261,18 @@ def setroi(roinum, element, edge=None, det=None):
         for d in [xs.channel1,xs.channel2,xs.channel3]:
             d.set_roi(roinum,e_ch-100,e_ch+100,name=element+'_'+e)
     print("ROI{} set for {}-{} edge.".format(roinum,element,e))
+
+
+def clearroi(roinum=None):
+    if roinum == None:
+        roinum = [1, 2, 3]
+    else:
+        roinum = [roinum]
+
+    for roi in roinum:
+        for d in [xs.channel1, xs.channel2, xs.channel3]:
+            d.set_roi(roi, 0, 0, name='')
+
 
 def getemissionE(element,edge = None):
     cur_element = xrfC.XrfElement(element)
