@@ -220,7 +220,6 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
 
 class SRXXspressTrigger(XspressTrigger):
     def trigger(self):
-        print(f'triggering in mode {self._mode}')
         if self._staged != Staged.yes:
             raise RuntimeError("not staged")
 
