@@ -85,6 +85,7 @@ class SRXFlyer1Axis(Device):
         self._encoder.pc.block_state_reset.put(1)
         self.reg = reg
         self._document_cache = []
+        self._last_bulk = None
 
     def stage(self):
         super().stage()
@@ -163,13 +164,6 @@ class SRXFlyer1Axis(Device):
         self._encoder.pc.block_state_reset.put(1)
         #see triggering errors of the xspress3 on suspension.  This is to test the reset of the xspress3 after a line.
         self._det.settings.acquire.put(0)
-        return NullStatus()
-
-    def collect(self):
-        # Create records in the FileStore database.
-        # move this to stage because I thinkt hat describe_collect needs the
-        # resource id
-        # TODO use ophyd.areadectector.filestoer_mixins.resllource_factory here
 
         self.__filename = '{}.h5'.format(uuid.uuid4())
         self.__filename_sis = '{}.h5'.format(uuid.uuid4())
@@ -182,13 +176,12 @@ class SRXFlyer1Axis(Device):
         self.__write_filepath_sis = os.path.join(self.LARGE_FILE_DIRECTORY_WRITE_PATH,
                                                  self.__filename_sis)
 
-
         self.__filestore_resource, datum_factory_z = resource_factory(
             'ZEBRA_HDF51', root='/',
             resource_path=self.__read_filepath,
             resource_kwargs={}, path_semantics='posix')
         self.__filestore_resource_sis, datum_factory_sis = resource_factory(
-            'SIS_HDF51',root='/',
+            'SIS_HDF51', root='/',
             resource_path=self.__read_filepath_sis,
             resource_kwargs={},
             path_semantics='posix')
@@ -213,22 +206,36 @@ class SRXFlyer1Axis(Device):
 
         # Yield a (partial) Event document. The RunEngine will put this
         # into metadatastore, as it does all readings.
-        yield {'time': time.time(), 'seq_num': 1,
-               'data': {'time': time_datum['datum_id'],
-#                        'enc1': enc1_datum_id},
-                        'enc1': enc1_datum['datum_id'],
-                        'fluor': xs_reading['fluor']['value'],
-                        'i0': sis_datum['datum_id'],
-                        'i0_time': sis_time['datum_id']},
-               'timestamps': {'time': time_datum['datum_id'],  # not a typo#
-                              'enc1': time_datum['datum_id'],
-                              'fluor': xs_reading['fluor']['timestamp'],
-                              'i0': sis_time['datum_id'],
-                              'i0_time': sis_time['datum_id']}}
+        self._last_bulk =  {
+            'time': time.time(), 'seq_num': 1,
+            'data': {'time': time_datum['datum_id'],
+                     'enc1': enc1_datum['datum_id'],
+                     'fluor': xs_reading['fluor']['value'],
+                     'i0': sis_datum['datum_id'],
+                     'i0_time': sis_time['datum_id']},
+            'timestamps': {'time': time_datum['datum_id'],  # not a typo#
+                           'enc1': time_datum['datum_id'],
+                           'fluor': xs_reading['fluor']['timestamp'],
+                           'i0': sis_time['datum_id'],
+                           'i0_time': sis_time['datum_id']}
+        }
+        return NullStatus()
+
+    def collect(self):
+        # Create records in the FileStore database.
+        # move this to stage because I thinkt hat describe_collect needs the
+        # resource id
+        # TODO use ophyd.areadectector.filestoer_mixins.resllource_factory here
+        if self._last_bulk is None:
+            raise Exception("the order of complete and collect is brittle and out "
+                            "of sync. This device relies on in-order and 1:1 calls "
+                            "between complete and collect to correctly create and stash "
+                            "the asset registry documents")
+        yield self._last_bulk
+        self._last_bulk = None
         self._mode = 'idle'
 
     def collect_asset_docs(self):
-        # TODO write this!
         yield from iter(list(self._document_cache))
         self._document_cache.clear()
 
