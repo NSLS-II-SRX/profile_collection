@@ -489,7 +489,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         # added to "prime" the detector
         #yield from abs_set(xs.settings.trigger_mode, 'TTL Veto Only')
 
-        yield from abs_set(xs.external_trig, True)
+        yield from bs.mov(xs.external_trig, True)
         ystep = 0
 
         for step in np.linspace(ystart, ystop, ynum):
@@ -497,7 +497,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
                                (ynum - ystep) * ( dwell * xnum + 3.8 ) / 3600.)
             ystep = ystep + 1
             # 'arm' the xs for outputting fly data
-            yield from abs_set(xs.fly_next, True)
+            yield from bps.mov(xs.fly_next, True)
 #            print('h5 armed\t',time.time())
             if step == ystart:
                 firststep = True
@@ -505,8 +505,8 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
                 firststep = False
             yield from fly_each_step([], ymotor, step, firststep)
 #            print('return from step\t',time.time())
-        yield from abs_set(xs.external_trig, False)
-        yield from abs_set(ion.count_mode, 1)
+        yield from bs.mov(xs.external_trig, False,
+                          ion.count_mode, 1)
         if shutter is True:
             yield from mv(shut_b, 'Close')
 
