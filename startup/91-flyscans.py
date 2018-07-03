@@ -497,7 +497,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         # added to "prime" the detector
         #yield from abs_set(xs.settings.trigger_mode, 'TTL Veto Only')
 
-        yield from bs.mov(xs.external_trig, True)
+        yield from bps.mov(xs.external_trig, True)
         ystep = 0
 
         for step in np.linspace(ystart, ystop, ynum):
