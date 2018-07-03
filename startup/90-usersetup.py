@@ -103,9 +103,11 @@ RE.md['proposal']  = {  'proposal_num': str(proposal_num),
                                   'cycle': str(cycle)
                         }
 
-
-userdatadir = '/nfs/xf05id1/userdata/'+str(cycle)+'/'+str(saf_num)+'_'+str(PI_lastname)+'/'
-scriptdir = '/nfs/xf05id1/src/bluesky_scripts/'
+# Changed from NFS to GPFS
+# userdatadir = '/nfs/xf05id1/userdata/'+str(cycle)+'/'+str(saf_num)+'_'+str(PI_lastname)+'/'
+userdatadir = '/nsls2/xf05id1/experiments/' + str(cycle) + '/' + str(saf_num) + '_' + str(PI_lastname) + '/'
+# scriptdir = '/nfs/xf05id1/src/bluesky_scripts/'
+scriptdir = '/nsls2/xf05id1/shared/src/bluesky_scripts/'
 scanoutput._DEFAULT_FILEDIR = userdatadir
 
 try:
