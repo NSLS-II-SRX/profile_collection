@@ -439,8 +439,9 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
         yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
         yield from abs_set(xmotor.velocity, v, wait=True)  # set the "stage speed"
-        yield from abs_set(xs.hdf5.num_capture, xnum)
-        yield from abs_set(xs.settings.num_images, xnum)
+
+        yield from abs_set(xs.hdf5.num_capture, xnum, wait=True)
+        yield from abs_set(xs.settings.num_images, xnum, wait=True)
         yield from abs_set(ion.nuse_all,xnum)
         # arm the Zebra (start caching x positions)
 
