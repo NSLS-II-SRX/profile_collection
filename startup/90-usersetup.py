@@ -27,12 +27,25 @@ proposal_num = 302925
 proposal_title = 'Routine Setup and Testing for Beamline 5-ID'
 PI_lastname = 'Chu'
 saf_num = 301967
+
 """
-proposal_num = 302204
-proposal_title = 'Determining the Provenance of Glacial Erratics found on the North Shore of Long Island Based on XRF Geochronology of he Mineral Monazite'
-PI_lastname = 'Mozer'
-saf_num = 302185
+proposal_num = 303140
+proposal_title = 'Teacher and Student Workshop: Imaging with a New Light'
+PI_lastname = 'Perez'
+saf_num = 302695
 """
+"""
+proposal_num = 302314
+proposal_title = 'Investigation of space-weathered minerals'
+PI_lastname = 'Legett'
+saf_num = 302682
+"""
+
+#proposal_num = 302204
+#proposal_title = 'Determining the Provenance of Glacial Erratics found on the North Shore of Long Island Based on XRF Geochronology of he #Mineral Monazite'
+#PI_lastname = 'Mozer'
+#saf_num = 302185
+
 #proposal_num = 302217
 #proposal_title = 'Using X-Ray Fluorescence and Absorption Spectroscopy to Analyze Heavy Element and Metal Contaminants in the Tissues of #Predatory Arachnids Residing Near the Forge River Polluted Water System in Shirley, New York'
 #PI_lastname = 'DAmbrosia'
