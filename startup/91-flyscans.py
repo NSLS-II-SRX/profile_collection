@@ -506,7 +506,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
                 firststep = False
             yield from fly_each_step([], ymotor, step, firststep)
 #            print('return from step\t',time.time())
-        yield from bs.mov(xs.external_trig, False,
+        yield from bps.mov(xs.external_trig, False,
                           ion.count_mode, 1)
         if shutter is True:
             yield from mv(shut_b, 'Close')
