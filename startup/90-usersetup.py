@@ -133,7 +133,7 @@ try:
 except FileNotFoundError:
     print("[W] Previous user data directory link did not exist!")
 
-os.symlink(userdatadir,'/home/xf05id1/current_user_data')
+os.symlink(userdatadir, '/home/xf05id1/current_user_data')
 def logscan(scantype):
     h=db[-1]
     scan_id = h.start['scan_id']
