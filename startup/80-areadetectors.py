@@ -12,7 +12,7 @@ from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreTIFF)
 from ophyd import Signal
 from ophyd import Component as C
-
+from hxntools.detectors.merlin import MerlinDetector
 from hxntools.handlers import register
 register(db)
 
@@ -373,3 +373,69 @@ class SrxXspress3Detector2(XspressTrigger, Xspress3Detector):
 for i in range(1,4):
     ch=getattr(xs.channel1.rois,'roi{:02}.value'.format(i))
     ch.name = 'ROI_{:02}'.format(i)
+
+class HDF5PluginWithFileStoreMerlin(HDF5Plugin, FileStoreHDF5IterativeWrite):
+    file_number_sync = None
+
+    def get_frames_per_point(self):
+        if self.parent._mode is SRXMode.fly:
+            return self.parent.total_points.get()
+        elif self.parent._mode is SRXMode.step:
+            return self.parent.cam.num_exposures.get()
+        else:
+            raise NotImplementedError
+
+    def stage(self):
+        self.stage_sigs['num_capture'] = self.parent.total_points.get()
+        staged = super().stage()
+        return staged
+
+
+class SRXMerlin(SingleTrigger, MerlinDetector):
+    total_points = Cpt(Signal, value=1, doc="The total number of points to be taken")
+    fly_next = Cpt(Signal, value=False, doc="latch to put the detector in 'fly' mode")
+
+    hdf5 = Cpt(HDF5PluginWithFileStoreMerlin, 'HDF1:',
+               read_attrs=[],
+               configuration_attrs=[],
+               write_path_template='/tmp/merlin',
+               root='/tmp')
+
+    stats1 = Cpt(StatsPlugin, 'Stats1:')
+    stats2 = Cpt(StatsPlugin, 'Stats2:')
+    stats3 = Cpt(StatsPlugin, 'Stats3:')
+    stats4 = Cpt(StatsPlugin, 'Stats4:')
+    stats5 = Cpt(StatsPlugin, 'Stats5:')
+    proc1 = Cpt(ProcessPlugin, 'Proc1:')
+    transform1 = Cpt(TransformPlugin, 'Trans1:')
+
+    roi1 = Cpt(ROIPlugin, 'ROI1:')
+    roi2 = Cpt(ROIPlugin, 'ROI2:')
+    roi3 = Cpt(ROIPlugin, 'ROI3:')
+    roi4 = Cpt(ROIPlugin, 'ROI4:')
+
+    def stop(self):
+        ret = super().stop()
+        self.hdf5.stop()
+        return ret
+
+    def stage(self):
+        # do the latching
+        if self.fly_next.get():
+            self.fly_next.put(False)
+            self._mode = SRXMode.fly
+            self.stage_sigs[self.cam.trigger_mode] = 1
+        else:
+            self.stage_sigs[self.cam.trigger_mode] = 0
+
+        return super().stage()
+
+    def unstage(self):
+        try:
+            ret = super().unstage()
+        finally:
+            self._mode = SRXMode.step
+        return ret
+
+merlin = SRXMerlin('XF:05IDD-ES{Merlin:1}', name='merlin')
+merlin.read_attrs = ['hdf5']
