@@ -383,7 +383,7 @@ class LiveZebraPlot(CallbackBase):
 # changed the flyer device to be aware of fast vs slow axis in a 2D scan
 # should abstract this method to use fast and slow axes, rather than x and y
 def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
-                 delta=0.002, shutter=True,
+                 delta=None, shutter=True,
                  xmotor=hf_stage.x, ymotor=hf_stage.y,
                  xs=xs, ion=sclr1, align=False,
                  flying_zebra=flying_zebra, md=None):
@@ -400,8 +400,14 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     c2pitch_kill = EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
     if md is None:
         md = {}
+
+    # If delta is None, set delta based on time for acceleration
     if delta is None:
-        delta = 0.002
+        # delta = 0.002  # old default value
+        v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
+        t_acc = 1.0  # acceleration time, default 1.0 s
+        delta = t_acc * v  # distance the stage will travel in t_acc
+    
     yield from abs_set(ymotor, ystart, wait=True) # ready to move
     yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
 
@@ -425,7 +431,8 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         'scaninfo': {'type': 'XRF_fly',
                      'raster': False,
                      'fast_axis': flying_zebra._fast_axis},
-        'scan_params': [xstart, xstop, xnum, ystart, ystop, ynum, dwell]
+        'scan_params': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
+        'delta': delta
         }
     )
 
@@ -624,8 +631,15 @@ def y_scan_and_fly(*args, **kwargs):
     i.e., the vertical, and the second three for the *slow axis*, horizontal.
     '''
     if 'delta' in kwargs.keys():
-        if kwargs['delta'] is not None:
-            kwargs['delta'] = 0.004
+        # if kwargs['delta'] is not None:  # If delta is set in the arguments,
+                                           # then we should not override that value
+                                           # AMK
+        if kwargs['delta'] is None:
+            # kwargs['delta'] = 0.004        # default value
+            v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
+            t_acc = 1.0  # acceleration time, default 1.0 s
+            kwargs['delta'] = t_acc * v  # distance the stage will travel in t_acc
+
     yield from scan_and_fly(*args, **kwargs,
                             xmotor=hf_stage.y,
                             ymotor=hf_stage.x,
