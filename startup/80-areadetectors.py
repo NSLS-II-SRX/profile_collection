@@ -155,7 +155,8 @@ db.reg.register_handler(BulkXSPRESS.HANDLER_NAME, BulkXSPRESS,
                         overwrite=True)
 
 from enum import Enum
-class X3Mode(Enum):
+
+class SRXMode(Enum):
     step = 1
     fly = 2
 
@@ -171,14 +172,14 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
 
     @property
     def filestore_spec(self):
-        if self.parent._mode is X3Mode.fly:
+        if self.parent._mode is SRXMode.fly:
            return BulkXSPRESS.HANDLER_NAME
         return Xspress3HDF5Handler.HANDLER_NAME
 
     def generate_datum(self, key, timestamp, datum_kwargs):
-        if self.parent._mode is X3Mode.step:
+        if self.parent._mode is SRXMode.step:
             return super().generate_datum(key, timestamp, datum_kwargs)
-        elif self.parent._mode is X3Mode.fly:
+        elif self.parent._mode is SRXMode.fly:
             # we are doing something _very_ dirty here to skip a level of the inheritance
             # this is brittle is if the MRO changes we may not hit all the level we expect to
             return FileStorePluginBase.generate_datum(self, key, timestamp, datum_kwargs)
@@ -227,12 +228,12 @@ class SRXXspressTrigger(XspressTrigger):
         self.settings.erase.put(1)
         self._acquisition_signal.put(1, wait=False)
         trigger_time = ttime.time()
-        if self._mode is X3Mode.step:
+        if self._mode is SRXMode.step:
             for sn in self.read_attrs:
                 if sn.startswith('channel') and '.' not in sn:
                     ch = getattr(self, sn)
                     self.dispatch(ch.name, trigger_time)
-        elif self._mode is X3Mode.fly:
+        elif self._mode is SRXMode.fly:
             self.dispatch('fluor', trigger_time)
         else:
             raise Exception(f"unexpected mode {self._mode}")
@@ -286,7 +287,7 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
                          read_attrs=read_attrs, **kwargs)
         # this is possiblely one too many places to store this
         # in the parent class it looks at if the extrenal_trig signal is high
-        self._mode = X3Mode.step
+        self._mode = SRXMode.step
 
         self.create_dir.put(-3)
 
@@ -299,14 +300,14 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
         # do the latching
         if self.fly_next.get():
             self.fly_next.put(False)
-            self._mode = X3Mode.fly
+            self._mode = SRXMode.fly
         return super().stage()
 
     def unstage(self):
         try:
             ret = super().unstage()
         finally:
-            self._mode = X3Mode.step
+            self._mode = SRXMode.step
         return ret
 
 xs = SrxXspress3Detector('XF:05IDD-ES{Xsp:1}:', name='xs')
