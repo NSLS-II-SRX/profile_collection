@@ -46,12 +46,14 @@ class SRXFlyer1Axis(Device):
 #    LARGE_FILE_DIRECTORY_WRITE_PATH = '/tmp/fly_scan_ancillary'
     LARGE_FILE_DIRECTORY_READ_PATH = '/nsls2/xf05id1/XF05ID1/data/2018-1/fly_scan_ancillary/'
     "This is the Zebra."
-    def __init__(self, encoder, xs, sclr1, fast_axis, *, reg=db.reg, **kwargs):
+    def __init__(self, encoder, xs, sclr1, fast_axis, *, reg=db.reg,
+                 merlin=None, **kwargs):
         super().__init__('', parent=None, **kwargs)
         self._mode = 'idle'
         self._encoder = encoder
         self._det = xs
         self._sis = sclr1
+        self._merlin = merlin
         self._filestore_resource = None
 
         self._fast_axis = fast_axis
@@ -116,6 +118,8 @@ class SRXFlyer1Axis(Device):
             desc[chan]['source'] = getattr(self._encoder.pc.data, chan).pvname
         desc['fluor'] = spec
         desc['fluor']['source'] = self._det.prefix
+        desc['merlin_image'] = spec
+        desc['merlin_image']['source'] = self._merlin.prefix
         desc['i0'] = spec
         desc['i0']['source'] = self._sis.mca2.pvname
         desc['i0_time'] = spec
@@ -130,7 +134,7 @@ class SRXFlyer1Axis(Device):
         self._npts = int(xnum)
         extent = xstop - xstart
         pxsize = extent / (xnum-1)
-        #1 ms delay between pulses
+        # 1 ms delay between pulses
         decrement = ((pxsize / dwell) * 0.002)
         self._encoder.pc.gate_start.put(xstart)
         #self._encoder.pc.gate_step.put(extent+0.01)
@@ -143,7 +147,8 @@ class SRXFlyer1Axis(Device):
 #        self._encoder.pc.pulse_step.put(extent/xnum)
 #        self._encoder.pc.pulse_width.put(extent/xnum-decrement)
         self._encoder.pc.pulse_step.put(pxsize)
-        self._encoder.pc.pulse_width.put(pxsize-decrement)
+        # self._encoder.pc.pulse_width.put(pxsize-decrement)
+        self._encoder.pc.pulse_width.put(pxsize *.9)
         self._encoder.pc.pulse_start.put(0.0)
         #self._encoder.pc.pulse_step.put(dwell)
         #self._encoder.pc.pulse_width.put(dwell-0.001)
@@ -226,12 +231,14 @@ class SRXFlyer1Axis(Device):
         self._document_cache.extend(('datum', d) for d in (time_datum, enc1_datum,
                                                           sis_datum, sis_time))
         self._document_cache.extend(self._det.collect_asset_docs())
+        self._document_cache.extend(self._merlin.collect_asset_docs())
 
-        # TODO call 'read' on the detector instead
-        # xs_datum_id = self.reg.register_datum(self._det.hdf5._filestore_res, {})
         xs_reading = self._det.read()
-        # Write the file.
+        merlin_reading = self._merlin.read()
+
+        # Write the files for the zebra
         export_zebra_data(self._encoder, self.__write_filepath,self._fast_axis)
+        # and the scaler
         export_sis_data(self._sis, self.__write_filepath_sis)
 
         # Yield a (partial) Event document. The RunEngine will put this
@@ -241,11 +248,13 @@ class SRXFlyer1Axis(Device):
             'data': {'time': time_datum['datum_id'],
                      'enc1': enc1_datum['datum_id'],
                      'fluor': xs_reading['fluor']['value'],
+                     'merlin_image': merlin_reading['merlin_image']['value'],
                      'i0': sis_datum['datum_id'],
                      'i0_time': sis_time['datum_id']},
             'timestamps': {'time': time_datum['datum_id'],  # not a typo#
                            'enc1': time_datum['datum_id'],
                            'fluor': xs_reading['fluor']['timestamp'],
+                           'merlin_image': merlin_reading['merlin_image']['timestamp'],
                            'i0': sis_time['datum_id'],
                            'i0_time': sis_time['datum_id']}
         }
@@ -286,8 +295,8 @@ class SRXFlyer1Axis(Device):
         self.stage()
 
 
-flying_zebra = SRXFlyer1Axis(zebra, xs, sclr1, 'HOR', name='flying_zebra')
-flying_zebra_y = SRXFlyer1Axis(zebra, xs, sclr1, 'VER', name='flying_zebra')
+flying_zebra = SRXFlyer1Axis(zebra, xs, sclr1, 'HOR', name='flying_zebra', merlin=merlin)
+flying_zebra_y = SRXFlyer1Axis(zebra, xs, sclr1, 'VER', name='flying_zebra', merlin=merlin)
 # flying_zebra_x_xs2 = SRXFlyer1Axis(zebra, xs2, sclr1, 'DET2HOR', name='flying_zebra')
 # flying_zebra_y_xs2 = SRXFlyer1Axis(zebra, xs2, sclr1, 'DET2VER', name='flying_zebra')
 # flying_zebra = SRXFlyer1Axis(zebra)
@@ -443,7 +452,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
         t_acc = 1.0  # acceleration time, default 1.0 s
         delta = t_acc * v  # distance the stage will travel in t_acc
-    
+
     yield from abs_set(ymotor, ystart, wait=True) # ready to move
     yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
 
@@ -479,7 +488,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     if (xs.name == 'xs2'):
         md['scaninfo']['type'] = 'XRF_E_tomo_fly'
 
-    @stage_decorator([xs])
+    @stage_decorator([xs, merlin])
     def fly_each_step(detectors, motor, step, firststep):
         "See http://nsls-ii.github.io/bluesky/plans.html#the-per-step-hook"
         # First, let 'scan' handle the normal y step, including a checkpoint.
@@ -490,18 +499,30 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
         yield from abs_set(xmotor.velocity, v, wait=True)  # set the "stage speed"
 
+        # set up the XS3 to be handle the external triggers for a row
         yield from abs_set(xs.hdf5.num_capture, xnum, wait=True)
         yield from abs_set(xs.settings.num_images, xnum, wait=True)
-        yield from abs_set(ion.nuse_all,xnum)
+
+        # set up the MERLIN to be handle the external triggers for a row
+        yield from abs_set(merlin.hdf5.num_capture, xnum, wait=True)
+        yield from abs_set(merlin.cam.num_images, xnum, wait=True)
+
+        # set up the struct scalar to expect the correct number of external triggers for a row
+        yield from abs_set(ion.nuse_all, xnum)
         # arm the Zebra (start caching x positions)
 
-
+        # arm the zebra
         yield from kickoff(flying_zebra, xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell, wait=True)
-        yield from abs_set(ion.erase_start, 1) # arm SIS3820, note that there is a 1 sec delay in setting X into motion
+        # clear and trigger the scaler
+        yield from abs_set(ion.erase_start, 1) # arm SIS3820, note that there is a 1.5 sec delay in setting X into motion
                                                # so the first point *in each row* won't normalize...
+        # trigger the xpress3
         yield from bps.trigger(xs, group='row')
+        # trigger the merlin
+        yield from bps.trigger(merlin, group='row')
         #if firststep == True:
         #    ttime.sleep(0.)
+        # this delay is to make sure that the X3 and merlin are reading to go
         yield from bps.sleep(1.5)
         yield from abs_set(xmotor, xstop+1*delta, group='row')  # move in x
         yield from bps.wait(group='row')
@@ -557,6 +578,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
             ystep = ystep + 1
             # 'arm' the xs for outputting fly data
             yield from bps.mov(xs.fly_next, True)
+            yield from bps.mov(merlin.fly_next, True)
 #            print('h5 armed\t',time.time())
             if step == ystart:
                 firststep = True
@@ -777,5 +799,3 @@ def scan_and_fly_xs2(*args, **kwargs):
                             ymotor=e_tomo.y,
                             flying_zebra=flying_zebra_x_xs2,
                             xs=xs2)
-
-
