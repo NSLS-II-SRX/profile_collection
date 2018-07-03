@@ -105,12 +105,18 @@ def xybatch_grid(xstart, xstepsize, xnumstep, ystart, ystepsize, ynumstep):
 def gaussian(x, A, sigma, x0):
     return A*np.exp(-(x - x0)**2/(2 * sigma**2))
 
-def peakup_dcm(correct_roll=True, plot=False):
-    '''
+def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
+    """
+
     Scan the HDCM fine pitch and, optionally, roll against the ion chamber in the D Hutch
 
     correct_roll    <Bool>      If True, align the beam in the vertical (roll)
-    '''
+    plot            <Bool>      If True, plot the intensity as a function of pitch/roll
+    shutter         <Bool>      If True, the shutter will be automatically opened/closed
+    use_calib       <Bool>      If True, use a previous calibration as an initial guess
+
+    """
+    
     e_value=energy.energy.get()[1]
     pitch_old = dcm.c2_pitch.position
     roll_old = dcm.c1_roll.position
@@ -120,7 +126,8 @@ def peakup_dcm(correct_roll=True, plot=False):
     ps = PeakStats(dcm.c2_pitch.name, i0.name)
     ps1 = PeakStats(dcm.c1_roll.name, i0.name)
 
-    RE(mv(shut_b,'Open'))
+    if (shutter ==  True):
+        RE(mv(shut_b,'Open'))
     c2pitch_kill=EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
 
     # pitch_lim = (-19.320, -19.370)
@@ -133,6 +140,18 @@ def peakup_dcm(correct_roll=True, plot=False):
     roll_lim = (-4.9, -5.6)
     roll_num = 51
 
+    if (use_calib):
+        # Pitch calibration
+        pitch_guess = -0.00055357 * e_value - 19.39382381
+        dcm.c2_pitch.move(pitch_guess, wait=True)
+        # Roll calibration
+        roll_guess  = -0.01124286 * e_value - 4.93568571
+        dcm.c1_roll.move(roll_guess, wait=True)
+        # Output guess
+        print('\nMoving to guess:')
+        print('\tC2 Pitch: %f' % (pitch_guess))
+        print('\tC1 Roll:  %f\n' % (roll_guess))
+
     #if e_value < 10.:
     #    sclr1.preset_time.put(0.1)
     #    RE(scan([sclr1], dcm.c2_pitch, -19.335, -19.305, 31), [ps])
@@ -140,12 +159,13 @@ def peakup_dcm(correct_roll=True, plot=False):
     #    sclr1.preset_time.put(1.)
     #    RE(scan([sclr1], dcm.c2_pitch, -19.355, -19.310, 46), [ps])
     if e_value < 14.:
-        sclr1.preset_time.put(0.1)
+        # sclr1.preset_time.put(0.1)
+        sclr1.preset_time.put(1.0)
     else:
-        sclr1.preset_time.put(1.)
+        sclr1.preset_time.put(1.0)
 
     if (plot == True):
-        sclr1.preset_time.put(1.0)  # If we are debugging, let's collect a longer scan
+        sclr1.preset_time.put(1.0)  # Let's collect a longer scan since we're plotting it
         RE(scan(det, dcm.c2_pitch, pitch_lim[0], pitch_lim[1], pitch_num), [ps])
         print('Pitch: Centroid at %f\n\n' % (ps.cen))
         plt.figure()
@@ -167,6 +187,7 @@ def peakup_dcm(correct_roll=True, plot=False):
             print('FAIL! Check motor location.\n')
         else:
             print('OK\n')
+    logscan('peakup_pitch')
 
     if correct_roll == True:
         if (plot == True):
@@ -193,7 +214,7 @@ def peakup_dcm(correct_roll=True, plot=False):
                 print('FAIL! Check motor location.\n')
             else:
                 print('OK\n')
-
+        logscan('peakup_roll')
 
     # Output old/new values
     print('Old pitch value:\t%f' % pitch_old)
@@ -203,7 +224,8 @@ def peakup_dcm(correct_roll=True, plot=False):
     print('New roll value: \t%f\n' % ps1.cen)
     print('Current roll value: \t%f\n' % dcm.c1_roll.position)
 
-    RE(mv(shut_b,'Close'))
+    if (shutter == True):
+        RE(mv(shut_b,'Close'))
 
     #for some reason we now need to kill the pitch motion to keep it from overheating.  6/8/17
     #this need has disappeared mysteriously after the shutdown - gjw 2018/01/19
@@ -269,9 +291,15 @@ def clearroi(roinum=None):
     else:
         roinum = [roinum]
 
+    # xs.channel1.rois.roi01.clear
     for roi in roinum:
-        for d in [xs.channel1, xs.channel2, xs.channel3]:
-            d.set_roi(roi, 0, 0, name='')
+        for d in [xs.channel1.rois, xs.channel2.rois, xs.channel3.rois]:
+            if (1 in roinum):
+                d.roi01.clear()  # set_roi(roi, 0, 0, name='')
+            if (2 in roinum):
+                d.roi02.clear()
+            if (3 in roinum):
+                d.roi03.clear()
 
 
 def getemissionE(element,edge = None):
