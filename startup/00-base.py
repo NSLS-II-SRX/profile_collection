@@ -28,3 +28,7 @@ class SRXPrompt(Prompts):
 
 ip = get_ipython()
 ip.prompts = SRXPrompt(ip)
+
+# Comment it out to enable BEC table:
+bec.disable_table()
+
