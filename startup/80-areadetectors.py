@@ -480,6 +480,10 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
     roi3 = Cpt(ROIPlugin, 'ROI3:')
     roi4 = Cpt(ROIPlugin, 'ROI4:')
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._mode = SRXMode.step
+
     def stop(self):
         ret = super().stop()
         self.hdf5.stop()
@@ -489,10 +493,20 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
         # do the latching
         if self.fly_next.get():
             self.fly_next.put(False)
-            self._mode = SRXMode.fly
+            # according to Ken's comments in hxntools this is a de-bounce time
+            # when in external trigger mode
+            self.stage_sigs[self.cam.acquire_time] = .005
+            self.stage_sigs[self.cam.acquire_period] = .0066392
+
             self.stage_sigs[self.cam.trigger_mode] = 1
+            self._mode = SRXMode.fly
         else:
+            # make sure we respect what ever the exposure time is set to
+            self.stage_sigs.pop(self.cam.acquire_time)
+            self.stage_sigs.pop(self.cam.acquire_period)
             self.stage_sigs[self.cam.trigger_mode] = 0
+
+            self._mode = SRXMode.step
 
         return super().stage()
 
