@@ -32,3 +32,6 @@ ip.prompts = SRXPrompt(ip)
 # Comment it out to enable BEC table:
 bec.disable_table()
 
+# Disable BestEffortCallback to plot ring current
+bec.disable_plots()
+

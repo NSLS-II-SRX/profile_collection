@@ -64,6 +64,14 @@ class SRXFlyer1Axis(Device):
             self.stage_sigs[self._encoder.pc.enc] = 'Enc1'
             self.stage_sigs[self._encoder.pc.dir] = 'Positive'
             self.stage_sigs[self._encoder.pc.enc_res1] = 5E-6
+        elif self._fast_axis == 'DET2HOR':
+            self.stage_sigs[self._encoder.pc.enc] = 'Enc3'
+            self.stage_sigs[self._encoder.pc.dir] = 'Positive'
+            self.stage_sigs[self._encoder.pc.enc_res1] = 5E-5
+        elif self._fast_axis == 'DET2VER':
+            self.stage_sigs[self._encoder.pc.enc] = 'Enc4'
+            self.stage_sigs[self._encoder.pc.dir] = 'Positive'
+            self.stage_sigs[self._encoder.pc.enc_res1] = 5E-5
 
         # gating info for encoder capture
         self.stage_sigs[self._encoder.pc.gate_num] = 1
@@ -75,6 +83,8 @@ class SRXFlyer1Axis(Device):
 
         self.stage_sigs[self._encoder.pc.enc_pos1_sync] = 1
         self.stage_sigs[self._encoder.pc.enc_pos2_sync] = 1
+        self.stage_sigs[self._encoder.pc.enc_pos3_sync] = 1
+        self.stage_sigs[self._encoder.pc.enc_pos4_sync] = 1
 
         #put SIS3820 into single count (not autocount) mode
         self.stage_sigs[self._sis.count_mode] = 0
@@ -137,12 +147,32 @@ class SRXFlyer1Axis(Device):
         self._encoder.pc.pulse_start.put(0.0)
         #self._encoder.pc.pulse_step.put(dwell)
         #self._encoder.pc.pulse_width.put(dwell-0.001)
+
+        # If both values are not synced, then the X-position was not updating
+        # during the scan and will remain at the initial value
+        # - AMK
+        self._encoder.pc.enc_pos1_sync.put(1, wait=True)  # Sample Y
+        self._encoder.pc.enc_pos2_sync.put(1, wait=True)  # Sample X
+        self._encoder.pc.enc_pos3_sync.put(1, wait=True)  # Det2 Stage X
+        self._encoder.pc.enc_pos4_sync.put(1, wait=True)  # Det2 Stage Y
+        # yield from abs_set(self._encoder.pc.enc_pos1_sync, 1, wait=True)
+        # yield from abs_set(self._encoder.pc.enc_pos2_sync, 1, wait=True)
+
         self._encoder.pc.arm.put(1)
-        #THIS MUST CHANGE!!!!
-        if self._fast_axis == 'VER':
-            self._encoder.pc.enc_pos1_sync.put(1)
-        elif self._fast_axis == 'HOR':
-            self._encoder.pc.enc_pos2_sync.put(1)
+        # yield from abs_set(self._encoder.pc.arm, 1, wait=True)
+
+        ## THIS MUST CHANGE!!!!
+        # if self._fast_axis == 'VER':
+        #     self._encoder.pc.enc_pos1_sync.put(1)
+        # elif self._fast_axis == 'HOR':
+        #     self._encoder.pc.enc_pos2_sync.put(1)
+        # If both values are not synced, then the X-position was not updating
+        # during the scan and will remain at the initial value
+        #
+        # Moved to before arming
+        # - AMK
+        # self._encoder.pc.enc_pos1_sync.put(1)
+        # self._encoder.pc.enc_pos2_sync.put(1)
 
         st = NullStatus()  # TODO Return a status object *first* and do the above asynchronously.
         return st
@@ -258,7 +288,9 @@ class SRXFlyer1Axis(Device):
 
 flying_zebra = SRXFlyer1Axis(zebra, xs, sclr1, 'HOR', name='flying_zebra')
 flying_zebra_y = SRXFlyer1Axis(zebra, xs, sclr1, 'VER', name='flying_zebra')
-#flying_zebra = SRXFlyer1Axis(zebra)
+# flying_zebra_x_xs2 = SRXFlyer1Axis(zebra, xs2, sclr1, 'DET2HOR', name='flying_zebra')
+# flying_zebra_y_xs2 = SRXFlyer1Axis(zebra, xs2, sclr1, 'DET2VER', name='flying_zebra')
+# flying_zebra = SRXFlyer1Axis(zebra)
 
 
 def export_zebra_data(zebra, filepath, fast_axis):
@@ -275,6 +307,10 @@ def export_zebra_data(zebra, filepath, fast_axis):
     time_d = zebra.pc.data.time.get()
     if fast_axis == 'HOR':
         enc1_d = zebra.pc.data.enc2.get()
+    elif fast_axis == 'DET2HOR':
+        enc1_d = zebra.pc.data.enc3.get()
+    elif fast_axis == 'DET2VER':
+        enc1_d = zebra.pc.data.enc4.get()
     else:
         enc1_d = zebra.pc.data.enc1.get()
 
@@ -431,10 +467,17 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         'scaninfo': {'type': 'XRF_fly',
                      'raster': False,
                      'fast_axis': flying_zebra._fast_axis},
+        # 'scaninfo': {'type': 'E_tomo',
+        #              'raster': False,
+        #              'fast_axis': flying_zebra._fast_axis},
         'scan_params': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
+        'scan_input': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
         'delta': delta
         }
     )
+
+    if (xs.name == 'xs2'):
+        md['scaninfo']['type'] = 'XRF_E_tomo_fly'
 
     @stage_decorator([xs])
     def fly_each_step(detectors, motor, step, firststep):
@@ -466,7 +509,15 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
         yield from complete(flying_zebra)  # tell the Zebra we are done
         yield from collect(flying_zebra)  # extract data from Zebra
-        yield from abs_set(xmotor.velocity, 1.0, wait=True)  # set the "stage speed"
+        if ('e_tomo' in xmotor.name):
+            v_return = 4
+            v_max = xmotor.velocity.high_limit
+            if (v_return > v_max):
+                xmotor.velocity.set(v_max)
+            else:
+                xmotor.velocity.set(v_return)
+        else:
+            yield from abs_set(xmotor.velocity, 1.0, wait=True)  # set the "stage speed"
 
     def at_scan(name, doc):
         scanrecord.current_scan.put(doc['uid'][:6])
@@ -644,3 +695,87 @@ def y_scan_and_fly(*args, **kwargs):
                             xmotor=hf_stage.y,
                             ymotor=hf_stage.x,
                             flying_zebra=flying_zebra_y)
+
+
+def y_scan_and_fly_xs2(*args, **kwargs):
+    '''
+    convenience wrapper for scanning Y as the fast axis.
+    call scan_and_fly, forcing slow and fast axes to be X and Y.
+    in this function, the first three scan parameters are for the *fast axis*,
+    i.e., the vertical, and the second three for the *slow axis*, horizontal.
+
+    A copy of flying_zebra_y where the xspress3 mini is chosen to collect data.
+    '''
+
+    if 'delta' in kwargs.keys():
+        # if kwargs['delta'] is not None:  # If delta is set in the arguments,
+                                           # then we should not override that value
+                                           # AMK
+        if kwargs['delta'] is None:
+            # kwargs['delta'] = 0.004        # default value
+            v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
+            t_acc = 1.0  # acceleration time, default 1.0 s
+            kwargs['delta'] = t_acc * v  # distance the stage will travel in t_acc
+
+    yield from scan_and_fly(*args, **kwargs,
+                            # xmotor=hf_stage.y,
+                            # ymotor=hf_stage.x,
+                            xmotor=e_tomo.y,
+                            ymotor=e_tomo.x,
+                            flying_zebra=flying_zebra_y_xs2,
+                            xs=xs2)
+
+def y_scan_and_fly_xs2_yz(*args, **kwargs):
+    '''
+    convenience wrapper for scanning Y as the fast axis.
+    ** This is a variant of y_scan_and_fly_xs2 but with Z and the slow motor (not X) ***
+    call scan_and_fly, forcing slow and fast axes to be Z and Y.
+    in this function, the first three scan parameters are for the *fast axis*,
+    i.e., the vertical, and the second three for the *slow axis*, horizontal.
+
+    A copy of flying_zebra_y where the xspress3 mini is chosen to collect data.
+    '''
+
+    if 'delta' in kwargs.keys():
+        # if kwargs['delta'] is not None:  # If delta is set in the arguments,
+                                           # then we should not override that value
+                                           # AMK
+        if kwargs['delta'] is None:
+            # kwargs['delta'] = 0.004        # default value
+            v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
+            t_acc = 1.0  # acceleration time, default 1.0 s
+            kwargs['delta'] = t_acc * v  # distance the stage will travel in t_acc
+
+    yield from scan_and_fly(*args, **kwargs,
+                            # xmotor=hf_stage.y,
+                            # ymotor=hf_stage.z,
+                            xmotor=e_tomo.y,
+                            ymotor=e_tomo.x,
+                            flying_zebra=flying_zebra_y_xs2,
+                            xs=xs2)
+
+
+def scan_and_fly_xs2(*args, **kwargs):
+    '''
+    A copy of flying_zebra where the xspress3 mini is chosen to collect data on the X axis
+    '''
+
+    if 'delta' in kwargs.keys():
+        # if kwargs['delta'] is not None:  # If delta is set in the arguments,
+                                           # then we should not override that value
+                                           # AMK
+        if kwargs['delta'] is None:
+            # kwargs['delta'] = 0.004        # default value
+            v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
+            t_acc = 1.0  # acceleration time, default 1.0 s
+            kwargs['delta'] = t_acc * v  # distance the stage will travel in t_acc
+
+    yield from scan_and_fly(*args, **kwargs,
+                            # xmotor=hf_stage.y,
+                            # ymotor=hf_stage.x,
+                            xmotor=e_tomo.x,
+                            ymotor=e_tomo.y,
+                            flying_zebra=flying_zebra_x_xs2,
+                            xs=xs2)
+
+

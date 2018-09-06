@@ -144,6 +144,7 @@ def xanes_plan(erange = [], estep = [],
     #add user meta data
     RE.md['sample']  = {'name': samplename}
     RE.md['scaninfo']  = {'type': 'XANES','ROI': roinum,'raster' : False, 'dwell':acqtime}
+    RE.md['scan_input'] = str(np.around(erange, 2)) + ', ' + str(np.around(estep, 2))
    
     #convert erange and estep to numpy array
     erange = numpy.array(erange)
@@ -259,7 +260,7 @@ def xanes_plan(erange = [], estep = [],
             print("You must export this scan data manually: xanes_afterscan_plan(doc[-1], <filename>, <roinum>)")
             return
         xanes_afterscan_plan(doc['run_start'], filename, roinum)
-        logscan('xanes')
+        logscan_detailed('xanes')
 
     def at_scan(name, doc):
         scanrecord.current_scan.put(doc['uid'][:6])
@@ -268,7 +269,8 @@ def xanes_plan(erange = [], estep = [],
         scanrecord.scanning.put(True)
 
     def finalize_scan():
-        yield from abs_set(energy.u_gap.corrfunc_en,1)
+        # yield from abs_set(energy.u_gap.corrfunc_en,1)  # disabled to test if
+        # undulator gets stuck -AMK
         yield from abs_set(energy.move_c2_x, True)
         yield from abs_set(energy.harmonic, None)
         scanrecord.scanning.put(False)

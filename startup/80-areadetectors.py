@@ -325,7 +325,12 @@ xs.settings.num_channels.put(3)
 xs.hdf5.warmup()
 
 
-class SrxXspress3Detector2(XspressTrigger, Xspress3Detector):
+# Working xs2 detector
+# 
+# Commented out because it is not connected
+# AMK
+#
+class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
     # TODO: garth, the ioc is missing some PVs?
     #   det_settings.erase_array_counters
     #       (XF:05IDD-ES{Xsp:1}:ERASE_ArrayCounters)
@@ -335,19 +340,37 @@ class SrxXspress3Detector2(XspressTrigger, Xspress3Detector):
     #   det_settings.update_attr (XF:05IDD-ES{Xsp:1}:UPDATE_AttrUpdate)
     #   det_settings.update (XF:05IDD-ES{Xsp:1}:UPDATE)
     roi_data = Cpt(PluginBase, 'ROIDATA:')
+
+    # Currently only using three channels. Uncomment these to enable more
     channel1 = C(Xspress3Channel, 'C1_', channel_num=1, read_attrs=['rois'])
+    # channel2 = C(Xspress3Channel, 'C2_', channel_num=2, read_attrs=['rois'])
+    # channel3 = C(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
+    # channels:
+    # channel4 = C(Xspress3Channel, 'C4_', channel_num=4)
+    # channel5 = C(Xspress3Channel, 'C5_', channel_num=5)
+    # channel6 = C(Xspress3Channel, 'C6_', channel_num=6)
+    # channel7 = C(Xspress3Channel, 'C7_', channel_num=7)
+    # channel8 = C(Xspress3Channel, 'C8_', channel_num=8)
+
+    create_dir = Cpt(EpicsSignal, 'HDF5:FileCreateDir')
 
     hdf5 = Cpt(Xspress3FileStoreFlyable, 'HDF5:',
-               read_path_template='/nsls2/xf05id1/data/2018-1/XS3MINI',
+               read_path_template='/nsls2/xf05id1/data/2018-2/XS3MINI',
                # read_path_template='/XF05IDD/XSPRESS3-2/2018-1/',
                # write_path_template='/epics/data/2017-3/',
                # write_path_template='/nsls2/xf05id1/data/2018-1/XS3MINI',
-               write_path_template='/home/xspress3/data/SRX/2018-1',
+               write_path_template='/home/xspress3/data/SRX/2018-2',
                #write_path_template='/nsls2/xf05id1/XF05ID1/XSPRESS3/2018-1',
                #write_path_template='/nsls2/xf05id1/data/xspress3/%Y/%M/',
 #               root='/data',
                # root='/',
                root='/nsls2/xf05id1')
+
+    # this is used as a latch to put the xspress3 into 'bulk' mode
+    # for fly scanning.  Do this is a signal (rather than as a local variable
+    # or as a method so we can modify this as part of a plan
+    fly_next = Cpt(Signal, value=False)
+
 
     def __init__(self, prefix, *, configuration_attrs=None, read_attrs=None,
                  **kwargs):
@@ -359,20 +382,41 @@ class SrxXspress3Detector2(XspressTrigger, Xspress3Detector):
             read_attrs = ['channel1', 'hdf5']
         super().__init__(prefix, configuration_attrs=configuration_attrs,
                          read_attrs=read_attrs, **kwargs)
+        # this is possiblely one too many places to store this
+        # in the parent class it looks at if the extrenal_trig signal is high
+        self._mode = SRXMode.step
+
+        # self.create_dir.put(-3)
 
     def stop(self):
         ret = super().stop()
         self.hdf5.stop()
         return ret
 
-#xs2 = SrxXspress3Detector2('XF:05IDD-ES{Xsp:2}:', name='xs2')
-#xs2.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
-#xs2.hdf5.num_extra_dims.put(0)
-#xs2.hdf5.warmup()
+    def stage(self):
+        # do the latching
+        if self.fly_next.get():
+            self.fly_next.put(False)
+            self._mode = SRXMode.fly
+        return super().stage()
+
+    def unstage(self):
+        try:
+            ret = super().unstage()
+        finally:
+            self._mode = SRXMode.step
+        return ret
+
+"""
+xs2 = SrxXspress3Detector2('XF:05IDD-ES{Xsp:2}:', name='xs2')
+xs2.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
+xs2.hdf5.num_extra_dims.put(0)
+xs2.hdf5.warmup()
 
 for i in range(1,4):
     ch=getattr(xs.channel1.rois,'roi{:02}.value'.format(i))
     ch.name = 'ROI_{:02}'.format(i)
+"""
 
 class HDF5PluginWithFileStoreMerlin(HDF5Plugin, FileStoreHDF5IterativeWrite):
     file_number_sync = None
@@ -437,5 +481,5 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
             self._mode = SRXMode.step
         return ret
 
-merlin = SRXMerlin('XF:05IDD-ES{Merlin:1}', name='merlin')
-merlin.read_attrs = ['hdf5']
+# merlin = SRXMerlin('XF:05IDD-ES{Merlin:1}', name='merlin')
+# merlin.read_attrs = ['hdf5']

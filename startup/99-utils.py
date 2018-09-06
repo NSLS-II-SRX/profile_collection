@@ -141,11 +141,15 @@ def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
     roll_num = 51
 
     if (use_calib):
+        # Factor to convert eV to keV
+        K = 1
+        if (e_value > 1000):
+            K = 1 / 1000
         # Pitch calibration
-        pitch_guess = -0.00055357 * e_value - 19.39382381
+        pitch_guess = -0.00055357 * K * e_value - 19.39382381
         dcm.c2_pitch.move(pitch_guess, wait=True)
         # Roll calibration
-        roll_guess  = -0.01124286 * e_value - 4.93568571
+        roll_guess  = -0.01124286 * K * e_value - 4.93568571
         dcm.c1_roll.move(roll_guess, wait=True)
         # Output guess
         print('\nMoving to guess:')
@@ -221,7 +225,7 @@ def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
     print('New pitch value:\t%f' % ps.cen)
     print('Current pitch value:\t%f' % dcm.c2_pitch.position)
     print('Old roll value: \t%f' % roll_old)
-    print('New roll value: \t%f\n' % ps1.cen)
+    print('New roll value: \t%f' % ps1.cen)
     print('Current roll value: \t%f\n' % dcm.c1_roll.position)
 
     if (shutter == True):

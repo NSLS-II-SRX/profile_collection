@@ -83,7 +83,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             shutter = True, align = False, xmotor = hf_stage.x, ymotor = hf_stage.y,
             acqtime, numrois=1, i0map_show=True, itmap_show=False, record_cryo = False,
             dpc = None, e_tomo=None, struck = True, srecord = None,
-            setenergy=None, u_detune=None, echange_waittime=10,samplename=None):
+            setenergy=None, u_detune=None, echange_waittime=10,samplename=None, snake=True):
 
     '''
     input:
@@ -104,6 +104,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     md = get_stock_md()
     md['sample']  = {'name': samplename}
     md['scaninfo']  = {'type': 'XRF', 'raster' : True}
+    md['scan_input'] = str([xstart, xnumstep, xstepsize, ystart, ynumstep, ystepsize, acqtime])
     if e_tomo is not None:
         md['scaninfo']  = {'type': 'E_Tomo', 'raster' : True}
     h=db[-1]
@@ -152,7 +153,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         #dpc.cam.acquire_time.put(acqtime)
         dpc.cam.acquire_time.put(acqtime*0.2)
     if e_tomo is not None:
-        md = ChainMap( md, {'hf_stage_th': hf_stage.th.position})
+        # md = ChainMap( md, {'hf_stage_th': hf_stage.th.position})
         det.append(e_tomo)
         e_tomo.external_trig.put(False)
         e_tomo.settings.acquire_time.put(acqtime)
@@ -196,11 +197,18 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
         roi_key = getattr(xs.channel1.rois, roi_name).value.name
         livetableitem.append(roi_key)
-
-
         if e_tomo is None:
+            fig = plt.figure('xs')
+            fig.clf()
             roimap = LiveGrid((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno',
-                            xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+                              xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart],
+                              ax=fig.gca())
+            # if (xnumstep == 0):
+            #     roimap = LivePlot(xmotor, roi_key, ax=fig.gca())
+            # else:
+            #    roimap = LiveGrid((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno',
+            #                     xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart],
+            #                     ax=fig.gca())
             livecallbacks.append(roimap)
 
     if e_tomo is not None:
@@ -210,9 +218,17 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
             roi_key = getattr(xs2.channel1.rois, roi_name).value.name
             livetableitem.append(roi_key)
-
+            fig = plt.figure('e tomo')
+            fig.clf()
             roimap2 = LiveGrid((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno',
-                                xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop])
+                               xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart],
+                               ax=fig.gca())
+            # if (xnumstep == 0):
+            #     roimap2 = LivePlot(xmotor, roi_key, ax=fig.gca())
+            # else:
+            #     roimap2 = LiveGrid((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno',
+            #                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart],
+            #                        ax=fig.gca())
             livecallbacks.append(roimap2)
 
     if dpc is not None:
@@ -232,10 +248,16 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             i0map = LiveGrid((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='viridis',
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop])
         else:
+            fig = plt.figure('i0')
+            fig.clf()
             i0map = LiveGrid((ynumstep+1, xnumstep+1), i0.name, clim=None, cmap='viridis',
-                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart],
+                        ax=fig.gca())
+            fig = plt.figure('im')
+            fig.clf()
             immap = LiveGrid((ynumstep+1, xnumstep+1), im.name, clim=None, cmap='viridis',
-                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
+                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart],
+                        ax=fig.gca())
         livecallbacks.append(i0map)
         livecallbacks.append(immap)
 
@@ -318,8 +340,9 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     def finalize_scan(name, doc):
         scanrecord.scanning.put(False)
 
-
-    hf2dxrf_scanplan = outer_product_scan(det, ymotor, ystart, ystop, ynumstep+1, xmotor, xstart, xstop, xnumstep+1, True, md=md)
+    # Added a flag to choose if you want to snake or not
+    # hf2dxrf_scanplan = outer_product_scan(det, ymotor, ystart, ystop, ynumstep+1, xmotor, xstart, xstop, xnumstep+1, True, md=md)
+    hf2dxrf_scanplan = outer_product_scan(det, ymotor, ystart, ystop, ynumstep+1, xmotor, xstart, xstop, xnumstep+1, snake, md=md)
 #    hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, livecallbacks)
     hf2dxrf_scanplan = subs_wrapper( hf2dxrf_scanplan, {'all':livecallbacks,'start':at_scan,'stop':finalize_scan})
     scaninfo = yield from hf2dxrf_scanplan
@@ -332,7 +355,8 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     if dpc is not None:
         logscan_event0info('2dxrf_withdpc', event0info = [dpc.tiff.file_name.name])
     else:
-        logscan('2dxrf')
+        # logscan_detailed('2dxrf', scan_param=[xstart, xnumstep, xstepsize, ystart, ynumstep, ystepsize, acqtime])
+        logscan_detailed('2dxrf')
 
     return scaninfo
 #    return yield from bp.subs_wrapper(hf2dxrf_scanplan,{'start':at_scan})
@@ -752,6 +776,7 @@ def hf2dxrf_xfm(*, xstart, xnumstep, xstepsize,
     md = get_stock_md_xfm()
     md['sample']  = {'name': samplename}
     md['scaninfo']  = {'type': 'XRF', 'raster' : True}
+    md['scan_input'] = str([xstart, xnumstep, xstepsize, ystart, ynumstep, ystepsize, acqtime])
 
     #setup the detector
     # TODO do this with configure
@@ -834,7 +859,7 @@ def hf2dxrf_xfm(*, xstart, xnumstep, xstepsize,
         yield from mv(shut_b,'Close')
 
     #write to scan log
-    logscan('2dxrf_xfm')
+    logscan_detailed('2dxrf_xfm')
 
     return scaninfo
 

@@ -17,79 +17,11 @@ proposal_title = None
 PI_lastname = None
 saf_num = None
 
-
-#proposal_num = 302249
-#proposal_title = 'Fast in-situ Probing Local Synthesis Reactions using X-ray Fluorescence Microscopy'
-#PI_lastname = 'Wang'
-#saf_num = 302307
-
 proposal_num = 302925
 proposal_title = 'Routine Setup and Testing for Beamline 5-ID'
 PI_lastname = 'Chu'
 saf_num = 301967
 
-"""
-proposal_num = 303140
-proposal_title = 'Teacher and Student Workshop: Imaging with a New Light'
-PI_lastname = 'Perez'
-saf_num = 302695
-"""
-"""
-proposal_num = 302314
-proposal_title = 'Investigation of space-weathered minerals'
-PI_lastname = 'Legett'
-saf_num = 302682
-"""
-
-#proposal_num = 302204
-#proposal_title = 'Determining the Provenance of Glacial Erratics found on the North Shore of Long Island Based on XRF Geochronology of he #Mineral Monazite'
-#PI_lastname = 'Mozer'
-#saf_num = 302185
-
-#proposal_num = 302217
-#proposal_title = 'Using X-Ray Fluorescence and Absorption Spectroscopy to Analyze Heavy Element and Metal Contaminants in the Tissues of #Predatory Arachnids Residing Near the Forge River Polluted Water System in Shirley, New York'
-#PI_lastname = 'DAmbrosia'
-#saf_num = 302142
-
-#proposal_num = 303121
-#proposal_title = 'In-situ studies of the local phase transformation dynamics within single particles during the calcination of layered Ni-#rich oxides'
-#PI_lastname = 'Zhang'
-#saf_num = 302608
-
-#proposal_num = 301962
-#proposal_title = 'Characterization of single crystal growth in glass by laser heating'
-#PI_lastname = 'Jain'
-#saf_num = 302040
-
-#proposal_num = 302659
-#proposal_title = 'Resolving the Electroactive Interface of CuFe2O4 composite battery electrodes: An Operando XRF mapping / XANES Investigation'
-#PI_lastname = 'Bock'
-#saf_num = 302104
-
-#proposal_num = 302712
-#proposal_title = 'Modeling Microscale Arsenic Reactivity in Complex Soil Matrices'
-#PI_lastname = 'Sharma'
-#saf_num = 302059
-
-#proposal_num = 302252
-#proposal_title = 'Spectro-microscopic study of intermetallic particles in aluminum alloys'
-#PI_lastname = 'Chou'
-#saf_num = 302074
-
-#proposal_num = 302825
-#proposal_title = 'Use of X-ray spectromicroscopic techniques on understanding the effect of sea-level rise on the production and breakdown of natural organohalogens in coastal wetlands'
-#PI_lastname = 'Schlesinger'
-#saf_num = 302026
-
-#proposal_num = 302315
-#proposal_title = 'Elucidating nanoparticle-plant leaf interactions, uptake, and mobility for designing highly efficient foliar-applied #agrochemicals'
-#PI_lastname = 'Avellan'
-#saf_num = 302330
-
-#proposal_num = 302773
-#proposal_title = 'Understanding Copper Speciation in Brain Amyloid Deposits Involved in Cognitive Impairment'
-#PI_lastname = 'Miller'
-#saf_num = 302361
 
 
 logfilename_postfix = str(saf_num)
@@ -185,7 +117,7 @@ def logscan_detailed(scantype):
     uid = h.start['uid']
 
     userlogf = open(userlogfile, 'a')
-    userlogf.write(str(scan_id)+'\t'+uid+'\t'+scantype+'\t'+str(h['start']['scan_params'])+'\n')
+    userlogf.write(str(scan_id)+'\t'+uid+'\t'+scantype+'\t'+str(h['start']['scan_input'])+'\n')
     userlogf.close()
 
 def scantime(scanid, printresults=True):
