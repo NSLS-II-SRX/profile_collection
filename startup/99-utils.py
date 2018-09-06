@@ -292,18 +292,17 @@ def setroi(roinum, element, edge=None, det=None):
 def clearroi(roinum=None):
     if roinum == None:
         roinum = [1, 2, 3]
-    else:
+    try:
+        roinum = list(roinum)
+    except TypeError:
         roinum = [roinum]
 
     # xs.channel1.rois.roi01.clear
-    for roi in roinum:
-        for d in [xs.channel1.rois, xs.channel2.rois, xs.channel3.rois]:
-            if (1 in roinum):
-                d.roi01.clear()  # set_roi(roi, 0, 0, name='')
-            if (2 in roinum):
-                d.roi02.clear()
-            if (3 in roinum):
-                d.roi03.clear()
+    for d in [xs.channel1.rois, xs.channel2.rois, xs.channel3.rois]:
+        for roi in roinum:
+             cpt = getattr(d, f'roi{roi:02d}')
+             d.clear()
+             d.kind = 'omitted'
 
 
 def getemissionE(element,edge = None):
