@@ -98,13 +98,13 @@ class SRXHFVLMCam(SingleTrigger,AreaDetector):
              write_path_template='/nsls2/xf05id1/data/hfvlm/%Y/%m/%d/',
              root='/nsls2/xf05id1')
 
-hfvlmAD = SRXHFVLMCam('XF:05IDD-BI:1{Mscp:1-Cam:1}', name='hfvlm', read_attrs=['tiff'])
-hfvlmAD.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
-hfvlmAD.tiff.read_attrs = []
-hfvlmAD.stats1.read_attrs = ['total']
-hfvlmAD.stats2.read_attrs = ['total']
-hfvlmAD.stats3.read_attrs = ['total']
-hfvlmAD.stats4.read_attrs = ['total']
+# hfvlmAD = SRXHFVLMCam('XF:05IDD-BI:1{Mscp:1-Cam:1}', name='hfvlm', read_attrs=['tiff'])
+# hfvlmAD.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
+# hfvlmAD.tiff.read_attrs = []
+# hfvlmAD.stats1.read_attrs = ['total']
+# hfvlmAD.stats2.read_attrs = ['total']
+# hfvlmAD.stats3.read_attrs = ['total']
+# hfvlmAD.stats4.read_attrs = ['total']
 
 class SRXPCOEDGECam(SingleTrigger,AreaDetector):
     cam = C(AreaDetectorCam, 'cam1:')
@@ -265,9 +265,9 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
     create_dir = Cpt(EpicsSignal, 'HDF5:FileCreateDir')
 
     hdf5 = Cpt(Xspress3FileStoreFlyable, 'HDF5:',
-               read_path_template='/XF05IDD/XSPRESS3/%Y/%m/%d/',
+               read_path_template='/nsls2/xf05id1/XF05ID1/XSPRESS3/%Y/%m/%d/',
                write_path_template='/epics/data/%Y/%m/%d/',
-               root='/XF05IDD')
+               root='/nsls2/xf05id1/XF05ID1')
 
     # this is used as a latch to put the xspress3 into 'bulk' mode
     # for fly scanning.  Do this is a signal (rather than as a local variable
