@@ -336,22 +336,17 @@ def export_sis_data(ion, filepath):
     while len(t) == 0 and len(t) != len(i):
         t = ion.mca1.get(timeout=5.)
         i = ion.mca2.get(timeout=5.)
+    
     correct_length = zebra.pc.data.num_down.get()
     size = (len(t),)
     size2 = (len(i),)
     with h5py.File(filepath, 'w') as f:
-        #dset0 = f.create_dataset("time",size,dtype='f')
-        #dset0[...] = np.array(t)
-        #dset1 = f.create_dataset("i0",size2,dtype='f')
-        #dset1[...] = np.array(i)
         if len(t) != correct_length:
             correction_factor = (correct_length-len(t))
-            #print(correction_factor,len(t),correct_length)
             new_t = [k for k in t] + [ 1e10 for _ in range(0,int(correction_factor)) ]
             new_i = [k for k in i] + [ 1e10 for _ in range(0,int(correction_factor)) ]
         else:
             correction_factor = 0
-            #print(correction_factor,len(t),correct_length)
             new_t = t
             new_i = i
         dset0 = f.create_dataset("time",(correct_length,),dtype='f')
@@ -467,6 +462,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         'scaninfo': {'type': 'XRF_fly',
                      'raster': False,
                      'fast_axis': flying_zebra._fast_axis},
+                     'theta': hf_stage.th.position,
         # 'scaninfo': {'type': 'E_tomo',
         #              'raster': False,
         #              'fast_axis': flying_zebra._fast_axis},
@@ -535,7 +531,8 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     #@subs_decorator([LiveTable([ymotor]), LiveGrid((ynum, xnum), sclr1.mca1.name)])
     @subs_decorator([LiveGrid((ynum, xnum+1),
                               xs.channel1.rois.roi01.value.name,
-                              extent=(xstart, xstop, ystop, ystart))])
+                              extent=(xstart, xstop, ystart, ystop),
+                              x_positive='right', y_positive='down')])
     @subs_decorator({'start': at_scan})
     @subs_decorator({'stop': finalize_scan})
     # monitor values from xs
