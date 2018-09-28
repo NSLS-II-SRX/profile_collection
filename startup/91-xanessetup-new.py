@@ -153,6 +153,24 @@ def xanes_plan(erange = [], estep = [],
     for i in range(len(estep)):
         ept = numpy.append(ept, numpy.arange(erange[i], erange[i+1], estep[i]))
     ept = numpy.append(ept, numpy.array(erange[-1]))
+
+    # Debugging
+    # Convert energy to bragg angle
+    egap = np.array(())
+    ebragg = np.array(())
+    exgap = np.array(())
+    for i in ept:
+        # Convert from eV to keV
+        # if (i > 4500):
+        #    i = i / 1000
+        # Convert keV to bragg angle
+        #b, _, _ = energy.energy_to_positions(i, 5, 0)
+        eg, eb, ex = energy.forward(i)
+        egap = np.append(egap, eg)
+        ebragg = np.append(ebragg, eb)
+        exgap = np.append(exgap, ex)
+        # print(ebragg)
+
     #register the detectors
     det = [ring_current]
     if struck == True:
@@ -214,6 +232,7 @@ def xanes_plan(erange = [], estep = [],
         #yield from abs_set(c2pitch_kill, 1)
 
     #setup the live callbacks
+    myscan = list_scan(det, energy, list(ept))
     livecallbacks = []    
     livetableitem = ['energy_energy']
     if struck == True:
@@ -236,6 +255,7 @@ def xanes_plan(erange = [], estep = [],
         liveplotx = energy.energy.name
         liveplotfig = plt.figure('raw xanes')
     
+    # livecallbacks.append(LiveTable([sclr1, xs, energy]))
     livecallbacks.append(LivePlot(liveploty, x=liveplotx, fig=liveplotfig))
     #livecallbacks.append(LivePlot(liveploty, x=liveplotx, ax=plt.gca(title='raw xanes')))
         
@@ -272,7 +292,7 @@ def xanes_plan(erange = [], estep = [],
         # yield from abs_set(energy.u_gap.corrfunc_en,1)  # disabled to test if
         # undulator gets stuck -AMK
         yield from abs_set(energy.move_c2_x, True)
-        yield from abs_set(energy.harmonic, None)
+        yield from abs_set(energy.harmonic, 3)
         scanrecord.scanning.put(False)
         if shutter == True:
             yield from mv(shut_b,'Close')
@@ -282,6 +302,8 @@ def xanes_plan(erange = [], estep = [],
         del RE.md['scaninfo']
 
     myscan = list_scan(det, energy, list(ept))
+    # myscan = list_scan(det, energy.bragg, list(ebragg), energy.u_gap, list(egap), energy.c2_x, list(exgap))
+    # myscan = scan_nd(det, energy.bragg, list(ebragg), energy.u_gap, list(egap), energy.c2_x, list(exgap))
     myscan = finalize_wrapper(myscan,finalize_scan)
 
     return (yield from subs_wrapper(myscan,{'all':livecallbacks,'stop':after_scan,'start':at_scan})) 

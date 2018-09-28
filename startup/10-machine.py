@@ -277,7 +277,7 @@ class Energy(PseudoPositioner):
     # motor enable flags
     move_u_gap = Cpt(Signal, None, add_prefix=(), value=True)
     move_c2_x = Cpt(Signal, None, add_prefix=(), value=True)
-    harmonic = Cpt(Signal, None, add_prefix=(), value=None)
+    harmonic = Cpt(Signal, None, add_prefix=(), value=3)
 
     # experimental
     detune = Cpt(Signal, None, add_prefix=(), value=0)
@@ -578,6 +578,7 @@ cal_data_2018cycle2 = {
 
 energy = Energy(prefix='', name='energy', **cal_data_2018cycle2)
 energy.synch_with_epics()
+energy.value = 1.0
 
 
 # Front End Slits (Primary Slits)
