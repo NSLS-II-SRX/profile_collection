@@ -130,6 +130,11 @@ def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
         RE(mv(shut_b,'Open'))
     c2pitch_kill=EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
 
+    # Turn off the ePID loop for the pitch motor
+    # 'XF:05IDD-CT{FbPid:02}PID:on'
+    c2_pid=EpicsSignal("XF:05IDD-CT{FbPid:02}PID:on")
+    c2_pid.put(0)  # Turn off the ePID loop
+
     # pitch_lim = (-19.320, -19.370)
     # pitch_num = 51
     # roll_lim = (-4.9, -5.14)
@@ -236,6 +241,7 @@ def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
     # This has now reappeared - amk 2018/06/06
     time.sleep(1)
     c2pitch_kill.put(1)
+    c2_pid.put(1)  # Turn on the ePID loop
 
 
 def ic_energy_batch(estart,estop,npts):
