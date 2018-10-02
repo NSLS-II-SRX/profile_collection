@@ -398,7 +398,13 @@ class Energy(PseudoPositioner):
             #energy is in eV
                 energy = energy / 1000.
 
-        if harmonic is None:
+        # harmonic cannot be None, it is an undesired datatype
+        # Previously, we were finding the harmonic with the highest flux, this
+        # was always done during energy change since harmonic was returned to
+        # None
+        # Here, we are programming it in
+        # if harmonic is None:
+        if (harmonic == 3):
             harmonic = 3
             #choose the right harmonic
             braggcal, c2xcal, ugapcal = self.energy_to_positions(energy, harmonic, detune)
