@@ -463,9 +463,10 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
 
     hdf5 = Cpt(HDF5PluginWithFileStoreMerlin, 'HDF1:',
                read_attrs=[],
+               read_path_template='/nsls2/xf05id1/XF05ID1/MERLIN/testing',
                configuration_attrs=[],
-               write_path_template='/tmp/merlin',
-               root='/tmp')
+               write_path_template='/mnt/MERLIN/testing',
+               root='/nsls2/xf05id1')
 
     stats1 = Cpt(StatsPlugin, 'Stats1:')
     stats2 = Cpt(StatsPlugin, 'Stats2:')
@@ -480,6 +481,12 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
     roi3 = Cpt(ROIPlugin, 'ROI3:')
     roi4 = Cpt(ROIPlugin, 'ROI4:')
 
+    # def __init__(self, prefix, *, configuration_attrs=None, read_attrs=None,
+    #              **kwargs):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._mode = SRXMode.step
+
     def stop(self):
         ret = super().stop()
         self.hdf5.stop()
@@ -489,10 +496,28 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
         # do the latching
         if self.fly_next.get():
             self.fly_next.put(False)
-            self._mode = SRXMode.fly
+            # According to Ken's comments in hxntools, this is a de-bounce time
+            # when in external trigger mode
+            self.stage_sigs[self.cam.acquire_time] = 0.005
+            self.stage_sigs[self.cam.acquire_period] = 0.0066392
+
             self.stage_sigs[self.cam.trigger_mode] = 1
+            self._mode = SRXMode.fly
         else:
+            # Set trigger mode
             self.stage_sigs[self.cam.trigger_mode] = 0
+
+            # Make sure we respect whatever the exposure time is set to
+            count_time = self.cam.acquire_time.get()
+            if count_time is not None:
+                self.stage_sigs[self.cam.acquire_time] = count_time
+                self.stage_sigs[self.cam.acquire_period] = count_time + 0.005
+
+            # self.stage_sigs.pop(self.cam.acquire_time)
+            # self.stage_sigs.pop(self.cam.acquire_period)
+            # self.stage_sigs[self.cam.trigger_mode] = 0
+
+            self._mode = SRXMode.step
 
         return super().stage()
 
@@ -503,5 +528,6 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
             self._mode = SRXMode.step
         return ret
 
-# merlin = SRXMerlin('XF:05IDD-ES{Merlin:1}', name='merlin')
-# merlin.read_attrs = ['hdf5']
+merlin = SRXMerlin('XF:05IDD-ES{Merlin:1}', name='merlin', read_attrs=['hdf5', 'cam', 'stats1'])
+merlin.hdf5.read_attrs = []
+
