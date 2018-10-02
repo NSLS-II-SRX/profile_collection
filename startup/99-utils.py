@@ -134,6 +134,8 @@ def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
     # 'XF:05IDD-CT{FbPid:02}PID:on'
     c2_pid=EpicsSignal("XF:05IDD-CT{FbPid:02}PID:on")
     c2_pid.put(0)  # Turn off the ePID loop
+    c2_V=EpicsSignal("XF:05ID-BI{EM:BPM1}DAC1")
+    c2_V.put(3.0)  # Reset the piezo voltage to 3 V
 
     # pitch_lim = (-19.320, -19.370)
     # pitch_num = 51
@@ -289,11 +291,13 @@ def setroi(roinum, element, edge=None, det=None):
     e_ch = int(cur_element.emission_line[e] * 1000)
     if det is not None:
         det.channel1.set_roi(roinum, e_ch-100, e_ch+100, name=element + '_' + e)
-        det.channel1.kind = 'normal'
+        cpt = getattr(det.channel1.rois, f'roi{roinum:02d}')
+        cpt.kind = 'normal'
     else:
         for d in [xs.channel1, xs.channel2, xs.channel3]:
             d.set_roi(roinum,e_ch-100,e_ch+100,name=element+'_'+e)
-            d.kind = 'normal'
+            cpt = getattr(d.rois, f'roi{roinum:02d}')
+            cpt.kind = 'normal'
     print("ROI{} set for {}-{} edge.".format(roinum,element,e))
 
 
