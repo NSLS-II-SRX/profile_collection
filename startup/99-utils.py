@@ -289,9 +289,11 @@ def setroi(roinum, element, edge=None, det=None):
     e_ch = int(cur_element.emission_line[e] * 1000)
     if det is not None:
         det.channel1.set_roi(roinum, e_ch-100, e_ch+100, name=element + '_' + e)
+        det.channel1.kind = 'normal'
     else:
-        for d in [xs.channel1,xs.channel2,xs.channel3]:
+        for d in [xs.channel1, xs.channel2, xs.channel3]:
             d.set_roi(roinum,e_ch-100,e_ch+100,name=element+'_'+e)
+            d.kind = 'normal'
     print("ROI{} set for {}-{} edge.".format(roinum,element,e))
 
 
@@ -307,8 +309,8 @@ def clearroi(roinum=None):
     for d in [xs.channel1.rois, xs.channel2.rois, xs.channel3.rois]:
         for roi in roinum:
              cpt = getattr(d, f'roi{roi:02d}')
-             d.clear()
-             d.kind = 'omitted'
+             cpt.clear()
+             cpt.kind = 'omitted'
 
 
 def getemissionE(element,edge = None):
