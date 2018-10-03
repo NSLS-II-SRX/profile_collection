@@ -75,7 +75,6 @@ def find_edge(scanid = -1, use_xrf = False, element = ''):
             ch_name = 'Det3_' + element + '_ka1'       
             mu = mu + table[ch_name]
         
-        
     p, xaxis, yaxis, edge = scanderive(numpy.array(braggpoints), numpy.array(mu))
 
     return p, xaxis, yaxis, edge
@@ -98,13 +97,21 @@ def braggcalib(scanlogDic = {}, use_xrf = False):
     # scanlogDic = {'Ti': 12195, 'Fe': 12194, 'Se':12187}
 
     # 2018-2 Jun 5
-    scanlogDic = {'Fe' : 14476,
-                  'V'  : 14477,
-                  'Cr' : 14478,
-                  'Cu' : 14480,
-                  'Se' : 14481,
-                  'Zr' : 14482}
+    # scanlogDic = {'Fe' : 14476,
+    #               'V'  : 14477,
+    #               'Cr' : 14478,
+    #               'Cu' : 14480,
+    #               'Se' : 14481,
+    #               'Zr' : 14482}
 
+    # 2018-3 Oct 2
+    if (scanlogDic == {}):
+        scanlogDic = {'V'  : 18037,
+                      'Cr' : 18040,
+                      'Fe' : 18043,
+                      'Cu' : 18046,
+                      'Se' : 18049,
+                      'Zr' : 18052}
 
     fitfunc = lambda pa, x: 12.3984/(2*pa[0]*numpy.sin((x+pa[1])*numpy.pi/180))  
     errfunc = lambda pa, x, y: fitfunc(pa,x) - y
