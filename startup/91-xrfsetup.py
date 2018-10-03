@@ -148,10 +148,23 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
     if dpc is not None:
         det.append(dpc)
-        dpc.cam.acquire.put(0)
-        dpc.cam.image_mode.put(0)
-        #dpc.cam.acquire_time.put(acqtime)
-        dpc.cam.acquire_time.put(acqtime*0.2)
+        if (dpc.name == 'merlin'):
+            # Set trigger mode
+            merlin.cam.trigger_mode.put(0)
+
+            # Make sure we respect whatever the exposure time is set to
+            merlin.cam.acquire_time.put(0.2 * acqtime)
+            merlin.cam.acquire_period.put(0.2 * acqtime + 0.005)
+            merlin.cam.num_images.put(1)
+            merlin.total_points.put((xnumstep+1)*(ynumstep+1))
+
+            merlin._mode = SRXMode.step
+        else:
+        # For "old" dpc detector
+            dpc.cam.acquire.put(0)
+            dpc.cam.image_mode.put(0)
+            # dpc.cam.acquire_time.put(acqtime)
+            dpc.cam.acquire_time.put(acqtime*0.2)
     if e_tomo is not None:
         # md = ChainMap( md, {'hf_stage_th': hf_stage.th.position})
         det.append(e_tomo)
@@ -353,7 +366,10 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     #write to scan log
 
     if dpc is not None:
-        logscan_event0info('2dxrf_withdpc', event0info = [dpc.tiff.file_name.name])
+        # Changed to export the hdf5 file name instead of the tiff file name
+        # logscan_event0info('2dxrf_withdpc', event0info = [dpc.tiff.file_name.name])
+        # logscan_event0info('2dxrf_withdpc', event0info = [dpc.hdf5.file_name.name])
+        logscan_event0info('2dxrf_withdpc', event0info = ['merlin_image'])
     else:
         # logscan_detailed('2dxrf', scan_param=[xstart, xnumstep, xstepsize, ystart, ynumstep, ystepsize, acqtime])
         logscan_detailed('2dxrf')
