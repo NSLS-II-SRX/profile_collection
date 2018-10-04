@@ -9,11 +9,13 @@ from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreHDF5IterativeWrite,
                                                  FileStoreTIFFSquashing,
-                                                 FileStoreTIFF)
+                                                 FileStoreTIFF,
+                                                 FileStoreHDF5)
 from ophyd import Signal
 from ophyd import Component as C
 from hxntools.detectors.merlin import MerlinDetector
 from hxntools.handlers import register
+
 register(db)
 
 
@@ -53,6 +55,26 @@ bpmAD.stats4.read_attrs = ['total']
 
 class HDF5PluginWithFileStore(HDF5Plugin, FileStoreHDF5IterativeWrite):
     file_number_sync = None
+
+class FileStoreBulkReadable(FileStoreIterativeWrite):
+
+    def _reset_data(self):
+        self._datum_uids.clear()
+        self._point_counter = itertools.count()
+
+    def bulk_read(self, timestamps):
+        image_name = self.image_name
+
+        uids = [self.generate_datum(self.image_name, ts, {}) for ts in timestamps]
+
+        #clear so unstage will not save the images twice:
+        self._reset_data()
+        return {image_name: uids}
+
+    @property
+    def image_name(self):
+        return self.parent._image_name
+
 
 class SRXPixirad(SingleTrigger,AreaDetector):
 
@@ -440,7 +462,39 @@ for i in range(1,4):
     ch.name = 'ROI_{:02}'.format(i)
 """
 
-class HDF5PluginWithFileStoreMerlin(HDF5Plugin, FileStoreHDF5IterativeWrite):
+class MerlinFileStoreHDF5(FileStorePluginBase, FileStoreBulkReadable):
+
+    _spec = 'TPX_HDF5' 
+    filestore_spec = _spec
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.stage_sigs.update([(self.file_template, '%s%s_%6.6d.h5'),
+                                (self.file_write_mode, 'Stream'),
+                                (self.compression, 'zlib'),
+                                (self.capture, 1)
+                                ])
+
+    def stage(self):
+        staged = super().stage()
+        res_kwargs = {'frame_per_point': 1}
+        logger.debug("Inserting resource with filename %s", self._fn)
+        self._generate_resource(res_kwargs)
+
+        return staged
+
+    def make_filename(self):
+        fn, read_path, write_path = super().make_filename()
+        mode_settings = self.parent.mode_settings
+        if mode_settings.make_directories.get():
+            makedirs(read_path)
+        return fn, read_path, write_path
+
+
+
+
+class HDF5PluginWithFileStoreMerlin(HDF5Plugin, FileStoreHDF5):
+    '''
     file_number_sync = None
 
     def get_frames_per_point(self):
@@ -450,11 +504,25 @@ class HDF5PluginWithFileStoreMerlin(HDF5Plugin, FileStoreHDF5IterativeWrite):
             return self.parent.cam.num_exposures.get()
         else:
             raise NotImplementedError
-
+    '''
     def stage(self):
-        self.stage_sigs['num_capture'] = self.parent.total_points.get()
-        staged = super().stage()
-        return staged
+        
+
+        '''
+        mode_settings = self.parent.mode_settings
+        total_points = mode_settings.total_points.get()
+        self.stage_sigs[self.num_capture] = total_points
+
+        # ensure that setting capture is the last thing that's done
+        self.stage_sigs.move_to_end(self.capture)
+        '''
+        return super().stage()
+
+
+
+        # self.stage_sigs['num_capture'] = self.parent.total_points.get()
+        # staged = super().stage()
+        # return staged
 
 
 class SRXMerlin(SingleTrigger, MerlinDetector):
