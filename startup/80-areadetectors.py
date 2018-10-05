@@ -485,44 +485,20 @@ class MerlinFileStoreHDF5(FileStorePluginBase, FileStoreBulkReadable):
 
     def make_filename(self):
         fn, read_path, write_path = super().make_filename()
-        mode_settings = self.parent.mode_settings
-        if mode_settings.make_directories.get():
-            makedirs(read_path)
         return fn, read_path, write_path
 
 
 
 
-class HDF5PluginWithFileStoreMerlin(HDF5Plugin, FileStoreHDF5):
-    '''
-    file_number_sync = None
+class HDF5PluginWithFileStoreMerlin(HDF5Plugin, MerlinFileStoreHDF5):
 
-    def get_frames_per_point(self):
-        if self.parent._mode is SRXMode.fly:
-            return self.parent.total_points.get()
-        elif self.parent._mode is SRXMode.step:
-            return self.parent.cam.num_exposures.get()
-        else:
-            raise NotImplementedError
-    '''
     def stage(self):
-        
+        if np.array(self.array_size.get()).sum() == 0:
+            raise Exception("you must warmup the hdf plugin via the `warmup()` "
+                            "method on the hdf5 plugin.")
 
-        '''
-        mode_settings = self.parent.mode_settings
-        total_points = mode_settings.total_points.get()
-        self.stage_sigs[self.num_capture] = total_points
-
-        # ensure that setting capture is the last thing that's done
-        self.stage_sigs.move_to_end(self.capture)
-        '''
         return super().stage()
 
-
-
-        # self.stage_sigs['num_capture'] = self.parent.total_points.get()
-        # staged = super().stage()
-        # return staged
 
 
 class SRXMerlin(SingleTrigger, MerlinDetector):
