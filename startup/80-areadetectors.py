@@ -471,7 +471,7 @@ class MerlinFileStoreHDF5(FileStorePluginBase, FileStoreBulkReadable):
         super().__init__(*args, **kwargs)
         self.stage_sigs.update([(self.file_template, '%s%s_%6.6d.h5'),
                                 (self.file_write_mode, 'Stream'),
-                                (self.compression, 'zlib'),
+                                # (self.compression, 'zlib'),
                                 (self.capture, 1)
                                 ])
 
