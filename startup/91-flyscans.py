@@ -480,10 +480,25 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         "See http://nsls-ii.github.io/bluesky/plans.html#the-per-step-hook"
         # First, let 'scan' handle the normal y step, including a checkpoint.
         yield from one_1d_step(detectors, motor, step)
+        # yield from bps.sleep(1.0)  # wait for the "x motor" to move
 
         # Now do the x steps.
         v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
         yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
+        yield from bps.sleep(1.0)  # wait for the "x motor" to move
+        x_set = xstart - delta
+        x_dial = xmotor.user_readback.get()
+        i = 0
+        while (np.abs(x_set - x_dial) > 0.001):
+            if (i == 0):
+                print('Waiting for motor to reach starting position...', end='')
+            i = i + 1
+            yield from abs_set(xmotor, xstart - delta, wait=True)
+            yield from bps.sleep(1.0)
+            x_dial = xmotor.user_readback.get()
+        if (i != 0):
+            print('done')
+            
         yield from abs_set(xmotor.velocity, v, wait=True)  # set the "stage speed"
 
         yield from abs_set(xs.hdf5.num_capture, xnum, wait=True)
@@ -513,7 +528,8 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
             else:
                 xmotor.velocity.set(v_return)
         else:
-            yield from abs_set(xmotor.velocity, 1.0, wait=True)  # set the "stage speed"
+            yield from bps.mov(xmotor.velocity, 1.0)             # set the "stage speed"
+            yield from abs_set(xmotor.velocity, 1.0, wait=True)  # set the "stage speed" twice just in case
 
     def at_scan(name, doc):
         scanrecord.current_scan.put(doc['uid'][:6])
