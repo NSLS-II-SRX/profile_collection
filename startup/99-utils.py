@@ -1,6 +1,8 @@
 import os
 import numpy as np
+from scipy.optimize import curve_fit
 from ophyd import EpicsSignal
+from ophyd.utils import make_dir_tree
 from bluesky.plans import relative_scan
 from bluesky.callbacks import LiveFit,LiveFitPlot
 from bluesky.callbacks.fitting import PeakStats
@@ -102,8 +104,13 @@ def xybatch_grid(xstart, xstepsize, xnumstep, ystart, ystepsize, ynumstep):
             xylist.append([i, j])
     return xylist
 
+# Simple Gaussian
 def gaussian(x, A, sigma, x0):
     return A*np.exp(-(x - x0)**2/(2 * sigma**2))
+
+# More complete Gaussian with offset and slope
+def f_gauss(x, A, sigma, x0, y0, m):
+    return y0 + m*x + A*np.exp(-(x - x0)**2/(2 * sigma**2))
 
 def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
     """
@@ -116,7 +123,7 @@ def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
     use_calib       <Bool>      If True, use a previous calibration as an initial guess
 
     """
-    
+
     e_value=energy.energy.get()[1]
     pitch_old = dcm.c2_pitch.position
     roll_old = dcm.c1_roll.position
@@ -244,6 +251,254 @@ def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
     time.sleep(1)
     c2pitch_kill.put(1)
     c2_pid.put(1)  # Turn on the ePID loop
+
+
+from scipy.optimize import curve_fit
+
+def peakup_fine(scaler='sclr_im', plot=True, shutter=True, use_calib=True):
+    """
+
+    Scan the HDCM C2 Piezo Motor to optimize the beam.
+
+    scaler      <String>    Define which scaler channel to maximize on ('sclr_i0', 'sclr_im')
+    plot        <Bool>      If True, plot the results
+    shutter     <Bool>      If True, the shutter is automatically opened/closed
+    use_calib   <Bool>      If True, use lookup table as an initial guess
+
+    """
+
+    # Get the energy in eV
+    E = energy.energy.get()[1]
+    if (E < 1000):
+        E = E * 1000
+
+    # Define the detector
+    det = [sclr1, dcm.c2_pitch]
+
+    # Turn off the ePIC loop for the pitch motor
+    # c2_pid = EpicsSignal('XF:05IDD-CT{FbPid:02}PID:on')
+    # yield from bps.mov(c2_pid, 0)
+    yield from bps.mov(dcm.c2_fine.pid_enabled, 0)
+    yield from dcm.c2_fine.reset_pid()
+
+    # Set the piezo to its default value (3.0)
+    # and return the pitch to its original value
+    pf2_default = 3.0
+    total_pitch = dcm.c2_pitch.position
+    yield from bps.mov(dcm.c2_fine, pf2_default)
+    yield from bps.mov(dcm.c2_pitch, total_pitch)
+    yield from bps.mov(dcm.c2_pitch_kill, 1.0)
+
+    # Set limits
+    pitch_lim = (2.5, 3.5)
+    pitch_num = 51
+
+    # Use calibration
+    if (use_calib):
+        # Need a new calibration curve
+        roll_guess = -0.01124286 * (E/1000) - 4.93568571
+        yield from bps.mov(dcm.c1_roll, roll_guess)
+
+    # Set counting time
+    sclr1.preset_time.put(1.0)
+
+    # Open the shutter
+    if (shutter == True):
+        yield from bps.mov(shut_b, 'Open')
+
+    # Run the C2 pitch fine scan
+    yield from scan(det, dcm.c2_fine, pitch_lim[0], pitch_lim[1], pitch_num)
+
+    # Close the shutter
+    if (shutter == True):
+        yield from bps.mov(shut_b, 'Close')
+
+    # Add scan to scanlog
+    logscan('peakup_fine_pitch')
+
+    # Collect the data
+    h = db[-1]
+    # x = h.table()['c2_fine_readback'].values
+    x = h.table()['dcm_c2_pitch'].values
+    y = h.table()[scaler].values
+
+    # Fit the data
+    # gaussian(x, A, sigma, x0):
+    y_min = np.amin(y)
+    y_max = np.amax(y)
+    x_loc = np.argmax(y)
+    try:
+        popt, _ = curve_fit(f_gauss, x, y, p0=[y_max, 0.001, x[x_loc], 0, 0])
+        pitch_new = popt[2]
+        print('Maximum flux found at %.4f' % (pitch_new))
+    except RuntimeError:
+        print('No optimized parameters found.')
+        print('Scanning a larger range.')
+
+        # Move total pitch to its original value
+        yield from bps.mov(dcm.c2_fine, pf2_default)
+        yield from bps.mov(dcm.c2_pitch, total_pitch)
+        yield from bps.mov(dcm.c2_pitch_kill, 1.0)
+
+        # Set extended pitch limits
+        pitch_lim = (2.0, 4.0)
+        pitch_num = 101
+
+        # Set counting time
+        sclr1.preset_time.put(1.0)
+
+        # Open the shutter
+        if (shutter == True):
+            yield from bps.mov(shut_b, 'Open')
+
+        # Run the C2 pitch fine scan
+        yield from scan(det, dcm.c2_fine, pitch_lim[0], pitch_lim[1], pitch_num)
+
+        # Close the shutter
+        if (shutter == True):
+            yield from bps.mov(shut_b, 'Close')
+
+        # Add scan to scanlog
+        logscan('peakup_fine_pitch')
+
+        # Collect the data
+        h = db[-1]
+        # x = h.table()['c2_fine_readback'].values
+        x = h.table()['dcm_c2_pitch'].values
+        y = h.table()[scaler].values
+
+        # Fit the data
+        # gaussian(x, A, sigma, x0):
+        y_min = np.amin(y)
+        y_max = np.amax(y)
+        x_loc = np.argmax(y)
+
+        try:
+            popt, _ = curve_fit(f_gauss, x, y, p0=[y_max, 0.001, x[x_loc], 0, 0])
+            pitch_new = popt[2]
+            print('Maximum flux found at %.4f' % (pitch_new))
+        except RuntimeError:
+            print('No optimized parameters found.')
+            print('Returning to default.')
+
+            pitch_new = total_pitch
+            plot = False
+
+    # Move to the maximum
+    yield from bps.mov(dcm.c2_fine, pf2_default)
+    yield from bps.sleep(1.0)
+    yield from bps.mov(dcm.c2_pitch, pitch_new)
+    yield from bps.sleep(1.0)
+
+    # Get the new position and set the ePID to that
+    yield from bps.mov(dcm.c2_pitch_kill, 1.0)
+
+    # Reset the ePID-I value
+    yield from dcm.c2_fine.reset_pid()
+    yield from bps.sleep(1.0)
+    yield from bps.mov(dcm.c2_fine.pid_enabled, 1)
+
+    # Plot the results
+    if (plot == True):
+        plt.figure('Peakup')
+        plt.clf()
+        plt.xlabel('C2 Pitch [mrad]')
+        plt.ylabel(scaler + ' [cts]')
+        plt.plot(x, y, 'C0*', label='raw')
+        x_plot = np.linspace(x[0], x[-1], num=101)
+        y_plot = f_gauss(x_plot, *popt)
+        plt.plot(x_plot, y_plot, 'C0--', label='fit')
+        plt.plot((pitch_new, pitch_new), (y_min, y_max), '--k', label='max')
+        plt.legend()
+
+
+# Run a knife-edge scan
+def knife_edge(motor, start, stop, stepsize, fly=False, high2low=True, use_trans=True):
+    """
+    motor       motor   motor used for scan
+    start       float   starting position
+    stop        float   stopping position
+    stepsize    float   distance between data points
+    fly         bool    if the motor can fly, then fly that motor
+    high2low    bool    scan from high transmission to low transmission
+                        ex. start will full beam and then block with object (knife/wire)
+    """
+
+    # Set detectors
+    det = [sclr1]
+    if (use_trans == False):
+        det.append(xs)
+
+    # Set counting time
+    sclr1.preset_time.put(1.0)
+    if (use_trans == False):
+        xs.settings.acquire_time.put(1.0)
+
+    # Need to convert stepsize to number of points
+    num = np.round((stop - start) / stepsize) + 1
+
+    # Run the scan
+    if (motor.name == 'hf_stage_y'):
+        if (fly):
+            yield from y_scan_and_fly()
+        else:
+            yield from scan(det, motor, start, stop, num)
+    else:
+        # table = LiveTable([motor])
+        # @subs_decorator(table)
+        # LiveTable([motor])
+        yield from scan(det, motor, start, stop, num)
+
+    # Get the information from the previous scan
+    tbl = db[-1].table()
+
+    # Get the position information
+    pos = motor.name
+    # if (motor == hf_stage.y):
+    #     pos = 'hf_stage_y'
+    # elif (motor == hf_stage.x):
+    #     pos = 'hf_stage_x'
+    # else:
+    #     pos = 'pos'
+
+    # Get the data
+    if (use_trans == True):
+        y = tbl['sclr_it'] / tbl['sclr_im']
+    else:
+        y = (tbl[xs.channel1.rois.roi01.name] +
+             tbl[xs.channel2.rois.roi01.name] +
+             tbl[xs.channel3.rois.roi01.name])
+        y = y / tbl['sclr_im']
+    x = tbl[pos]
+    dydx = np.gradient(y, x)
+
+    # Plot the figure
+    plt.figure()
+    plt.plot(x, y, 'C0-', label='Raw data')
+    plt.plot(x, dydx, 'C1o', label='Derivative')
+
+    # Fit the Gaussian
+    # def f_gauss(x, A, sigma, x0, y0, m):
+    try:
+        if (high2low == True):
+            p_guess = [np.amin(dydx), 0.0005, x[np.argmin(dydx)], 0, 0]
+        else:
+            p_guess = [np.amax(dydx), 0.0005, x[np.argmax(dydx)], 0, 0]
+
+        p, _ = curve_fit(f_gauss, x, dydx, p0 = p_guess)
+    except:
+        print('Fit failed.')
+        p = [1, 1, np.mean(x), 0, 0]
+
+    # Plot the fit
+    x_plot = np.linspace(np.amin(x), np.amax(x), num=100)
+    plt.plot(x_plot, f_gauss(x_plot, *p), 'C1-', label='Fit')
+    plt.legend()
+
+    # Report findings
+    C = 2 * np.sqrt(2 * np.log(2))
+    print('\nThe beam size is %f um' % (1000 * C * p[1]))
+    print('The edge is at %.4f mm\n' % (p[2]))
 
 
 def ic_energy_batch(estart,estop,npts):
@@ -389,3 +644,4 @@ def estimate_scan_duration(xnum, ynum, dwell, scantype=None, event_delay=None):
     print("Estimated duration is {0:d} hr {1:.1f} min ({2:.1f} sec).".format(int(div),rem/60,result))
 
     return result
+
