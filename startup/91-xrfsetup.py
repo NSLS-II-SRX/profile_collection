@@ -15,6 +15,8 @@ Modified on Wed Wed 02 14:14 to comment out the saturn detector which is not in 
     #4. put x/y axes onto the live plot
     #5. add i0 into the default figure
 
+
+from bluesky.simulators import plot_raster_path
 from bluesky.plans import outer_product_scan, scan
 import bluesky.plans as bp
 from bluesky.callbacks import LiveGrid
@@ -153,10 +155,11 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             merlin.cam.trigger_mode.put(0)
 
             # Make sure we respect whatever the exposure time is set to
-            merlin.cam.acquire_time.put(0.2 * acqtime)
-            merlin.cam.acquire_period.put(0.2 * acqtime + 0.005)
+            merlin.cam.acquire_time.put(acqtime)
+            merlin.cam.acquire_period.put(acqtime + 0.005)
             merlin.cam.num_images.put(1)
             merlin.total_points.put((xnumstep+1)*(ynumstep+1))
+            merlin.hdf5.stage_sigs['num_capture'] = (xnumstep+1)*(ynumstep+1)
 
             merlin._mode = SRXMode.step
         else:
@@ -370,6 +373,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         # logscan_event0info('2dxrf_withdpc', event0info = [dpc.tiff.file_name.name])
         # logscan_event0info('2dxrf_withdpc', event0info = [dpc.hdf5.file_name.name])
         logscan_event0info('2dxrf_withdpc', event0info = ['merlin_image'])
+        merlin.hdf5.stage_sigs['num_capture'] = 0
     else:
         # logscan_detailed('2dxrf', scan_param=[xstart, xnumstep, xstepsize, ystart, ynumstep, ystepsize, acqtime])
         logscan_detailed('2dxrf')
@@ -1091,3 +1095,13 @@ def hf2dxrf_ioc(waittime = 5, shutter=True, dpc = None, i0map_show=False,itmap_s
             if len(scanlist) is not 0:
                 time.sleep(waittime)
     scanrecord.current_scan.put('')
+
+
+def fermat_master_plan(*args, exp_time=0.2, testing=True, **kwargs):
+    plan = bp.rel_spiral_fermat(*args, **kwargs)
+    d = plot_raster_path(plan, args[1].name, args[2].name, probe_size=.001, lw=0.5)
+    num_points = d['path'].get_path().vertices.shape[0]
+    print(f"Number of points: {num_points}")
+    if not testing:
+        yield from bps.mv(merlin.total_points, num_points)
+        yield from rel_spiral_fermat(*args, **kwargs)

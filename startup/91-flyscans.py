@@ -441,7 +441,8 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
                  delta=None, shutter=True,
                  xmotor=hf_stage.x, ymotor=hf_stage.y,
                  xs=xs, ion=sclr1, align=False,
-                 flying_zebra=flying_zebra, md=None):
+                 flying_zebra=flying_zebra, md=None,
+                 dpc=None):
     """
 
     Read IO from SIS3820.
@@ -455,6 +456,28 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     c2pitch_kill = EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
     if md is None:
         md = {}
+
+    # Setup detectors
+    det = [zebra.name, xs.name, ion.name]
+    
+    # Setup the a detector for DPC
+    # This is assumed to be the Merlin
+    if dpc is not None:
+        det.append(dpc.name)
+        # Set trigger mode
+        dpc.cam.trigger_mode.put(2)
+
+        # Make sure we respect whatever the exposure time is set to
+        if (dwell < 0.0066392):
+            print('The Merlin should not operate faster than 7 ms.')
+            print('Changing the scan dwell time to 7 ms.')
+            dwell = 0.007
+        dpc.cam.acquire_time.put(dwell - 0.0016392)
+        dpc.cam.acquire_period.put(dwell)
+        dpc.cam.num_images.put(1)
+        dpc.total_points.put(xnum)
+
+        dpc._mode = SRXMode.fly
 
     # If delta is None, set delta based on time for acceleration
     if delta is None:
@@ -480,6 +503,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
 
     md = ChainMap(md, {
         'plan_name': 'scan_and_fly',
+        # 'detectors': [zebra.name, xs.name, ion.name],
         'detectors': [zebra.name, xs.name, ion.name],
         'dwell': dwell,
         'shape': (xnum, ynum),
