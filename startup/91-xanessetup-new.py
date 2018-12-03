@@ -28,10 +28,12 @@ def xanes_afterscan_plan(scanid, filename, roinum):
 
     # create columns for data file
     columnitem = ['energy_energy', 'energy_u_gap_readback', 'energy_bragg', 'energy_c2_x']
+    # columnitem = ['energy_energy', 'energy_u_gap_readback', 'energy_bragg']
     # include I_0 and I_t from either the SRS or Oxford preamp, raise expection
     # if neither present
     if 'sclr1' in h.start['detectors']:
-        columnitem = columnitem + ['sclr_i0', 'sclr_it']
+        # columnitem = columnitem + ['sclr_i0', 'sclr_it']
+        columnitem = columnitem + ['sclr_i0', 'sclr_im', 'sclr_it']
     elif 'current_preamp' in h.start['detectors']:
         columnitem = columnitem + ['current_preamp_ch0', 'current_preamp_ch2']
     else:
@@ -57,9 +59,11 @@ def xanes_afterscan_plan(scanid, filename, roinum):
     if 'xs' in h.start['detectors']:
         datatablenames = datatablenames + [ str(roi) for roi in roi_key]
     if 'sclr1' in  h.start['detectors']:
-        datatablenames = datatablenames + ['sclr_i0', 'sclr_it']
+        # datatablenames = datatablenames + ['sclr_i0', 'sclr_it']
+        datatablenames = datatablenames + ['sclr_i0', 'sclr_im', 'sclr_it']
         datatable = h.table(stream_name='primary',fields=datatablenames)        
         i0_array = numpy.array(datatable['sclr_i0'])
+        im_array = numpy.array(datatable['sclr_im'])
         it_array = numpy.array(datatable['sclr_it'])
     elif 'current_preamp' in h.start['detectors']:
         datatablenames = datatablenames + ['current_preamp_ch2', 'current_preamp_ch0']

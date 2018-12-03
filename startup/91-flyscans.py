@@ -120,6 +120,10 @@ class SRXFlyer1Axis(Device):
         desc['i0']['source'] = self._sis.mca2.pvname
         desc['i0_time'] = spec
         desc['i0_time']['source'] = self._sis.mca1.pvname
+        desc['im'] = spec
+        desc['im']['source'] = self._sis.mca3.pvname
+        desc['it'] = spec
+        desc['it']['source'] = self._sis.mca4.pvname
 
         return {'stream0': desc}
 
@@ -219,12 +223,14 @@ class SRXFlyer1Axis(Device):
         time_datum = datum_factory_z({'column': 'time'})
         enc1_datum = datum_factory_z({'column': 'enc1'})
         sis_datum =  datum_factory_sis({'column': 'i0'})
+        sis_datum_im =  datum_factory_sis({'column': 'im'})
+        sis_datum_it =  datum_factory_sis({'column': 'it'})
         sis_time =  datum_factory_sis({'column': 'time'})
 
         self._document_cache.extend(('resource', d) for d in (self.__filestore_resource,
                                                              self.__filestore_resource_sis))
         self._document_cache.extend(('datum', d) for d in (time_datum, enc1_datum,
-                                                          sis_datum, sis_time))
+                                                          sis_datum, sis_time, sis_datum_im, sis_datum_it))
         self._document_cache.extend(self._det.collect_asset_docs())
 
         # TODO call 'read' on the detector instead
@@ -242,12 +248,16 @@ class SRXFlyer1Axis(Device):
                      'enc1': enc1_datum['datum_id'],
                      'fluor': xs_reading['fluor']['value'],
                      'i0': sis_datum['datum_id'],
-                     'i0_time': sis_time['datum_id']},
+                     'i0_time': sis_time['datum_id'],
+                     'im': sis_datum_im['datum_id'],
+                     'it': sis_datum_it['datum_id']},
             'timestamps': {'time': time_datum['datum_id'],  # not a typo#
                            'enc1': time_datum['datum_id'],
                            'fluor': xs_reading['fluor']['timestamp'],
                            'i0': sis_time['datum_id'],
-                           'i0_time': sis_time['datum_id']}
+                           'i0_time': sis_time['datum_id'],
+                           'im': sis_datum_im['datum_id'],
+                           'it': sis_datum_it['datum_id']}
         }
         return NullStatus()
 
@@ -333,26 +343,40 @@ def export_zebra_data(zebra, filepath, fast_axis):
 def export_sis_data(ion, filepath):
     t = ion.mca1.get(timeout=5.)
     i = ion.mca2.get(timeout=5.)
+    im= ion.mca3.get(timeout=5.)
+    it= ion.mca4.get(timeout=5.)
     while len(t) == 0 and len(t) != len(i):
         t = ion.mca1.get(timeout=5.)
         i = ion.mca2.get(timeout=5.)
+        im= ion.mca3.get(timeout=5.)
+        it= ion.mca4.get(timeout=5.)
     
     correct_length = zebra.pc.data.num_down.get()
     size = (len(t),)
     size2 = (len(i),)
+    size3 = (len(im),)
+    size4 = (len(it),)
     with h5py.File(filepath, 'w') as f:
         if len(t) != correct_length:
             correction_factor = (correct_length-len(t))
             new_t = [k for k in t] + [ 1e10 for _ in range(0,int(correction_factor)) ]
             new_i = [k for k in i] + [ 1e10 for _ in range(0,int(correction_factor)) ]
+            new_im= [k for k in im] + [ 1e10 for _ in range(0,int(correction_factor)) ]
+            new_it= [k for k in it] + [ 1e10 for _ in range(0,int(correction_factor)) ]
         else:
             correction_factor = 0
             new_t = t
             new_i = i
+            new_im= im
+            new_it= it
         dset0 = f.create_dataset("time",(correct_length,),dtype='f')
         dset0[...] = np.array(new_t)
         dset1 = f.create_dataset("i0",(correct_length,),dtype='f')
         dset1[...] = np.array(new_i)
+        dset2 = f.create_dataset("im",(correct_length,),dtype='f')
+        dset2[...] = np.array(new_im)
+        dset3 = f.create_dataset("it",(correct_length,),dtype='f')
+        dset3[...] = np.array(new_it)
         f.close()
 
 class ZebraHDF5Handler(HandlerBase):

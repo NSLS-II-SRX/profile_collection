@@ -147,6 +147,8 @@ class SRXScaler(EpicsScaler):
     wfrm = Cpt(EpicsSignal, 'Wfrm')
     mca1 = Cpt(EpicsSignalRO, 'mca1')
     mca2 = Cpt(EpicsSignalRO, 'mca2')
+    mca3 = Cpt(EpicsSignalRO, 'mca3')
+    mca4 = Cpt(EpicsSignalRO, 'mca4')
 
     def __init__(self, prefix, **kwargs):
         super().__init__(prefix, **kwargs)
