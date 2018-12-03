@@ -217,7 +217,8 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             fig = plt.figure('xs')
             fig.clf()
             roimap = LiveGrid((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno',
-                              xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart],
+                              xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop],
+                              x_positive='right', y_positive='down',
                               ax=fig.gca())
             # if (xnumstep == 0):
             #     roimap = LivePlot(xmotor, roi_key, ax=fig.gca())
@@ -237,7 +238,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             fig = plt.figure('e tomo')
             fig.clf()
             roimap2 = LiveGrid((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno',
-                               xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart],
+                               xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop],
                                ax=fig.gca())
             # if (xnumstep == 0):
             #     roimap2 = LivePlot(xmotor, roi_key, ax=fig.gca())
@@ -262,7 +263,8 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     if i0map_show is True:
         if struck == False:
             i0map = LiveGrid((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='viridis',
-                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop])
+                             xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop],
+                             x_positive='right', y_positive='down')
         else:
             fig = plt.figure('i0')
             fig.clf()
@@ -272,7 +274,8 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             fig = plt.figure('im')
             fig.clf()
             immap = LiveGrid((ynumstep+1, xnumstep+1), im.name, clim=None, cmap='viridis',
-                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart],
+                        xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop],
+                        x_positive='right', y_positive='down',
                         ax=fig.gca())
         livecallbacks.append(i0map)
         livecallbacks.append(immap)
