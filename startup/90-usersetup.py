@@ -20,7 +20,7 @@ saf_num = None
 proposal_num = 302925
 proposal_title = 'Routine Setup and Testing for Beamline 5-ID'
 PI_lastname = 'Chu'
-saf_num = 301967
+saf_num = 303008
 
 
 
