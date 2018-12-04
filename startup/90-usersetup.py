@@ -26,7 +26,7 @@ saf_num = 301967
 
 logfilename_postfix = str(saf_num)
 
-cycle = '2018_cycle2'
+cycle = '2018_cycle3'
 
 RE.md['proposal']  = {  'proposal_num': str(proposal_num),
                          'proposal_title': str(proposal_title),
