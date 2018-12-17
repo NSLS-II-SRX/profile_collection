@@ -298,6 +298,10 @@ class SRXFlyer1Axis(Device):
 
 flying_zebra = SRXFlyer1Axis(zebra, xs, sclr1, 'HOR', name='flying_zebra')
 flying_zebra_y = SRXFlyer1Axis(zebra, xs, sclr1, 'VER', name='flying_zebra')
+# For confocal
+flying_zebra_x_xs2 = SRXFlyer1Axis(zebra, xs2, sclr1, 'HOR', name='flying_zebra')
+flying_zebra_y_xs2 = SRXFlyer1Axis(zebra, xs2, sclr1, 'VER', name='flying_zebra')
+# For chip imaging
 # flying_zebra_x_xs2 = SRXFlyer1Axis(zebra, xs2, sclr1, 'DET2HOR', name='flying_zebra')
 # flying_zebra_y_xs2 = SRXFlyer1Axis(zebra, xs2, sclr1, 'DET2VER', name='flying_zebra')
 # flying_zebra = SRXFlyer1Axis(zebra)
@@ -533,7 +537,7 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         # Now do the x steps.
         v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
         yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
-        yield from bps.sleep(1.0)  # wait for the "x motor" to move
+        # yield from bps.sleep(1.0)  # wait for the "x motor" to move
         x_set = xstart - delta
         x_dial = xmotor.user_readback.get()
         i = 0
@@ -593,10 +597,19 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
 
     #@subs_decorator([LiveTable([ymotor]), RowBasedLiveGrid((ynum, xnum), ion.name, row_key=ymotor.name), LiveZebraPlot()])
     #@subs_decorator([LiveTable([ymotor]), LiveGrid((ynum, xnum), sclr1.mca1.name)])
-    @subs_decorator([LiveGrid((ynum, xnum+1),
-                              xs.channel1.rois.roi01.value.name,
-                              extent=(xstart, xstop, ystart, ystop),
-                              x_positive='right', y_positive='down')])
+    if (ynum == 1):
+        livepopup = LivePlot(xs.channel1.rois.roi01.value.name,
+                             xlim=(xstart, xstop))
+    else:
+        livepopup = LiveGrid((ynum, xnum+1),
+                             xs.channel1.rois.roi01.value.name,
+                             extent=(xstart, xstop, ystart, ystop),
+                             x_positive='right', y_positive='down')
+    @subs_decorator([livepopup])
+    # @subs_decorator([LiveGrid((ynum, xnum+1),
+    #                           xs.channel1.rois.roi01.value.name,
+    #                           extent=(xstart, xstop, ystart, ystop),
+    #                           x_positive='right', y_positive='down')])
     @subs_decorator({'start': at_scan})
     @subs_decorator({'stop': finalize_scan})
     # monitor values from xs
@@ -779,10 +792,10 @@ def y_scan_and_fly_xs2(*args, **kwargs):
             kwargs['delta'] = t_acc * v  # distance the stage will travel in t_acc
 
     yield from scan_and_fly(*args, **kwargs,
-                            # xmotor=hf_stage.y,
-                            # ymotor=hf_stage.x,
-                            xmotor=e_tomo.y,
-                            ymotor=e_tomo.x,
+                            xmotor=hf_stage.y,
+                            ymotor=hf_stage.x,
+                            # xmotor=e_tomo.y,
+                            # ymotor=e_tomo.x,
                             flying_zebra=flying_zebra_y_xs2,
                             xs=xs2)
 
@@ -808,10 +821,10 @@ def y_scan_and_fly_xs2_yz(*args, **kwargs):
             kwargs['delta'] = t_acc * v  # distance the stage will travel in t_acc
 
     yield from scan_and_fly(*args, **kwargs,
-                            # xmotor=hf_stage.y,
-                            # ymotor=hf_stage.z,
-                            xmotor=e_tomo.y,
-                            ymotor=e_tomo.x,
+                            xmotor=hf_stage.y,
+                            ymotor=hf_stage.z,
+                            # xmotor=e_tomo.y,
+                            # ymotor=e_tomo.x,
                             flying_zebra=flying_zebra_y_xs2,
                             xs=xs2)
 
@@ -832,10 +845,33 @@ def scan_and_fly_xs2(*args, **kwargs):
             kwargs['delta'] = t_acc * v  # distance the stage will travel in t_acc
 
     yield from scan_and_fly(*args, **kwargs,
-                            # xmotor=hf_stage.y,
-                            # ymotor=hf_stage.x,
-                            xmotor=e_tomo.x,
-                            ymotor=e_tomo.y,
+                            xmotor=hf_stage.x,
+                            ymotor=hf_stage.y,
+                            # xmotor=e_tomo.x,
+                            # ymotor=e_tomo.y,
+                            flying_zebra=flying_zebra_x_xs2,
+                            xs=xs2)
+
+def scan_and_fly_xs2_xz(*args, **kwargs):
+    '''
+    A copy of flying_zebra where the xspress3 mini is chosen to collect data on the X axis
+    '''
+
+    if 'delta' in kwargs.keys():
+        # if kwargs['delta'] is not None:  # If delta is set in the arguments,
+                                           # then we should not override that value
+                                           # AMK
+        if kwargs['delta'] is None:
+            # kwargs['delta'] = 0.004        # default value
+            v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
+            t_acc = 1.0  # acceleration time, default 1.0 s
+            kwargs['delta'] = t_acc * v  # distance the stage will travel in t_acc
+
+    yield from scan_and_fly(*args, **kwargs,
+                            xmotor=hf_stage.x,
+                            ymotor=hf_stage.z,
+                            # xmotor=e_tomo.x,
+                            # ymotor=e_tomo.y,
                             flying_zebra=flying_zebra_x_xs2,
                             xs=xs2)
 
