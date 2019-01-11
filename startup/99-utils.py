@@ -547,12 +547,12 @@ def setroi(roinum, element, edge=None, det=None):
     if det is not None:
         det.channel1.set_roi(roinum, e_ch-100, e_ch+100, name=element + '_' + e)
         cpt = getattr(det.channel1.rois, f'roi{roinum:02d}')
-        cpt.kind = 'normal'
+        cpt.kind = 'hinted'
     else:
         for d in [xs.channel1, xs.channel2, xs.channel3]:
             d.set_roi(roinum,e_ch-100,e_ch+100,name=element+'_'+e)
             cpt = getattr(d.rois, f'roi{roinum:02d}')
-            cpt.kind = 'normal'
+            cpt.kind = 'hinted'
     print("ROI{} set for {}-{} edge.".format(roinum,element,e))
 
 

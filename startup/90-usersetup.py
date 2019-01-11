@@ -36,7 +36,7 @@ saf_num = 303008
 
 logfilename_postfix = str(saf_num)
 
-cycle = '2018_cycle3'
+cycle = '2019_cycle1'
 
 RE.md['proposal']  = {  'proposal_num': str(proposal_num),
                          'proposal_title': str(proposal_title),
@@ -56,9 +56,7 @@ try:
     os.makedirs(userdatadir, exist_ok=True)
 except Exception as e:
     print(e)
-    print('cannot create directory:' + userdatadir)
-    sys.exit()
-
+    raise OSError('cannot create directory:' + userdatadir)
 
 userlogfile = userdatadir+'logfile'+logfilename_postfix+'.txt'
 
@@ -149,24 +147,21 @@ def scantime(scanid, printresults=True):
     return db[scanid].start['time'], db[scanid].stop['time'], start_str, stop_str
 
 def timestamp_batchoutput(filename = 'timestamplog.text', initial_scanid = None, final_scanid = None):
-    f = open(filename,'w')
-    for scanid in range(initial_scanid, final_scanid+1):
-        f.write(str(scanid)+'\n')
-        try:
-            start_t, stop_t = scantime(scanid)
-            f.write(start_t)
-            f.write('\n')
-            f.write(stop_t)
-            f.write('\n')
-        except:
-            f.write('scan did no finish correctly.\n')
-    f.close()
+    with open(filename, 'w') as f:
+        for scanid in range(initial_scanid, final_scanid+1):
+            f.write(str(scanid)+'\n')
+            try:
+                start_t, stop_t = scantime(scanid)
+                f.write(start_t)
+                f.write('\n')
+                f.write(stop_t)
+                f.write('\n')
+            except:
+                f.write('scan did no finish correctly.\n')
 
 def scantime_batchoutput(filename = 'scantimelog.txt', scanlist = []):
-
-    f = open(filename, 'w')
-    f.write('scanid\tstartime(s)\tstoptime(s)\tstartime(date-time)\tstoptime(date-time)\n')
-    for i in scanlist:
-        starttime_s, endtime_s, starttime, endtime = scantime(i, printresults=False)
-        f.write(str(i)+'\t'+str(starttime_s)+'\t'+str(endtime_s)+'\t'+starttime[12::]+'\t'+endtime[12::]+'\n')
-    f.close()
+    with open(filename, 'w') as f:
+        f.write('scanid\tstartime(s)\tstoptime(s)\tstartime(date-time)\tstoptime(date-time)\n')
+        for i in scanlist:
+            starttime_s, endtime_s, starttime, endtime = scantime(i, printresults=False)
+            f.write(str(i)+'\t'+str(starttime_s)+'\t'+str(endtime_s)+'\t'+starttime[12::]+'\t'+endtime[12::]+'\n')
