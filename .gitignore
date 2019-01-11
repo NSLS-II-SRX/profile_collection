@@ -65,3 +65,6 @@ profile_default
 
 # swap files
 *.swp
+
+# DAMA playground:
+zz-dama.py
