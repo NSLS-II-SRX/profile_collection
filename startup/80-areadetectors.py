@@ -241,6 +241,22 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
             set_and_wait(sig, val)
         print("done")
 
+    def describe(self):
+        desc = super().describe()
+
+        if self.parent._mode is SRXMode.fly:
+            spec = {'external': 'FileStore:',
+                    'dtype' : 'array',
+                    # TODO do not hard code
+                    'shape' : (self.parent.settings.num_images.get(), 3, 4096),
+                    'source': self.prefix
+            }
+            return {'fluor': spec}
+        else:
+            return super().describe()
+
+
+
 class SRXXspressTrigger(XspressTrigger):
     def trigger(self):
         if self._staged != Staged.yes:
@@ -313,9 +329,11 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
 
         self.create_dir.put(-3)
 
-    def stop(self):
+    def stop(self, *, success=False):
         ret = super().stop()
-        self.hdf5.stop()
+        # todo move this into the stop method of the settings object?
+        self.settings.acquire.put(0)
+        self.hdf5.stop(success=success)
         return ret
 
     def stage(self):
@@ -370,7 +388,7 @@ xs.hdf5.warmup()
 
 
 # Working xs2 detector
-# 
+#
 # Commented out because it is not connected
 # AMK
 #
@@ -464,7 +482,7 @@ for i in range(1,4):
 
 class MerlinFileStoreHDF5(FileStorePluginBase, FileStoreBulkReadable):
 
-    _spec = 'TPX_HDF5' 
+    _spec = 'TPX_HDF5'
     filestore_spec = _spec
 
     def __init__(self, *args, **kwargs):
@@ -574,4 +592,3 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
 
 merlin = SRXMerlin('XF:05IDD-ES{Merlin:1}', name='merlin', read_attrs=['hdf5', 'cam', 'stats1'])
 merlin.hdf5.read_attrs = []
-
