@@ -104,6 +104,10 @@ class SRXFlyer1Axis(Device):
         #pc gate output is 31 for zebra.  use it to trigger xspress3 and I0
         self.stage_sigs[self._encoder.output1.ttl.addr] = 31
         self.stage_sigs[self._encoder.output3.ttl.addr] = 31
+        # this is for the merlin
+        self.stage_sigs[self._encoder.output2.ttl.addr] = 53
+        # this is for the dexela
+        self.stage_sigs[self._encoder.output4.ttl.addr] = 55
 
         self.stage_sigs[self._encoder.pc.enc_pos1_sync] = 1
         self.stage_sigs[self._encoder.pc.enc_pos2_sync] = 1
@@ -395,7 +399,7 @@ def export_sis_data(ion, filepath):
         i = ion.mca2.get(timeout=5.)
         im= ion.mca3.get(timeout=5.)
         it= ion.mca4.get(timeout=5.)
-    
+
     correct_length = zebra.pc.data.num_down.get()
     size = (len(t),)
     size2 = (len(i),)
@@ -994,5 +998,3 @@ def scan_and_fly_xs2_xz(*args, **kwargs):
                             # ymotor=e_tomo.y,
                             flying_zebra=flying_zebra_x_xs2,
                             xs=xs2)
-
-
