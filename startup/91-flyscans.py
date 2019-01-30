@@ -47,11 +47,34 @@ class SRXFlyer1Axis(Device):
 #    LARGE_FILE_DIRECTORY_WRITE_PATH = '/tmp/fly_scan_ancillary'
     LARGE_FILE_DIRECTORY_READ_PATH = '/nsls2/xf05id1/XF05ID1/data/2018-1/fly_scan_ancillary/'
     "This is the Zebra."
-    def __init__(self, encoder, xs, sclr1, fast_axis, *, reg=db.reg, **kwargs):
+    KNOWN_DETS = {'xs', 'merlin', 'dexela'}
+    @property
+    def encoder(self):
+        return self._encoder
+
+    @property
+    def detectors(self):
+        return tuple(self._dets)
+
+    @detectors.setter
+    def detectors(self, value):
+        dets = tuple(value)
+        if not all(d.name in self.KNOWN_DETS
+                   for d in dets):
+            raise ValueError(f'One or more of {[d.name for d in dets]}'
+                             f'is not known to the zebara.  '
+                             f'The known detectors are {self.KNOWN_DETS})')
+        self._dets = dets
+
+    @property
+    def sclr(self):
+        return self._sis
+
+    def __init__(self, encoder, dets, sclr1, fast_axis, *, reg=db.reg, **kwargs):
         super().__init__('', parent=None, **kwargs)
         self._mode = 'idle'
         self._encoder = encoder
-        self._det = xs
+        self._dets = dets
         self._sis = sclr1
         self._filestore_resource = None
 
@@ -115,8 +138,12 @@ class SRXFlyer1Axis(Device):
         for chan in ('time', 'enc1'):
             desc[chan] = spec
             desc[chan]['source'] = getattr(self._encoder.pc.data, chan).pvname
-        desc['fluor'] = spec
-        desc['fluor']['source'] = self._det.prefix
+
+        # handle the detectors we are going to get
+        for d in self._dets:
+            desc.update(d.describe())
+
+        # handle the ion chamber that the zebra is collecting
         desc['i0'] = spec
         desc['i0']['source'] = self._sis.mca2.pvname
         desc['i0_time'] = spec
@@ -194,11 +221,17 @@ class SRXFlyer1Axis(Device):
             #poll()
         ttime.sleep(.1)
         self._mode = 'complete'
-        # self._encoder.pc.arm.put(0)  # sanity check; this should happen automatically
-        # this does the same as the above, but also aborts data collection
+        # self._encoder.pc.arm.put(0) # sanity check; this should
+        # happen automatically this does the same as the above, but
+        # also aborts data collection
         self._encoder.pc.block_state_reset.put(1)
-        #see triggering errors of the xspress3 on suspension.  This is to test the reset of the xspress3 after a line.
-        self._det.settings.acquire.put(0)
+        #see triggering errors of the xspress3 on suspension.  This is
+        #to test the reset of the xspress3 after a line.
+
+
+        for d in self._dets:
+            # xs.settings.acquire.put(0)
+            d.stop(success=True)
 
         self.__filename = '{}.h5'.format(uuid.uuid4())
         self.__filename_sis = '{}.h5'.format(uuid.uuid4())
@@ -232,11 +265,11 @@ class SRXFlyer1Axis(Device):
                                                              self.__filestore_resource_sis))
         self._document_cache.extend(('datum', d) for d in (time_datum, enc1_datum,
                                                           sis_datum, sis_time, sis_datum_im, sis_datum_it))
-        self._document_cache.extend(self._det.collect_asset_docs())
 
-        # TODO call 'read' on the detector instead
-        # xs_datum_id = self.reg.register_datum(self._det.hdf5._filestore_res, {})
-        xs_reading = self._det.read()
+        # grab the asset documents from all of the child detectors
+        for d in self._dets:
+            self._document_cache.extend(d.collect_asset_docs())
+
         # Write the file.
         export_zebra_data(self._encoder, self.__write_filepath,self._fast_axis)
         export_sis_data(self._sis, self.__write_filepath_sis)
@@ -247,19 +280,24 @@ class SRXFlyer1Axis(Device):
             'time': time.time(), 'seq_num': 1,
             'data': {'time': time_datum['datum_id'],
                      'enc1': enc1_datum['datum_id'],
-                     'fluor': xs_reading['fluor']['value'],
                      'i0': sis_datum['datum_id'],
                      'i0_time': sis_time['datum_id'],
                      'im': sis_datum_im['datum_id'],
                      'it': sis_datum_it['datum_id']},
             'timestamps': {'time': time_datum['datum_id'],  # not a typo#
                            'enc1': time_datum['datum_id'],
-                           'fluor': xs_reading['fluor']['timestamp'],
                            'i0': sis_time['datum_id'],
                            'i0_time': sis_time['datum_id'],
                            'im': sis_datum_im['datum_id'],
                            'it': sis_datum_it['datum_id']}
         }
+        for d in self._dets:
+            reading = d.read()
+            self._last_bulk['data'].update({k: v['value']
+                                            for k, v in reading.items()})
+            self._last_bulk['timestamps'].update({k: v['timestamp']
+                                                  for k, v in reading.items()})
+
         return NullStatus()
 
     def collect(self):
@@ -297,8 +335,8 @@ class SRXFlyer1Axis(Device):
         self.stage()
 
 
-flying_zebra = SRXFlyer1Axis(zebra, xs, sclr1, 'HOR', name='flying_zebra')
-flying_zebra_y = SRXFlyer1Axis(zebra, xs, sclr1, 'VER', name='flying_zebra')
+flying_zebra = SRXFlyer1Axis(zebra, [xs], sclr1, 'HOR', name='flying_zebra')
+flying_zebra_y = SRXFlyer1Axis(zebra, [xs], sclr1, 'VER', name='flying_zebra')
 # NOTE: as of 2019-01-11, xs2 device is not available, as it's only used for
 # specialized experiments.
 # For confocal
