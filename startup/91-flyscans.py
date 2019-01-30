@@ -482,36 +482,65 @@ class LiveZebraPlot(CallbackBase):
 
 # changed the flyer device to be aware of fast vs slow axis in a 2D scan
 # should abstract this method to use fast and slow axes, rather than x and y
-def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
-                 delta=None, shutter=True,
-                 xmotor=hf_stage.x, ymotor=hf_stage.y,
-                 xs=xs, ion=sclr1, align=False,
-                 flying_zebra=flying_zebra, md=None,
-                 dpc=None):
-    """
+def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
 
-    Read IO from SIS3820.
+                      flying_zebra, xmotor, ymotor,
+
+                      delta=None, shutter=True, align=False,
+
+                      md=None):
+    """Read IO from SIS3820.
     Zebra buffers x(t) points as a flyer.
     Xpress3 is our detector.
     The aerotech has the x and y positioners.
     delta should be chosen so that it takes about 0.5 sec to reach the gate??
     ymotor  slow axis
     xmotor  fast axis
+
+    Parameters
+    ----------
+    Detectors : List[Device]
+       These detectors must be known to the zebra
+
+    xstart, xstop : float
+    xnum : int
+    ystart, ystop : float
+    ynum : int
+    dwell : float
+       Dwell time in seconds
+
+    flying_zebra : SRXFlyer1Axis
+
+    xmotor, ymotor : EpicsMotor, kwarg only
+        These should be known to the zebra
+        # TODO sort out how to check this
+
+    delta : float, optional, kwarg only
+       offset on the ystage start position.  If not given, derive from
+       dwell + pixel size
+    align : bool, optional, kwarg only
+       If True, try to align the beamline
+    shutter : bool, optional, kwarg only
+       If True, try to open the shutter
     """
     c2pitch_kill = EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
     if md is None:
         md = {}
 
-    # Setup detectors
-    det = [zebra.name, xs.name, ion.name]
-    
-    # Setup the a detector for DPC
-    # This is assumed to be the Merlin
-    if dpc is not None:
-        det.append(dpc.name)
+    # assign detectors to flying_zebra, this may fail
+    flying_zebra.detectors = detectors
+    # Setup detectors, combine the zebra, sclr, and the just set detector list
+    detectors = (flying_zebra.encoder, flying_zebra.sclr) + flying_zebra.detectors
+
+    dets_by_name = {d.name : d
+                    for d in detectors}
+
+    # set up the merlin
+    if 'merlin' in dets_by_name:
+        dpc = dets_by_name['merlin']
+        # TODO use stage sigs
         # Set trigger mode
         dpc.cam.trigger_mode.put(2)
-
         # Make sure we respect whatever the exposure time is set to
         if (dwell < 0.0066392):
             print('The Merlin should not operate faster than 7 ms.')
@@ -523,33 +552,36 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         dpc.total_points.put(xnum)
 
         dpc._mode = SRXMode.fly
+        del dpc
 
     # If delta is None, set delta based on time for acceleration
     if delta is None:
         # delta = 0.002  # old default value
-        v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
+        v = ((xstop - xstart) / (xnum-1)) / dwell  # compute "stage speed"
         t_acc = 1.0  # acceleration time, default 1.0 s
         delta = t_acc * v  # distance the stage will travel in t_acc
-    
+
+    # TODO can we do this move in parallel?
     yield from abs_set(ymotor, ystart, wait=True) # ready to move
     yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
 
-    if shutter is True:
+    if shutter:
         yield from mv(shut_b, 'Open')
 
     if align:
         fly_ps = PeakStats(dcm.c2_pitch.name, i0.name)
-        align_scan = scan([sclr1], dcm.c2_pitch, -19.320, -19.360, 41)
-        align_scan = bp.subs_wrapper(align_scan, fly_ps)
-        yield from align_scan
-        yield from abs_set(dcm.c2_pitch, fly_ps.max[0], wait=True)
+        align_scan = bp.subs_wrapper(
+            scan([flying_zebra.sclr], dcm.c2_pitch, -19.320, -19.360, 41),
+            fly_ps)
+        ret = yield from align_scan
+        if ret is not None:
+            yield from abs_set(dcm.c2_pitch, fly_ps.max[0], wait=True)
         #ttime.sleep(10)
         #yield from abs_set(c2pitch_kill, 1)
 
     md = ChainMap(md, {
         'plan_name': 'scan_and_fly',
-        # 'detectors': [zebra.name, xs.name, ion.name],
-        'detectors': [zebra.name, xs.name, ion.name],
+        'detectors': [d.name for d in detectors],
         'dwell': dwell,
         'shape': (xnum, ynum),
         'scaninfo': {'type': 'XRF_fly',
@@ -565,24 +597,27 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         }
     )
 
-    if (xs.name == 'xs2'):
-        md['scaninfo']['type'] = 'XRF_E_tomo_fly'
+    # if (xs == 'xs2'):
+    #     md['scaninfo']['type'] = 'XRF_E_tomo_fly'
 
-    @stage_decorator([xs])
-    def fly_each_step(detectors, motor, step, firststep):
+    @stage_decorator(flying_zebra.detectors)
+    def fly_each_step(motor, step):
         "See http://nsls-ii.github.io/bluesky/plans.html#the-per-step-hook"
         # First, let 'scan' handle the normal y step, including a checkpoint.
-        yield from one_1d_step(detectors, motor, step)
+        yield from one_1d_step([], motor, step)
         # yield from bps.sleep(1.0)  # wait for the "x motor" to move
 
         # Now do the x steps.
-        v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
+        v = ((xstop - xstart) / (xnum-1)) / dwell  # compute "stage speed"
         yield from abs_set(xmotor, xstart - delta, wait=True) # ready to move
+
+        # TODO  Why are we re-trying the move?  This should be fixed at
+        # a lower level
         # yield from bps.sleep(1.0)  # wait for the "x motor" to move
         x_set = xstart - delta
         x_dial = xmotor.user_readback.get()
         i = 0
-        while (np.abs(x_set - x_dial) > 0.001):
+        while (np.abs(x_set - x_dial) > 0.0001):
             if (i == 0):
                 print('Waiting for motor to reach starting position...', end='')
             i = i + 1
@@ -591,38 +626,66 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
             x_dial = xmotor.user_readback.get()
         if (i != 0):
             print('done')
-            
+
         yield from abs_set(xmotor.velocity, v, wait=True)  # set the "stage speed"
 
-        yield from abs_set(xs.hdf5.num_capture, xnum, wait=True)
-        yield from abs_set(xs.settings.num_images, xnum, wait=True)
+        # set up all of the detectors
+        # TODO we should be able to move this out of the per-line call?!
+        if 'xs' in dets_by_name:
+            xs = dets_by_name['xs']
+            yield from abs_set(xs.hdf5.num_capture, xnum, wait=True)
+            yield from abs_set(xs.settings.num_images, xnum, wait=True)
+
+        if 'merlin' in dets_by_name:
+            merlin = dets_by_name['merlin']
+            yield from abs_set(merlin.hdf5.num_capture, xnum, wait=True)
+            yield from abs_set(merlin.cam.num_images, xnum, wait=True)
+
+        if 'dexela' in dets_by_name:
+            dexela = dets_by_name['dexela']
+            yield from abs_set(dexela.hdf5.num_capture, xnum, wait=True)
+            yield from abs_set(dexela.cam.num_images, xnum, wait=True)
+
+        ion = flying_zebra.sclr
         yield from abs_set(ion.nuse_all,xnum)
+
         # arm the Zebra (start caching x positions)
+        yield from kickoff(flying_zebra,
+                           xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell,
+                           wait=True)
 
+        # arm SIS3820, note that there is a 1 sec delay in setting X
+        # into motion so the first point *in each row* won't
+        # normalize...
+        yield from abs_set(ion.erase_start, 1)
 
-        yield from kickoff(flying_zebra, xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell, wait=True)
-        yield from abs_set(ion.erase_start, 1) # arm SIS3820, note that there is a 1 sec delay in setting X into motion
-                                               # so the first point *in each row* won't normalize...
-        yield from bps.trigger(xs, group='row')
-        #if firststep == True:
-        #    ttime.sleep(0.)
+        # trigger all of the detectors
+        for d in flying_zebra.detectors:
+            yield from bps.trigger(d, group='row')
+
         yield from bps.sleep(1.5)
-        yield from abs_set(xmotor, xstop+1*delta, group='row')  # move in x
+        # start the 'fly'
+        yield from abs_set(xmotor, xstop + 1*delta, group='row')  # move in x
+        # wait for the motor and detectors to all agree they are done
         yield from bps.wait(group='row')
+
         # yield from abs_set(xs.settings.acquire, 0)  # stop acquiring images
+
+        # we still know about ion from above
         yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
+
         yield from complete(flying_zebra)  # tell the Zebra we are done
         yield from collect(flying_zebra)  # extract data from Zebra
+        # TODO what?
         if ('e_tomo' in xmotor.name):
-            v_return = 4
-            v_max = xmotor.velocity.high_limit
-            if (v_return > v_max):
-                xmotor.velocity.set(v_max)
-            else:
-                xmotor.velocity.set(v_return)
+            v_return = min(4, xmotor.velocity.high_limit)
+            yield from bps.mov(xmotor.velocity, v_return)
         else:
-            yield from bps.mov(xmotor.velocity, 1.0)             # set the "stage speed"
-            yield from abs_set(xmotor.velocity, 1.0, wait=True)  # set the "stage speed" twice just in case
+            # set the "stage speed"
+            yield from bps.mov(xmotor.velocity, 1.0)
+            # TODO wat
+            # set the "stage speed" twice just in case
+            yield from abs_set(xmotor.velocity, 1.0, wait=True)
 
     def at_scan(name, doc):
         scanrecord.current_scan.put(doc['uid'][:6])
@@ -636,8 +699,13 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
         scanrecord.scanning.put(False)
         scanrecord.time_remaining.put(0)
 
-    #@subs_decorator([LiveTable([ymotor]), RowBasedLiveGrid((ynum, xnum), ion.name, row_key=ymotor.name), LiveZebraPlot()])
-    #@subs_decorator([LiveTable([ymotor]), LiveGrid((ynum, xnum), sclr1.mca1.name)])
+    # TODO remove this eventually?
+    xs = dets_by_name['xs']
+
+    # @subs_decorator([LiveTable([ymotor]),
+    #                  RowBasedLiveGrid((ynum, xnum), ion.name, row_key=ymotor.name),
+    #                  LiveZebraPlot()])
+    # @subs_decorator([LiveTable([ymotor]), LiveGrid((ynum, xnum), sclr1.mca1.name)])
     if (ynum == 1):
         livepopup = LivePlot(xs.channel1.rois.roi01.value.name,
                              xlim=(xstart, xstop))
@@ -655,14 +723,15 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     @subs_decorator({'stop': finalize_scan})
     # monitor values from xs
     @monitor_during_decorator([xs.channel1.rois.roi01.value])
-    #@monitor_during_decorator([xs], run=False)  # monitor values from xs
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
     def plan():
+        # TODO move this to stage sigs
         yield from bps.mov(xs.total_points, xnum)
         # added to "prime" the detector
         #yield from abs_set(xs.settings.trigger_mode, 'TTL Veto Only')
 
+        # TODO move this to stage sigs
         yield from bps.mov(xs.external_trig, True)
         ystep = 0
 
@@ -670,22 +739,32 @@ def scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
             yield from abs_set(scanrecord.time_remaining,
                                (ynum - ystep) * ( dwell * xnum + 3.8 ) / 3600.)
             ystep = ystep + 1
-            # 'arm' the xs for outputting fly data
-            yield from bps.mov(xs.fly_next, True)
-#            print('h5 armed\t',time.time())
-            if step == ystart:
-                firststep = True
-            else:
-                firststep = False
-            yield from fly_each_step([], ymotor, step, firststep)
-#            print('return from step\t',time.time())
+            # 'arm' the all of the detectors for outputting fly data
+            for d in flying_zebra.detectors:
+                yield from bps.mov(d.fly_next, True)
+            # print('h5 armed\t',time.time())
+            yield from fly_each_step(ymotor, step)
+            # print('return from step\t',time.time())
+
+        # TODO this should be taken care of by stage sigs
+        ion = flying_zebra.sclr
         yield from bps.mov(xs.external_trig, False,
-                          ion.count_mode, 1)
-        if shutter is True:
-            yield from mv(shut_b, 'Close')
+                           ion.count_mode, 1)
 
-    return (yield from plan())
+    if shutter:
+        final_plan = finalize_wrapper(plan(),
+                                      bps.mov(shut_b, 'Close'))
+    else:
+        final_plan = plan()
 
+    return (yield from final_plan)
+
+def scan_and_fly(*args, **kwargs):
+    kwargs.setdefault('xmotor', hf_stage.x)
+    kwargs.setdefault('ymotor', hf_stage.y)
+    _xs = kwargs.pop('xs', xs)
+    kwargs.setdefault('flying_zebra', flying_zebra)
+    yield from scan_and_fly_base([_xs], *args, **kwargs)
 
 class RowBasedLiveGrid(LiveGrid):
     """
