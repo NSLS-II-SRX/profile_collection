@@ -625,8 +625,8 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
         super().__init__(*args, **kwargs)
         self._mode = SRXMode.step
 
-    def stop(self):
-        ret = super().stop()
+    def stop(self, success=False):
+        ret = super().stop(success=success)
         self.hdf5.stop()
         return ret
 
