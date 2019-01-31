@@ -10,11 +10,14 @@ from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreHDF5IterativeWrite,
                                                  FileStoreTIFFSquashing,
                                                  FileStoreTIFF,
-                                                 FileStoreHDF5)
+                                                 FileStoreHDF5, new_short_uid,
+                                                 FileStoreBase
+                                                 )
 from ophyd import Signal
 from ophyd import Component as C
 from hxntools.detectors.merlin import MerlinDetector
 from hxntools.handlers import register
+import itertools
 
 register(db)
 
@@ -173,7 +176,26 @@ class BulkXSPRESS(HandlerBase):
         return self._handle['entry/instrument/detector/data'][:]
 
 
+class BulkMerlin(BulkXSPRESS):
+    HANDLER_NAME = 'MERLIN_FLY_STREAM_V1'
+    def __call__(self):
+        return self._handle['entry/instrument/detector/data'][:]
+
+
+class BulkMerlinDEBUG(BulkXSPRESS):
+    # This is for data take in 'capture' mode, only used for debugging
+    # once.
+    HANDLER_NAME = 'MERLIN_FLY'
+    def __call__(self):
+        return self._handle['entry/instrument/detector/data'][1:]
+
+
 db.reg.register_handler(BulkXSPRESS.HANDLER_NAME, BulkXSPRESS,
+                        overwrite=True)
+# needed to get at some debugging data
+db.reg.register_handler('MERLIN_FLY', BulkMerlinDEBUG,
+                        overwrite=True)
+db.reg.register_handler(BulkMerlin.HANDLER_NAME, BulkMerlin,
                         overwrite=True)
 
 from enum import Enum
@@ -480,33 +502,87 @@ for i in range(1,4):
     ch=getattr(xs.channel1.rois,'roi{:02}.value'.format(i))
     ch.name = 'ROI_{:02}'.format(i)
 
-class MerlinFileStoreHDF5(FileStorePluginBase, FileStoreBulkReadable):
+class MerlinFileStoreHDF5(FileStoreBase):
 
     _spec = 'TPX_HDF5'
-    filestore_spec = _spec
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.stage_sigs.update([(self.file_template, '%s%s_%6.6d.h5'),
+        self.stage_sigs.update([('auto_increment', 'Yes'),
+                                ('array_counter', 0),
+                                ('auto_save', 'Yes'),
+                                ('num_capture', 0),  # this will be updated later
+                                (self.file_template, '%s%s_%6.6d.h5'),
                                 (self.file_write_mode, 'Stream'),
                                 # (self.compression, 'zlib'),
                                 (self.capture, 1)
                                 ])
+        self._point_counter = None
+
+    def unstage(self):
+        self._point_counter = None
+        return super().unstage()
+
+    def make_filename(self):
+        filename = new_short_uid()
+        formatter = datetime.datetime.now().strftime
+        write_path = formatter(self.write_path_template)
+        read_path = formatter(self.read_path_template)
+
+
+        fn, read_path, write_path = filename, read_path, write_path
+        return fn, read_path, write_path
+
+    @property
+    def filestore_spec(self):
+        if self.parent._mode is SRXMode.fly:
+            return BulkMerlin.HANDLER_NAME
+        return 'TPX_HDF5'
+
+    def generate_datum(self, key, timestamp, datum_kwargs):
+        if self.parent._mode is SRXMode.fly:
+            return super().generate_datum(key, timestamp, datum_kwargs)
+        elif self.parent._mode is SRXMode.step:
+            i = next(self._point_counter)
+            datum_kwargs = datum_kwargs or {}
+            datum_kwargs.update({'point_number': i})
+            return super().generate_datum(key, timestamp, datum_kwargs)
 
     def stage(self):
+        # Make a filename.
+        filename, read_path, write_path = self.make_filename()
+
+        # Ensure we do not have an old file open.
+        set_and_wait(self.capture, 0)
+        # These must be set before parent is staged (specifically
+        # before capture mode is turned on. They will not be reset
+        # on 'unstage' anyway.
+        set_and_wait(self.file_path, write_path)
+        set_and_wait(self.file_name, filename)
+        set_and_wait(self.file_number, 0)
         staged = super().stage()
-        res_kwargs = {'frame_per_point': 1}
+
+        # AD does this same templating in C, but we can't access it
+        # so we do it redundantly here in Python.
+        self._fn = self.file_template.get() % (read_path,
+                                               filename,
+                                               self.file_number.get() - 1)
+                                               # file_number is *next* iteration
+        self._fp = read_path
+        if not self.file_path_exists.get():
+            raise IOError("Path %s does not exist on IOC."
+                          "" % self.file_path.get())
+
+        if self.parent._mode is SRXMode.fly:
+            res_kwargs = {}
+        else:
+            res_kwargs = {'frame_per_point': 1}
+            self._point_counter = itertools.count()
+
         logger.debug("Inserting resource with filename %s", self._fn)
         self._generate_resource(res_kwargs)
 
         return staged
-
-    def make_filename(self):
-        fn, read_path, write_path = super().make_filename()
-        return fn, read_path, write_path
-
-
-
 
 class HDF5PluginWithFileStoreMerlin(HDF5Plugin, MerlinFileStoreHDF5):
 
@@ -560,10 +636,12 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
             self.fly_next.put(False)
             # According to Ken's comments in hxntools, this is a de-bounce time
             # when in external trigger mode
-            self.stage_sigs[self.cam.acquire_time] = 0.005
-            self.stage_sigs[self.cam.acquire_period] = 0.0066392
 
-            self.stage_sigs[self.cam.trigger_mode] = 1
+            # moved this to the plan
+            # self.stage_sigs[self.cam.acquire_time] = 0.005
+            # self.stage_sigs[self.cam.acquire_period] = 0.0066392
+
+            self.stage_sigs[self.cam.trigger_mode] = 2
             self._mode = SRXMode.fly
         else:
             # Set trigger mode
