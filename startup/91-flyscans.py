@@ -731,7 +731,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     @run_decorator(md=md)
     def plan():
         # TODO move this to stage sigs
-        yield from bps.mov(xs.total_points, xnum)
+        for d in flying_zebra.detectors:
+            yield from bps.mov(d.total_points, xnum)
         # added to "prime" the detector
         #yield from abs_set(xs.settings.trigger_mode, 'TTL Veto Only')
 
