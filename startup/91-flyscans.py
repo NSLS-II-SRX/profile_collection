@@ -544,18 +544,19 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         dpc = dets_by_name['merlin']
         # TODO use stage sigs
         # Set trigger mode
-        dpc.cam.trigger_mode.put(2)
+        # dpc.cam.trigger_mode.put(2)
         # Make sure we respect whatever the exposure time is set to
         if (dwell < 0.0066392):
             print('The Merlin should not operate faster than 7 ms.')
             print('Changing the scan dwell time to 7 ms.')
             dwell = 0.007
-        dpc.cam.acquire_time.put(dwell - 0.0016392)
-        dpc.cam.acquire_period.put(dwell)
-        dpc.cam.num_images.put(1)
-        dpc.total_points.put(xnum)
-
-        dpc._mode = SRXMode.fly
+        # According to Ken's comments in hxntools, this is a de-bounce time
+        # when in external trigger mode
+        dpc.cam.stage_sigs['acquire_time'] = .3 * dwell - 0.0016392
+        dpc.cam.stage_sigs['acquire_period'] = .5 * dwell
+        dpc.cam.stage_sigs['num_images'] = 1
+        dpc.stage_sigs['total_points'] = xnum
+        dpc.hdf5.stage_sigs['num_capture'] = xnum
         del dpc
 
     # If delta is None, set delta based on time for acceleration
