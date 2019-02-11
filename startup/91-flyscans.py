@@ -774,7 +774,10 @@ def scan_and_fly(*args, **kwargs):
     kwargs.setdefault('ymotor', hf_stage.y)
     _xs = kwargs.pop('xs', xs)
     kwargs.setdefault('flying_zebra', flying_zebra)
-    yield from scan_and_fly_base([_xs, merlin], *args, **kwargs)
+    # To fly both xs and merlin
+    # yield from scan_and_fly_base([_xs, merlin], *args, **kwargs)
+    # To fly only xs
+    yield from scan_and_fly_base([_xs, dexela], *args, **kwargs)
 
 class RowBasedLiveGrid(LiveGrid):
     """

@@ -68,6 +68,8 @@ class FileStoreBulkReadable(FileStoreIterativeWrite):
         self._point_counter = itertools.count()
 
     def bulk_read(self, timestamps):
+        # if you see this, delete this line but report to DAMA
+        raise Exception("should not be here")
         image_name = self.image_name
 
         uids = [self.generate_datum(self.image_name, ts, {}) for ts in timestamps]
@@ -199,12 +201,6 @@ db.reg.register_handler('MERLIN_FLY', BulkMerlinDEBUG,
                         overwrite=True)
 db.reg.register_handler(BulkMerlin.HANDLER_NAME, BulkMerlin,
                         overwrite=True)
-
-from enum import Enum
-
-class SRXMode(Enum):
-    step = 1
-    fly = 2
 
 from ophyd.areadetector.filestore_mixins import FileStorePluginBase
 class Xspress3FileStoreFlyable(Xspress3FileStore):
