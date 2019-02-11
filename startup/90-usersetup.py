@@ -17,20 +17,10 @@ proposal_title = None
 PI_lastname = None
 saf_num = None
 
-proposal_num = 302925
+proposal_num = 303891
 proposal_title = 'Routine Setup and Testing for Beamline 5-ID'
-PI_lastname = 'Chu'
-saf_num = 303008
-
-# proposal_num = 303164
-# proposal_title = '3D confocal x-ray fluorescence microscopy (CXRF) at the 2-micron scale using collimating channel arrays (CCAs) to elucidate the role of copper in pollen fertility in A. thaliana'
-# PI_lastname = 'Woll'
-# saf_num = 303397
-
-#proposal_num = 302825
-#proposal_title = 'Use of X-ray spectromicroscopic techniques on understanding the effect of sea-level rise on the production and breakdown of natural organohalogens in coastal wetlands'
-#PI_lastname = 'Schlesinger'
-#saf_num = 303388
+PI_lastname = 'Kiss'
+saf_num = 303524
 
 
 
