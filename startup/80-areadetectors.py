@@ -30,12 +30,12 @@ class BPMCam(SingleTrigger, AreaDetector):
     cam = C(AreaDetectorCam, '')
     image_plugin = C(ImagePlugin, 'image1:')
 
-    tiff = C(SRXTIFFPlugin, 'TIFF1:',
-             #write_path_template='/epicsdata/bpm1-cam1/2016/2/24/')
-             #write_path_template='/epicsdata/bpm1-cam1/%Y/%m/%d/',
-             #root='/epicsdata', reg=db.reg)
-             write_path_template='/nsls2/xf05id1/data/bpm1-cam1/%Y/%m/%d/',
-             root='/nsls2/xf05id1')
+    # tiff = C(SRXTIFFPlugin, 'TIFF1:',
+    #          #write_path_template='/epicsdata/bpm1-cam1/2016/2/24/')
+    #          #write_path_template='/epicsdata/bpm1-cam1/%Y/%m/%d/',
+    #          #root='/epicsdata', reg=db.reg)
+    #          write_path_template='/nsls2/xf05id1/data/bpm1-cam1/%Y/%m/%d/',
+    #          root='/nsls2/xf05id1')
     roi1 = C(ROIPlugin, 'ROI1:')
     roi2 = C(ROIPlugin, 'ROI2:')
     roi3 = C(ROIPlugin, 'ROI3:')
@@ -48,9 +48,11 @@ class BPMCam(SingleTrigger, AreaDetector):
     # stats5 = C(StatsPlugin, 'Stats5:')
     pass
 
-bpmAD = BPMCam('XF:05IDA-BI:1{BPM:1-Cam:1}', name='bpmAD', read_attrs=['tiff'])
-bpmAD.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
-bpmAD.tiff.read_attrs = []
+# bpmAD = BPMCam('XF:05IDA-BI:1{BPM:1-Cam:1}', name='bpmAD', read_attrs=['tiff'])
+# bpmAD.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
+# bpmAD.tiff.read_attrs = []
+bpmAD = BPMCam('XF:05IDA-BI:1{BPM:1-Cam:1}', name='bpmAD', read_attrs=[])
+bpmAD.read_attrs = ['stats1', 'stats2', 'stats3', 'stats4']
 bpmAD.stats1.read_attrs = ['total']
 bpmAD.stats2.read_attrs = ['total']
 bpmAD.stats3.read_attrs = ['total']
