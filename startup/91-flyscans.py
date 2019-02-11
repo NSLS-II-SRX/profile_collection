@@ -331,7 +331,11 @@ class SRXFlyer1Axis(Device):
         #self._encoder.pc.arm.put(0)
         self._encoder.pc.block_state_reset.put(1)
         self._sis.stop_all.put(1)
-        self._det.settings.acquire.put(0)
+        for d in self._dets:
+            if hasattr(d, 'settings'):
+                d.settings.acquire.put(0)
+            if hasattr(d, 'cam'):
+                d.cam.acquire.put(0)
         self._mode = 'idle'
         self.unstage()
 
