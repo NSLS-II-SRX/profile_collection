@@ -769,15 +769,20 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
     return (yield from final_plan)
 
-def scan_and_fly(*args, **kwargs):
+
+def scan_and_fly(*args, extra_dets=None, **kwargs):
     kwargs.setdefault('xmotor', hf_stage.x)
     kwargs.setdefault('ymotor', hf_stage.y)
     _xs = kwargs.pop('xs', xs)
     kwargs.setdefault('flying_zebra', flying_zebra)
+    if extra_dets is None:
+        extra_dets = []
+    dets = [_xs] + extra_dets
     # To fly both xs and merlin
     # yield from scan_and_fly_base([_xs, merlin], *args, **kwargs)
     # To fly only xs
-    yield from scan_and_fly_base([_xs, dexela], *args, **kwargs)
+    yield from scan_and_fly_base(dets, *args, **kwargs)
+
 
 class RowBasedLiveGrid(LiveGrid):
     """
