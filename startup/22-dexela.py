@@ -56,16 +56,6 @@ class DexelaFileStoreHDF5(FileStoreBase):
             return BulkDexela.HANDLER_NAME
         return 'TPX_HDF5'
 
-    def stage(self):
-        ret = super().stage()
-        if self.parent._mode == SRXMode.step:
-            self._generate_resource({'frame_per_point': 1})
-        elif self.parent._mode == SRXMode.fly:
-            self._generate_resource()
-        else:
-            raise ValueError("unexpected mode")
-        return ret
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.stage_sigs.update([('auto_increment', 'Yes'),
@@ -114,12 +104,9 @@ class DexelaFileStoreHDF5(FileStoreBase):
         set_and_wait(self.file_path, write_path)
         set_and_wait(self.file_name, filename)
         set_and_wait(self.file_number, 0)
-        self.stage_sigs['num_capture'] = self.parent.total_points.get()
-        self.parent.cam.stage_sigs['image_mode'] = 'Multiple'
-        if self.parent._mode is SRXMode.fly:
-            self.parent.cam.stage_sigs['trigger_mode'] = 'Ext. Edge Single'
-        else:
-            self.parent.cam.stage_sigs['trigger_mode'] = 'Int. Software'
+        if self.parent._mode is SRXMode.step:
+            set_and_wait(self.num_capture, self.parent.total_points.get())
+
         staged = super().stage()
 
         # AD does this same templating in C, but we can't access it
@@ -136,7 +123,9 @@ class DexelaFileStoreHDF5(FileStoreBase):
         if self.parent._mode is SRXMode.fly:
             res_kwargs = {}
         else:
+            set_and_wait(self.parent.cam.num_images, 1)
             res_kwargs = {'frame_per_point': 1}
+
             self._point_counter = itertools.count()
 
         logger.debug("Inserting resource with filename %s", self._fn)
@@ -152,8 +141,6 @@ class DexelaHDFWithFileStore(HDF5Plugin, DexelaFileStoreHDF5):
                             "method on the hdf5 plugin.")
 
         return super().stage()
-
-
 
 
 class SRXDexelaDetector(SingleTrigger, DexelaDetector):
@@ -178,6 +165,14 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
         if self.fly_next.get():
             self.fly_next.put(False)
             self._mode = SRXMode.fly
+
+        self.cam.stage_sigs['image_mode'] = 'Multiple'
+        if self._mode is SRXMode.fly:
+            self.cam.stage_sigs['trigger_mode'] = 'Ext. Edge Single'
+        else:
+            self.cam.stage_sigs['trigger_mode'] = 'Int. Fixed Rate'
+
+
         return super().stage()
 
     def unstage(self):
