@@ -87,20 +87,27 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             dpc = None, e_tomo=None, struck = True, srecord = None,
             setenergy=None, u_detune=None, echange_waittime=10,samplename=None, snake=True):
 
+    '''input:
+        xstart, xnumstep, xstepsize : float
+        ystart, ynumstep, ystepsize : float
+        acqtime : float
+             acqusition time to be set for both xspress3 and F460
+        numrois : integer
+            number of ROIs set to display in the live raster scans.
+            This is for display ONLY.  The actualy number of ROIs
+            saved depend on how many are enabled and set in the
+            read_attr However noramlly one cares only the raw XRF
+            spectra which are all saved and will be used for fitting.
+            i0map_show (boolean): When set to True, map of the i0 will
+            be displayed in live raster, default is True itmap_show
+            (boolean): When set to True, map of the trasnmission diode
+            will be displayed in the live raster, default is True
+            energy (float): set energy, use with caution, hdcm might
+            become misaligned u_detune (float): amount of undulator to
+            detune in the unit of keV
+
     '''
-    input:
-        xstart, xnumstep, xstepsize (float)
-        ystart, ynumstep, ystepsize (float)
-        acqtime (float): acqusition time to be set for both xspress3 and F460
-        numrois (integer): number of ROIs set to display in the live raster scans. This is for display ONLY.
-                           The actualy number of ROIs saved depend on how many are enabled and set in the read_attr
-                           However noramlly one cares only the raw XRF spectra which are all saved and will be used for fitting.
-        i0map_show (boolean): When set to True, map of the i0 will be displayed in live raster, default is True
-        itmap_show (boolean): When set to True, map of the trasnmission diode will be displayed in the live raster, default is True
-        energy (float): set energy, use with caution, hdcm might become misaligned
-        u_detune (float): amount of undulator to detune in the unit of keV
-    '''
-    c2pitch_kill=EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
+    c2pitch_kill = EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
 
     #record relevant meta data in the Start document, defined in 90-usersetup.py
     md = get_stock_md()
@@ -121,6 +128,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         current_preamp.exp_time.put(acqtime)
     else:
         sclr1.preset_time.put(acqtime)
+
     xs.settings.acquire_time.put(acqtime)
     xs.total_points.put((xnumstep+1)*(ynumstep+1))
 
@@ -136,8 +144,10 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     #det = [current_preamp, saturn]
     if record_cryo is True:
         det = [current_preamp, xs, cryo_v19, cryo_lt19, cryo_pt1,
-           hdcm_Si111_1stXtalrtd, hdcm_Si111_2ndXtal_rtd,  hdcm_1stXtal_ThermStab_rtd, hdcm_ln2out_rtd, hdcm_water_rtd,
-           dBPM_h, dBPM_v, dBPM_t, dBPM_i, dBPM_o, dBPM_b]
+               hdcm_Si111_1stXtalrtd, hdcm_Si111_2ndXtal_rtd,
+               hdcm_1stXtal_ThermStab_rtd, hdcm_ln2out_rtd,
+               hdcm_water_rtd, dBPM_h, dBPM_v, dBPM_t, dBPM_i, dBPM_o,
+               dBPM_b]
     else:
         if struck == False:
             det = [current_preamp, xs]
@@ -152,30 +162,32 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         det.append(dpc)
         if (dpc.name == 'merlin'):
             # Set trigger mode
-            merlin.cam.trigger_mode.put(0)
+            dpc.cam.trigger_mode.put(0)
 
             # Make sure we respect whatever the exposure time is set to
-            merlin.cam.acquire_time.put(acqtime)
-            merlin.cam.acquire_period.put(acqtime + 0.005)
-            merlin.cam.num_images.put(1)
-            merlin.total_points.put((xnumstep+1)*(ynumstep+1))
-            merlin.hdf5.stage_sigs['num_capture'] = (xnumstep+1)*(ynumstep+1)
+            dpc.cam.acquire_time.put(acqtime)
+            dpc.cam.acquire_period.put(acqtime + 0.005)
+            dpc.cam.num_images.put(1)
 
-            merlin._mode = SRXMode.step
+            dpc.hdf5.stage_sigs['num_capture'] = (xnumstep+1)*(ynumstep+1)
+
         else:
         # For "old" dpc detector
             dpc.cam.acquire.put(0)
             dpc.cam.image_mode.put(0)
             # dpc.cam.acquire_time.put(acqtime)
             dpc.cam.acquire_time.put(acqtime*0.2)
+            dpc._mode = SRXMode.step
+
+        dpc._mode = SRXMode.step
+        dpc.total_points.put((xnumstep+1)*(ynumstep+1))
+
     if e_tomo is not None:
         # md = ChainMap( md, {'hf_stage_th': hf_stage.th.position})
         det.append(e_tomo)
         e_tomo.external_trig.put(False)
         e_tomo.settings.acquire_time.put(acqtime)
         e_tomo.total_points.put((xnumstep+1)*(ynumstep+1))
-
-
 
     #setup the live callbacks
     livecallbacks = []
@@ -216,8 +228,10 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         if e_tomo is None:
             fig = plt.figure('xs')
             fig.clf()
-            roimap = LiveGrid((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno',
-                              xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop],
+            roimap = LiveGrid((ynumstep+1, xnumstep+1), roi_key,
+                              clim=None, cmap='inferno',
+                              xlabel='x (mm)', ylabel='y (mm)',
+                              extent=[xstart, xstop, ystart, ystop],
                               x_positive='right', y_positive='down',
                               ax=fig.gca())
             # if (xnumstep == 0):
@@ -237,9 +251,13 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             livetableitem.append(roi_key)
             fig = plt.figure('e tomo')
             fig.clf()
-            roimap2 = LiveGrid((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='inferno',
-                               xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop],
+            roimap2 = LiveGrid((ynumstep+1, xnumstep+1), roi_key,
+                               clim=None, cmap='inferno',
+                               xlabel='x (mm)', ylabel='y (mm)',
+                               x_positive='right', y_positive='down',
+                               extent=[xstart, xstop, ystart, ystop],
                                ax=fig.gca())
+
             # if (xnumstep == 0):
             #     roimap2 = LivePlot(xmotor, roi_key, ax=fig.gca())
             # else:
@@ -248,10 +266,17 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             #                        ax=fig.gca())
             livecallbacks.append(roimap2)
 
-    if dpc is not None:
-        dpc_tmap = LiveGrid((ynumstep+1, xnumstep+1), dpc.stats1.total.name, clim=None, cmap='magma',
-                            xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop])
+    if dpc is not None and hasattr(dpc, 'stats1'):
+        fig = plt.figure('dpc')
+        fig.clf()
+        dpc_tmap = LiveGrid((ynumstep+1, xnumstep+1),
+                            dpc.stats1.total.name, clim=None, cmap='magma',
+                            xlabel='x (mm)', ylabel='y (mm)',
+                            x_positive='right', y_positive='down',
+                            extent=[xstart, xstop, ystart, ystop],
+                            ax=fig.gca())
         livecallbacks.append(dpc_tmap)
+
 #        dpc_hmap = LiveGrid((ynumstep+1, xnumstep+1), dpc.stats1.centroid.x.name, clim=None, cmap='magma',
 #                            xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystop, ystart])
 #        livecallbacks.append(dpc_hmap)
@@ -260,10 +285,12 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 #        livecallbacks.append(dpc_vmap)
 
 
-    if i0map_show is True:
-        if struck == False:
-            i0map = LiveGrid((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='viridis',
-                             xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop],
+    if i0map_show:
+        if not struck:
+            i0map = LiveGrid((ynumstep+1, xnumstep+1),
+                             'current_preamp_ch2', clim=None, cmap='viridis',
+                             xlabel='x (mm)', ylabel='y (mm)',
+                             extent=[xstart, xstop, ystart, ystop],
                              x_positive='right', y_positive='down')
         else:
             fig = plt.figure('i0')
@@ -280,13 +307,13 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         livecallbacks.append(i0map)
         livecallbacks.append(immap)
 
-    if itmap_show is True:
+    if itmap_show:
         itmap = LiveGrid((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='magma',
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop])
         livecallbacks.append(itmap)
 
     #this does not seem to work
-    if record_cryo is True:
+    if record_cryo:
         cryo_v19map = LiveGrid((ynumstep+1, xnumstep+1), 'cryo_v19', clim=None, cmap='jet',
                         xlabel='x (mm)', ylabel='y (mm)', extent=[xstart, xstop, ystart, ystop])
         livecallbacks.append(cryo_v19map)
@@ -331,13 +358,13 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
     #TO-DO: implement fast shutter control (open)
     #TO-DO: implement suspender for all shutters in genral start up script
-    if shutter is True:
+    if shutter:
         yield from abs_set(xmotor,xstart, wait = True)
         yield from abs_set(ymotor,ystart, wait = True)
         yield from mv(shut_b,'Open')
 
     #peak up monochromator at this energy
-    if align == True:
+    if align:
         ps = PeakStats(dcm.c2_pitch.name,i0.name)
         e_value = energy.energy.get()[1]
         if e_value < 14. and struck==True:
@@ -361,12 +388,21 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
     # Added a flag to choose if you want to snake or not
     # hf2dxrf_scanplan = outer_product_scan(det, ymotor, ystart, ystop, ynumstep+1, xmotor, xstart, xstop, xnumstep+1, True, md=md)
-    hf2dxrf_scanplan = outer_product_scan(det, ymotor, ystart, ystop, ynumstep+1, xmotor, xstart, xstop, xnumstep+1, snake, md=md)
-#    hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, livecallbacks)
-    hf2dxrf_scanplan = subs_wrapper( hf2dxrf_scanplan, {'all':livecallbacks,'start':at_scan,'stop':finalize_scan})
+
+    hf2dxrf_scanplan = outer_product_scan(det,
+                                          ymotor, ystart, ystop, ynumstep+1,
+                                          xmotor, xstart, xstop, xnumstep+1, snake,
+                                          md=md)
+
+    # hf2dxrf_scanplan = bp.subs_wrapper( hf2dxrf_scanplan, livecallbacks)
+    hf2dxrf_scanplan = subs_wrapper(hf2dxrf_scanplan,
+                                    {'all': livecallbacks,
+                                     'start': at_scan,
+                                     'stop': finalize_scan})
+
     scaninfo = yield from hf2dxrf_scanplan
     #TO-DO: implement fast shutter control (close)
-    if shutter is True:
+    if shutter:
         yield from mv(shut_b,'Close')
 
     #write to scan log
@@ -375,7 +411,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         # Changed to export the hdf5 file name instead of the tiff file name
         # logscan_event0info('2dxrf_withdpc', event0info = [dpc.tiff.file_name.name])
         # logscan_event0info('2dxrf_withdpc', event0info = [dpc.hdf5.file_name.name])
-        logscan_event0info('2dxrf_withdpc', event0info = ['merlin_image'])
+        logscan_event0info('2dxrf_withdpc')
         merlin.hdf5.stage_sigs['num_capture'] = 0
     else:
         # logscan_detailed('2dxrf', scan_param=[xstart, xnumstep, xstepsize, ystart, ynumstep, ystepsize, acqtime])
@@ -400,7 +436,7 @@ def multi_region_h(regions, energy_list=None, **kwargs):
 def hf2dxrf_estack(batch_dir = None, batch_filename = None,
             erange = [], estep = [],
             energy_pt = None,  echange_waittime = 5, energy_waittime = 5,
-            harmonic = None, correct_c2_x=True, correct_c1_r = False,
+            harmonic = 1, correct_c2_x=True, correct_c1_r = False,
           #same parameters as in hd2dxrf
             xstart=None, xnumstep=None, xstepsize=None,
             ystart=None, ynumstep=None, ystepsize=None,
@@ -456,7 +492,7 @@ def hf2dxrf_estack(batch_dir = None, batch_filename = None,
     if correct_c1_r is not False:
         dcm.c1_roll.set(correct_c1_r)
 
-    if harmonic is not None:
+    if harmonic != 1:
         energy.harmonic.put(harmonic)
 
     for energy_setpt in ept:
@@ -479,7 +515,7 @@ def hf2dxrf_estack(batch_dir = None, batch_filename = None,
 
     #clean up when the scan is done
     energy.move_c2_x.put(True)
-    energy.harmonic.put(None)
+    energy.harmonic.put(1)
 
 def hf2dxrf_repeat(num_scans = None, waittime = 10,
                    xstart=None, xnumstep=None, xstepsize=None,
