@@ -90,7 +90,7 @@ def xanes_afterscan_plan(scanid, filename, roinum):
                         output = False, filename_add = filename) 
 
 def xanes_plan(erange = [], estep = [],  
-            harmonic = None, correct_c2_x=True, correct_c1_r = False, detune = None,
+            harmonic=1, correct_c2_x=True, correct_c1_r = False, detune = None,
             acqtime=1., roinum=1, delaytime = 0.00, struck=True, fluor = True,
             samplename = '', filename = '', shutter = True, align = False, align_at = None):
                 
@@ -98,7 +98,7 @@ def xanes_plan(erange = [], estep = [],
     erange (list of floats): energy ranges for XANES in eV, e.g. erange = [7112-50, 7112-20, 7112+50, 7112+120]
     estep  (list of floats): energy step size for each energy range in eV, e.g. estep = [2, 1, 5]
     
-    harmonic (None or odd integer): when set to None, use the highest harmonic achievable automatically. 
+    harmonic (odd integer): when set to 1, use the highest harmonic achievable automatically. 
                                     when set to an odd integer, force the XANES scan to use that harmonic
     correct_c2_x (boolean or float): when True, automatically correct the c2x 
                                      when False, c2x will not be moved during the XANES scan
@@ -197,8 +197,8 @@ def xanes_plan(erange = [], estep = [],
         yield from abs_set(energy.move_c2_x,False)
     if correct_c1_r is not False:
         yield from abs_set(dcm.c1_roll,correct_c1_r)
-    if harmonic is not None:        
-        yield from abs_set(energy.harmonic,harmonic)
+    if harmonic != 1: 
+        yield from abs_set(energy.harmonic, harmonic)
     #prepare to peak up DCM at first scan point
     if align_at is not None:
         align = True
@@ -296,7 +296,7 @@ def xanes_plan(erange = [], estep = [],
         # yield from abs_set(energy.u_gap.corrfunc_en,1)  # disabled to test if
         # undulator gets stuck -AMK
         yield from abs_set(energy.move_c2_x, True)
-        yield from abs_set(energy.harmonic, 3)
+        yield from abs_set(energy.harmonic, 1)
         scanrecord.scanning.put(False)
         if shutter == True:
             yield from mv(shut_b,'Close')
@@ -316,7 +316,7 @@ def xanes_plan(erange = [], estep = [],
 def xanes_batch_plan(xylist=[], waittime = [2], 
                     samplename = None, filename = None,
                     erange = [], estep = [], struck = True, align = False, align_at=None, 
-                    harmonic = None, correct_c2_x=True, delaytime=0.0, detune = None,            
+                    harmonic=1, correct_c2_x=True, delaytime=0.0, detune = None,            
                     xmotor=hf_stage.x, ymotor=hf_stage.y, zmotor=hf_stage.z,
                     acqtime=None, roinum=1, shutter = True, fluor = True
                     ):
@@ -413,7 +413,7 @@ def xanes_batch_plan(xylist=[], waittime = [2],
 
 def hfxanes_ioc(waittime = None, samplename = None, filename = None,
                 erange = [], estep = [], struck = True, align = False, align_at = None,
-                harmonic = None, correct_c2_x= True, delaytime=0.0, detune = None,
+                harmonic = 1, correct_c2_x= True, delaytime=0.0, detune = None,
                 acqtime=None, roinum=1, shutter = True, fluor = True, 
                 ):
     '''

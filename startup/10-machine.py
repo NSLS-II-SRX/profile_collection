@@ -277,7 +277,8 @@ class Energy(PseudoPositioner):
     # motor enable flags
     move_u_gap = Cpt(Signal, None, add_prefix=(), value=True)
     move_c2_x = Cpt(Signal, None, add_prefix=(), value=True)
-    harmonic = Cpt(Signal, None, add_prefix=(), value=3)
+    # harmonic = Cpt(Signal, None, add_prefix=(), value=3)
+    harmonic = Cpt(Signal, None, add_prefix=(), value=1)
 
     # experimental
     detune = Cpt(Signal, None, add_prefix=(), value=0)
@@ -329,11 +330,11 @@ class Energy(PseudoPositioner):
         return BraggRBV, C2X, ugap
 
     def undulator_energy(self, harmonic=3):
-        """Return the current enegry peak of the undulator at the given harmonic
+        """Return the current energy peak of the undulator at the given harmonic
 
         Paramaters
         ----------
-        harmanic : int, optional
+        harmonic : int, optional
             The harmonic to use, defaults to 3
         """
 #        uga    scanlogDic = {'Fe': 11256, 'Cu':11254, 'Cr': 11258, 'Ti': 11260, 'Se':11251}
@@ -404,11 +405,11 @@ class Energy(PseudoPositioner):
         # None
         # Here, we are programming it in
         # if harmonic is None:
-        if (harmonic == 3):
+        if (harmonic == 1):
             harmonic = 3
-            #choose the right harmonic
+            # Choose the right harmonic
             braggcal, c2xcal, ugapcal = self.energy_to_positions(energy, harmonic, detune)
-            # try higher harmonics until the required gap is too small
+            # Try higher harmonics until the required gap is too small
             while True:
                 braggcal, c2xcal, ugapcal = self.energy_to_positions(energy, harmonic + 2, detune)
                 if ugapcal < 6.4:
