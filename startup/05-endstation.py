@@ -135,3 +135,13 @@ class SRXTomo(Device):
 
 # tomo_stage = SRXTomo('XF:05IDD-ES:1{Stg:Tomo-Ax:', name='tomo_stage')
 tomo_stage = SRXTomo('XF:05IDD-ES', name='tomo_stage')
+
+
+class SRXJJSLITS(Device):
+    h_gap = Cpt(EpicsMotor, 'HA}Mtr')
+    h_trans = Cpt(EpicsMotor, 'HT}Mtr')
+    v_gap = Cpt(EpicsMotor, 'VA}Mtr')
+    v_trans = Cpt(EpicsMotor, 'VT}Mtr')
+
+jjslits = SRXJJSLITS('XF:05IDD-OP:1{Slt:KB-Ax:', name='jjslits')
+
