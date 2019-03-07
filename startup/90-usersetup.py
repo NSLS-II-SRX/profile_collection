@@ -22,7 +22,25 @@ proposal_title = 'Routine Setup and Testing for Beamline 5-ID'
 PI_lastname = 'Kiss'
 saf_num = 303524
 
+#proposal_num = 303990
+#proposal_title = 'Multimodal analysis of soil-borne Fe and Mn microparticles using micro-XRF, micro-XRD, micro-XANES, XPS, SEM and NanoSIMS'
+#PI_lastname = 'Tenzer'
+#saf_num = 303690
 
+#proposal_num = 303921
+#proposal_title = 'Spatial Distribution of Reduction-Oxidation Sensitive Transition Metals within Rove Formation Reduction Spots'
+#PI_lastname = 'Trewhella'
+#saf_num = 303682
+
+# proposal_num = 303670
+# proposal_title = 'Manganese-dependent carbon oxidation at oxic-anoxic interfaces in soils and sediments'
+# PI_lastname = 'Keiluweit'
+# saf_num = 303792
+
+# proposal_num = 303602
+# proposal_title = 'Characterizing solid electrolyte interphase (SEI) formation on Iron-based Battery Electrodes: A combined Operando Spatially Resolved XANES and Isothermal Microcalorimetry Study'
+# PI_lastname = 'Bock'
+# saf_num = 303794
 
 logfilename_postfix = str(saf_num)
 
