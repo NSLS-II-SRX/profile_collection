@@ -168,6 +168,9 @@ class SRXFlyer1Axis(Device):
         pxsize = extent / (xnum-1)
         #1 ms delay between pulses
         decrement = ((pxsize / dwell) * 0.002)
+        if decrement < 4e-6:
+            # print('Changing the pulse width')
+            decrement = 4e-6
         self._encoder.pc.gate_start.put(xstart)
         #self._encoder.pc.gate_step.put(extent+0.01)
         #self._encoder.pc.gate_width.put(extent+0.005)
@@ -180,6 +183,10 @@ class SRXFlyer1Axis(Device):
 #        self._encoder.pc.pulse_width.put(extent/xnum-decrement)
         self._encoder.pc.pulse_step.put(pxsize)
         self._encoder.pc.pulse_width.put(pxsize-decrement)
+        # If decrement is too small, then zebra will not send individual pulses
+        # but integrate over the entire line
+        # if (self._encoder.pc.pulse_step.get() == self._encoder.pc.pulse_width.get()):
+
         self._encoder.pc.pulse_start.put(0.0)
         #self._encoder.pc.pulse_step.put(dwell)
         #self._encoder.pc.pulse_width.put(dwell-0.001)
