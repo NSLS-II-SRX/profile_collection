@@ -112,6 +112,11 @@ def gaussian(x, A, sigma, x0):
 def f_gauss(x, A, sigma, x0, y0, m):
     return y0 + m*x + A*np.exp(-(x - x0)**2/(2 * sigma**2))
 
+# Integral of the Gaussian function with slope and offset
+def f_int_gauss(x, A, sigma, x0, y0, m):
+    x_star = (x - x0) / sigma
+    return A * erf(x_star / np.sqrt(2)) + y0 + m*x
+
 def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
     """
 
@@ -130,8 +135,8 @@ def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
 
     det = [sclr1]
 
-    ps = PeakStats(dcm.c2_pitch.name, i0.name)
-    ps1 = PeakStats(dcm.c1_roll.name, i0.name)
+    ps = PeakStats(dcm.c2_pitch.name, im.name)
+    ps1 = PeakStats(dcm.c1_roll.name, im.name)
 
     if (shutter ==  True):
         RE(mv(shut_b,'Open'))
@@ -149,9 +154,15 @@ def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
     # roll_lim = (-4.9, -5.14)
     # roll_num = 45
 
-    pitch_lim = (-19.375, -19.425)
+    # pitch_lim = (-19.375, -19.425)
+    # pitch_num = 51
+    # roll_lim = (-4.9, -5.6)
+    # roll_num = 51
+
+    pitch_lim = (pitch_old-0.025, pitch_old+0.025)
+    roll_lim = (roll_old-0.1, roll_old+0.1)
+
     pitch_num = 51
-    roll_lim = (-4.9, -5.6)
     roll_num = 51
 
     if (use_calib):
@@ -255,7 +266,7 @@ def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
 
 from scipy.optimize import curve_fit
 
-def peakup_fine(scaler='sclr_im', plot=True, shutter=True, use_calib=True):
+def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True):
     """
 
     Scan the HDCM C2 Piezo Motor to optimize the beam.
@@ -295,19 +306,36 @@ def peakup_fine(scaler='sclr_im', plot=True, shutter=True, use_calib=True):
 
     # Use calibration
     if (use_calib):
-        # Need a new calibration curve
-        roll_guess = -0.01124286 * (E/1000) - 4.93568571
+        # 2018-06-28
+        # roll_guess = -0.01124286 * (E/1000) - 4.93568571
+        # 2019-02-14
+        roll_guess = -0.00850813 * (E/1000) - 5.01098505
         yield from bps.mov(dcm.c1_roll, roll_guess)
+        # 2019-02-14
+        pitch_guess = -0.00106066 * (E/1000) - 19.37338813
+        yield from bps.mov(dcm.c2_pitch, pitch_guess)
+        yield from bps.mov(dcm.c2_pitch_kill, 1.0)
 
     # Set counting time
     sclr1.preset_time.put(1.0)
+
+    # Setup LiveCallbacks
+    plt.figure('Peakup')
+    plt.clf()
+    livecallbacks = [LivePlot(scaler, dcm.c2_pitch.name,
+                              linestyle='', marker='*', color='C0',
+                              label='raw',
+                              fig=plt.figure('Peakup'))]
 
     # Open the shutter
     if (shutter == True):
         yield from bps.mov(shut_b, 'Open')
 
     # Run the C2 pitch fine scan
-    yield from scan(det, dcm.c2_fine, pitch_lim[0], pitch_lim[1], pitch_num)
+    @subs_decorator(livecallbacks)
+    def myplan():
+        yield from scan(det, dcm.c2_fine, pitch_lim[0], pitch_lim[1], pitch_num)
+    yield from myplan()
 
     # Close the shutter
     if (shutter == True):
@@ -401,10 +429,10 @@ def peakup_fine(scaler='sclr_im', plot=True, shutter=True, use_calib=True):
     # Plot the results
     if (plot == True):
         plt.figure('Peakup')
-        plt.clf()
-        plt.xlabel('C2 Pitch [mrad]')
-        plt.ylabel(scaler + ' [cts]')
-        plt.plot(x, y, 'C0*', label='raw')
+        # plt.clf()
+        # plt.xlabel('C2 Pitch [mrad]')
+        # plt.ylabel(scaler + ' [cts]')
+        # plt.plot(x, y, 'C0*', label='raw')
         x_plot = np.linspace(x[0], x[-1], num=101)
         y_plot = f_gauss(x_plot, *popt)
         plt.plot(x_plot, y_plot, 'C0--', label='fit')
@@ -413,12 +441,14 @@ def peakup_fine(scaler='sclr_im', plot=True, shutter=True, use_calib=True):
 
 
 # Run a knife-edge scan
-def knife_edge(motor, start, stop, stepsize, fly=False, high2low=True, use_trans=True):
+def knife_edge(motor, start, stop, stepsize, acqtime,
+               fly=True, high2low=False, use_trans=True):
     """
     motor       motor   motor used for scan
     start       float   starting position
     stop        float   stopping position
     stepsize    float   distance between data points
+    acqtime     float   counting time per step
     fly         bool    if the motor can fly, then fly that motor
     high2low    bool    scan from high transmission to low transmission
                         ex. start will full beam and then block with object (knife/wire)
@@ -439,21 +469,36 @@ def knife_edge(motor, start, stop, stepsize, fly=False, high2low=True, use_trans
 
     # Run the scan
     if (motor.name == 'hf_stage_y'):
-        if (fly):
-            yield from y_scan_and_fly()
+        if fly:
+            yield from y_scan_and_fly(start, stop, num,
+                                      hf_stage.x.position, hf_stage.x.position+0.001, 1,
+                                      acqtime)
         else:
             yield from scan(det, motor, start, stop, num)
     else:
-        # table = LiveTable([motor])
-        # @subs_decorator(table)
-        # LiveTable([motor])
-        yield from scan(det, motor, start, stop, num)
+        if fly:
+            yield from scan_and_fly(start, stop, num,
+                                    hf_stage.y.position, hf_stage.y.position+0.001, 1,
+                                    acqtime)
+        else:
+            # table = LiveTable([motor])
+            # @subs_decorator(table)
+            # LiveTable([motor])
+            yield from scan(det, motor, start, stop, num)
 
     # Get the information from the previous scan
-    tbl = db[-1].table()
-
+    try:
+        tbl = db[-1].table('stream0', fill=True)
+    except:
+        print('Waiting...')
+        time.sleep(15)
+        tbl = db[-1].table('stream0', fill=True)
+    
     # Get the position information
-    pos = motor.name
+    if fly:
+        pos = 'enc1'
+    else:
+        pos = motor.name
     # if (motor == hf_stage.y):
     #     pos = 'hf_stage_y'
     # elif (motor == hf_stage.x):
@@ -463,42 +508,70 @@ def knife_edge(motor, start, stop, stepsize, fly=False, high2low=True, use_trans
 
     # Get the data
     if (use_trans == True):
-        y = tbl['sclr_it'] / tbl['sclr_im']
+        y = tbl['it'] / tbl['im']
     else:
-        y = (tbl[xs.channel1.rois.roi01.name] +
-             tbl[xs.channel2.rois.roi01.name] +
-             tbl[xs.channel3.rois.roi01.name])
-        y = y / tbl['sclr_im']
-    x = tbl[pos]
+        y = np.sum(np.array(tbl['fluor'])[0][:, :, 794:814], axis=(1, 2))
+        y = y / np.array(tbl['im'])[0]
+    x = np.array(tbl[pos])[0]
+    x = x.astype(np.float64)
+    y = y.astype(np.float64)
     dydx = np.gradient(y, x)
 
-    # Plot the figure
-    plt.figure()
-    plt.plot(x, y, 'C0-', label='Raw data')
-    plt.plot(x, dydx, 'C1o', label='Derivative')
+    # Fit the raw data
+    # def f_int_gauss('x, A, sigma, x0, y0, m)
+    p_guess = [0.5*np.amax(y),
+               0.001,
+               0.5*(x[0] + x[-1]),
+               np.amin(y) + 0.5*np.amax(y),
+               0.001]
+    if high2low:
+        p_guess[0] = 0.5 * np.amin(y)
+    try:
+        popt, _ = curve_fit(f_int_gauss, x, y, p0=p_guess)
+    except:
+        print('Raw fit failed.')
+        popt = p_guess
 
-    # Fit the Gaussian
+    # Plot variables
+    x_plot = np.linspace(np.amin(x), np.amax(x), num=100)
+    y_plot = f_int_gauss(x_plot, *popt)
+    dydx_plot = np.gradient(y_plot, x_plot)
+
+    # Display fit of raw data
+    plt.figure('Raw')
+    plt.clf()
+    plt.plot(x, y, '*', label='Raw Data')
+    plt.plot(x_plot, f_int_gauss(x_plot, *p_guess), '-', label='Guess fit')
+    plt.plot(x_plot, y_plot, '-', label='Final fit')
+    plt.legend()
+
+    # Use the fitted raw data to fit a Gaussian
     # def f_gauss(x, A, sigma, x0, y0, m):
     try:
         if (high2low == True):
-            p_guess = [np.amin(dydx), 0.0005, x[np.argmin(dydx)], 0, 0]
+            p_guess = [np.amin(dydx_plot), popt[1], popt[2], 0, 0]
         else:
-            p_guess = [np.amax(dydx), 0.0005, x[np.argmax(dydx)], 0, 0]
+            p_guess = [np.amax(dydx_plot), popt[1], popt[2], 0, 0]
 
-        p, _ = curve_fit(f_gauss, x, dydx, p0 = p_guess)
+        popt2, _ = curve_fit(f_gauss, x_plot, dydx_plot, p0=p_guess)
     except:
         print('Fit failed.')
-        p = [1, 1, np.mean(x), 0, 0]
+        popt2 = p_guess
+
 
     # Plot the fit
-    x_plot = np.linspace(np.amin(x), np.amax(x), num=100)
-    plt.plot(x_plot, f_gauss(x_plot, *p), 'C1-', label='Fit')
+    plt.figure('Derivative')
+    plt.clf()
+    plt.plot(x, dydx, '*', label='dydx raw')
+    plt.plot(x_plot, dydx_plot, '-', label='dydx fit')
+    plt.plot(x_plot, f_gauss(x_plot, *p_guess), '-', label='Guess')
+    plt.plot(x_plot, f_gauss(x_plot, *popt2), '-', label='Fit')
     plt.legend()
 
     # Report findings
     C = 2 * np.sqrt(2 * np.log(2))
-    print('\nThe beam size is %f um' % (1000 * C * p[1]))
-    print('The edge is at %.4f mm\n' % (p[2]))
+    print('\nThe beam size is %f um' % (1000 * C * popt2[1]))
+    print('The edge is at %.4f mm\n' % (popt2[2]))
 
 
 def ic_energy_batch(estart,estop,npts):
