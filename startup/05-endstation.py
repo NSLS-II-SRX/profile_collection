@@ -145,3 +145,7 @@ class SRXJJSLITS(Device):
 
 jjslits = SRXJJSLITS('XF:05IDD-OP:1{Slt:KB-Ax:', name='jjslits')
 
+
+Mo_shutter = EpicsSignal('XF:05IDA-OP:1{XIAFltr:4}Cmd',
+                        write_pv='XF:05IDA-OP:1{XIAFltr:4}Cmd',
+                        name='Mo_shutter')

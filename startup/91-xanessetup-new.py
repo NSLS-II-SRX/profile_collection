@@ -1,8 +1,10 @@
 from bluesky.plans import list_scan
 import bluesky.plans as bp
 from bluesky.plan_stubs import mv
+from bluesky.plan_stubs import one_1d_step
 from bluesky.preprocessors import finalize_wrapper
 from bluesky.preprocessors import subs_wrapper
+from bluesky.utils import short_uid as _short_uid
 import scanoutput
 import numpy
 import time
@@ -92,7 +94,7 @@ def xanes_afterscan_plan(scanid, filename, roinum):
 def xanes_plan(erange = [], estep = [],  
             harmonic=1, correct_c2_x=True, correct_c1_r = False, detune = None,
             acqtime=1., roinum=1, delaytime = 0.00, struck=True, fluor = True,
-            samplename = '', filename = '', shutter = True, align = False, align_at = None):
+            samplename = '', filename = '', shutter = True, align = False, align_at = None, per_step=None):
                 
     '''
     erange (list of floats): energy ranges for XANES in eV, e.g. erange = [7112-50, 7112-20, 7112+50, 7112+120]
@@ -236,7 +238,7 @@ def xanes_plan(erange = [], estep = [],
         #yield from abs_set(c2pitch_kill, 1)
 
     #setup the live callbacks
-    myscan = list_scan(det, energy, list(ept))
+    myscan = list_scan(det, energy, list(ept), per_step=per_step)
     livecallbacks = []    
     livetableitem = ['energy_energy']
     if struck == True:
@@ -305,7 +307,8 @@ def xanes_plan(erange = [], estep = [],
         del RE.md['sample']['name']
         del RE.md['scaninfo']
 
-    myscan = list_scan(det, energy, list(ept))
+    myscan = list_scan(det, energy, list(ept), per_step=per_step)
+    # myscan = list_scan(det, energy, list(ept), per_step=per_step(detectors, motor, step))
     # myscan = list_scan(det, energy.bragg, list(ebragg), energy.u_gap, list(egap), energy.c2_x, list(exgap))
     # myscan = scan_nd(det, energy.bragg, list(ebragg), energy.u_gap, list(egap), energy.c2_x, list(exgap))
     myscan = finalize_wrapper(myscan,finalize_scan)
@@ -460,4 +463,23 @@ def hfxanes_ioc(waittime = None, samplename = None, filename = None,
                 time.sleep(waittime)
 #            print(erange, estep, thisscan.acq.get(), thisscan.roi.get(), thisscan.sampname.get(), thisscan.filename.get())
     scanrecord.current_scan.put('')
+
+
+def fast_shutter_per_step(detectors, motor, step):
+    def move():
+        grp = _short_uid('set')
+        yield Msg('checkpoint')
+        yield Msg('set', motor, step, group=grp)
+        yield Msg('wait', None, group=grp)
+
+    yield from move()
+    # Open and close the fast shutter (Mo Foil) between XANES points
+    # Open the shutter
+    yield from mv(Mo_shutter, 0)
+    yield from bps.sleep(1.0)
+    # Step? trigger xspress3
+    yield from trigger_and_read(list(detectors) + [motor])
+    # Close the shutter
+    yield from mv(Mo_shutter, 1)
+
 
