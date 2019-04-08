@@ -907,6 +907,8 @@ def batch_fly_arb(paramlist, kwlist=None, motlist=None):
 
 
 def y_scan_and_fly(*args, **kwargs):
+    kwargs.setdefault('xmotor', hf_stage.y)
+    kwargs.setdefault('ymotor', hf_stage.x)
     '''
     convenience wrapper for scanning Y as the fast axis.
     call scan_and_fly, forcing slow and fast axes to be X and Y.
