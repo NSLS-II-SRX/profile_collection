@@ -496,7 +496,7 @@ def knife_edge(motor, start, stop, stepsize, acqtime,
     try:
         tbl = db[-1].table('stream0', fill=True)
     except:
-        print('Waiting...')
+        print('Waiting for data...')
         time.sleep(15)
         tbl = db[-1].table('stream0', fill=True)
     
@@ -517,14 +517,14 @@ def knife_edge(motor, start, stop, stepsize, acqtime,
         y = tbl['it'] / tbl['im']
     else:
         y = np.sum(np.array(tbl['fluor'])[0][:, :, 794:814], axis=(1, 2))
-        y = y / np.array(tbl['im'])[0]
+        y = y / np.array(tbl['i0'])[0]
     x = np.array(tbl[pos])[0]
     x = x.astype(np.float64)
     y = y.astype(np.float64)
     dydx = np.gradient(y, x)
 
     # Fit the raw data
-    # def f_int_gauss('x, A, sigma, x0, y0, m)
+    # def f_int_gauss(x, A, sigma, x0, y0, m)
     p_guess = [0.5*np.amax(y),
                0.001,
                0.5*(x[0] + x[-1]),
@@ -559,7 +559,8 @@ def knife_edge(motor, start, stop, stepsize, acqtime,
         else:
             p_guess = [np.amax(dydx_plot), popt[1], popt[2], 0, 0]
 
-        popt2, _ = curve_fit(f_gauss, x_plot, dydx_plot, p0=p_guess)
+        # popt2, _ = curve_fit(f_gauss, x_plot, dydx_plot, p0=p_guess)
+        popt2, _ = curve_fit(f_gauss, x, dydx, p0=p_guess)
     except:
         print('Fit failed.')
         popt2 = p_guess
