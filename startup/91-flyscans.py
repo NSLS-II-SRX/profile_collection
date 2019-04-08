@@ -47,7 +47,7 @@ class SRXFlyer1Axis(Device):
 #    LARGE_FILE_DIRECTORY_WRITE_PATH = '/tmp/fly_scan_ancillary'
     LARGE_FILE_DIRECTORY_READ_PATH = '/nsls2/xf05id1/XF05ID1/data/2018-1/fly_scan_ancillary/'
     "This is the Zebra."
-    KNOWN_DETS = {'xs', 'merlin', 'dexela'}
+    KNOWN_DETS = {'xs', 'xs2', 'merlin', 'dexela'}
     @property
     def encoder(self):
         return self._encoder
@@ -107,7 +107,9 @@ class SRXFlyer1Axis(Device):
         # this is for the merlin
         self.stage_sigs[self._encoder.output2.ttl.addr] = 53
         # this is for the dexela
-        self.stage_sigs[self._encoder.output4.ttl.addr] = 55
+        # self.stage_sigs[self._encoder.output4.ttl.addr] = 55
+        # this is for the xs2 
+        self.stage_sigs[self._encoder.output4.ttl.addr] = 31
 
         self.stage_sigs[self._encoder.pc.enc_pos1_sync] = 1
         self.stage_sigs[self._encoder.pc.enc_pos2_sync] = 1
@@ -355,8 +357,8 @@ flying_zebra_y = SRXFlyer1Axis(zebra, [xs], sclr1, 'VER', name='flying_zebra')
 # NOTE: as of 2019-01-11, xs2 device is not available, as it's only used for
 # specialized experiments.
 # For confocal
-# flying_zebra_x_xs2 = SRXFlyer1Axis(zebra, xs2, sclr1, 'HOR', name='flying_zebra')
-# flying_zebra_y_xs2 = SRXFlyer1Axis(zebra, xs2, sclr1, 'VER', name='flying_zebra')
+flying_zebra_x_xs2 = SRXFlyer1Axis(zebra, [xs2], sclr1, 'HOR', name='flying_zebra')
+flying_zebra_y_xs2 = SRXFlyer1Axis(zebra, [xs2], sclr1, 'VER', name='flying_zebra')
 # For chip imaging
 # flying_zebra_x_xs2 = SRXFlyer1Axis(zebra, xs2, sclr1, 'DET2HOR', name='flying_zebra')
 # flying_zebra_y_xs2 = SRXFlyer1Axis(zebra, xs2, sclr1, 'DET2VER', name='flying_zebra')
@@ -600,13 +602,13 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         'detectors': [d.name for d in detectors],
         'dwell': dwell,
         'shape': (xnum, ynum),
-        'scaninfo': {'type': 'XRF_fly',
-                     'raster': False,
-                     'fast_axis': flying_zebra._fast_axis},
-                     'theta': hf_stage.th.position,
-        # 'scaninfo': {'type': 'E_tomo',
+        # 'scaninfo': {'type': 'XRF_fly',
         #              'raster': False,
         #              'fast_axis': flying_zebra._fast_axis},
+        #              'theta': hf_stage.th.position,
+        'scaninfo': {'type': 'E_tomo',
+                     'raster': False,
+                     'fast_axis': flying_zebra._fast_axis},
         'scan_params': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
         'scan_input': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
         'delta': delta
@@ -615,6 +617,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
     # if (xs == 'xs2'):
     #     md['scaninfo']['type'] = 'XRF_E_tomo_fly'
+    if ('xs2' in dets_by_name):
+        md['scaninfo']['type'] = 'XRF_E_tomo_fly'
 
     @stage_decorator(flying_zebra.detectors)
     def fly_each_step(motor, step):
@@ -651,6 +655,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             xs = dets_by_name['xs']
             yield from abs_set(xs.hdf5.num_capture, xnum, wait=True)
             yield from abs_set(xs.settings.num_images, xnum, wait=True)
+
+        if 'xs2' in dets_by_name:
+            xs2 = dets_by_name['xs2']
+            yield from abs_set(xs2.hdf5.num_capture, xnum, wait=True)
+            yield from abs_set(xs2.settings.num_images, xnum, wait=True)
 
         if 'merlin' in dets_by_name:
             merlin = dets_by_name['merlin']
@@ -716,7 +725,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         scanrecord.time_remaining.put(0)
 
     # TODO remove this eventually?
-    xs = dets_by_name['xs']
+    # xs = dets_by_name['xs']
+    xs = dets_by_name['xs2']
 
     # @subs_decorator([LiveTable([ymotor]),
     #                  RowBasedLiveGrid((ynum, xnum), ion.name, row_key=ymotor.name),
@@ -780,8 +790,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 def scan_and_fly(*args, extra_dets=None, **kwargs):
     kwargs.setdefault('xmotor', hf_stage.x)
     kwargs.setdefault('ymotor', hf_stage.y)
-    _xs = kwargs.pop('xs', xs)
-    kwargs.setdefault('flying_zebra', flying_zebra)
+    # _xs = kwargs.pop('xs', xs)
+    # kwargs.setdefault('flying_zebra', flying_zebra)
+    _xs = kwargs.pop('xs2', xs2)
+    kwargs.setdefault('flying_zebra', flying_zebra_x_xs2)
+    # extra_dets = [xs2]
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
@@ -910,10 +923,12 @@ def y_scan_and_fly(*args, **kwargs):
             t_acc = 1.0  # acceleration time, default 1.0 s
             kwargs['delta'] = t_acc * v  # distance the stage will travel in t_acc
 
+    # yield from scan_and_fly(*args, **kwargs,
+    #                         xmotor=hf_stage.y,
+    #                         ymotor=hf_stage.x,
+    #                         flying_zebra=flying_zebra_y)
     yield from scan_and_fly(*args, **kwargs,
-                            xmotor=hf_stage.y,
-                            ymotor=hf_stage.x,
-                            flying_zebra=flying_zebra_y)
+                            flying_zebra=flying_zebra_y_xs2)
 
 
 def y_scan_and_fly_xs2(*args, **kwargs):

@@ -437,11 +437,11 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
     create_dir = Cpt(EpicsSignal, 'HDF5:FileCreateDir')
 
     hdf5 = Cpt(Xspress3FileStoreFlyable, 'HDF5:',
-               read_path_template='/nsls2/xf05id1/data/2018-3/XS3MINI',
+               read_path_template='/nsls2/xf05id1/data/2019-1/XS3MINI',
                # read_path_template='/XF05IDD/XSPRESS3-2/2018-1/',
                # write_path_template='/epics/data/2017-3/',
                # write_path_template='/nsls2/xf05id1/data/2018-1/XS3MINI',
-               write_path_template='/home/xspress3/data/SRX/2018-3',
+               write_path_template='/home/xspress3/data/SRX/2019-1',
                #write_path_template='/nsls2/xf05id1/XF05ID1/XSPRESS3/2018-1',
                #write_path_template='/nsls2/xf05id1/data/xspress3/%Y/%M/',
 #               root='/data',
@@ -470,9 +470,11 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
 
         # self.create_dir.put(-3)
 
-    def stop(self):
+    def stop(self, *, success=False):
         ret = super().stop()
-        self.hdf5.stop()
+        # todo move this into the stop method of the settings object?
+        self.settings.acquire.put(0)
+        self.hdf5.stop(success=success)
         return ret
 
     def stage(self):
@@ -490,10 +492,10 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
         return ret
 
 
-# xs2 = SrxXspress3Detector2('XF:05IDD-ES{Xsp:2}:', name='xs2')
-# xs2.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
-# xs2.hdf5.num_extra_dims.put(0)
-# xs2.hdf5.warmup()
+xs2 = SrxXspress3Detector2('XF:05IDD-ES{Xsp:2}:', name='xs2')
+xs2.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
+xs2.hdf5.num_extra_dims.put(0)
+xs2.hdf5.warmup()
 
 
 for i in range(1,4):
