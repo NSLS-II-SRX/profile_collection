@@ -415,8 +415,14 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True):
     # Move to the maximum
     yield from bps.mov(dcm.c2_fine, pf2_default)
     yield from bps.sleep(1.0)
-    yield from bps.mov(dcm.c2_pitch, pitch_new)
-    yield from bps.sleep(1.0)
+    ind = 0
+    while (np.abs(dcm.c2_pitch.position - pitch_new) > 0.0005):
+        yield from bps.mov(dcm.c2_pitch, pitch_new)
+        yield from bps.sleep(1.0)
+        ind = ind + 1
+        if (ind > 5):
+            print('Warning: C2 Fine motor might not be in correct location.')
+            break
 
     # Get the new position and set the ePID to that
     yield from bps.mov(dcm.c2_pitch_kill, 1.0)
