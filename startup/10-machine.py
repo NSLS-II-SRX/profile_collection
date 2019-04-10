@@ -129,8 +129,8 @@ class Energy(PseudoPositioner):
     # motor enable flags
     move_u_gap = Cpt(Signal, None, add_prefix=(), value=True)
     move_c2_x = Cpt(Signal, None, add_prefix=(), value=True)
-    # harmonic = Cpt(Signal, None, add_prefix=(), value=3)
-    harmonic = Cpt(Signal, None, add_prefix=(), value=1)
+    harmonic = Cpt(Signal, None, add_prefix=(), value=0, kind='config')
+    selected_harmonic = Cpt(Signal, None, add_prefix=(), value=0)
 
     # experimental
     detune = Cpt(Signal, None, add_prefix=(), value=0)
@@ -260,7 +260,10 @@ class Energy(PseudoPositioner):
     @pseudo_position_argument
     def forward(self, p_pos):
         energy = p_pos.energy
-        harmonic = self.harmonic.get()
+        harmonic = int(self.harmonic.get())
+        if harmonic < 0 or ((harmonic % 2) == 0 and harmonic != 0):
+            raise RuntimeError(f"The harmonic must be 0 or odd and positive, you set {harmonic}.  "
+                               "Set `energy.harmonic` to a positive odd integer or 0.")
         detune = self.detune.get()
         if energy <= 4.4:
             raise ValueError("The energy you entered is too low ({} keV). "
@@ -283,17 +286,17 @@ class Energy(PseudoPositioner):
         # None
         # Here, we are programming it in
         # if harmonic is None:
-        if (harmonic == 1):
+        if (harmonic < 3):
             harmonic = 3
             # Choose the right harmonic
             braggcal, c2xcal, ugapcal = self.energy_to_positions(energy, harmonic, detune)
             # Try higher harmonics until the required gap is too small
             while True:
                 braggcal, c2xcal, ugapcal = self.energy_to_positions(energy, harmonic + 2, detune)
-                if ugapcal < 6.4:
+                if ugapcal < self.u_gap.low_limit:
                     break
                 harmonic += 2
-
+        self.selected_harmonic.put(harmonic)
         # compute where we would move everything to in a perfect world
         bragg, c2_x, u_gap = self.energy_to_positions(energy, harmonic, detune)
 
@@ -320,6 +323,7 @@ class Energy(PseudoPositioner):
     def synch_with_epics(self):
         self.epics_d_spacing.put(self._d_111)
         self.epics_bragg_offset.put(self._delta_bragg)
+
 
 # change it to a better way to pass the calibration
 cal_data_2016cycle1 = {'d_111': 3.12961447804,
