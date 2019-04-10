@@ -14,241 +14,6 @@ ring_current = EpicsSignalRO('SR:C03-BI{DCCT:1}I:Real-I', name='ring_current')
 cryo_v19 = EpicsSignal('XF:05IDA-UT{Cryo:1-IV:19}Sts-Sts', name='cryo_v19')
 
 
-class UVDone(Signal):
-    def __init__(self, parent, brake, readback, err, stp, **kwargs):
-        super().__init__(parent=parent, value=1, **kwargs)
-        self._rbv = readback
-        self._brake = brake
-        self._started = False
-        self._err = err
-        self._stp = stp
-        self.target = None
-
-    def put(self, *arg, **kwargs):
-        raise TypeError("You con not tell an undulator it is done")
-
-    def _put(self, *args, **kwargs):
-        return super().put(*args, **kwargs)
-
-    def _watcher(self, obj=None, value=None, **kwargs):
-        target = self.target
-        rbv = getattr(self.parent, self._rbv)
-        cur_value = rbv.get()
-        brake = getattr(self.parent, self._brake)
-        brake_on = brake.get()
-
-        err_str = getattr(self.parent, self._err).get()
-        if not self._started:
-            self._started = not brake_on
-        # come back and check this threshold value
-        #if brake_on and abs(target - cur_value) < 0.002:
-        if abs(target - cur_value) < 0.001:
-            self._put(1)
-            rbv.clear_sub(self._watcher)
-            brake.clear_sub(self._watcher)
-            self._started = False
-
-        elif brake_on:
-            if err_str:
-                self._put(1)
-                rbv.clear_sub(self._watcher)
-                brake.clear_sub(self._watcher)
-                self._started = False
-            elif self._started:
-                print(self.parent.name, ": reactuated due to not reaching target")
-                self.parent.actuate.put(self.parent.actuate_value)
-
-    def _stop_watcher(self, *arg, **kwargs):
-        '''Call back to be installed on the stop signal
-
-        if this gets flipped, clear all of the other callbacks and tell
-        the status object that it is done.
-
-        TODO: mark status object as failed
-        TODO: only trigger this on 0 -> 1 transposition
-        '''
-        print('STOPPED')
-        # set the target to None and remove all callbacks
-        self.reset(None)
-        # flip this signal to 1 to signal it is done
-        self._put(1)
-        # push stop again 'just to be safe'
-        # this is paranoia related to the re-kicking the motor is the
-        # other callback
-        stop = getattr(self.parent, self._stp)
-        stop.put(1)
-
-    def reset(self, target):
-        try:
-            self.target = float(target)
-        except TypeError:
-            self.target = target
-        self._put(0)
-        self._remove_cbs()
-        self._started = False
-
-    def _remove_cbs(self):
-        rbv = getattr(self.parent, self._rbv)
-        stop = getattr(self.parent, self._stp)
-        moving = getattr(self.parent, self._brake)
-
-        rbv.clear_sub(self._watcher)
-        moving.clear_sub(self._watcher)
-        stop.clear_sub(self._stop_watcher)
-
-    def stop(self):
-        self.reset(None)
-        self._put(1)
-
-
-class URealPos(Device):
-    #undulator real position, gap and taper
-    ds_low = Cpt(EpicsSignalRO, '}REAL_POSITION_DS_LOWER')
-    ds_upp = Cpt(EpicsSignalRO, '}REAL_POSITION_DS_UPPER')
-    us_low = Cpt(EpicsSignalRO, '}REAL_POSITION_US_LOWER')
-    us_upp = Cpt(EpicsSignalRO, '}REAL_POSITION_US_UPPER')
-
-
-class UPos(Device):
-    #undulator positions, gap and taper
-    ds_low = Cpt(EpicsSignalRO, '}POSITION_DS_LOWER')
-    ds_upp = Cpt(EpicsSignalRO, '}POSITION_DS_UPPER')
-    us_low = Cpt(EpicsSignalRO, '}POSITION_US_LOWER')
-    us_upp = Cpt(EpicsSignalRO, '}POSITION_US_UPPER')
-
-class GapPos(Device):
-    gap_avg = Cpt(EpicsSignalRO, '}GAP_AVG')
-    gap_ds = Cpt(EpicsSignalRO, '}GAP_DS')
-    gap_us = Cpt(EpicsSignalRO, '}GAP_US')
-    gap_taper = Cpt(EpicsSignalRO, '}GAP_TAPER')
-
-
-class Girder(Device):
-    lower_tilt = Cpt(EpicsSignalRO, '}GIRDER_LOWER_TILT')
-    upper_tile = Cpt(EpicsSignalRO, '}GIRDER_UPPER_TILT')
-    tilt_error = Cpt(EpicsSignalRO, '}GIRDER_TILT_ERROR')
-    tilt_limit = Cpt(EpicsSignalRO, '}GIRDER_TILT_LIMIT')
-
-
-class Elev(Device):
-    ct_us = Cpt(EpicsSignalRO, '-LEnc:1}Pos')
-    offset_us = Cpt(EpicsSignalRO, '-LEnc:1}Offset:RB')
-    ct_ds = Cpt(EpicsSignalRO, '-LEnc:6}Pos')
-    offset_ds = Cpt(EpicsSignalRO, '-LEnc:6}Offset:RB')
-
-
-class FixedPVPositioner(PVPositioner):
-    """This subclass ensures that the setpoint is really set before
-    """
-    def _move_async(self, position, **kwargs):
-        '''Move and do not wait until motion is complete (asynchronous)'''
-        if self.actuate is not None:
-            set_and_wait(self.setpoint, position)
-            self.actuate.put(self.actuate_value, wait=False)
-        else:
-            self.setpoint.put(position, wait=False)
-
-    def move(self, v, *args, **kwargs):
-        kwargs['timeout'] = None
-        self.done.reset(v)
-        ret = super().move(v, *args, **kwargs)
-        self.brake_on.subscribe(self.done._watcher,
-                                event_type=self.brake_on.SUB_VALUE)
-        self.readback.subscribe(self.done._watcher,
-                                event_type=self.readback.SUB_VALUE)
-
-        self.stop_signal.subscribe(self.done._stop_watcher,
-                                   event_type=self.stop_signal.SUB_VALUE,
-                                   run=False)
-        return ret
-
-
-class Undulator(FixedPVPositioner):
-    # positioner signals
-    setpoint = Cpt(EpicsSignal, '-Mtr:2}Inp:Pos')
-    readback = Cpt(EpicsSignalRO, '-LEnc}Gap')
-    stop_signal = Cpt(EpicsSignal, '-Mtrc}Sw:Stp')
-    actuate = Cpt(EpicsSignal, '-Mtr:2}Sw:Go')
-    actuate_value = 1
-    done = Cpt(UVDone, None, brake='brake_on',
-               readback='readback', err='err', stp='stop_signal',
-               add_prefix=())
-
-    # correction function signals, need to be merged into single object
-    corrfunc_en = Cpt(EpicsSignal, '-MtrC}EnaAdj:out')
-    corrfunc_dis = Cpt(EpicsSignal, '-MtrC}DisAdj:out')
-    corrfunc_sta = Cpt(EpicsSignal, '-MtrC}AdjSta:RB')
-
-    # brake status
-    brake_on = Cpt(EpicsSignalRO, '-Mtr:2}Rb:Brk')
-
-    # low-level positional information about undulator
-    real_pos = Cpt(URealPos, '')
-    pos = Cpt(UPos, '')
-    girder = Cpt(Girder, '')
-    elevation = Cpt(Elev, '')
-
-    # error status
-    err = Cpt(EpicsSignalRO, '-Motor}Err:GetCerr_.VALA', string=True)
-
-    def move(self, v, *args, moved_cb=None, **kwargs):
-        kwargs['timeout'] = None
-        if np.abs(v - self.position) < .001:
-            self._started_moving = True
-            self._moving = False
-            self._done_moving()
-            st = MoveStatus(self, v)
-            if moved_cb:
-                moved_cb(obj=self)
-            st._finished()
-            return st
-        return super().move(v, *args, moved_cb=moved_cb, **kwargs)
-
-    def __init__(self, *args, calib_path=None, calib_file=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        # todo make these error messages look more like standard exceptions
-        if calib_path is None:
-            raise TypeError("must provide calib_dir")
-        if calib_file is None:
-            raise TypeError("must provide calib_file")
-
-        with open(os.path.join(calib_path, calib_file), 'r') as f:
-            next(f)
-            uposlistIn=[]
-            elistIn=[]
-            for line in f:
-                num = [float(x) for x in line.split()]
-                uposlistIn.append(num[0])
-                elistIn.append(num[1])
-
-        self.etoulookup = InterpolatedUnivariateSpline(elistIn, uposlistIn)
-        self.utoelookup = InterpolatedUnivariateSpline(uposlistIn, elistIn)
-
-    def _move_changed(self, timestamp=None, value=None, sub_type=None,
-                      **kwargs):
-        was_moving = self._moving
-        self._moving = (value != self.done_value)
-
-        started = False
-        if not self._started_moving:
-            started = self._started_moving = (not was_moving and self._moving)
-
-        if started:
-            self._run_subs(sub_type=self.SUB_START, timestamp=timestamp,
-                           value=value, **kwargs)
-
-        if not self.put_complete:
-            success = not bool(self.err.get())
-            # In the case of put completion, motion complete
-            if was_moving and not self._moving:
-                self._done_moving(success=success, timestamp=timestamp,
-                                  value=value)
-
-    def stop(self, success=True):
-        self.done.stop()
-        return super().stop(success=success)
-
-
 _undulator_kwargs = dict(name='ivu1_gap', read_attrs=['readback'],
                          calib_path='/nfs/xf05id1/UndulatorCalibration/',
                          # calib_file='SRXUgapCalibration20150411_final.text',
@@ -262,12 +27,33 @@ _undulator_kwargs = dict(name='ivu1_gap', read_attrs=['readback'],
 ANG_OVER_EV = 12.3984
 
 
+class InsertionDevice(Device):
+    gap = Cpt(EpicsMotor, '-Ax:Gap}-Mtr',
+              kind='hinted')
+    brake = Cpt(EpicsSignal,
+                write_pv='}BrakesDisengaged-SP',
+                read_pv='}BrakesDisengaged-Sts',
+                kind='omitted')
+    elevation = Cpt(EpicsSignalRO, '-Ax:Elev}-Mtr.RBV',
+                    kind='normal')
+    taper = Cpt(EpicsSignalRO, '-Ax:Taper}-Mtr.RBV',
+                    kind='normal')
+    taper = Cpt(EpicsSignalRO, '-Ax:Tilt}-Mtr.RBV',
+                    kind='normal')
+    taper = Cpt(EpicsSignalRO, '-Ax:Tilt}-Mtr.RBV',
+                    kind='normal')
+
+    def set(self, *args, **kwargs):
+        set_and_wait(self.brake, 1)
+        return self.gap.set(*args, **kwargs)
+
+
 class Energy(PseudoPositioner):
     # synthetic axis
     energy = Cpt(PseudoSingle)
     # real motors
-    u_gap = Cpt(Undulator, 'SR:C5-ID:G1{IVU21:1', add_prefix=(),
-                **_undulator_kwargs)
+    u_gap = Cpt(InsertionDevice, 'SR:C5-ID:G1{IVU21:1',
+                add_prefix=(), **_undulator_kwargs)
     bragg = Cpt(EpicsMotor, 'XF:05IDA-OP:1{Mono:HDCM-Ax:P}Mtr', add_prefix=(),
                 read_attrs=['user_readback'])
     c2_x = Cpt(EpicsMotor, 'XF:05IDA-OP:1{Mono:HDCM-Ax:X2}Mtr', add_prefix=(),
@@ -314,18 +100,27 @@ class Energy(PseudoPositioner):
         etoulookup = self.u_gap.etoulookup
 
         # calculate Bragg RBV
-        BraggRBV = np.arcsin((ANG_OVER_EV / target_energy)/(2 * d_111))/np.pi*180 - delta_bragg
+        BraggRBV = (
+            np.arcsin((ANG_OVER_EV / target_energy) / (2 * d_111)) /
+            np.pi * 180 -
+            delta_bragg)
 
         # calculate C2X
         Bragg = BraggRBV + delta_bragg
-        T2 = Xoffset * np.sin(Bragg * np.pi / 180)/np.sin(2 * Bragg * np.pi / 180)
+        T2 = (Xoffset *
+              np.sin(Bragg * np.pi / 180) /
+              np.sin(2 * Bragg * np.pi / 180))
         dT2 = T2 - T2cal
         C2X = C2Xcal - dT2
 
         # calculate undulator gap
-        #  TODO make this more sohpisticated to stay a fixed distance off the
-        #  peak of the undulator energy
-        ugap = float(etoulookup((target_energy + u_detune)/undulator_harmonic))
+
+        #  TODO make this more sohpisticated to stay a fixed distance
+        #  off the peak of the undulator energy
+        ugap = float(
+            etoulookup((target_energy + u_detune) /
+                       undulator_harmonic))  # in mm
+        ugap *= 1000  # convert to um
 
         return BraggRBV, C2X, ugap
 
@@ -338,7 +133,7 @@ class Energy(PseudoPositioner):
             The harmonic to use, defaults to 3
         """
 #        uga    scanlogDic = {'Fe': 11256, 'Cu':11254, 'Cr': 11258, 'Ti': 11260, 'Se':11251}
-        # scanlogDic = {'Fe':11369, 'Cu':11367, 'Ti':11371, 'Se':11364}        
+        # scanlogDic = {'Fe':11369, 'Cu':11367, 'Ti':11371, 'Se':11364}
         p = self.u_gap.get().readback
         utoelookup = self.u_gap.utoelookup
 
@@ -577,7 +372,7 @@ cal_data_2018cycle1b = {
 
 cal_data_2018cycle2 = {
  'd_111': 3.128549107739033,
- 'delta_bragg': 0.3139487894740349, # {'Fe':14476, 'V':14477, 'Cr':14478, 'Cu':14480, 'Se':14481, 'Zr':14482} 
+ 'delta_bragg': 0.3139487894740349, # {'Fe':14476, 'V':14477, 'Cr':14478, 'Cu':14480, 'Se':14481, 'Zr':14482}
  'C2Xcal': 3.6,
  'T2cal': 15.0347755916,
  'xoffset': 24.75, #best value for 12 and 5 keV
@@ -585,7 +380,7 @@ cal_data_2018cycle2 = {
 
 cal_data_2018cycle3 = {
  'd_111': 3.1292294240934786,
- 'delta_bragg': 0.3113245678165956, # {'V':18037, 'Cr':18040, 'Fe':18043, 'Cu':18046, 'Se':18049, 'Zr':18052} 
+ 'delta_bragg': 0.3113245678165956, # {'V':18037, 'Cr':18040, 'Fe':18043, 'Cu':18046, 'Se':18049, 'Zr':18052}
  'C2Xcal': 3.6,
  'T2cal': 15.0347755916,
  'xoffset': 24.75, #best value for 12 and 5 keV
@@ -593,7 +388,7 @@ cal_data_2018cycle3 = {
 
 cal_data_2019cycle1 = {
  'd_111': 3.129024799425239,
- 'delta_bragg': 0.3092257938019577, # {'V':21828, 'Cr':21830, 'Fe':21833, 'Cu':21835, 'Se':21838, 'Zr':21843} 
+ 'delta_bragg': 0.3092257938019577, # {'V':21828, 'Cr':21830, 'Fe':21833, 'Cu':21835, 'Se':21838, 'Zr':21843}
  'C2Xcal': 3.6,
  'T2cal': 15.0347755916,
  'xoffset': 24.465, #best value for 12 and 5 keV
