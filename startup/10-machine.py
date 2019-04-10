@@ -5,6 +5,7 @@ from ophyd import (PVPositioner, EpicsSignal, EpicsSignalRO, EpicsMotor,
 from ophyd.utils.epics_pvs import set_and_wait
 from ophyd.ophydobj import MoveStatus
 from ophyd.pseudopos import (pseudo_position_argument, real_position_argument)
+from ophyd.positioner import PositionerBase
 from ophyd import Component as Cpt
 from scipy.interpolate import InterpolatedUnivariateSpline
 import math
@@ -27,39 +28,104 @@ _undulator_kwargs = dict(name='ivu1_gap', read_attrs=['readback'],
 ANG_OVER_EV = 12.3984
 
 
-class InsertionDevice(Device):
+class InsertionDevice(Device, PositionerBase):
     gap = Cpt(EpicsMotor, '-Ax:Gap}-Mtr',
-              kind='hinted')
-    brake = Cpt(EpicsSignal,
+              kind='hinted', name='')
+    brake = Cpt(EpicsSignal, '}BrakesDisengaged-Sts',
                 write_pv='}BrakesDisengaged-SP',
-                read_pv='}BrakesDisengaged-Sts',
-                kind='omitted')
-    elevation = Cpt(EpicsSignalRO, '-Ax:Elev}-Mtr.RBV',
-                    kind='normal')
+                kind='omitted', add_prefix=('read_pv', 'write_pv', 'suffix'))
+
+    # These are debugging values, not even connected to by default
+    elev = Cpt(EpicsSignalRO, '-Ax:Elev}-Mtr.RBV',
+               kind='omitted')
     taper = Cpt(EpicsSignalRO, '-Ax:Taper}-Mtr.RBV',
-                    kind='normal')
-    taper = Cpt(EpicsSignalRO, '-Ax:Tilt}-Mtr.RBV',
-                    kind='normal')
-    taper = Cpt(EpicsSignalRO, '-Ax:Tilt}-Mtr.RBV',
-                    kind='normal')
+                kind='omitted')
+    tilt = Cpt(EpicsSignalRO, '-Ax:Tilt}-Mtr.RBV',
+               kind='omitted')
+    elev_u = Cpt(EpicsSignalRO, '-Ax:E}-Mtr.RBV',
+                 kind='omitted')
 
     def set(self, *args, **kwargs):
         set_and_wait(self.brake, 1)
         return self.gap.set(*args, **kwargs)
+
+    def stop(self, *, success=False):
+        return self.gap.stop(success=success)
+
+    @property
+    def settle_time(self):
+        return self.gap.settle_time
+
+    @settle_time.setter
+    def settle_time(self, val):
+        self.gap.settle_time = val
+
+    @property
+    def timeout(self):
+        return self.gap.timeout
+
+    @timeout.setter
+    def timeout(self, val):
+        self.gap.timeout = val
+
+    @property
+    def egu(self):
+        return self.gap.egu
+
+    @property
+    def limits(self):
+        return self.gap.limits
+
+    @property
+    def low_limit(self):
+        return self.gap.low_limit
+
+    @property
+    def high_limit(self):
+        return self.gap.high_limit
+
+    def move(self, *args, moved_cb=None, **kwargs):
+
+        if moved_cb is not None:
+            @functools.wraps(moved_cb)
+            def inner(obj=None):
+                if obj is not None:
+                    obj = self
+                return moved_cb(obj=obj)
+        else:
+            inner = None
+        return self.set(*args, moved_cb=inner, **kwargs)
+
+    @property
+    def position(self):
+        return self.gap.position
+
+    @property
+    def moving(self):
+        return self.gap.moving
+
+    def subscribe(self, callback, *args, **kwargs):
+        import functools
+
+        @functools.wraps(callback)
+        def inner(obj, **kwargs):
+            return callback(obj=self, **kwargs)
+
+        return self.gap.subscribe(inner, *args, **kwargs)
 
 
 class Energy(PseudoPositioner):
     # synthetic axis
     energy = Cpt(PseudoSingle)
     # real motors
-    u_gap = Cpt(InsertionDevice, 'SR:C5-ID:G1{IVU21:1',
-                add_prefix=(), **_undulator_kwargs)
+    u_gap = Cpt(InsertionDevice, 'SR:C5-ID:G1{IVU21:1')
     bragg = Cpt(EpicsMotor, 'XF:05IDA-OP:1{Mono:HDCM-Ax:P}Mtr', add_prefix=(),
                 read_attrs=['user_readback'])
     c2_x = Cpt(EpicsMotor, 'XF:05IDA-OP:1{Mono:HDCM-Ax:X2}Mtr', add_prefix=(),
                read_attrs=['user_readback'])
     epics_d_spacing = EpicsSignal('XF:05IDA-CT{IOC:Status01}DCMDspacing.VAL')
     epics_bragg_offset = EpicsSignal('XF:05IDA-CT{IOC:Status01}BraggOffset.VAL')
+
     # motor enable flags
     move_u_gap = Cpt(Signal, None, add_prefix=(), value=True)
     move_c2_x = Cpt(Signal, None, add_prefix=(), value=True)
@@ -97,7 +163,7 @@ class Energy(PseudoPositioner):
         delta_bragg = self._delta_bragg
         C2Xcal = self._c2xcal
         T2cal = self._t2cal
-        etoulookup = self.u_gap.etoulookup
+        etoulookup = self.etoulookup
 
         # calculate Bragg RBV
         BraggRBV = (
@@ -135,7 +201,7 @@ class Energy(PseudoPositioner):
 #        uga    scanlogDic = {'Fe': 11256, 'Cu':11254, 'Cr': 11258, 'Ti': 11260, 'Se':11251}
         # scanlogDic = {'Fe':11369, 'Cu':11367, 'Ti':11371, 'Se':11364}
         p = self.u_gap.get().readback
-        utoelookup = self.u_gap.utoelookup
+        utoelookup = self.utoelookup
 
         fundemental = float(utoelookup(ugap))
 
@@ -152,6 +218,23 @@ class Energy(PseudoPositioner):
         self._delta_bragg = delta_bragg
         self._c2xcal = C2Xcal
         self._t2cal = T2cal
+
+        calib_path = '/nfs/xf05id1/UndulatorCalibration/'
+        calib_file = 'SRXUgapCalibration20170612.txt'
+
+        with open(os.path.join(calib_path, calib_file), 'r') as f:
+            next(f)
+            uposlistIn=[]
+            elistIn=[]
+            for line in f:
+                num = [float(x) for x in line.split()]
+                uposlistIn.append(num[0])
+                elistIn.append(num[1])
+
+        self.etoulookup = InterpolatedUnivariateSpline(elistIn, uposlistIn)
+        self.utoelookup = InterpolatedUnivariateSpline(uposlistIn, elistIn)
+
+        self.u_gap.gap.user_readback.name = self.u_gap.name
 
 
     def crystal_gap(self):
