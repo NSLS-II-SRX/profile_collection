@@ -8,6 +8,7 @@ from ophyd.pseudopos import (pseudo_position_argument, real_position_argument)
 from ophyd.positioner import PositionerBase
 from ophyd import Component as Cpt
 from scipy.interpolate import InterpolatedUnivariateSpline
+import functools
 import math
 import uuid
 
@@ -105,8 +106,6 @@ class InsertionDevice(Device, PositionerBase):
         return self.gap.moving
 
     def subscribe(self, callback, *args, **kwargs):
-        import functools
-
         @functools.wraps(callback)
         def inner(obj, **kwargs):
             return callback(obj=self, **kwargs)
