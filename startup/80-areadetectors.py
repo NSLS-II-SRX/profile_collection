@@ -492,10 +492,10 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
         return ret
 
 
-xs2 = SrxXspress3Detector2('XF:05IDD-ES{Xsp:2}:', name='xs2')
-xs2.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
-xs2.hdf5.num_extra_dims.put(0)
-xs2.hdf5.warmup()
+# xs2 = SrxXspress3Detector2('XF:05IDD-ES{Xsp:2}:', name='xs2')
+# xs2.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
+# xs2.hdf5.num_extra_dims.put(0)
+# xs2.hdf5.warmup()
 
 
 for i in range(1,4):
