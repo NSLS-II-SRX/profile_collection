@@ -357,8 +357,8 @@ flying_zebra_y = SRXFlyer1Axis(zebra, [xs], sclr1, 'VER', name='flying_zebra')
 # NOTE: as of 2019-01-11, xs2 device is not available, as it's only used for
 # specialized experiments.
 # For confocal
-flying_zebra_x_xs2 = SRXFlyer1Axis(zebra, [xs2], sclr1, 'HOR', name='flying_zebra')
-flying_zebra_y_xs2 = SRXFlyer1Axis(zebra, [xs2], sclr1, 'VER', name='flying_zebra')
+# flying_zebra_x_xs2 = SRXFlyer1Axis(zebra, [xs2], sclr1, 'HOR', name='flying_zebra')
+# flying_zebra_y_xs2 = SRXFlyer1Axis(zebra, [xs2], sclr1, 'VER', name='flying_zebra')
 # For chip imaging
 # flying_zebra_x_xs2 = SRXFlyer1Axis(zebra, xs2, sclr1, 'DET2HOR', name='flying_zebra')
 # flying_zebra_y_xs2 = SRXFlyer1Axis(zebra, xs2, sclr1, 'DET2VER', name='flying_zebra')
