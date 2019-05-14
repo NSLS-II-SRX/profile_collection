@@ -210,7 +210,7 @@ def xanes_plan(erange = [], estep = [],
         else:
             print("aligning at ",align_at)
             yield from abs_set(energy, float(align_at), wait = True)
-    energy.u_gap.corrfunc_dis.put(1)
+    # energy.u_gap.corrfunc_dis.put(1)
     #open b shutter
     if shutter is True:
         #shut_b.open()

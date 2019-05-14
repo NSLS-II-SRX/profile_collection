@@ -725,8 +725,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         scanrecord.time_remaining.put(0)
 
     # TODO remove this eventually?
-    # xs = dets_by_name['xs']
-    xs = dets_by_name['xs2']
+    xs = dets_by_name['xs']
+    # xs = dets_by_name['xs2']
 
     # @subs_decorator([LiveTable([ymotor]),
     #                  RowBasedLiveGrid((ynum, xnum), ion.name, row_key=ymotor.name),
@@ -790,10 +790,10 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 def scan_and_fly(*args, extra_dets=None, **kwargs):
     kwargs.setdefault('xmotor', hf_stage.x)
     kwargs.setdefault('ymotor', hf_stage.y)
-    # _xs = kwargs.pop('xs', xs)
-    # kwargs.setdefault('flying_zebra', flying_zebra)
-    _xs = kwargs.pop('xs2', xs2)
-    kwargs.setdefault('flying_zebra', flying_zebra_x_xs2)
+    _xs = kwargs.pop('xs', xs)
+    kwargs.setdefault('flying_zebra', flying_zebra)
+    # _xs = kwargs.pop('xs2', xs2)
+    # kwargs.setdefault('flying_zebra', flying_zebra_x_xs2)
     # extra_dets = [xs2]
     if extra_dets is None:
         extra_dets = []
@@ -925,12 +925,10 @@ def y_scan_and_fly(*args, **kwargs):
             t_acc = 1.0  # acceleration time, default 1.0 s
             kwargs['delta'] = t_acc * v  # distance the stage will travel in t_acc
 
-    # yield from scan_and_fly(*args, **kwargs,
-    #                         xmotor=hf_stage.y,
-    #                         ymotor=hf_stage.x,
-    #                         flying_zebra=flying_zebra_y)
     yield from scan_and_fly(*args, **kwargs,
-                            flying_zebra=flying_zebra_y_xs2)
+                            flying_zebra=flying_zebra_y)
+    # yield from scan_and_fly(*args, **kwargs,
+    #                         flying_zebra=flying_zebra_y_xs2)
 
 
 def y_scan_and_fly_xs2(*args, **kwargs):
