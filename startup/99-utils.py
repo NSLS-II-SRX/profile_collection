@@ -309,15 +309,23 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True):
         # 2018-06-28
         # roll_guess = -0.01124286 * (E/1000) - 4.93568571
         # 2019-02-14
-        roll_guess = -0.00850813 * (E/1000) - 5.01098505
+        # roll_guess = -0.00850813 * (E/1000) - 5.01098505
+        # 2019-02-14
+        roll_guess = -0.01661758 * (E/1000) - 5.09654066
         yield from bps.mov(dcm.c1_roll, roll_guess)
         # 2019-02-14
-        pitch_guess = -0.00106066 * (E/1000) - 19.37338813
+        # pitch_guess = -0.00106066 * (E/1000) - 19.37338813
+        # 2019-04-24
+        pitch_guess = -0.00202462 * (E/1000) - 17.57951692
         yield from bps.mov(dcm.c2_pitch, pitch_guess)
         yield from bps.mov(dcm.c2_pitch_kill, 1.0)
 
     # Set counting time
     sclr1.preset_time.put(1.0)
+
+    # Open the shutter
+    if (shutter == True):
+        yield from bps.mov(shut_b, 'Open')
 
     # Setup LiveCallbacks
     plt.figure('Peakup')

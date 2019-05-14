@@ -114,14 +114,20 @@ def braggcalib(scanlogDic = {}, use_xrf = False):
     #                   'Zr' : 18052}
 
     # 2019-1 Feb 5
-    if (scanlogDic == {}):
-        scanlogDic = {'V'  : 21828,
-                      'Cr' : 21830,
-                      'Fe' : 21833,
-                      'Cu' : 21835,
-                      'Se' : 21838,
-                      'Zr' : 21843}
+    # if (scanlogDic == {}):
+    #     scanlogDic = {'V'  : 21828,
+    #                   'Cr' : 21830,
+    #                   'Fe' : 21833,
+    #                   'Cu' : 21835,
+    #                   'Se' : 21838,
+    #                   'Zr' : 21843}
 
+    # 2019-1 Apr 23 
+    if (scanlogDic == {}):
+        scanlogDic = {'V'  : 26058,
+                      'Cr' : 26059,
+                      'Se' : 26060,
+                      'Zr' : 26061}
     fitfunc = lambda pa, x: 12.3984/(2*pa[0]*numpy.sin((x+pa[1])*numpy.pi/180))  
     errfunc = lambda pa, x, y: fitfunc(pa,x) - y
 

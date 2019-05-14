@@ -480,6 +480,23 @@ cal_data_2019cycle1 = {
  'xoffset': 24.465, #best value for 12 and 5 keV
 }
 
+cal_data_2019cycle1 = {
+ 'd_111': 3.143196587210581,
+ 'delta_bragg': 0.2011442467795649,
+ 'C2Xcal': 3.6,
+ 'T2cal': 15.0347755916,
+ 'xoffset': 24.646398991691104 #best value for 12 and 5 keV
+}
+
+cal_data_2019cycle1 = {
+ 'd_111': 3.128774072188798,
+ 'delta_bragg': 0.22324196449806297,
+ 'C2Xcal': 3.6,
+ 'T2cal': 15.0347755916,
+ # 'xoffset': 24.646398991691104 #best value for 12 and 5 keV
+ 'xoffset': 24.770  # not sure why value changed midcycle, reoptimized at 5 and 12 keV
+}
+
 energy = Energy(prefix='', name='energy', **cal_data_2019cycle1)
 energy.synch_with_epics()
 energy.value = 1.0

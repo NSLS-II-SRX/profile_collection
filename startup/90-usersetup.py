@@ -17,60 +17,20 @@ proposal_title = None
 PI_lastname = None
 saf_num = None
 
-proposal_num = 303891
+proposal_num = 304923
 proposal_title = 'Routine Setup and Testing for Beamline 5-ID'
 PI_lastname = 'Kiss'
-saf_num = 303524
+saf_num = 304072
 
-# proposal_num = 303164
-# proposal_title = '3D confocal x-ray fluorescence microscopy (CXRF) at the 2-micron scale using collimating channel arrays (CCAs) to elucidate the role of copper in pollen fertility in A. thaliana'
-# PI_lastname = 'Woll'
-# saf_num = 303939
-
-#proposal_num = 303990
-#proposal_title = 'Multimodal analysis of soil-borne Fe and Mn microparticles using micro-XRF, micro-XRD, micro-XANES, XPS, SEM and NanoSIMS'
-#PI_lastname = 'Tenzer'
-#saf_num = 303690
-
-#proposal_num = 303921
-#proposal_title = 'Spatial Distribution of Reduction-Oxidation Sensitive Transition Metals within Rove Formation Reduction Spots'
-#PI_lastname = 'Trewhella'
-#saf_num = 303682
-
-# proposal_num = 303670
-# proposal_title = 'Manganese-dependent carbon oxidation at oxic-anoxic interfaces in soils and sediments'
-# PI_lastname = 'Keiluweit'
-# saf_num = 303792
-
-#proposal_num = 303602
-#proposal_title = 'Characterizing solid electrolyte interphase (SEI) formation on Iron-based Battery Electrodes: A combined #Operando Spatially Resolved XANES and Isothermal Microcalorimetry Study'
-#PI_lastname = 'Bock'
-#saf_num = 303794
-
-# proposal_num = 303181
-# proposal_title = 'In-operando corrosion study of intermetallic particles in aluminum alloys'
-# PI_lastname = 'Chou'
-# saf_num = 303814
-
-# proposal_num = 304091
-# proposal_title = 'Fe and Mn catalyzed organobromine production in coastal wetlands impacted by sea-level rise'
-# PI_lastname = 'Schlesinger'
-# saf_num = 303923
-
-# proposal_num = 303902
-# proposal_title = 'In-operando XANES and XRD of electrochemical materials in a Cu-Bi-MnO2 cathode'
-# PI_lastname = 'Turney'
-# saf_num = 303634
-
-# proposal_num = 303295
-# proposal_title = 'Understanding Copper Speciation in Brain Amyloid Deposits Involved in Cognitive Impairment'
-# PI_lastname = 'Miller'
-# saf_num = 303861
-
+# proposal_num = 304603
+# proposal_title = 'Investigation of glass modification during laser heating by X-ray absorption spectroscopy'
+# PI_lastname = 'McAnany'
+# saf_num = 304153
 
 logfilename_postfix = str(saf_num)
 
-cycle = '2019_cycle1'
+cycle = '2019_cycle2'
+
 
 RE.md['proposal']  = {  'proposal_num': str(proposal_num),
                          'proposal_title': str(proposal_title),
