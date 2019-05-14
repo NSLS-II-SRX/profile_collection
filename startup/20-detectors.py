@@ -59,8 +59,9 @@ class BpmDiode(Device):
 
 #bpm1 = BpmDiode('xf05bpm03:DataRead', name='bpm1')
 #bpm2 = BpmDiode('xf05bpm04:DataRead', name='bpm2')
-bpm1 = TetrAMM('XF:05IDA-BI{BPM:3}',name='bpm1')
-bpm2 = TetrAMM('XF:05IDA-BI{BPM:4}',name='bpm2')
+# BPM IOC disabled 2019-04-15
+# bpm1 = TetrAMM('XF:05IDA-BI{BPM:3}',name='bpm1')
+# bpm2 = TetrAMM('XF:05IDA-BI{BPM:4}',name='bpm2')
 
 class DiamondBPM(Device):
     diode_top = Cpt(EpicsSignalRO, 'Current1:MeanValue_RBV')
