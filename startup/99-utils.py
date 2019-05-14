@@ -160,7 +160,7 @@ def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
     # roll_num = 51
 
     pitch_lim = (pitch_old-0.025, pitch_old+0.025)
-    roll_lim = (roll_old-0.1, roll_old+0.1)
+    roll_lim = (roll_old-0.2, roll_old+0.2)
 
     pitch_num = 51
     roll_num = 51
@@ -217,6 +217,7 @@ def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
         else:
             print('OK\n')
     logscan('peakup_pitch')
+    c2pitch_kill.put(1)
 
     if correct_roll == True:
         if (plot == True):
@@ -266,7 +267,8 @@ def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
 
 from scipy.optimize import curve_fit
 
-def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True):
+def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
+                fix_roll=True, fix_pitch=True):
     """
 
     Scan the HDCM C2 Piezo Motor to optimize the beam.
@@ -275,6 +277,8 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True):
     plot        <Bool>      If True, plot the results
     shutter     <Bool>      If True, the shutter is automatically opened/closed
     use_calib   <Bool>      If True, use lookup table as an initial guess
+    fix_roll    <Bool>      If True, peakup C1 roll piezo
+    fix_pitch   <Bool>      If True, peakup C2 pitch piezo
 
     """
 
@@ -284,7 +288,18 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True):
         E = E * 1000
 
     # Define the detector
-    det = [sclr1, dcm.c2_pitch]
+    det = [sclr1, dcm.c1_roll, dcm.c2_pitch]
+
+    # Set the roll piezo to its default value (3.0)
+    # and return the roll to its original value
+    rf1_default = 3.0
+    total_roll = dcm.c1_roll.position
+    yield from bps.mov(dcm.c1_fine, rf1_default)
+    yield from bps.mov(dcm.c1_roll, total_roll)
+
+    # Set limits
+    roll_lim = (2.5, 3.5)
+    roll_num = 51
 
     # Turn off the ePIC loop for the pitch motor
     # c2_pid = EpicsSignal('XF:05IDD-CT{FbPid:02}PID:on')
@@ -292,12 +307,13 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True):
     yield from bps.mov(dcm.c2_fine.pid_enabled, 0)
     yield from dcm.c2_fine.reset_pid()
 
-    # Set the piezo to its default value (3.0)
+    # Set the pitch piezo to its default value (3.0)
     # and return the pitch to its original value
     pf2_default = 3.0
     total_pitch = dcm.c2_pitch.position
     yield from bps.mov(dcm.c2_fine, pf2_default)
     yield from bps.mov(dcm.c2_pitch, total_pitch)
+    yield from bps.sleep(1)
     yield from bps.mov(dcm.c2_pitch_kill, 1.0)
 
     # Set limits
@@ -334,10 +350,6 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True):
                               linestyle='', marker='*', color='C0',
                               label='raw',
                               fig=plt.figure('Peakup'))]
-
-    # Open the shutter
-    if (shutter == True):
-        yield from bps.mov(shut_b, 'Open')
 
     # Run the C2 pitch fine scan
     @subs_decorator(livecallbacks)
@@ -567,8 +579,8 @@ def knife_edge(motor, start, stop, stepsize, acqtime,
         else:
             p_guess = [np.amax(dydx_plot), popt[1], popt[2], 0, 0]
 
-        # popt2, _ = curve_fit(f_gauss, x_plot, dydx_plot, p0=p_guess)
-        popt2, _ = curve_fit(f_gauss, x, dydx, p0=p_guess)
+        popt2, _ = curve_fit(f_gauss, x_plot, dydx_plot, p0=p_guess)
+        # popt2, _ = curve_fit(f_gauss, x, dydx, p0=p_guess)
     except:
         print('Fit failed.')
         popt2 = p_guess
