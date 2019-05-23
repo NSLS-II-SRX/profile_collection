@@ -668,5 +668,5 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
             self._mode = SRXMode.step
         return ret
 
-# merlin = SRXMerlin('XF:05IDD-ES{Merlin:1}', name='merlin', read_attrs=['hdf5', 'cam', 'stats1'])
-# merlin.hdf5.read_attrs = []
+merlin = SRXMerlin('XF:05IDD-ES{Merlin:1}', name='merlin', read_attrs=['hdf5', 'cam', 'stats1'])
+merlin.hdf5.read_attrs = []

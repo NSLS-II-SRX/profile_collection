@@ -565,7 +565,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             dwell = 0.007
         # According to Ken's comments in hxntools, this is a de-bounce time
         # when in external trigger mode
-        dpc.cam.stage_sigs['acquire_time'] = .3 * dwell - 0.0016392
+        dpc.cam.stage_sigs['acquire_time'] = .25 * dwell - 0.0016392
         dpc.cam.stage_sigs['acquire_period'] = .5 * dwell
         dpc.cam.stage_sigs['num_images'] = 1
         dpc.stage_sigs['total_points'] = xnum
