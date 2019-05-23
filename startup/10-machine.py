@@ -7,10 +7,13 @@ from ophyd.ophydobj import MoveStatus
 from ophyd.pseudopos import (pseudo_position_argument, real_position_argument)
 from ophyd.positioner import PositionerBase
 from ophyd import Component as Cpt
+from nslsii.devices import TwoButtonShutter
+
 from scipy.interpolate import InterpolatedUnivariateSpline
 import functools
 import math
 import uuid
+
 
 ring_current = EpicsSignalRO('SR:C03-BI{DCCT:1}I:Real-I', name='ring_current')
 cryo_v19 = EpicsSignal('XF:05IDA-UT{Cryo:1-IV:19}Sts-Sts', name='cryo_v19')
@@ -515,75 +518,75 @@ fe = SRXSlitsFE('FE:C05A-OP{Slt:', name='fe')
 _time_fmtstr = '%Y-%m-%d %H:%M:%S'
 
 
-class TwoButtonShutter(Device):
-    # TODO this needs to be fixed in EPICS as these names make no sense
-    # the vlaue comingout of the PV do not match what is shown in CSS
-    open_cmd = Cpt(EpicsSignal, 'Cmd:Opn-Cmd', string=True)
-    open_val = 'Open'
-
-    close_cmd = Cpt(EpicsSignal, 'Cmd:Cls-Cmd', string=True)
-    close_val = 'Not Open'
-
-    status = Cpt(EpicsSignalRO, 'Pos-Sts', string=True)
-
-    close_status = Cpt(EpicsSignalRO, 'Sts:Cls-Sts')
-    fail_to_close = Cpt(EpicsSignalRO, 'Sts:FailCls-Sts', string=True)
-    fail_to_open = Cpt(EpicsSignalRO, 'Sts:FailOpn-Sts', string=True)
-    # user facing commands
-    open_str = 'Open'
-    close_str = 'Close'
-
-    def set(self, val):
-        if self._set_st is not None:
-            raise RuntimeError('trying to set while a set is in progress')
-
-        cmd_map = {self.open_str: self.open_cmd,
-                   self.close_str: self.close_cmd}
-        target_map = {self.open_str: self.open_val,
-                      self.close_str: self.close_val}
-
-        cmd_sig = cmd_map[val]
-        target_val = target_map[val]
-
-        st = self._set_st = DeviceStatus(self)
-        enums = self.status.enum_strs
-
-        def shutter_cb(value, timestamp, **kwargs):
-            value = enums[int(value)]
-            if value == target_val:
-                self._set_st._finished()
-                self._set_st = None
-                self.status.clear_sub(shutter_cb)
-        uid = str(uuid.uuid4())
-        cmd_enums = cmd_sig.enum_strs
-        count = 0
-
-        def cmd_retry_cb(value, timestamp, **kwargs):
-            nonlocal count
-            value = cmd_enums[int(value)]
-            # ts = datetime.datetime.fromtimestamp(timestamp).strftime(_time_fmtstr)
-            # print('sh', ts, val, st)
-            if count > 5:
-                cmd_sig.clear_sub(cmd_retry_cb)
-                st._finished(success=False)
-            if value == 'None':
-                if not st.done:
-                    import time
-                    time.sleep(1)
-                    count += 1
-                    cmd_sig.set(1)
-                else:
-                    cmd_sig.clear_sub(cmd_retry_cb)
-
-        cmd_sig.subscribe(cmd_retry_cb, run=False)
-        cmd_sig.set(1)
-        self.status.subscribe(shutter_cb)
-        return st
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._set_st = None
-        self.read_attrs = ['status']
+# class TwoButtonShutter(Device):
+#     # TODO this needs to be fixed in EPICS as these names make no sense
+#     # the vlaue comingout of the PV do not match what is shown in CSS
+#     open_cmd = Cpt(EpicsSignal, 'Cmd:Opn-Cmd', string=True)
+#     open_val = 'Open'
+# 
+#     close_cmd = Cpt(EpicsSignal, 'Cmd:Cls-Cmd', string=True)
+#     close_val = 'Not Open'
+# 
+#     status = Cpt(EpicsSignalRO, 'Pos-Sts', string=True)
+# 
+#     close_status = Cpt(EpicsSignalRO, 'Sts:Cls-Sts')
+#     fail_to_close = Cpt(EpicsSignalRO, 'Sts:FailCls-Sts', string=True)
+#     fail_to_open = Cpt(EpicsSignalRO, 'Sts:FailOpn-Sts', string=True)
+#     # user facing commands
+#     open_str = 'Open'
+#     close_str = 'Close'
+# 
+#     def set(self, val):
+#         if self._set_st is not None:
+#             raise RuntimeError('trying to set while a set is in progress')
+# 
+#         cmd_map = {self.open_str: self.open_cmd,
+#                    self.close_str: self.close_cmd}
+#         target_map = {self.open_str: self.open_val,
+#                       self.close_str: self.close_val}
+# 
+#         cmd_sig = cmd_map[val]
+#         target_val = target_map[val]
+# 
+#         st = self._set_st = DeviceStatus(self)
+#         enums = self.status.enum_strs
+# 
+#         def shutter_cb(value, timestamp, **kwargs):
+#             value = enums[int(value)]
+#             if value == target_val:
+#                 self._set_st._finished()
+#                 self._set_st = None
+#                 self.status.clear_sub(shutter_cb)
+#         uid = str(uuid.uuid4())
+#         cmd_enums = cmd_sig.enum_strs
+#         count = 0
+# 
+#         def cmd_retry_cb(value, timestamp, **kwargs):
+#             nonlocal count
+#             value = cmd_enums[int(value)]
+#             # ts = datetime.datetime.fromtimestamp(timestamp).strftime(_time_fmtstr)
+#             # print('sh', ts, val, st)
+#             if count > 5:
+#                 cmd_sig.clear_sub(cmd_retry_cb)
+#                 st._finished(success=False)
+#             if value == 'None':
+#                 if not st.done:
+#                     import time
+#                     time.sleep(1)
+#                     count += 1
+#                     cmd_sig.set(1)
+#                 else:
+#                     cmd_sig.clear_sub(cmd_retry_cb)
+# 
+#         cmd_sig.subscribe(cmd_retry_cb, run=False)
+#         cmd_sig.set(1)
+#         self.status.subscribe(shutter_cb)
+#         return st
+# 
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         self._set_st = None
+#         self.read_attrs = ['status']
 
 
 shut_fe = TwoButtonShutter('XF:05ID-PPS{Sh:WB}', name='shut_fe')
