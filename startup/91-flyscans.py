@@ -107,9 +107,9 @@ class SRXFlyer1Axis(Device):
         # this is for the merlin
         self.stage_sigs[self._encoder.output2.ttl.addr] = 53
         # this is for the dexela
-        # self.stage_sigs[self._encoder.output4.ttl.addr] = 55
+        self.stage_sigs[self._encoder.output4.ttl.addr] = 55
         # this is for the xs2 
-        self.stage_sigs[self._encoder.output4.ttl.addr] = 31
+        # self.stage_sigs[self._encoder.output4.ttl.addr] = 31
 
         self.stage_sigs[self._encoder.pc.enc_pos1_sync] = 1
         self.stage_sigs[self._encoder.pc.enc_pos2_sync] = 1
@@ -571,6 +571,13 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         dpc.stage_sigs['total_points'] = xnum
         dpc.hdf5.stage_sigs['num_capture'] = xnum
         del dpc
+
+    # setup dexela
+    if ('dexela' in dets_by_name):
+        xrd = dets_by_name['dexela']
+        xrd.cam.stage_sigs['acquire_time'] = 1.00 * dwell - 0.050
+        xrd.cam.stage_sigs['acquire_period'] = 1.00 * dwell - 0.020
+        del xrd
 
     # If delta is None, set delta based on time for acceleration
     if delta is None:

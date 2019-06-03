@@ -176,7 +176,8 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             dpc.cam.acquire.put(0)
             dpc.cam.image_mode.put(0)
             # dpc.cam.acquire_time.put(acqtime)
-            dpc.cam.acquire_time.put(acqtime*0.2)
+            dpc.cam.acquire_time.put(acqtime*0.75)
+            # dpc.cam.acquire_time.put(10)
             dpc._mode = SRXMode.step
 
         dpc._mode = SRXMode.step
@@ -403,7 +404,19 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     scaninfo = yield from hf2dxrf_scanplan
     #TO-DO: implement fast shutter control (close)
     if shutter:
-        yield from mv(shut_b,'Close')
+        i = 0
+        MAX_TRIES = 3
+        while (i < MAX_TRIES):
+            try:
+                yield from mv(shut_b,'Close')
+                i = MAX_TRIES
+                break
+            except:
+                i = i + 1
+                print('Trying to close the shutter again ({i}/{MAX_TRIES})...')
+                if (i == MAX_TRIES):
+                    print('Reached maximum tries. Shutter may be open.')
+            
 
     #write to scan log
 
