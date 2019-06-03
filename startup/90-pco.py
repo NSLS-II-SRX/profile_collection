@@ -48,5 +48,5 @@ class SRXPCOEDGE(SingleTrigger, AreaDetector):
             root='/nsls2/xf05id1/XF05ID1/')
 
 
-pcoedge = SRXPCOEDGE('XF05IDD-ES{PCO:1}:', name='pcoedge')
-pcoedge.cam.ensure_nonblocking()
+# pcoedge = SRXPCOEDGE('XF05IDD-ES{PCO:1}:', name='pcoedge')
+# pcoedge.cam.ensure_nonblocking()
