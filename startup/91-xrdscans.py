@@ -63,7 +63,10 @@ def collect_xrd(pos=[], empty_pos=[], acqtime=1, N=1,
         logscan('xrd_count')
 
     # Loop through positions
+    if (pos == []):
+        pos = [[hf_stage.x.position, hf_stage.y.position]]
     for i in range(len(pos)):
+        i = int(i)
         # Move into position
         # yield from bps.mov(hf_stage.x, pos[i][0])
         yield from bps.mov(hf_stage.topx, pos[i][0])

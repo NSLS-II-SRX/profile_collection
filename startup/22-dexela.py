@@ -149,6 +149,7 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
                read_attrs=[],
                configuration_attrs=[],
                write_path_template='Z:\\%Y\\%m\\%d\\',
+               # write_path_template='C:\\temp\\dexela\\',
                read_path_template='/nsls2/xf05id1/XF05ID1/dexela/%Y/%m/%d/',
                root='/nsls2/xf05id1/XF05ID1/dexela/')
     # this is used as a latch to put the xspress3 into 'bulk' mode
