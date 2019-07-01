@@ -694,6 +694,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         # trigger all of the detectors
         for d in flying_zebra.detectors:
             yield from bps.trigger(d, group='row')
+            if d.name == 'dexela':
+                yield from bps.sleep(1)
 
         yield from bps.sleep(1.5)
         # start the 'fly'
