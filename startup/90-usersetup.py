@@ -22,11 +22,6 @@ proposal_title = 'Routine Setup and Testing for Beamline 5-ID'
 PI_lastname = 'Kiss'
 saf_num = 304072
 
-# proposal_num = 304603
-# proposal_title = 'Investigation of glass modification during laser heating by X-ray absorption spectroscopy'
-# PI_lastname = 'McAnany'
-# saf_num = 304153
-
 logfilename_postfix = str(saf_num)
 
 cycle = '2019_cycle2'
