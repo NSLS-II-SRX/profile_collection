@@ -55,9 +55,9 @@ def xanes_afterscan_pco(scanid, roinum, filename, i0scale, itscale, roi_key):
  
     #usercolumnnameitem = ['scaled_current_preamp_ch0', 'scaled_current_preamp_ch2', 'roi_sum']
     usercolumnnameitem = ['I0', 'It', 'If']
-    
-    datatable = get_table(h, ['current_preamp_ch0', 'current_preamp_ch2', roi_key[0], roi_key[1], roi_key[2]],
-                          stream_name='primary')        
+
+    datatable = h.get_table(['current_preamp_ch0', 'current_preamp_ch2', roi_key[0], roi_key[1], roi_key[2]],
+                            stream_name='primary')
     i0_array = abs(numpy.array(datatable['current_preamp_ch2']) - i0_baseline) * i0scale
     it_array = abs(numpy.array(datatable['current_preamp_ch0']) - it_baseline) * itscale
     roi_sum = numpy.array(datatable[roi_key[0]]) +  numpy.array(datatable[roi_key[1]]) + numpy.array(datatable[roi_key[2]])  
