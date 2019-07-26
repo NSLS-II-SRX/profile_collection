@@ -8,6 +8,7 @@ from ophyd.pseudopos import (pseudo_position_argument, real_position_argument)
 from ophyd.positioner import PositionerBase
 from ophyd import Component as Cpt
 from nslsii.devices import TwoButtonShutter
+from pathlib import Path
 
 from scipy.interpolate import InterpolatedUnivariateSpline
 import functools
@@ -221,10 +222,10 @@ class Energy(PseudoPositioner):
         self._c2xcal = C2Xcal
         self._t2cal = T2cal
 
-        calib_path = '/nfs/xf05id1/UndulatorCalibration/'
+        calib_path = Path(__file__).parent
         calib_file = 'SRXUgapCalibration20170612.txt'
 
-        with open(os.path.join(calib_path, calib_file), 'r') as f:
+        with open(calib_path / calib_file, 'r') as f:
             next(f)
             uposlistIn=[]
             elistIn=[]
