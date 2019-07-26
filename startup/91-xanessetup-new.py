@@ -5,7 +5,6 @@ from bluesky.plan_stubs import one_1d_step
 from bluesky.preprocessors import finalize_wrapper
 from bluesky.preprocessors import subs_wrapper
 from bluesky.utils import short_uid as _short_uid
-import scanoutput
 import numpy
 import time
 from epics import PV
@@ -85,11 +84,11 @@ def xanes_afterscan_plan(scanid, filename, roinum):
             usercolumnitem['If-{:02}'.format(i)] = roisum
             usercolumnitem['If-{:02}'.format(i)].round(0)
 
-    scanoutput.textout(scan = scanid, header = headeritem, 
-                        userheader = userheaderitem, column = columnitem, 
-                        usercolumn = usercolumnitem, 
-                        usercolumnname = usercolumnitem.keys(), 
-                        output = False, filename_add = filename) 
+    textout(scan = scanid, header = headeritem,
+            userheader = userheaderitem, column = columnitem,
+            usercolumn = usercolumnitem,
+            usercolumnname = usercolumnitem.keys(),
+            output = False, filename_add = filename)
 
 def xanes_plan(erange = [], estep = [],  
             harmonic=1, correct_c2_x=True, correct_c1_r = False, detune = None,

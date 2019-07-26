@@ -6,7 +6,6 @@ set up all user specific information
 @author: xf05id1
 """
 import os
-import scanoutput
 import time
 import shutil
 
@@ -39,7 +38,7 @@ RE.md['proposal']  = {  'proposal_num': str(proposal_num),
 userdatadir = '/nsls2/xf05id1/experiments/' + str(cycle) + '/' + str(saf_num) + '_' + str(PI_lastname) + '/'
 # scriptdir = '/nfs/xf05id1/src/bluesky_scripts/'
 scriptdir = '/nsls2/xf05id1/shared/src/bluesky_scripts/'
-scanoutput._DEFAULT_FILEDIR = userdatadir
+_DEFAULT_FILEDIR = userdatadir
 
 try:
     os.makedirs(userdatadir, exist_ok=True)

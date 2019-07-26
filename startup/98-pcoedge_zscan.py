@@ -65,10 +65,10 @@ def xanes_afterscan_pco(scanid, roinum, filename, i0scale, itscale, roi_key):
     usercolumnitem['I0'] = i0_array
     usercolumnitem['It'] = it_array
     usercolumnitem['If'] = roi_sum
-    
-    
-    scanoutput.textout(scan = scanid, header = headeritem, userheader = userheaderitem, column = columnitem, 
-                       usercolumn = usercolumnitem, usercolumnname = usercolumnnameitem, output = False, filename_add = filename) 
+
+
+    textout(scan = scanid, header = headeritem, userheader = userheaderitem, column = columnitem,
+            usercolumn = usercolumnitem, usercolumnname = usercolumnnameitem, output = False, filename_add = filename)
 
 def pco_zscan(acqtime = 0.0005, record_preamp = True, preamp_acqtime = None,
             num_img = 10, imgwait = 2, 

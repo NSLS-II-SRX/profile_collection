@@ -8,7 +8,7 @@ converting to be compatible with bluesky, still editing
 
 @author: xf05id1
 """
-import SRXenergy
+
 from epics import caget
 from epics import caput
 from epics import PV
@@ -20,7 +20,7 @@ import scipy as sp
 import scipy.optimize
 import math
 import numpy as np
-import srxbpm
+
 
 def hdcm_c1roll_c2x_calibration():
     onlyplot = False
