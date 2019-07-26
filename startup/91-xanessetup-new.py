@@ -7,14 +7,12 @@ from bluesky.preprocessors import subs_wrapper
 from bluesky.utils import short_uid as _short_uid
 import numpy
 import time
-from epics import PV
-from databroker import get_table
 import collections
 
 def xanes_afterscan_plan(scanid, filename, roinum):
     #print(scanid,filename,roinum)
-    # custom header list 
-    headeritem = [] 
+    # custom header list
+    headeritem = []
     # load header for our scan
     h=db[scanid]
 
@@ -55,20 +53,20 @@ def xanes_afterscan_plan(scanid, filename, roinum):
     # fluorescence detector data
     usercolumnitem = {}
     datatablenames = []
-    
+
     # assume that we are using either the SRS or Oxford preamp for both I_0 and I_T
     if 'xs' in h.start['detectors']:
         datatablenames = datatablenames + [ str(roi) for roi in roi_key]
     if 'sclr1' in  h.start['detectors']:
         # datatablenames = datatablenames + ['sclr_i0', 'sclr_it']
         datatablenames = datatablenames + ['sclr_i0', 'sclr_im', 'sclr_it']
-        datatable = h.table(stream_name='primary',fields=datatablenames)        
+        datatable = h.table(stream_name='primary',fields=datatablenames)
         i0_array = numpy.array(datatable['sclr_i0'])
         im_array = numpy.array(datatable['sclr_im'])
         it_array = numpy.array(datatable['sclr_it'])
     elif 'current_preamp' in h.start['detectors']:
         datatablenames = datatablenames + ['current_preamp_ch2', 'current_preamp_ch0']
-        datatable = h.table(stream_name='primary',fields=datatablenames)        
+        datatable = h.table(stream_name='primary',fields=datatablenames)
         i0_array = numpy.array(datatable['current_preamp_ch2'])
         it_array = numpy.array(datatable['current_preamp_ch0'])
     else:
@@ -77,10 +75,10 @@ def xanes_afterscan_plan(scanid, filename, roinum):
     if 'xs' in h.start['detectors']:
         for i in roinum:
             roi_name = 'roi{:02}'.format(i)
-            roisum = datatable[getattr(xs.channel1.rois, roi_name).value.name] 
+            roisum = datatable[getattr(xs.channel1.rois, roi_name).value.name]
             #roisum.index += -1
-            roisum = roisum + datatable[getattr(xs.channel2.rois, roi_name).value.name] 
-            roisum = roisum + datatable[getattr(xs.channel3.rois, roi_name).value.name] 
+            roisum = roisum + datatable[getattr(xs.channel2.rois, roi_name).value.name]
+            roisum = roisum + datatable[getattr(xs.channel3.rois, roi_name).value.name]
             usercolumnitem['If-{:02}'.format(i)] = roisum
             usercolumnitem['If-{:02}'.format(i)].round(0)
 
@@ -90,24 +88,24 @@ def xanes_afterscan_plan(scanid, filename, roinum):
             usercolumnname = usercolumnitem.keys(),
             output = False, filename_add = filename)
 
-def xanes_plan(erange = [], estep = [],  
+def xanes_plan(erange = [], estep = [],
             harmonic=1, correct_c2_x=True, correct_c1_r = False, detune = None,
             acqtime=1., roinum=1, delaytime = 0.00, struck=True, fluor = True,
             samplename = '', filename = '', shutter = True, align = False, align_at = None, per_step=None):
-                
+
     '''
     erange (list of floats): energy ranges for XANES in eV, e.g. erange = [7112-50, 7112-20, 7112+50, 7112+120]
     estep  (list of floats): energy step size for each energy range in eV, e.g. estep = [2, 1, 5]
-    
-    harmonic (odd integer): when set to 1, use the highest harmonic achievable automatically. 
+
+    harmonic (odd integer): when set to 1, use the highest harmonic achievable automatically.
                                     when set to an odd integer, force the XANES scan to use that harmonic
-    correct_c2_x (boolean or float): when True, automatically correct the c2x 
+    correct_c2_x (boolean or float): when True, automatically correct the c2x
                                      when False, c2x will not be moved during the XANES scan
     correct_c1_r (False or float): when False, c1r will not be moved during a XANES scan
                                    when set to a float, c1r will be set to that value before a XANES scan but will remain the same during the whole scan
     detune:  add this value to the gap of the undulator to reduce flux [mm]
 
-    acqtime (float): acqusition time to be set for both xspress3 and preamplifier                                   
+    acqtime (float): acqusition time to be set for both xspress3 and preamplifier
     roinum: select the roi to be used to calculate the XANES spectrum
     delaytime:  reduce acquisition time of F460 by this value [sec]
     struck:  Use the SRS and Struck scaler for the ion chamber and diode.  Set to False to use the F460.
@@ -118,9 +116,9 @@ def xanes_plan(erange = [], estep = [],
 
     shutter:  instruct the scan to control the B shutter [bool]
     align:  control the tuning of the DCM pointing before each XANES scan [bool]
-    align_at:  energy at which to align, default is the first energy point 
-    '''                                
-                
+    align_at:  energy at which to align, default is the first energy point
+    '''
+
     ept = numpy.array([])
     det = []
     filename=filename
@@ -150,11 +148,11 @@ def xanes_plan(erange = [], estep = [],
     RE.md['sample']  = {'name': samplename}
     RE.md['scaninfo']  = {'type': 'XANES','ROI': roinum,'raster' : False, 'dwell':acqtime}
     RE.md['scan_input'] = str(np.around(erange, 2)) + ', ' + str(np.around(estep, 2))
-   
+
     #convert erange and estep to numpy array
     erange = numpy.array(erange)
     estep = numpy.array(estep)
-    #calculation for the energy points        
+    #calculation for the energy points
     for i in range(len(estep)):
         ept = numpy.append(ept, numpy.arange(erange[i], erange[i+1], estep[i]))
     ept = numpy.append(ept, numpy.array(erange[-1]))
@@ -198,7 +196,7 @@ def xanes_plan(erange = [], estep = [],
         yield from abs_set(energy.move_c2_x,False)
     if correct_c1_r is not False:
         yield from abs_set(dcm.c1_roll,correct_c1_r)
-    if harmonic != 1: 
+    if harmonic != 1:
         yield from abs_set(energy.harmonic, harmonic)
     #prepare to peak up DCM at first scan point
     if align_at is not None:
@@ -238,32 +236,32 @@ def xanes_plan(erange = [], estep = [],
 
     #setup the live callbacks
     myscan = list_scan(det, energy, list(ept), per_step=per_step)
-    livecallbacks = []    
+    livecallbacks = []
     livetableitem = ['energy_energy']
     if struck == True:
-        livetableitem = livetableitem + ['sclr_i0', 'sclr_it']  
+        livetableitem = livetableitem + ['sclr_i0', 'sclr_it']
     else:
-        livetableitem = livetableitem + ['current_preamp_ch0', 'current_preamp_ch2']  
+        livetableitem = livetableitem + ['current_preamp_ch0', 'current_preamp_ch2']
     if fluor == True:
         roi_name = 'roi{:02}'.format(roinum[0])
         roi_key = []
         roi_key.append(getattr(xs.channel1.rois, roi_name).value.name)
         roi_key.append(getattr(xs.channel2.rois, roi_name).value.name)
         roi_key.append(getattr(xs.channel3.rois, roi_name).value.name)
-        livetableitem.append(roi_key[0])    
+        livetableitem.append(roi_key[0])
         livecallbacks.append(LiveTable(livetableitem))
         liveploty = roi_key[0]
         liveplotx = energy.energy.name
         liveplotfig = plt.figure('raw xanes')
     elif struck == True:
-        liveploty = 'sclr_it' 
+        liveploty = 'sclr_it'
         liveplotx = energy.energy.name
         liveplotfig = plt.figure('raw xanes')
-    
+
     # livecallbacks.append(LiveTable([sclr1, xs, energy]))
     livecallbacks.append(LivePlot(liveploty, x=liveplotx, fig=liveplotfig))
     #livecallbacks.append(LivePlot(liveploty, x=liveplotx, ax=plt.gca(title='raw xanes')))
-        
+
     if struck == True:
         liveploty = 'sclr_i0'
         i0 = 'sclr_i0'
@@ -273,13 +271,13 @@ def xanes_plan(erange = [], estep = [],
     liveplotfig2 = plt.figure('i0')
     livecallbacks.append(LivePlot(liveploty, x=liveplotx, fig=liveplotfig2))
     #livecallbacks.append(LivePlot(liveploty, x=liveplotx, ax=plt.gca(title='incident intensity')))
-    livenormfig = plt.figure('normalized xanes')    
+    livenormfig = plt.figure('normalized xanes')
     if fluor == True:
-        livecallbacks.append(NormalizeLivePlot(roi_key[0], x=liveplotx, norm_key = i0, fig=livenormfig))  
-        #livecallbacks.append(NormalizeLivePlot(roi_key[0], x=liveplotx, norm_key = i0, ax=plt.gca(title='normalized xanes')))  
+        livecallbacks.append(NormalizeLivePlot(roi_key[0], x=liveplotx, norm_key = i0, fig=livenormfig))
+        #livecallbacks.append(NormalizeLivePlot(roi_key[0], x=liveplotx, norm_key = i0, ax=plt.gca(title='normalized xanes')))
     else:
-        livecallbacks.append(NormalizeLivePlot('sclr_it', x=liveplotx, norm_key = i0, fig=livenormfig))  
-        #livecallbacks.append(NormalizeLivePlot(roi_key[0], x=liveplotx, norm_key = i0, ax=plt.gca(title='normalized xanes')))  
+        livecallbacks.append(NormalizeLivePlot('sclr_it', x=liveplotx, norm_key = i0, fig=livenormfig))
+        #livecallbacks.append(NormalizeLivePlot(roi_key[0], x=liveplotx, norm_key = i0, ax=plt.gca(title='normalized xanes')))
     def after_scan(name, doc):
         if name != 'stop':
             print("You must export this scan data manually: xanes_afterscan_plan(doc[-1], <filename>, <roinum>)")
@@ -312,22 +310,22 @@ def xanes_plan(erange = [], estep = [],
     # myscan = scan_nd(det, energy.bragg, list(ebragg), energy.u_gap, list(egap), energy.c2_x, list(exgap))
     myscan = finalize_wrapper(myscan,finalize_scan)
 
-    return (yield from subs_wrapper(myscan,{'all':livecallbacks,'stop':after_scan,'start':at_scan})) 
+    return (yield from subs_wrapper(myscan,{'all':livecallbacks,'stop':after_scan,'start':at_scan}))
 
 #not up to date, ignore for now
-def xanes_batch_plan(xylist=[], waittime = [2], 
+def xanes_batch_plan(xylist=[], waittime = [2],
                     samplename = None, filename = None,
-                    erange = [], estep = [], struck = True, align = False, align_at=None, 
-                    harmonic=1, correct_c2_x=True, delaytime=0.0, detune = None,            
+                    erange = [], estep = [], struck = True, align = False, align_at=None,
+                    harmonic=1, correct_c2_x=True, delaytime=0.0, detune = None,
                     xmotor=hf_stage.x, ymotor=hf_stage.y, zmotor=hf_stage.z,
                     acqtime=None, roinum=1, shutter = True, fluor = True
                     ):
-                        
+
     '''
     Running batch XANES scans on different locations, defined as in xylist.
-    input: 
+    input:
         xylist (list of x,y positions in float): pairs of x, y positions on which XANES scans will be collected
-            E.g. xylist = [[10.4, 20.4], [10.5, 20.8]] 
+            E.g. xylist = [[10.4, 20.4], [10.5, 20.8]]
         waitime (list of float): wait time between scans, if not specified, 2 seconds will be used
             E.g. waittime = [10] #10 sec. wait time will be used between all scans
             E.g. waititme = [10, 20] #10 sec. will be used between 1st and 2nd scans; 20 sec. will be used after the 2nd scan. The number of scans need to match with the number of waittime listed
@@ -340,39 +338,39 @@ def xanes_batch_plan(xylist=[], waittime = [2],
             same rules as in sample name is used.
             E.g. filename = ['sample1']: all scans will have the same file name
             E.g. filename = ['sample1', 'sample2']: two points in the xylist will have different file names attached to their scan ids.
-                       
+
         other inputs are same as in the xanes funciton.
     '''
 
     if type(xylist) is not list:
         raise AttributeError("xylist must be a python list, e.g., [ [x0,y0], [x1,y1] ]")
-    
+
     for pt_num, position in enumerate(xylist):
         #move stages to the next point
-        #yield from abs_set(hf_stage.x, position[0],wait=True) 
+        #yield from abs_set(hf_stage.x, position[0],wait=True)
         #yield from abs_set(hf_stage.y, position[1],wait=True)
         #if len(position) == 3:
         #    yield from abs_set(hf_stage.z, position[2],wait=True)
-        yield from abs_set(xmotor, position[0],wait=True) 
+        yield from abs_set(xmotor, position[0],wait=True)
         yield from abs_set(ymotor, position[1],wait=True)
         if len(position) == 3:
             yield from abs_set(zmotor, position[2],wait=True)
 
         #check bragg temperature before start the scan
 #        if dcm.temp_pitch.get() > 110:
-#            print('bragg temperature too high, wait ' + str(bragg_waittime) + ' s.')            
+#            print('bragg temperature too high, wait ' + str(bragg_waittime) + ' s.')
 #            time.sleep(bragg_waittime)
-        
+
         if samplename is None:
             pt_samplename = ''
         else:
             if type(samplename) is not list:
                 samplename = [samplename]
             if len(samplename) is 1:
-                pt_samplename = samplename[0]                
+                pt_samplename = samplename[0]
             elif len(samplename) is not len(xylist):
                 err_msg = 'number of samplename is different from the number of points'
-                raise ValueError(err_msg)            
+                raise ValueError(err_msg)
             else:
                 pt_samplename = samplename[pt_num]
 
@@ -382,26 +380,26 @@ def xanes_batch_plan(xylist=[], waittime = [2],
             if type(filename) is not list:
                 filename = [filename]
             if len(filename) is 1:
-                pt_filename = filename[0]     
+                pt_filename = filename[0]
             elif len(filename) is not len(xylist):
                 err_msg = 'number of filename is different from the number of points'
                 raise ValueError(err_msg)
             else:
                 pt_filename = filename[pt_num]
-                
+
         if type(waittime) is not list:
             waittime = [waittime]
         if len(waittime) is not len(xylist) and len(waittime) is not 1:
             err_msg = 'number of waittime is different from the number of points'
             raise ValueError(err_msg)
-        
-        yield from xanes_plan(erange = erange, estep = estep,  
-            harmonic = harmonic, correct_c2_x= correct_c2_x, detune = detune,              
-            acqtime = acqtime, roinum = roinum, align = align, align_at = align_at, 
-            delaytime=delaytime, samplename = pt_samplename, 
+
+        yield from xanes_plan(erange = erange, estep = estep,
+            harmonic = harmonic, correct_c2_x= correct_c2_x, detune = detune,
+            acqtime = acqtime, roinum = roinum, align = align, align_at = align_at,
+            delaytime=delaytime, samplename = pt_samplename,
             filename = pt_filename, struck=struck, fluor=fluor,
             shutter=shutter)
-            
+
         #wait for specified time period in sec.
         if len(waittime) is 1:
             time.sleep(waittime[0])
@@ -416,7 +414,7 @@ def xanes_batch_plan(xylist=[], waittime = [2],
 def hfxanes_ioc(waittime = None, samplename = None, filename = None,
                 erange = [], estep = [], struck = True, align = False, align_at = None,
                 harmonic = 1, correct_c2_x= True, delaytime=0.0, detune = None,
-                acqtime=None, roinum=1, shutter = True, fluor = True, 
+                acqtime=None, roinum=1, shutter = True, fluor = True,
                 ):
     '''
     invokes hf2dxrf repeatedly with parameters provided separately.
@@ -447,15 +445,15 @@ def hfxanes_ioc(waittime = None, samplename = None, filename = None,
             xstart = thisscan.p1s.get()
             ystart = thisscan.p2s.get()
             #move stages to the next point
-            yield from abs_set(hf_stage.x, xstart, wait=True) 
+            yield from abs_set(hf_stage.x, xstart, wait=True)
             yield from abs_set(hf_stage.y, ystart, wait=True)
 #            print(xstart,ystart)
             acqtime = thisscan.acq.get()
 
-            hfxanes_gen = yield from xanes_plan(erange = erange, estep = estep,  
-                harmonic = harmonic, correct_c2_x= correct_c2_x,              
+            hfxanes_gen = yield from xanes_plan(erange = erange, estep = estep,
+                harmonic = harmonic, correct_c2_x= correct_c2_x,
                 acqtime = thisscan.acq.get(), roinum = int(thisscan.roi.get()), align = align, align_at = align_at,
-                delaytime=delaytime, samplename = thisscan.sampname.get(), 
+                delaytime=delaytime, samplename = thisscan.sampname.get(),
                 filename = thisscan.filename.get(), struck=struck, fluor=fluor, detune=thisscan.detune.get(),
                 shutter=shutter)
             if len(scanlist) is not 0:
@@ -480,5 +478,3 @@ def fast_shutter_per_step(detectors, motor, step):
     yield from trigger_and_read(list(detectors) + [motor])
     # Close the shutter
     yield from mv(Mo_shutter, 1)
-
-

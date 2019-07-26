@@ -1,12 +1,12 @@
-
 import math
-from ophyd import (Device, PVPositionerPC, EpicsMotor, Signal, EpicsSignal,
-                   EpicsSignalRO, Component as Cpt, FormattedComponent as FCpt,
-                   PseudoSingle, PseudoPositioner,
-                   )
+from ophyd import (Device, PVPositionerPC, EpicsMotor, Signal,
+                   EpicsSignal, EpicsSignalRO, Component as Cpt,
+                   FormattedComponent as FCpt, PseudoSingle,
+                   PseudoPositioner, )
 from ophyd.pseudopos import (real_position_argument,
                              pseudo_position_argument)
-from hxntools.device import NamedDevice #qustion for Ken
+from hxntools.device import NamedDevice  # qustion for Ken
+
 
 class FineSampleLabX(PseudoPositioner, NamedDevice):
     '''Pseudo positioner definition for zoneplate fine sample positioner
@@ -18,8 +18,8 @@ class FineSampleLabX(PseudoPositioner, NamedDevice):
     lab_z = Cpt(PseudoSingle)
 
     # real axes
-    real_finex_top = Cpt(EpicsMotor, 'XFT}Mtr',  doc='Attocube ECS3030 x, sampe as tomo_stage.finex_top', settle_time= piezo_jena_settle_time)
-    real_finez_top = Cpt(EpicsMotor, 'ZFT}Mtr',  doc='Attocube ECS3030 z, sampe as tomo_stage.finez_top', settle_time= piezo_jena_settle_time)
+    real_finex_top = Cpt(EpicsMotor, 'XFT}Mtr', doc='Attocube ECS3030 x, sampe as tomo_stage.finex_top', settle_time=piezo_jena_settle_time)
+    real_finez_top = Cpt(EpicsMotor, 'ZFT}Mtr', doc='Attocube ECS3030 z, sampe as tomo_stage.finez_top', settle_time=piezo_jena_settle_time)
     real_theta = Cpt(EpicsMotor, 'Theta}Mtr', doc='rotatry stage theta angle')
 
     # configuration settings
