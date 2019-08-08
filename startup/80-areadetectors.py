@@ -668,5 +668,12 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
             self._mode = SRXMode.step
         return ret
 
-merlin = SRXMerlin('XF:05IDD-ES{Merlin:1}', name='merlin', read_attrs=['hdf5', 'cam', 'stats1'])
-merlin.hdf5.read_attrs = []
+try:
+    merlin = SRXMerlin('XF:05IDD-ES{Merlin:1}', name='merlin', read_attrs=['hdf5', 'cam', 'stats1'])
+    merlin.hdf5.read_attrs = []
+except TimeoutError:
+    print('\nCannot connect to Merlin. Continuing without device.\n')
+except:
+    print('\nUnexpected error connecting to Merlin.\n', sys.exc_info()[0], end='\n\n')
+
+
