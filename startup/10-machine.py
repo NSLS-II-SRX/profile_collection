@@ -500,7 +500,17 @@ cal_data_2019cycle1 = {
  'xoffset': 24.770  # not sure why value changed midcycle, reoptimized at 5 and 12 keV
 }
 
-energy = Energy(prefix='', name='energy', **cal_data_2019cycle1)
+# Calibrated 2019-08-16
+# Use scans 29496 - 29503
+cal_data_2019cycle3 = {
+ 'd_111': 3.1287603762011367,
+ 'delta_bragg': 0.21004620069236488,
+ 'C2Xcal': 3.6,
+ 'T2cal': 15.0347755916,
+ 'xoffset': 24.770
+}
+
+energy = Energy(prefix='', name='energy', **cal_data_2019cycle3)
 energy.synch_with_epics()
 energy.value = 1.0
 
