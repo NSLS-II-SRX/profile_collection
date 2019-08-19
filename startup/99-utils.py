@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from scipy.optimize import curve_fit
+from scipy.special import erf
 from ophyd import EpicsSignal
 from ophyd.utils import make_dir_tree
 from bluesky.plans import relative_scan
@@ -513,12 +514,23 @@ def knife_edge(motor, start, stop, stepsize, acqtime,
             yield from scan(det, motor, start, stop, num)
 
     # Get the information from the previous scan
-    try:
-        tbl = db[-1].table('stream0', fill=True)
-    except:
-        print('Waiting for data...')
-        time.sleep(15)
-        tbl = db[-1].table('stream0', fill=True)
+    haz_data = False
+    loop_counter = 0
+    MAX_LOOP_COUNTER = 15
+    print('Waiting for data...', end='', flush=True)
+    while (loop_counter < MAX_LOOP_COUNTER):
+        try:
+            tbl = db[-1].table('stream0', fill=True, flush=True)
+            haz_data = True
+            print('done')
+        except:
+            loop_counter += 1
+            time.sleep(1)
+
+    # Check if we haz data
+    if (not haz_data):
+        print('Data collection timed out!')
+        return
     
     # Get the position information
     if fly:
