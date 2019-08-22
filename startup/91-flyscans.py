@@ -353,12 +353,15 @@ class SRXFlyer1Axis(Device):
 
 
 flying_zebra = SRXFlyer1Axis(zebra, [xs], sclr1, 'HOR', name='flying_zebra')
-flying_zebra_y = SRXFlyer1Axis(zebra, [xs], sclr1, 'VER', name='flying_zebra')
-# NOTE: as of 2019-01-11, xs2 device is not available, as it's only used for
-# specialized experiments.
+flying_zebra_y = SRXFlyer1Axis(zebra, [xs], sclr1, 'VER', name='flying_zebra_y')
+
 # For confocal
-# flying_zebra_x_xs2 = SRXFlyer1Axis(zebra, [xs2], sclr1, 'HOR', name='flying_zebra')
-# flying_zebra_y_xs2 = SRXFlyer1Axis(zebra, [xs2], sclr1, 'VER', name='flying_zebra')
+if xs2 is not None:
+    flying_zebra_x_xs2 = SRXFlyer1Axis(zebra, [xs2], sclr1, 'HOR', name='flying_zebra_x_xs2')
+    flying_zebra_y_xs2 = SRXFlyer1Axis(zebra, [xs2], sclr1, 'VER', name='flying_zebra_y_xs2')
+else:
+    flying_zebra_x_xs2 = None
+    flying_zebra_y_xs2 = None
 # For chip imaging
 # flying_zebra_x_xs2 = SRXFlyer1Axis(zebra, xs2, sclr1, 'DET2HOR', name='flying_zebra')
 # flying_zebra_y_xs2 = SRXFlyer1Axis(zebra, xs2, sclr1, 'DET2VER', name='flying_zebra')
@@ -500,11 +503,8 @@ class LiveZebraPlot(CallbackBase):
 # changed the flyer device to be aware of fast vs slow axis in a 2D scan
 # should abstract this method to use fast and slow axes, rather than x and y
 def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
-
                       flying_zebra, xmotor, ymotor,
-
                       delta=None, shutter=True, align=False,
-
                       md=None):
     """Read IO from SIS3820.
     Zebra buffers x(t) points as a flyer.

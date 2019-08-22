@@ -184,5 +184,13 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
         return ret
 
 
-dexela = SRXDexelaDetector('XF:05IDD-ES{Dexela:1}', name='dexela')
-dexela.read_attrs = ['hdf5']
+try:
+    dexela = SRXDexelaDetector('XF:05IDD-ES{Dexela:1}', name='dexela')
+    dexela.read_attrs = ['hdf5']
+except TimeoutError:
+    dexela = None
+    print('\nCannot connect to Dexela. Continuing without device.\n')
+except:
+    dexela = None
+    print('\nUnexpected error connecting to Dexela.\n', sys.exc_info()[0], end='\n\n')
+

@@ -408,10 +408,6 @@ xs.hdf5.warmup()
 
 
 # Working xs2 detector
-#
-# Commented out because it is not connected
-# AMK
-#
 class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
     # TODO: garth, the ioc is missing some PVs?
     #   det_settings.erase_array_counters
@@ -423,29 +419,16 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
     #   det_settings.update (XF:05IDD-ES{Xsp:1}:UPDATE)
     roi_data = Cpt(PluginBase, 'ROIDATA:')
 
-    # Currently only using three channels. Uncomment these to enable more
+    # XS2 only uses 1 channel. Currently only using three channels. Uncomment these to enable more
     channel1 = C(Xspress3Channel, 'C1_', channel_num=1, read_attrs=['rois'])
     # channel2 = C(Xspress3Channel, 'C2_', channel_num=2, read_attrs=['rois'])
     # channel3 = C(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
-    # channels:
-    # channel4 = C(Xspress3Channel, 'C4_', channel_num=4)
-    # channel5 = C(Xspress3Channel, 'C5_', channel_num=5)
-    # channel6 = C(Xspress3Channel, 'C6_', channel_num=6)
-    # channel7 = C(Xspress3Channel, 'C7_', channel_num=7)
-    # channel8 = C(Xspress3Channel, 'C8_', channel_num=8)
 
     create_dir = Cpt(EpicsSignal, 'HDF5:FileCreateDir')
 
     hdf5 = Cpt(Xspress3FileStoreFlyable, 'HDF5:',
-               read_path_template='/nsls2/xf05id1/data/2019-1/XS3MINI',
-               # read_path_template='/XF05IDD/XSPRESS3-2/2018-1/',
-               # write_path_template='/epics/data/2017-3/',
-               # write_path_template='/nsls2/xf05id1/data/2018-1/XS3MINI',
-               write_path_template='/home/xspress3/data/SRX/2019-1',
-               #write_path_template='/nsls2/xf05id1/XF05ID1/XSPRESS3/2018-1',
-               #write_path_template='/nsls2/xf05id1/data/xspress3/%Y/%M/',
-#               root='/data',
-               # root='/',
+               read_path_template='/nsls2/xf05id1/data/2019-2/XS3MINI',
+               write_path_template='/home/xspress3/data/SRX/2019-2',
                root='/nsls2/xf05id1')
 
     # this is used as a latch to put the xspress3 into 'bulk' mode
@@ -492,10 +475,18 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
         return ret
 
 
-# xs2 = SrxXspress3Detector2('XF:05IDD-ES{Xsp:2}:', name='xs2')
-# xs2.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
-# xs2.hdf5.num_extra_dims.put(0)
-# xs2.hdf5.warmup()
+try:
+    xs2 = SrxXspress3Detector2('XF:05IDD-ES{Xsp:2}:', name='xs2')
+    xs2.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
+    xs2.hdf5.num_extra_dims.put(0)
+    xs2.hdf5.warmup()
+except TimeoutError:
+    xs2 = None
+    print('\nCannot connect to xs2. Continuing without device.\n')
+except:
+    xs2 = None
+    print('\nUnexpected error connecting to xs2.\n', sys.exc_info()[0], end='\n\n')
+
 
 
 for i in range(1,4):
