@@ -271,7 +271,7 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
                     'shape' : (self.parent.settings.num_images.get(), 3, 4096),
                     'source': self.prefix
             }
-            return {self.parent._f_key : spec}
+            return {self.parent._f_key: spec}
         else:
             return super().describe()
 
@@ -670,5 +670,3 @@ except TimeoutError:
     print('\nCannot connect to Merlin. Continuing without device.\n')
 except:
     print('\nUnexpected error connecting to Merlin.\n', sys.exc_info()[0], end='\n\n')
-
-
