@@ -1,3 +1,6 @@
+import skimage.io as io
+
+
 def collect_xrd(pos=[], empty_pos=[], acqtime=1, N=1,
                 dark_frame=False, shutter=True):
     # Scan parameters
@@ -8,8 +11,8 @@ def collect_xrd(pos=[], empty_pos=[], acqtime=1, N=1,
     
     N_pts = len(pos)
     if (pos == []):
-        # pos = [[hf_stage.x.position, hf_stage.y.position, hf_stage.z.position]]
-        pos = [[hf_stage.topx.position, hf_stage.y.position]]
+        pos = [[hf_stage.x.position, hf_stage.y.position, hf_stage.z.position]]
+        # pos = [[hf_stage.topx.position, hf_stage.y.position]]
     if (empty_pos != []):
         N_pts = N_pts + 1
     if (dark_frame):
@@ -41,8 +44,8 @@ def collect_xrd(pos=[], empty_pos=[], acqtime=1, N=1,
 
     if (empty_pos != []):
         # Move into position
-        # yield from bps.mov(hf_stage.x, empty_pos[0])
-        yield from bps.mov(hf_stage.topx, empty_pos[0])
+        yield from bps.mov(hf_stage.x, empty_pos[0])
+        # yield from bps.mov(hf_stage.topx, empty_pos[0])
         yield from bps.mov(hf_stage.y, empty_pos[1])
         if (len(empty_pos) == 3):
             yield from bps.mov(hf_stage.z, empty_pos[2])
@@ -68,8 +71,8 @@ def collect_xrd(pos=[], empty_pos=[], acqtime=1, N=1,
     for i in range(len(pos)):
         i = int(i)
         # Move into position
-        # yield from bps.mov(hf_stage.x, pos[i][0])
-        yield from bps.mov(hf_stage.topx, pos[i][0])
+        yield from bps.mov(hf_stage.x, pos[i][0])
+        # yield from bps.mov(hf_stage.topx, pos[i][0])
         yield from bps.mov(hf_stage.y, pos[i][1])
         if (len(pos[i]) == 3):
             yield from bps.mov(hf_stage.z, pos[i][2])
@@ -102,4 +105,33 @@ def xrd_fly(*args, extra_dets=[dexela], **kwargs):
     # yield from scan_and_fly_base([_xs, merlin], *args, **kwargs)
     # To fly only xs
     yield from scan_and_fly_base(dets, *args, **kwargs)
+
+
+def make_tiff(scanid, scantype, fn):
+    h = db[int(scanid)]
+
+    if (scantype == 'fly'):
+        d = list(h.data('dexela_image', stream_name='stream0', fill=True))
+        d = np.array(d)
+
+        (row, col, imgY, imgX) = d.shape
+        if (d.size == 0):
+            print('Error collecting dexela data...')
+            return
+        d = np.reshape(d, (row*col, imgY, imgX))
+    elif (scantype == 'count'):
+        d = list(h.data('dexela_image', fill=True))
+        d = np.array(d)
+    elif (scantype == 'grid_scan'):
+        d = list(h.data('dexela_image', fill=True))
+        d = np.array(d)
+        d = np.squeeze(d)
+    else:
+        print('I don\'t know what to do.')
+        return
+
+    try:
+        io.imsave(fn, d.astype('uint16'))
+    except:
+        print(f'Error writing file.')
 
