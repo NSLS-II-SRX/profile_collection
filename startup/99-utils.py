@@ -268,7 +268,7 @@ def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
 
 from scipy.optimize import curve_fit
 
-def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
+def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=False,
                 fix_roll=True, fix_pitch=True):
     """
 
@@ -295,8 +295,8 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # and return the roll to its original value
     rf1_default = 3.0
     total_roll = dcm.c1_roll.position
-    yield from bps.mov(dcm.c1_fine, rf1_default)
-    yield from bps.mov(dcm.c1_roll, total_roll)
+    # yield from bps.mov(dcm.c1_fine, rf1_default)
+    # yield from bps.mov(dcm.c1_roll, total_roll)
 
     # Set limits
     roll_lim = (2.5, 3.5)
@@ -318,7 +318,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     yield from bps.mov(dcm.c2_pitch_kill, 1.0)
 
     # Set limits
-    pitch_lim = (2.5, 3.5)
+    pitch_lim = (2.0, 4.0)
     pitch_num = 51
 
     # Use calibration
@@ -328,7 +328,9 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
         # 2019-02-14
         # roll_guess = -0.00850813 * (E/1000) - 5.01098505
         # 2019-02-14
-        roll_guess = -0.01661758 * (E/1000) - 5.09654066
+        # roll_guess = -0.01661758 * (E/1000) - 5.09654066
+        # 2019-08-29
+        roll_guess = 0.000
         yield from bps.mov(dcm.c1_roll, roll_guess)
         # 2019-02-14
         # pitch_guess = -0.00106066 * (E/1000) - 19.37338813
@@ -520,9 +522,10 @@ def knife_edge(motor, start, stop, stepsize, acqtime,
     print('Waiting for data...', end='', flush=True)
     while (loop_counter < MAX_LOOP_COUNTER):
         try:
-            tbl = db[-1].table('stream0', fill=True, flush=True)
+            tbl = db[-1].table('stream0', fill=True)
             haz_data = True
             print('done')
+            break
         except:
             loop_counter += 1
             time.sleep(1)
