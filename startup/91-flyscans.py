@@ -734,8 +734,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         scanrecord.time_remaining.put(0)
 
     # TODO remove this eventually?
-    xs = dets_by_name['xs']
+    # xs = dets_by_name['xs']
     # xs = dets_by_name['xs2']
+    xs = dets_by_name[flying_zebra.detectors[0].name]
 
     # @subs_decorator([LiveTable([ymotor]),
     #                  RowBasedLiveGrid((ynum, xnum), ion.name, row_key=ymotor.name),

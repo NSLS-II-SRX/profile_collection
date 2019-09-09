@@ -271,7 +271,7 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
                     'shape' : (self.parent.settings.num_images.get(), 3, 4096),
                     'source': self.prefix
             }
-            return {'fluor': spec}
+            return {self.parent._f_key : spec}
         else:
             return super().describe()
 
@@ -292,7 +292,7 @@ class SRXXspressTrigger(XspressTrigger):
                     ch = getattr(self, sn)
                     self.dispatch(ch.name, trigger_time)
         elif self._mode is SRXMode.fly:
-            self.dispatch('fluor', trigger_time)
+            self.dispatch(self._f_key, trigger_time)
         else:
             raise Exception(f"unexpected mode {self._mode}")
         self._abs_trigger_count += 1
@@ -333,8 +333,9 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
     fly_next = Cpt(Signal, value=False)
 
 
-    def __init__(self, prefix, *, configuration_attrs=None, read_attrs=None,
+    def __init__(self, prefix, *, f_key='fluor', configuration_attrs=None, read_attrs=None,
                  **kwargs):
+        self._f_key = f_key
         if configuration_attrs is None:
             configuration_attrs = ['external_trig', 'total_points',
                                    'spectra_per_point', 'settings',
@@ -437,8 +438,9 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
     fly_next = Cpt(Signal, value=False)
 
 
-    def __init__(self, prefix, *, configuration_attrs=None, read_attrs=None,
+    def __init__(self, prefix, *, f_key='fluor', configuration_attrs=None, read_attrs=None,
                  **kwargs):
+        self._f_key = f_key
         if configuration_attrs is None:
             configuration_attrs = ['external_trig', 'total_points',
                                    'spectra_per_point', 'settings',
@@ -476,7 +478,8 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
 
 
 try:
-    xs2 = SrxXspress3Detector2('XF:05IDD-ES{Xsp:2}:', name='xs2')
+    xs2 = SrxXspress3Detector2('XF:05IDD-ES{Xsp:2}:', name='xs2', f_key='fluor_xs2')
+    # xs2 = SrxXspress3Detector2('XF:05IDD-ES{Xsp:2}:', name='xs2')
     xs2.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
     xs2.hdf5.num_extra_dims.put(0)
     xs2.hdf5.warmup()
@@ -662,6 +665,7 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
 try:
     merlin = SRXMerlin('XF:05IDD-ES{Merlin:1}', name='merlin', read_attrs=['hdf5', 'cam', 'stats1'])
     merlin.hdf5.read_attrs = []
+    merlin.hdf5.warmup()
 except TimeoutError:
     print('\nCannot connect to Merlin. Continuing without device.\n')
 except:
