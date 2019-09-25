@@ -170,14 +170,17 @@ from hxntools.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
                                          logger)
 from databroker.assets.handlers import Xspress3HDF5Handler, HandlerBase
 
+try:
+    from area_detector_handlers.handlers import BulkXSPRESS
+except ImportError:
+    class BulkXSPRESS(HandlerBase):
+        HANDLER_NAME = 'XPS3_FLY'
 
-class BulkXSPRESS(HandlerBase):
-    HANDLER_NAME = 'XPS3_FLY'
-    def __init__(self, resource_fn):
-        self._handle = h5py.File(resource_fn, 'r')
+        def __init__(self, resource_fn):
+            self._handle = h5py.File(resource_fn, 'r')
 
-    def __call__(self):
-        return self._handle['entry/instrument/detector/data'][:]
+        def __call__(self):
+            return self._handle['entry/instrument/detector/data'][:]
 
 
 class BulkMerlin(BulkXSPRESS):
