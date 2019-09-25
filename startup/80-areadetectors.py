@@ -168,7 +168,11 @@ from pathlib import PurePath
 from hxntools.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
                                          Xspress3Channel, Xspress3FileStore,
                                          logger)
-from databroker.assets.handlers import Xspress3HDF5Handler, HandlerBase
+try:
+    from area_detector_handlers import HandlerBase
+    from area_detector_handlers.handlers import Xspress3HDF5Handler
+except ImportError:
+    from databroker.assets.handlers import Xspress3HDF5Handler, HandlerBase
 
 try:
     from area_detector_handlers.handlers import BulkXSPRESS
