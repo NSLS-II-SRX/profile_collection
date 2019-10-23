@@ -1,6 +1,11 @@
 import skimage.io as io
 
 
+def update_scan_id():
+    scanrecord.current_scan.put(db[-1].start['uid'][:6])
+    scanrecord.current_scan_id.put(str(RE.md['scan_id']))
+
+
 def collect_xrd(pos=[], empty_pos=[], acqtime=1, N=1,
                 dark_frame=False, shutter=True):
     # Scan parameters
@@ -23,13 +28,19 @@ def collect_xrd(pos=[], empty_pos=[], acqtime=1, N=1,
     # Setup detector
     xrd_det = [dexela]
     for d in xrd_det:
-        d.cam.stage_sigs['acquire_time'] = acqtime
-        d.cam.stage_sigs['acquire_period'] = acqtime + 0.100 
-        d.cam.stage_sigs['num_images'] = 1
+        # d.cam.stage_sigs['acquire_time'] = acqtime
+        # d.cam.stage_sigs['acquire_period'] = acqtime + 0.100
+        # d.cam.stage_sigs['num_images'] = 1
+        # d.stage_sigs['total_points'] = N_tot
+        # d.hdf5.stage_sigs['num_capture'] = N_tot
+        d.stage_sigs['cam.acquire_time'] = acqtime
+        d.stage_sigs['cam.acquire_period'] = acqtime + 0.100
+        d.stage_sigs['cam.image_mode'] = 1
+        d.stage_sigs['cam.num_images'] = N
         d.stage_sigs['total_points'] = N_tot
-        d.hdf5.stage_sigs['num_capture'] = N_tot
+        d.stage_sigs['hdf5.num_capture'] = N_tot
 
-    
+
     # Collect dark frame
     if (dark_frame):
         # Check shutter
@@ -38,6 +49,8 @@ def collect_xrd(pos=[], empty_pos=[], acqtime=1, N=1,
 
         # Trigger detector
         yield from count(xrd_det, num=N)
+        # yield from count(xrd_det)
+        update_scan_id()
 
         # Write to logfile
         logscan('xrd_count')
@@ -56,7 +69,9 @@ def collect_xrd(pos=[], empty_pos=[], acqtime=1, N=1,
 
         # Trigger the detector
         yield from count(xrd_det, num=N)
+        # yield from count(xrd_det)
         # yield from bps.trigger_and_read(xrd_det)
+        update_scan_id()
 
         # Close shutter
         if (shutter):
@@ -82,8 +97,29 @@ def collect_xrd(pos=[], empty_pos=[], acqtime=1, N=1,
             yield from bps.mov(shut_b, 'Open')
 
         # Trigger the detector
-        yield from count(xrd_det, num=N)
-        # yield from bps.trigger_and_read(xrd_det)
+        # Keep getting TimeoutErrors setting capture complete to False
+        # This is a lot of duct tape, but hopefully this will let the scans
+        # work instead of timing out
+        need_data = True
+        num_tries = 0
+        while (need_data):
+            try:
+                num_tries = num_tries + 1
+                yield from count(xrd_det, num=N)
+                # yield from count(xrd_det)
+                # yield from bps.trigger_and_read(xrd_det)
+                need_data = False
+                update_scan_id()
+            except TimeoutError:
+                dexela.unstage()
+                if (num_tries >= 5):
+                    print('Timeout has occured 5 times.')
+                    raise
+                print('TimeoutError: Trying again...')
+                yield from bps.sleep(5)
+            except:
+                raise
+
 
         # Close shutter
         if (shutter):
@@ -92,7 +128,58 @@ def collect_xrd(pos=[], empty_pos=[], acqtime=1, N=1,
         # Write to logfile
         logscan('xrd_count')
 
-        
+
+def collect_xrd_map(xstart, xstop, xnum,
+                    ystart, ystop, ynum, acqtime=1,
+                    dark_frame=False, shutter=True):
+
+    # Scan parameters
+    if (acqtime < 0.0066392):
+        print('The detector should not operate faster than 7 ms.')
+        print('Changing the scan dwell time to 7 ms.')
+        acqtime = 0.007
+
+    N = xnum * ynum
+
+    # Setup detector
+    xrd_det = [dexela]
+    for d in xrd_det:
+        d.stage_sigs['cam.acquire_time'] = acqtime
+        d.stage_sigs['cam.acquire_period'] = acqtime + 0.100
+        d.stage_sigs['cam.image_mode'] = 1
+        d.stage_sigs['cam.num_images'] = 1
+        d.stage_sigs['total_points'] = N
+        d.stage_sigs['hdf5.num_capture'] = N
+
+    # Collect dark frame
+    if (dark_frame):
+        # Check shutter
+        if (shutter):
+           yield from bps.mov(shut_b, 'Close')
+
+        # Trigger detector
+        yield from count(xrd_det, num=N)
+        update_scan_id()
+
+        # Write to logfile
+        logscan('xrd_count')
+
+    if shutter:
+        yield from mv(shut_b, 'Open')
+
+    scan_dets = xrd_det.append(sclr1)
+    yield from outer_product_scan(scan_dets,
+                                  hf_stage.x, xstart, xstop, xnum,
+                                  hf_stage.y, ystart, ystop, ynum)
+
+    if shutter:
+        yield from mv(shut_b, 'Close')
+
+    # Write to logfile
+    logscan('xrd_count')
+    update_scan_id()
+
+
 def xrd_fly(*args, extra_dets=[dexela], **kwargs):
     kwargs.setdefault('xmotor', hf_stage.x)
     kwargs.setdefault('ymotor', hf_stage.y)

@@ -165,6 +165,9 @@ class SRXFlyer1Axis(Device):
 
 
     def kickoff(self, *, xstart, xstop, xnum, dwell):
+        dets_by_name = {d.name : d
+                        for d in self.detectors}
+
         self._encoder.pc.arm.put(0)
         self._mode = 'kicked off'
         self._npts = int(xnum)
@@ -185,6 +188,18 @@ class SRXFlyer1Axis(Device):
 #        self._encoder.pc.pulse_width.put(dwell - 0.005)
 #        self._encoder.pc.pulse_step.put(extent/xnum)
 #        self._encoder.pc.pulse_width.put(extent/xnum-decrement)
+
+        # For dexela, we will use time triggering in a pixel, not position
+
+        if 'dexela' in dets_by_name:
+            self._encoder.output1.ttl.addr.put(52)
+            self._encoder.output3.ttl.addr.put(52)
+            self._encoder.pulse1.width.put(0.5 * dwell - 0.050)
+        else:
+            self._encoder.output1.ttl.addr.put(31)
+            self._encoder.output3.ttl.addr.put(31)
+
+        self._encoder.pc.pulse_source.put(0)
         self._encoder.pc.pulse_step.put(pxsize)
         self._encoder.pc.pulse_width.put(pxsize-decrement)
         # If decrement is too small, then zebra will not send individual pulses
@@ -576,7 +591,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # setup dexela
     if ('dexela' in dets_by_name):
         xrd = dets_by_name['dexela']
-        xrd.cam.stage_sigs['acquire_time'] = 1.00 * dwell - 0.050
+        xrd.cam.stage_sigs['acquire_time'] = 0.50 * dwell - 0.050
         xrd.cam.stage_sigs['acquire_period'] = 1.00 * dwell - 0.020
         del xrd
 

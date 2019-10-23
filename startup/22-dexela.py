@@ -148,14 +148,19 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
     hdf5 = Cpt(DexelaHDFWithFileStore, 'HDF1:',
                read_attrs=[],
                configuration_attrs=[],
-               write_path_template='Z:\\%Y\\%m\\%d\\',
-               # write_path_template='C:\\temp\\dexela\\',
+               # write_path_template='Z:\\%Y\\%m\\%d\\',
+               # write_path_template='C:\\temp\\dexela\\%Y\\%m\\%d\\',
+               write_path_template='C:\\data\\304976_Turney\\%Y\\%m\\%d\\',
+               # write_path_template='C:\\temp\\write_here\\',
                read_path_template='/nsls2/xf05id1/XF05ID1/dexela/%Y/%m/%d/',
                root='/nsls2/xf05id1/XF05ID1/dexela/')
     # this is used as a latch to put the xspress3 into 'bulk' mode
     # for fly scanning.  Do this is a signal (rather than as a local variable
     # or as a method so we can modify this as part of a plan
     fly_next = Cpt(Signal, value=False)
+
+
+    roi1 = Cpt(ROIPlugin, 'ROI1:')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
