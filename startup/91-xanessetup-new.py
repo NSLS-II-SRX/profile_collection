@@ -29,8 +29,8 @@ def xanes_afterscan_plan(scanid, filename, roinum):
     userheaderitem['hfm.bend'] = h.start['hfm']['bend']
 
     # create columns for data file
-    columnitem = ['energy_energy', 'energy_u_gap_readback', 'energy_bragg', 'energy_c2_x']
-    # columnitem = ['energy_energy', 'energy_u_gap_readback', 'energy_bragg']
+    # columnitem = ['energy_energy', 'energy_u_gap_readback', 'energy_bragg', 'energy_c2_x']
+    columnitem = ['energy_energy', 'energy_bragg', 'energy_c2_x']
     # include I_0 and I_t from either the SRS or Oxford preamp, raise expection
     # if neither present
     if 'sclr1' in h.start['detectors']:
