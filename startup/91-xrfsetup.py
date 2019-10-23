@@ -107,8 +107,6 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             detune in the unit of keV
 
     '''
-    c2pitch_kill = EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
-
     #record relevant meta data in the Start document, defined in 90-usersetup.py
     md = get_stock_md()
     md['sample']  = {'name': samplename}
