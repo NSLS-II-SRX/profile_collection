@@ -267,7 +267,7 @@ def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
 
 from scipy.optimize import curve_fit
 
-def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=False,
+def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
                 fix_roll=True, fix_pitch=True):
     """
 
@@ -318,7 +318,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=False,
 
     # Set limits
     pitch_lim = (2.0, 4.0)
-    pitch_num = 51
+    pitch_num = 101
 
     # Use calibration
     if (use_calib):
@@ -329,12 +329,16 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=False,
         # 2019-02-14
         # roll_guess = -0.01661758 * (E/1000) - 5.09654066
         # 2019-08-29
-        roll_guess = 0.000
+        # roll_guess = 0.000
+        # 2019-08-29
+        roll_guess = 0.00921 * (E/1000) - 0.380612
         yield from bps.mov(dcm.c1_roll, roll_guess)
         # 2019-02-14
         # pitch_guess = -0.00106066 * (E/1000) - 19.37338813
         # 2019-04-24
-        pitch_guess = -0.00202462 * (E/1000) - 17.57951692
+        # pitch_guess = -0.00202462 * (E/1000) - 17.57951692
+        # 2019-09-12
+        pitch_guess = -0.00128 * (E/1000) + 0.04097433
         yield from bps.mov(dcm.c2_pitch, pitch_guess)
         yield from bps.mov(dcm.c2_pitch_kill, 1.0)
 
@@ -630,6 +634,52 @@ def ic_energy_batch(estart,estop,npts):
 def retune_undulator():
     energy.detune.put(0.)
     energy.move(energy.energy.get()[0])
+
+
+def mv_position(pos = []):
+    """
+    Move to predefined positions of phosphor paper(pos1,default),
+    the schitillator(pos2), or the Cu wire(pos3).
+
+    pos     <list> 1 = [25.15, 29.3, 50.75] # phosphor paper
+                   2 = [29.18, 18.33, 50.3] # scintillator
+                   3 = [27.166, 25.03, 47.565] # Cu wire
+                   [x, y, z] # any positions defined
+    """
+
+    # Check current positions
+    if (pos == []):
+        print('You are now in this position: %f, %f, %f. No new positions given.Exiting...' % (hf_stage.x.position, hf_stage.y.position, hf_stage.z.position))
+        return
+
+    # Check positions and go there
+    if (pos == 1):
+        print('Will go to phosphor paper position.')
+        pos = [25.15, 29.3, 50.75]
+        hf_stage.x.move(pos[0])
+        hf_stage.y.move(pos[1])
+        hf_stage.z.move(pos[2])
+    elif (pos == 2):
+        print('Will go to scintillator position.')
+        pos = [29.18, 18.33, 50.3]
+        hf_stage.x.move(pos[0])
+        hf_stage.y.move(pos[1])
+        hf_stage.z.move(pos[2])
+    elif (pos == 3):
+        print('Will go to Cu wire position.')
+        pos = [27.166, 25.03, 47.565]
+        hf_stage.x.move(pos[0])
+        hf_stage.y.move(pos[1])
+        hf_stage.z.move(pos[2])
+    elif (len(pos) > 2):
+        print('You will move to the defined positions now.')
+        hf_stage.x.move(pos[0])
+        hf_stage.y.move(pos[1])
+        hf_stage.z.move(pos[2])
+    else:
+        print('Not a position, exiting...')
+        return
+
 
 import skbeam.core.constants.xrf as xrfC
 
