@@ -19,12 +19,18 @@ saf_num = None
 
 proposal_num = 304923
 proposal_title = 'Routine Setup and Testing for Beamline 5-ID'
-PI_lastname = 'Kiss'
-saf_num = 304072
+PI_lastname = 'Chu'
+saf_num = 304726
+
+# proposal_num = 305310
+# proposal_title = 'Imaging defects and strain in sapphire substrates of superconducting qubits'
+# PI_lastname = 'Lei'
+# saf_num = 304922
+
 
 logfilename_postfix = str(saf_num)
 
-cycle = '2019_cycle2'
+cycle = '2019_cycle3'
 
 
 RE.md['proposal']  = {  'proposal_num': str(proposal_num),
