@@ -540,7 +540,6 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     shutter : bool, optional, kwarg only
        If True, try to open the shutter
     """
-    c2pitch_kill = EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
     if md is None:
         md = {}
 

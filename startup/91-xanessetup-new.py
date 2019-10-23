@@ -127,7 +127,6 @@ def xanes_plan(erange = [], estep = [],
     filename=filename
     last_time_pt = time.time()
     ringbuf = collections.deque(maxlen=10)
-    c2pitch_kill=EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
     xs.external_trig.put(False)
 
     #make sure user provided correct input

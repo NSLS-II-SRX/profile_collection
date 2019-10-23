@@ -134,6 +134,8 @@ class Energy(PseudoPositioner):
     harmonic = Cpt(Signal, None, add_prefix=(), value=0, kind='config')
     selected_harmonic = Cpt(Signal, None, add_prefix=(), value=0)
 
+    c2pitch_kill = EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
+
     # experimental
     detune = Cpt(Signal, None, add_prefix=(), value=0)
 

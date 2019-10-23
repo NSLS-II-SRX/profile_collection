@@ -141,7 +141,6 @@ def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
 
     if (shutter ==  True):
         RE(mv(shut_b,'Open'))
-    c2pitch_kill=EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
 
     # Turn off the ePID loop for the pitch motor
     # 'XF:05IDD-CT{FbPid:02}PID:on'

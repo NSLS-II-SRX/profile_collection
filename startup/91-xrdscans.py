@@ -8,7 +8,7 @@ def collect_xrd(pos=[], empty_pos=[], acqtime=1, N=1,
         print('The detector should not operate faster than 7 ms.')
         print('Changing the scan dwell time to 7 ms.')
         acqtime = 0.007
-    
+
     N_pts = len(pos)
     if (pos == []):
         pos = [[hf_stage.x.position, hf_stage.y.position, hf_stage.z.position]]
