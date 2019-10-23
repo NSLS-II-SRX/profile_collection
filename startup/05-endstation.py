@@ -52,8 +52,10 @@ m3 = SRX_M3('XF:05IDD-OP:1{Mir:3-Ax:', name='m3')
 # High flux sample stages
 class HFSampleStage(Device):
     x = Cpt(EpicsMotor, '{Stg:Smpl1-Ax:X}Mtr')
+    RETRY_DEADBAND_X = EpicsSignal('XF:05IDD-ES:1{Stg:Smpl1-Ax:X}Mtr.RDBD')
     #y = Cpt(EpicsMotor, 'Y}Mtr')
     y = Cpt(EpicsMotor, '{Stg:Smpl1-Ax:Y}Mtr')
+    RETRY_DEADBAND_Y = EpicsSignal('XF:05IDD-ES:1{Stg:Smpl1-Ax:Y}Mtr.RDBD')
     z = Cpt(EpicsMotor, '{Stg:Smpl1-Ax:Z}Mtr')
     th = Cpt(EpicsMotor, '{Smpl:1-Ax:Rot}Mtr')
     # for NPoint

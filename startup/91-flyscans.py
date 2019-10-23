@@ -42,10 +42,12 @@ register(db)
 
 
 class SRXFlyer1Axis(Device):
-    LARGE_FILE_DIRECTORY_WRITE_PATH = '/nsls2/xf05id1/XF05ID1/data/2018-1/fly_scan_ancillary/'
+    # LARGE_FILE_DIRECTORY_WRITE_PATH = '/nsls2/xf05id1/XF05ID1/data/2018-1/fly_scan_ancillary/'
+    LARGE_FILE_DIRECTORY_WRITE_PATH = '/nsls2/xf05id1/XF05ID1/data/2019-3/fly_scan_ancillary/'
 #    LARGE_FILE_DIRECTORY_READ_PATH = '/tmp/test_data'
 #    LARGE_FILE_DIRECTORY_WRITE_PATH = '/tmp/fly_scan_ancillary'
-    LARGE_FILE_DIRECTORY_READ_PATH = '/nsls2/xf05id1/XF05ID1/data/2018-1/fly_scan_ancillary/'
+    # LARGE_FILE_DIRECTORY_READ_PATH = '/nsls2/xf05id1/XF05ID1/data/2018-1/fly_scan_ancillary/'
+    LARGE_FILE_DIRECTORY_READ_PATH = '/nsls2/xf05id1/XF05ID1/data/2019-3/fly_scan_ancillary/'
     "This is the Zebra."
     KNOWN_DETS = {'xs', 'xs2', 'merlin', 'dexela'}
     @property
@@ -617,7 +619,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         #              'fast_axis': flying_zebra._fast_axis},
         'scan_params': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
         'scan_input': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
-        'delta': delta
+        'delta': delta,
+        'beamline_status' : {'energy' : energy.position.energy}
         }
     )
 
@@ -743,6 +746,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # @subs_decorator([LiveTable([ymotor]), LiveGrid((ynum, xnum), sclr1.mca1.name)])
     if (ynum == 1):
         livepopup = LivePlot(xs.channel1.rois.roi01.value.name,
+                             xmotor.name,
                              xlim=(xstart, xstop))
     else:
         livepopup = LiveGrid((ynum, xnum+1),
