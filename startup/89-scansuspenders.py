@@ -18,28 +18,21 @@ def shuttergenerator(shutter, value):
 # old values 140, resume=160
 susp_rc = SuspendFloor(ring_current, 140, resume_thresh=160, sleep=10*60,
                        pre_plan=list(shuttergenerator(shut_b, 'Close')),
-                       post_plan=list(shuttergenerator(shut_b, 'Open'))
-                       )
+                       post_plan=list(shuttergenerator(shut_b, 'Open')))
 
-#cryo cooler suspender
+
+# Cryo cooler suspender
 #cryo_v19 = EpicsSignal('XF:05IDA-UT{Cryo:1-IV:19}Sts-Sts', name='cryo_v19')
 susp_cryo = SuspendCeil(cryo_v19, 0.8, resume_thresh=0.2, sleep=15*60,
                         pre_plan=list(shuttergenerator(shut_b, 'Close')),
-                        post_plan=list(shuttergenerator(shut_b, 'Open'))
-)
+                        post_plan=list(shuttergenerator(shut_b, 'Open')))
 
-#shutter status suspender
-# susp_shut_a = SuspendBoolHigh(shut_a.close_status, sleep = 10)
- #susp_shut_b = SuspendBoolHigh(shut_b.close_status, sleep = 10)
-susp_shut_a = SuspendBoolHigh(shut_a.status, sleep=10)
-susp_shut_b = SuspendBoolHigh(shut_b.status, sleep=10)
 
+# Shutter status suspender
 susp_shut_fe = SuspendBoolHigh(EpicsSignalRO(shut_fe.status.pvname), sleep=10)
+susp_shut_a = SuspendBoolHigh(EpicsSignalRO(shut_a.status.pvname), sleep=10)
+susp_shut_b = SuspendBoolHigh(EpicsSignalRO(shut_b.status.pvname), sleep=10)
 
-#susp_shut_a = SuspendBoolHigh(shut_a.close_status, sleep = 10,
-#                              pre_plan=list(shuttergenerator(shut_b, 'Close')),
-#                              post_plan=list(shuttergenerator(shut_b, 'Open'))
-#                              ) 
 
 #HDCM bragg temperature suspender
 #dcm_bragg_temp = EpicsSignal('XF:05IDA-OP:1{Mono:HDCM-Ax:P}T-I', name='dcm_bragg_temp')
