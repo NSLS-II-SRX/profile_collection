@@ -552,7 +552,7 @@ def knife_edge(motor, start, stop, stepsize, acqtime,
 
     # Get the data
     if (use_trans == True):
-        y = tbl['it'] / tbl['im']
+        y = tbl['it'].values[0] / tbl['im'].values[0]
     else:
         y = np.sum(np.array(tbl['fluor'])[0][:, :, 794:814], axis=(1, 2))
         y = y / np.array(tbl['i0'])[0]
@@ -569,7 +569,7 @@ def knife_edge(motor, start, stop, stepsize, acqtime,
                np.amin(y) + 0.5*np.amax(y),
                0.001]
     if high2low:
-        p_guess[0] = 0.5 * np.amin(y)
+        p_guess[0] = -0.5 * np.amin(y)
     try:
         popt, _ = curve_fit(f_int_gauss, x, y, p0=p_guess)
     except:
