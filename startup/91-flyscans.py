@@ -660,10 +660,14 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         def move_to_start_fly():
             "See http://nsls-ii.github.io/bluesky/plans.html#the-per-step-hook"
             # First, let 'scan' handle the normal y step, including a checkpoint.
-            yield from one_nd_step([], {xmotor : xstart - delta,
-                                        ymotor : step},
-                                       {xmotor : xmotor.position,
-                                        ymotor : ymotor.position})
+            # yield from one_nd_step([], {xmotor : xstart - delta,
+            #                             ymotor : step},
+            #                            {xmotor : xmotor.position,
+            #                             ymotor : ymotor.position})
+            yield from abs_set(xmotor, xstart-delta, group='row')
+            yield from one_1d_step([], motor, step)
+            yield from bps.wait(group='row')
+
         # t_mvstartfly = tic()
         yield from move_to_start_fly()
         # toc(t_mvstartfly, str='Move to start fly each')
