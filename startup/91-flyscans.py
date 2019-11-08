@@ -369,15 +369,16 @@ class SRXFlyer1Axis(Device):
         self.unstage()
 
     def resume(self):
-        # self.stage()
-        try:
-            self.stage()
-        except RedundantStaging:
-        # except:
-            print('Redundant Staging\nUnstaging flyer...')
-            self.unstage()
-            print('Staging flyer...')
-            self.stage()
+        self.unstage()
+        self.stage()
+       #  try:
+       #      self.stage()
+       #  except RedundantStaging:
+       #  # except:
+       #      print('Redundant Staging\nUnstaging flyer...')
+       #      self.unstage()
+       #      print('Staging flyer...')
+       #      self.stage()
 
 
 flying_zebra = SRXFlyer1Axis(zebra, [xs], sclr1, 'HOR', name='flying_zebra')
