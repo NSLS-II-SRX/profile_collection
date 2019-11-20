@@ -644,11 +644,12 @@ def mv_position(pos = []):
     Move to predefined positions of phosphor paper(pos1,default),
     the schitillator(pos2), or the Cu wire(pos3).
 
-    pos     <list> 1 = [25.15, 29.3, 50.75] # phosphor paper
-                   2 = [29.18, 18.33, 50.3] # scintillator
-                   3 = [27.166, 25.03, 47.565] # Cu wire
+    pos     <list> 1 = [22.7, 25.66, 52.596] # phosphor paper
+                   2 = [29.18, 19.33, 51.82] # scintillator
+                   3 = [27.166, 25.217, 45.859] # Cu wire
                    [x, y, z] # any positions defined
     """
+    print('To go to position 1,2,3; Assuming topx, topz at 0; rotation at 45 deg.')
 
     # Check current positions
     if (pos == []):
@@ -658,27 +659,19 @@ def mv_position(pos = []):
     # Check positions and go there
     if (pos == 1):
         print('Will go to phosphor paper position.')
-        pos = [25.15, 29.3, 50.75]
-        hf_stage.x.move(pos[0])
-        hf_stage.y.move(pos[1])
-        hf_stage.z.move(pos[2])
+        pos = [22.7, 25.66, 52.596]
+        yield from mv(hf_stage.x, pos[0], hf_stage.y, pos[1], hf_stage.z, pos[2])
     elif (pos == 2):
         print('Will go to scintillator position.')
-        pos = [29.18, 18.33, 50.3]
-        hf_stage.x.move(pos[0])
-        hf_stage.y.move(pos[1])
-        hf_stage.z.move(pos[2])
+        pos = [29.18, 19.33, 51.82]
+        yield from mv(hf_stage.x, pos[0], hf_stage.y, pos[1], hf_stage.z, pos[2])
     elif (pos == 3):
-        print('Will go to Cu wire position.')
-        pos = [27.166, 25.03, 47.565]
-        hf_stage.x.move(pos[0])
-        hf_stage.y.move(pos[1])
-        hf_stage.z.move(pos[2])
+        print('Will go to Cu horizontal wire position.')
+        pos = [27.166, 25.217, 45.859]
+        yield from mv(hf_stage.x, pos[0], hf_stage.y, pos[1], hf_stage.z, pos[2])
     elif (len(pos) > 2):
         print('You will move to the defined positions now.')
-        hf_stage.x.move(pos[0])
-        hf_stage.y.move(pos[1])
-        hf_stage.z.move(pos[2])
+        yield from mv(hf_stage.x, pos[0], hf_stage.y, pos[1], hf_stage.z, pos[2])
     else:
         print('Not a position, exiting...')
         return
