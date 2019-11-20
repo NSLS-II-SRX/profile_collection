@@ -309,6 +309,8 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
     #   det_settings.update (XF:05IDD-ES{Xsp:1}:UPDATE)
     roi_data = Cpt(PluginBase, 'ROIDATA:')
 
+    erase = Cpt(EpicsSignal, 'ERASE')
+
     # Currently only using three channels. Uncomment these to enable more
     channel1 = C(Xspress3Channel, 'C1_', channel_num=1, read_attrs=['rois'])
     channel2 = C(Xspress3Channel, 'C2_', channel_num=2, read_attrs=['rois'])
@@ -358,6 +360,9 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
         return ret
 
     def stage(self):
+        # Erase what is currently in the system
+        # This prevents a single hot pixel in the upper-left corner of a map
+        xs.erase.put(0)
         # do the latching
         if self.fly_next.get():
             self.fly_next.put(False)
