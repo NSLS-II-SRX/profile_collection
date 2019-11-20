@@ -64,11 +64,13 @@ for f in ['simple_batch.py','fly_batch.py']:
     if not os.path.exists(userdatadir+f):
         shutil.copyfile(scriptdir+f,userdatadir+f)
 try:
-    os.unlink('/home/xf05id1/current_user_data')
+    os.unlink('/nsls2/xf05id1/shared/current_user_data')
 except FileNotFoundError:
     print("[W] Previous user data directory link did not exist!")
 
-os.symlink(userdatadir, '/home/xf05id1/current_user_data')
+os.symlink(userdatadir, '/nsls2/xf05id1/shared/current_user_data')
+
+
 def logscan(scantype):
     h=db[-1]
     scan_id = h.start['scan_id']
