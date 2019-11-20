@@ -872,17 +872,12 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 def scan_and_fly(*args, extra_dets=None, **kwargs):
     kwargs.setdefault('xmotor', hf_stage.x)
     kwargs.setdefault('ymotor', hf_stage.y)
-    _xs = kwargs.pop('xs', xs)
     kwargs.setdefault('flying_zebra', flying_zebra)
-    # _xs = kwargs.pop('xs2', xs2)
-    # kwargs.setdefault('flying_zebra', flying_zebra_x_xs2)
-    # extra_dets = [xs2]
+
+    _xs = kwargs.pop('xs', xs)
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
-    # To fly both xs and merlin
-    # yield from scan_and_fly_base([_xs, merlin], *args, **kwargs)
-    # To fly only xs
     yield from scan_and_fly_base(dets, *args, **kwargs)
 
 
@@ -988,60 +983,47 @@ def batch_fly_arb(paramlist, kwlist=None, motlist=None):
         yield from scan_and_fly(*paramlist[i], **kwlist[i])
 
 
-def y_scan_and_fly(*args, **kwargs):
-    kwargs.setdefault('xmotor', hf_stage.y)
-    kwargs.setdefault('ymotor', hf_stage.x)
+def y_scan_and_fly(*args, extra_dets=None, **kwargs):
     '''
-    convenience wrapper for scanning Y as the fast axis.
-    call scan_and_fly, forcing slow and fast axes to be X and Y.
-    in this function, the first three scan parameters are for the *fast axis*,
+    Convenience wrapper for scanning Y as the fast axis.
+    Call scan_and_fly_base, forcing slow and fast axes to be X and Y.
+    In this function, the first three scan parameters are for the *fast axis*,
     i.e., the vertical, and the second three for the *slow axis*, horizontal.
     '''
-    if 'delta' in kwargs.keys():
-        # if kwargs['delta'] is not None:  # If delta is set in the arguments,
-                                           # then we should not override that value
-                                           # AMK
-        if kwargs['delta'] is None:
-            # kwargs['delta'] = 0.004        # default value
-            v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
-            t_acc = 1.0  # acceleration time, default 1.0 s
-            kwargs['delta'] = t_acc * v  # distance the stage will travel in t_acc
 
-    yield from scan_and_fly(*args, **kwargs,
-                            flying_zebra=flying_zebra_y)
-    # yield from scan_and_fly(*args, **kwargs,
-    #                         flying_zebra=flying_zebra_y_xs2)
+    kwargs.setdefault('xmotor', hf_stage.y)
+    kwargs.setdefault('ymotor', hf_stage.x)
+    kwargs.setdefault('flying_zebra', flying_zebra_y)
+
+    _xs = kwargs.pop('xs', xs)
+    if extra_dets is None:
+        extra_dets = []
+    dets = [_xs] + extra_dets
+    yield from scan_and_fly_base(dets, *args, **kwargs)
 
 
-def y_scan_and_fly_xs2(*args, **kwargs):
+def y_scan_and_fly_xs2(*args, extra_dets=None, **kwargs):
     '''
-    convenience wrapper for scanning Y as the fast axis.
-    call scan_and_fly, forcing slow and fast axes to be X and Y.
-    in this function, the first three scan parameters are for the *fast axis*,
+    Convenience wrapper for scanning Y as the fast axis.
+    Call scan_and_fly_base, forcing slow and fast axes to be X and Y.
+    In this function, the first three scan parameters are for the *fast axis*,
     i.e., the vertical, and the second three for the *slow axis*, horizontal.
 
     A copy of flying_zebra_y where the xspress3 mini is chosen to collect data.
     '''
 
-    if 'delta' in kwargs.keys():
-        # if kwargs['delta'] is not None:  # If delta is set in the arguments,
-                                           # then we should not override that value
-                                           # AMK
-        if kwargs['delta'] is None:
-            # kwargs['delta'] = 0.004        # default value
-            v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
-            t_acc = 1.0  # acceleration time, default 1.0 s
-            kwargs['delta'] = t_acc * v  # distance the stage will travel in t_acc
+    kwargs.setdefault('xmotor', hf_stage.y)
+    kwargs.setdefault('ymotor', hf_stage.x)
+    kwargs.setdefault('flying_zebra', flying_zebra_y_xs2)
 
-    yield from scan_and_fly(*args, **kwargs,
-                            xmotor=hf_stage.y,
-                            ymotor=hf_stage.x,
-                            # xmotor=e_tomo.y,
-                            # ymotor=e_tomo.x,
-                            flying_zebra=flying_zebra_y_xs2,
-                            xs=xs2)
+    _xs = kwargs.pop('xs', xs2)
+    if extra_dets is None:
+        extra_dets = []
+    dets = [_xs] + extra_dets
+    yield from scan_and_fly_base(dets, *args, **kwargs)
 
-def y_scan_and_fly_xs2_yz(*args, **kwargs):
+
+def y_scan_and_fly_xs2_yz(*args, extra_dets=None, **kwargs):
     '''
     convenience wrapper for scanning Y as the fast axis.
     ** This is a variant of y_scan_and_fly_xs2 but with Z and the slow motor (not X) ***
@@ -1052,67 +1034,45 @@ def y_scan_and_fly_xs2_yz(*args, **kwargs):
     A copy of flying_zebra_y where the xspress3 mini is chosen to collect data.
     '''
 
-    if 'delta' in kwargs.keys():
-        # if kwargs['delta'] is not None:  # If delta is set in the arguments,
-                                           # then we should not override that value
-                                           # AMK
-        if kwargs['delta'] is None:
-            # kwargs['delta'] = 0.004        # default value
-            v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
-            t_acc = 1.0  # acceleration time, default 1.0 s
-            kwargs['delta'] = t_acc * v  # distance the stage will travel in t_acc
+    kwargs.setdefault('xmotor', hf_stage.y)
+    kwargs.setdefault('ymotor', hf_stage.z)
+    kwargs.setdefault('flying_zebra', flying_zebra_y_xs2)
 
-    yield from scan_and_fly(*args, **kwargs,
-                            xmotor=hf_stage.y,
-                            ymotor=hf_stage.z,
-                            # xmotor=e_tomo.y,
-                            # ymotor=e_tomo.x,
-                            flying_zebra=flying_zebra_y_xs2,
-                            xs=xs2)
+    _xs = kwargs.pop('xs', xs2)
+    if extra_dets is None:
+        extra_dets = []
+    dets = [_xs] + extra_dets
+    yield from scan_and_fly_base(dets, *args, **kwargs)
 
 
-def scan_and_fly_xs2(*args, **kwargs):
+def scan_and_fly_xs2(*args, extra_dets=None, **kwargs):
     '''
     A copy of flying_zebra where the xspress3 mini is chosen to collect data on the X axis
     '''
 
-    if 'delta' in kwargs.keys():
-        # if kwargs['delta'] is not None:  # If delta is set in the arguments,
-                                           # then we should not override that value
-                                           # AMK
-        if kwargs['delta'] is None:
-            # kwargs['delta'] = 0.004        # default value
-            v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
-            t_acc = 1.0  # acceleration time, default 1.0 s
-            kwargs['delta'] = t_acc * v  # distance the stage will travel in t_acc
+    kwargs.setdefault('xmotor', hf_stage.x)
+    kwargs.setdefault('ymotor', hf_stage.y)
+    kwargs.setdefault('flying_zebra', flying_zebra_x_xs2)
 
-    yield from scan_and_fly(*args, **kwargs,
-                            xmotor=hf_stage.x,
-                            ymotor=hf_stage.y,
-                            # xmotor=e_tomo.x,
-                            # ymotor=e_tomo.y,
-                            flying_zebra=flying_zebra_x_xs2,
-                            xs=xs2)
+    _xs = kwargs.pop('xs', xs2)
+    if extra_dets is None:
+        extra_dets = []
+    dets = [_xs] + extra_dets
+    yield from scan_and_fly_base(dets, *args, **kwargs)
 
-def scan_and_fly_xs2_xz(*args, **kwargs):
+
+def scan_and_fly_xs2_xz(*args, extra_dets=None, **kwargs):
     '''
     A copy of flying_zebra where the xspress3 mini is chosen to collect data on the X axis
     '''
 
-    if 'delta' in kwargs.keys():
-        # if kwargs['delta'] is not None:  # If delta is set in the arguments,
-                                           # then we should not override that value
-                                           # AMK
-        if kwargs['delta'] is None:
-            # kwargs['delta'] = 0.004        # default value
-            v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"
-            t_acc = 1.0  # acceleration time, default 1.0 s
-            kwargs['delta'] = t_acc * v  # distance the stage will travel in t_acc
+    kwargs.setdefault('xmotor', hf_stage.x)
+    kwargs.setdefault('ymotor', hf_stage.z)
+    kwargs.setdefault('flying_zebra', flying_zebra_x_xs2)
 
-    yield from scan_and_fly(*args, **kwargs,
-                            xmotor=hf_stage.x,
-                            ymotor=hf_stage.z,
-                            # xmotor=e_tomo.x,
-                            # ymotor=e_tomo.y,
-                            flying_zebra=flying_zebra_x_xs2,
-                            xs=xs2)
+    _xs = kwargs.pop('xs', xs2)
+    if extra_dets is None:
+        extra_dets = []
+    dets = [_xs] + extra_dets
+    yield from scan_and_fly_base(dets, *args, **kwargs)
+
