@@ -22,11 +22,6 @@ proposal_title = 'Routine Setup and Testing for Beamline 5-ID'
 PI_lastname = 'Chu'
 saf_num = 304726
 
-# proposal_num = 305310
-# proposal_title = 'Imaging defects and strain in sapphire substrates of superconducting qubits'
-# PI_lastname = 'Lei'
-# saf_num = 304922
-
 
 logfilename_postfix = str(saf_num)
 
