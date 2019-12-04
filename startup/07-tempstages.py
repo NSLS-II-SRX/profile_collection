@@ -10,4 +10,5 @@ class XFMstage(Device):
     z = Cpt(EpicsMotor, 'Z}Mtr')
 
 
-stage = XFMstage('XF:05IDD-ES:1{Stg:XFM1-Ax:', name='stage')
+# stage = XFMstage('XF:05IDD-ES:1{Stg:XFM1-Ax:', name='stage')
+stage = XFMstage('XF:05IDD-ES:1{Mscp:1-Ax:', name='stage')
