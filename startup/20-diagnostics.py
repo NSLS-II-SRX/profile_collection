@@ -10,31 +10,6 @@ import time as ttime
 import threading
 
 
-hfm_cam = EpicsSignal('XF:05IDA-BI:1{FS:1-Cam:1}Acquire_RBV',
-                        write_pv='XF:05IDA-BI:1{FS:1-Cam:1}Acquire',
-                        name='hfm_cam_trigger')
-hfm_tot1 = EpicsSignal('XF:05IDA-BI:1{FS:1-Cam:1}Stats1:Total_RBV',
-                        name='hfm_tot1')
-bpm1_cam = EpicsSignal('XF:05IDA-BI:1{BPM:1-Cam:1}Acquire_RBV',
-                        write_pv='XF:05IDA-BI:1{Mir:1-Cam:1}Acquire',
-                        name='hfm_cam_trigger')
-bpm1_tot1 = EpicsSignal('XF:05IDA-BI:1{BPM:1-Cam:1}Stats1:Total_RBV',
-                         name='bpm1_tot1')
-# hfvlm_cam = EpicsSignal('XF:05IDD-BI:1{Mscp:1-Cam:1}cam1:Acquire_RBV',
-#                         write_pv='XF:05IDD-BI:1{Mscp:1-Cam:1}cam1:Acquire',
-#                         name='hfvlm_cam_trigger')
-hfvlm_cam = EpicsSignal('XF:05IDD-BI:1{Mscp:1-Cam:1}cam1:Acquire',
-                        write_pv='XF:05IDD-BI:1{Mscp:1-Cam:1}cam1:Acquire',
-                        name='hfvlm_cam_trigger')
-hfvlm_cam_tiff = EpicsSignal('XF:05IDD-BI:1{Mscp:1-Cam:1}TIFF1:Capture',
-                        write_pv='XF:05IDD-BI:1{Mscp:1-Cam:1}TIFF1:Capture',
-                        name='hfvlm_cam_tiff')
-#hfvlm_tot1 = EpicsSignal('XF:05IDD-BI:1{Mscp:1-Cam:1}Stats1:Total_RBV',
-#                         name='hfvlm_tot1')
-#hfvlm_tot3 = EpicsSignal('XF:05IDD-BI:1{Mscp:1-Cam:1}Stats3:Total_RBV',
-#                         name='hfvlm_tot3')
-
-
 ### BPM1 Statistics
 class BpmStats(Device):
     tot1 = Cpt(EpicsSignal, 'Stats1:Total_RBV')
