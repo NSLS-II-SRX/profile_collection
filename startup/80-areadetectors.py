@@ -72,32 +72,3 @@ class SRXPixirad(SingleTrigger,AreaDetector):
 #pixi.stats4.read_attrs = ['total','centroid','sigma_x','sigma_y']
 #pixi.tiff.read_attrs = []
 
-class SRXPCOEDGECam(SingleTrigger,AreaDetector):
-    cam = C(AreaDetectorCam, 'cam1:')
-    image_plugin = C(ImagePlugin, 'image1:')
-    stats1 = C(StatsPlugin, 'Stats1:')
-    stats2 = C(StatsPlugin, 'Stats2:')
-    stats3 = C(StatsPlugin, 'Stats3:')
-    stats4 = C(StatsPlugin, 'Stats4:')
-    stats5 = C(StatsPlugin, 'Stats5:')
-    roi1 = C(ROIPlugin, 'ROI1:')
-    roi2 = C(ROIPlugin, 'ROI2:')
-    roi3 = C(ROIPlugin, 'ROI3:')
-    roi4 = C(ROIPlugin, 'ROI4:')
-    tiff = C(SRXTIFFPlugin, 'TIFF1:',
-            read_path_template='/data/PCOEDGE/%Y/%m/%d/',
-             write_path_template='C:/epicsdata/pcoedge/%Y/%m/%d/',
-             root='/data')
-
-#pcoedge = SRXPCOEDGECam('XF:05IDD-ES:1{Det:PCO}',name='pcoedge')
-###    read_attrs=['tiff'])
-##pcoedge.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4', 'stats5', 'cam']
-#pcoedge.read_attrs = ['tiff', 'stats1', 'cam']
-#pcoedge.tiff.read_attrs = ['file_name']
-#pcoedge.stats1.read_attrs = ['total','centroid','sigma_x','sigma_y']
-#pcoedge.stats1.centroid.read_attrs = ['x','y']
-##pcoedge.stats1.read_attrs = ['total']
-##pcoedge.stats2.read_attrs = ['total']
-##pcoedge.stats3.read_attrs = ['total']
-##pcoedge.stats4.read_attrs = ['total']
-##pcoedge.stats4.read_attrs = ['total','sigma_x','sigma_y']

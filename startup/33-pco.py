@@ -29,7 +29,6 @@ class PCOEdgeCamV33(AreaDetectorCam):
             if hasattr(cpt, 'ensure_nonblocking'):
                 cpt.ensure_nonblocking()
     
-
 class SRXPCOEDGE(SingleTrigger, AreaDetector):
     cam = C(PCOEdgeCamV33, 'cam1:')
     image_plugin = C(ImagePlugin, 'image1:')
@@ -48,5 +47,11 @@ class SRXPCOEDGE(SingleTrigger, AreaDetector):
             root='/nsls2/xf05id1/XF05ID1/')
 
 
-# pcoedge = SRXPCOEDGE('XF05IDD-ES{PCO:1}:', name='pcoedge')
-# pcoedge.cam.ensure_nonblocking()
+try:
+    pcoedge = SRXPCOEDGE('XF05IDD-ES{PCO:1}:', name='pcoedge')
+    pcoedge.cam.ensure_nonblocking()
+except TimeoutError:
+    print('\nCannot connect to PCO Edge. Continuing without device.\n')
+except:
+    print('\nUnexpected error connecting to PCO Edge.\n', sys.exc_info()[0], end='\n\n')
+
