@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Oct 24 19:45:48 2016
-
-@author: xf05id1
-"""
-
 from ophyd import EpicsSignal
 
 def cryofill(wait_time_after_v19_claose = 60*10):
