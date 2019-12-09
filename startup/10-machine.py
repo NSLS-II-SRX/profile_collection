@@ -123,6 +123,11 @@ class InsertionDevice(Device, PositionerBase):
         return self.gap.subscribe(inner, *args, **kwargs)
 
 
+def retune_undulator():
+    energy.detune.put(0.)
+    energy.move(energy.energy.get()[0])
+
+
 ### Setup energy axis
 class Energy(PseudoPositioner):
     # Synthetic axis
