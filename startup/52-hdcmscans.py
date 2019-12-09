@@ -182,19 +182,6 @@ def braggcalib(scanlogDic = {}, use_xrf = False):
     print('Bragg RBV offset:', fitted_dcm[1])
 
 
-# Simple Gaussian
-def gaussian(x, A, sigma, x0):
-    return A*np.exp(-(x - x0)**2/(2 * sigma**2))
-
-# More complete Gaussian with offset and slope
-def f_gauss(x, A, sigma, x0, y0, m):
-    return y0 + m*x + A*np.exp(-(x - x0)**2/(2 * sigma**2))
-
-# Integral of the Gaussian function with slope and offset
-def f_int_gauss(x, A, sigma, x0, y0, m):
-    x_star = (x - x0) / sigma
-    return A * erf(x_star / np.sqrt(2)) + y0 + m*x
-
 def peakup_dcm(correct_roll=True, plot=False, shutter=True, use_calib=False):
     """
 
