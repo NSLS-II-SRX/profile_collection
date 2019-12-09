@@ -574,7 +574,7 @@ it requires the HDCM Bragg is calibrated and the d111 and dBragg in SRXenergy sc
 
 converting to be compatible with bluesky, still editing
 """
-import SRXenergy  # Not used in this file
+# import SRXenergy  # Not used in this file
 from epics import caget  # caput/get should not be used
 from epics import caput
 from epics import PV  # PV should probably be changed to EpicsSignalRO
@@ -586,7 +586,7 @@ import scipy as sp
 import scipy.optimize
 import math
 import numpy as np
-import srxbpm  # Not used in this file
+# import srxbpm  # Not used in this file
 
 def hdcm_c1roll_c2x_calibration():
     onlyplot = False
