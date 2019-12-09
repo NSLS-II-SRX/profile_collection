@@ -1,3 +1,5 @@
+print(f'Loading {__file__}...')
+
 from ophyd.areadetector import AreaDetector, SingleTrigger, HDF5Plugin
 from ophyd.areadetector.cam import AreaDetectorCam
 from ophyd.areadetector.plugins import ROIPlugin, StatsPlugin, ImagePlugin

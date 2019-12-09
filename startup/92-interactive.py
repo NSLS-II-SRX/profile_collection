@@ -1,3 +1,5 @@
+print(f'Loading {__file__}...')
+
 import matplotlib.widgets as mwidgets
 import matplotlib.dates as mdates
 from collections import defaultdict

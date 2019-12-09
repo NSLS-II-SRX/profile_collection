@@ -1,3 +1,5 @@
+print(f'Loading {__file__}...')
+
 from bluesky.suspenders import SuspendFloor, SuspendCeil, SuspendBoolHigh, SuspendBoolLow
 import bluesky.plans as bp
 import bluesky.plan_stubs as bps

@@ -1,3 +1,5 @@
+print(f'Loading {__file__}...')
+
 from bluesky.callbacks import CallbackBase,LivePlot
 from xray_vision.backend.mpl.cross_section_2d import CrossSection
 

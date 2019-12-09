@@ -1,3 +1,5 @@
+print(f'Loading {__file__}...')
+
 from ophyd import EpicsSignal
 
 def cryofill(wait_time_after_v19_claose = 60*10):

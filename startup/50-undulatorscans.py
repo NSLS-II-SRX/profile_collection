@@ -1,3 +1,5 @@
+print(f'Loading {__file__}...')
+
 # -*- coding: utf-8 -*-
 """
 Created on Mon Jun  6 18:48:07 2016

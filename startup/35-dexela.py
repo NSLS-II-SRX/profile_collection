@@ -1,3 +1,5 @@
+print(f'Loading {__file__}...')
+
 import os
 import ophyd
 from hxntools.detectors.dexela import (DexelaDetector,)

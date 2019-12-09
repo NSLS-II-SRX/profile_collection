@@ -1,3 +1,5 @@
+print(f'Loading {__file__}...')
+
 from bluesky.plans import list_scan
 import bluesky.plans as bp
 from bluesky.plan_stubs import mv

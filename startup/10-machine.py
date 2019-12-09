@@ -1,3 +1,5 @@
+print(f'Loading {__file__}...')
+
 import os
 import numpy as np
 from ophyd import (PVPositioner, EpicsSignal, EpicsSignalRO, EpicsMotor,

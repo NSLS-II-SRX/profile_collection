@@ -1,3 +1,5 @@
+print(f'Loading {__file__}...')
+
 from ophyd import ProsilicaDetector, EpicsSignal, Device, EpicsScaler, TetrAMM, EpicsSignalRO
 from ophyd import Component as Cpt
 from ophyd.device import (Component as C, DynamicDeviceComponent as DDC)

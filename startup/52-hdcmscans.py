@@ -1,3 +1,5 @@
+print(f'Loading {__file__}...')
+
 import numpy
 import string
 from matplotlib import pyplot
