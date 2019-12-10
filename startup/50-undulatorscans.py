@@ -15,12 +15,12 @@ def bpmAD_exposuretime_adjust():
     if (maxct < 150):
         while(bpmAD.stats1.max_value.get() <= 170):
             current_exptime = bpmAD.cam.acquire_time.value
-            yield from abs_set(bpmAD.cam.acquire_time, current_exptime + 0.0005, wait=True)
+            bpmAD.cam.acquire_time.put(current_exptime + 0.0005)
             yield from bps.sleep(0.5)
     elif (maxct > 170):
         while(bpmAD.stats1.max_value.get() >= 150):
             current_exptime = bpmAD.cam.acquire_time.value
-            yield from abs_set(bpmAD.cam.acquire_time, current_exptime - 0.0005, wait=True)
+            bpmAD.cam.acquire_time.put(current_exptime - 0.0005)
             yield from bps.sleep(0.5)
 
 
@@ -42,7 +42,7 @@ def undulator_calibration(outfile=None,
 
     # Format a default filename
     if (outfile is None):
-        outfile = '%s_SRXUgapCalibration.txt' % (datetime.datetime.now().strftime('%Y%m%d'))
+g       outfile = '%s_SRXUgapCalibration.txt' % (datetime.datetime.now().strftime('%Y%m%d'))
 
     # Check if the file exists
     if (not os.path.exists(UCalibDir + outfile)):
@@ -56,7 +56,7 @@ def undulator_calibration(outfile=None,
     bragg_scanpoint = int(bragg_scanwidth * 2 / energy_res + 1)
     harmonic = 3
 
-    yield from abs_set(energy.harmonic, harmonic)
+    energy.harmonic.put(harmonic)
     
     # Generate lookup table by scanning Bragg at each undulator gap set point
     for u_gap_setpoint in np.arange(u_gap_start, u_gap_end+u_gap_step, u_gap_step):
@@ -67,13 +67,13 @@ def undulator_calibration(outfile=None,
         print('Move u_gap to:\t', u_gap_setpoint)
         print('Move Bragg energy to:\t', energy_setpoint)
         
-        yield from abs_set(energy.move_c2_x, False, wait=True)
-        yield from abs_set(energy.move_u_gap, True, wait=True)
+        energy.move_c2_x.put(False)
+        energy.move_u_gap.put(True)
         yield from bps.sleep(0.2)    
         yield from mv(energy, energy_setpoint)
 
         yield from bpmAD_exposuretime_adjust()    
-        yield from abs_set(energy.move_u_gap, False, wait=True)
+        energy.move_u_gap.put(False)
 
         # Setup LiveCallbacks
         liveplotfig1 = plt.figure()
