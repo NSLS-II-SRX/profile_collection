@@ -42,7 +42,7 @@ def undulator_calibration(outfile=None,
 
     # Format a default filename
     if (outfile is None):
-g       outfile = '%s_SRXUgapCalibration.txt' % (datetime.datetime.now().strftime('%Y%m%d'))
+        outfile = '%s_SRXUgapCalibration.txt' % (datetime.datetime.now().strftime('%Y%m%d'))
 
     # Check if the file exists
     if (not os.path.exists(UCalibDir + outfile)):
