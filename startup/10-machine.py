@@ -2,10 +2,9 @@ print(f'Loading {__file__}...')
 
 import os
 import numpy as np
-from ophyd import (PVPositioner, EpicsSignal, EpicsSignalRO, EpicsMotor,
+from ophyd import (EpicsSignal, EpicsSignalRO, EpicsMotor,
                    Device, Signal, PseudoPositioner, PseudoSingle)
 from ophyd.utils.epics_pvs import set_and_wait
-from ophyd.ophydobj import MoveStatus
 from ophyd.pseudopos import (pseudo_position_argument, real_position_argument)
 from ophyd.positioner import PositionerBase
 from ophyd import Component as Cpt
@@ -13,10 +12,11 @@ from ophyd import Component as Cpt
 from scipy.interpolate import InterpolatedUnivariateSpline
 import functools
 import math
-import uuid
 
-# For organization, this file will define objects for the machine. This will
-# include the undulator (and energy axis) and front end slits.
+'''
+For organization, this file will define objects for the machine. This will
+include the undulator (and energy axis) and front end slits.
+'''
 
 
 ### Constants
@@ -25,17 +25,14 @@ ANG_OVER_EV = 12.3984
 
 ### Signals
 ring_current = EpicsSignalRO('SR:C03-BI{DCCT:1}I:Real-I', name='ring_current')
-# Move this to cryo?
-cryo_v19 = EpicsSignal('XF:05IDA-UT{Cryo:1-IV:19}Sts-Sts', name='cryo_v19')
 
 
-# Is this used?
-_undulator_kwargs = dict(name='ivu1_gap', read_attrs=['readback'],
-                         calib_path='/nfs/xf05id1/UndulatorCalibration/',
-                         calib_file='SRXUgapCalibration20170612.txt',
-                         configuration_attrs=['corrfunc_sta', 'pos', 'girder',
-                                              'real_pos', 'elevation'])
-
+# Is this used? First test by commenting out this dictionary
+# _undulator_kwargs = dict(name='ivu1_gap', read_attrs=['readback'],
+#                          calib_path='/nfs/xf05id1/UndulatorCalibration/',
+#                          calib_file='SRXUgapCalibration20170612.txt',
+#                          configuration_attrs=['corrfunc_sta', 'pos', 'girder',
+#                                               'real_pos', 'elevation'])
 
 
 ### Setup undulator
@@ -96,7 +93,6 @@ class InsertionDevice(Device, PositionerBase):
         return self.gap.high_limit
 
     def move(self, *args, moved_cb=None, **kwargs):
-
         if moved_cb is not None:
             @functools.wraps(moved_cb)
             def inner(obj=None):
@@ -146,9 +142,6 @@ class Energy(PseudoPositioner):
     move_c2_x = Cpt(Signal, None, add_prefix=(), value=True)
     harmonic = Cpt(Signal, None, add_prefix=(), value=0, kind='config')
     selected_harmonic = Cpt(Signal, None, add_prefix=(), value=0)
-
-    # Is this duplicated?
-    c2pitch_kill = EpicsSignal("XF:05IDA-OP:1{Mono:HDCM-Ax:P2}Cmd:Kill-Cmd")
 
     # Experimental
     detune = Cpt(Signal, None, add_prefix=(), value=0)
@@ -375,7 +368,7 @@ class SRXSlitsFE(Device):
 fe = SRXSlitsFE('FE:C05A-OP{Slt:', name='fe')
 
 
-# Is this needed here? Can it be moved to 00-setup?
-_time_fmtstr = '%Y-%m-%d %H:%M:%S'
+# Is this needed here? Testing removal
+# _time_fmtstr = '%Y-%m-%d %H:%M:%S'
 
 

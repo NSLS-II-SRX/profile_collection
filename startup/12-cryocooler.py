@@ -2,6 +2,9 @@ print(f'Loading {__file__}...')
 
 from ophyd import EpicsSignal
 
+# Move this to cryo?
+cryo_v19 = EpicsSignal('XF:05IDA-UT{Cryo:1-IV:19}Sts-Sts', name='cryo_v19')
+
 def cryofill(wait_time_after_v19_claose = 60*10):
     cryo_v19_possp = EpicsSignal('XF:05IDA-UT{Cryo:1-IV:19}Pos-SP', name='cryov19_possp')
     cryo_v19_possp.set(100)
