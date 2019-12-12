@@ -1,6 +1,7 @@
 print(f'Loading {__file__}...')
 
-from ophyd import EpicsMotor, EpicsSignalRO, EpicsSignal, PVPositionerPC
+
+from ophyd import EpicsMotor, EpicsSignal
 from ophyd import Device
 from ophyd import Component as Cpt
 
@@ -35,6 +36,7 @@ class SRXMICROKB(Device):
     KBh_pitch = Cpt(EpicsMotor, 'KBv-Ax:Pitch}Mtr')
     KBh_USB = Cpt(EpicsMotor, 'KBv-Ax:UsB}Mtr')
     KBh_DSB = Cpt(EpicsMotor, 'KBv-Ax:DsB}Mtr')
+
 microKB = SRXMICROKB('XF:05IDD-OP:1{Mir:', name='microKB')
 
 

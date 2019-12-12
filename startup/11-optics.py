@@ -1,10 +1,10 @@
 print(f'Loading {__file__}...')
 
+import numpy as np
 from ophyd import EpicsMotor, EpicsSignal, EpicsSignalRO
 from ophyd import Device
 from ophyd import Component as Cpt
 from ophyd import PVPositionerPC
-from numpy import int16
 from nslsii.devices import TwoButtonShutter
 
 
@@ -40,10 +40,10 @@ class SRXSlitsPB(Device):
 slt_wb = SRXSlitsWB('XF:05IDA-OP:1{Slt:1-Ax:', name='slt_wb')
 slt_pb = SRXSlitsPB('XF:05IDA-OP:1{Slt:2-Ax:', name='slt_pb')
 
-# Is this used?
-class SRXSlits2(Device):
-    inb = Cpt(EpicsMotor, 'I}Mtr')
-    out = Cpt(EpicsMotor, 'O}Mtr')
+# Is this used? Commented out before removing
+# class SRXSlits2(Device):
+#     inb = Cpt(EpicsMotor, 'I}Mtr')
+#     out = Cpt(EpicsMotor, 'O}Mtr')
 
 
 ### Setup HFM Mirror
@@ -148,7 +148,7 @@ slt_ssa = SRXSSACalc('XF:05IDB-OP:1{Slt:SSA-Ax:',name='slt_ssa')
 #     iobit = Cpt(EpicsSignalRO,':SYS_STAT1LO')
 #     def status(self):
 #         self.low_cmd()
-#         shutopen = bool(int16(self.iobit.get()) & int16(2))
+#         shutopen = bool(np.int16(self.iobit.get()) & np.int16(2))
 #         if shutopen is True:
 #             return 'Open'
 #         else:

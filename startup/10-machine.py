@@ -27,14 +27,6 @@ ANG_OVER_EV = 12.3984
 ring_current = EpicsSignalRO('SR:C03-BI{DCCT:1}I:Real-I', name='ring_current')
 
 
-# Is this used? First test by commenting out this dictionary
-# _undulator_kwargs = dict(name='ivu1_gap', read_attrs=['readback'],
-#                          calib_path='/nfs/xf05id1/UndulatorCalibration/',
-#                          calib_file='SRXUgapCalibration20170612.txt',
-#                          configuration_attrs=['corrfunc_sta', 'pos', 'girder',
-#                                               'real_pos', 'elevation'])
-
-
 ### Setup undulator
 class InsertionDevice(Device, PositionerBase):
     gap = Cpt(EpicsMotor, '-Ax:Gap}-Mtr',
@@ -366,9 +358,4 @@ class SRXSlitsFE(Device):
     out = Cpt(EpicsMotor, '4-Ax:O}Mtr')
 
 fe = SRXSlitsFE('FE:C05A-OP{Slt:', name='fe')
-
-
-# Is this needed here? Testing removal
-# _time_fmtstr = '%Y-%m-%d %H:%M:%S'
-
 
