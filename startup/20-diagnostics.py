@@ -1,15 +1,10 @@
 print(f'Loading {__file__}...')
 
-from ophyd import ProsilicaDetector, EpicsSignal, Device, EpicsScaler, TetrAMM, EpicsSignalRO
+
+from ophyd import EpicsSignal, EpicsSignalRO, Device, TetrAMM
 from ophyd import Component as Cpt
-from ophyd.device import (Component as C, DynamicDeviceComponent as DDC)
 from ophyd.ophydobj import StatusBase
 from ophyd.status import wait
-from hxntools.detectors.zebra import Zebra, EpicsSignalWithRBV
-from collections import OrderedDict
-
-import time as ttime
-import threading
 
 
 ### BPM1 Statistics
@@ -82,57 +77,4 @@ class SlitDrainCurrent(Device):
 wbs = SlitDrainCurrent('XF:05IDA-BI{BPM:01}AH501:', name='wbs')
 pbs= SlitDrainCurrent('XF:05IDA-BI{BPM:02}AH501:', name='pbs')
 ssa = SlitDrainCurrent('XF:05IDA-BI{BPM:05}AH501:', name='ssa')
-
-
-
-### This device is no longer used
-# Commenting out before deleting
-# class CurrentPreamp(Device):
-#     ch0 = Cpt(EpicsSignalRO, 'Cur:I0-I')
-#     ch1 = Cpt(EpicsSignalRO, 'Cur:I1-I')
-#     ch2 = Cpt(EpicsSignalRO, 'Cur:I2-I')
-#     ch3 = Cpt(EpicsSignalRO, 'Cur:I3-I')
-# 
-#     exp_time = Cpt(EpicsSignal, 'Per-SP')
-#     initi_trigger = Cpt(EpicsSignal, 'Cmd:Init')
-#     event_receiver = Cpt(EpicsSignal,
-#                          'XF:05IDD-ES:1{EVR:1-Out:FP3}Src:Scale-SP',
-#                          add_prefix=())
-# 
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#         self.stage_sigs[self.event_receiver] = 'Force Low'
-#         #self.stage_sigs[self.initi_trigger] = 1 #this somewhat did not work
-# 
-#     def stage(self):
-# 
-#         # Customize what is done before every scan (and undone at the end)
-#         # self.stage_sigs[self.trans_diode] = 5
-#         # or just use pyepics directly if you need to
-#         ret = super().stage()
-#         self.initi_trigger.put(1, wait=True)
-#         wait(self.trigger())
-#         return ret
-# 
-#     def trigger(self):
-#         init_ts = self.ch0.timestamp
-#         self.event_receiver.put('Force Low', wait=True)
-#         self.event_receiver.put('Force High', wait=True)
-#         self.event_receiver.put('Force Low')
-#         ret = DeviceStatus(self)
-# 
-#         def done_cb(*args, obj=None, old_value=None, value=None,
-#                     timestamp=None, **kwargs):
-#             #print('init ts: {!r}    cur ts : {!r}'.format(init_ts, timestamp))
-#             #print('old value: {!r}    new value : {!r}'.format(init_ts,
-#             #                                                   timestamp))
-# 
-#             # if the timestamp or the value has changed, assume it is done
-#             if (timestamp != init_ts) or (value != old_value):
-#                 ret._finished()
-#                 obj.clear_sub(done_cb)
-# 
-#         self.ch0.subscribe(done_cb, event_type=self.ch0.SUB_VALUE, run=True)
-# 
-#         return ret
 

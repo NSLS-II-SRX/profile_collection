@@ -1,15 +1,16 @@
 print(f'Loading {__file__}...')
 
-from ophyd import EpicsSignal, Device, EpicsScaler, EpicsSignalRO
+
+from ophyd import Device, EpicsScaler, EpicsSignal, EpicsSignalRO
 from ophyd import Component as Cpt
-from ophyd.device import (Component as C, DynamicDeviceComponent as DDC)
-from ophyd.ophydobj import StatusBase
+from ophyd.device import DynamicDeviceComponent as DDC
 from collections import OrderedDict
 
 
 class EpicsSignalROLazyier(EpicsSignalRO):
     def get(self, *args, timeout=5, **kwargs):
         return super().get(*args, timeout=timeout, **kwargs)
+
 
 def _scaler_fields(attr_base, field_base, range_, **kwargs):
     defn = OrderedDict()
@@ -71,14 +72,15 @@ class SRXScaler(EpicsScaler):
 
 sclr1 = SRXScaler('XF:05IDD-ES:1{Sclr:1}',name='sclr1')
 sclr1.read_attrs = ['channels.chan2','channels.chan3','channels.chan4']
+
 i0_channel = getattr(sclr1.channels,'chan2')
 i0_channel.name = 'sclr_i0'
 it_channel = getattr(sclr1.channels,'chan4')
 it_channel.name = 'sclr_it'
 im_channel = getattr(sclr1.channels,'chan3')
 im_channel.name = 'sclr_im'
+
 i0 = sclr1.channels.chan2
 it = sclr1.channels.chan4
 im = sclr1.channels.chan3
-
 

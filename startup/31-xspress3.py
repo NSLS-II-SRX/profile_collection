@@ -1,30 +1,13 @@
 print(f'Loading {__file__}...')
 
-from ophyd.areadetector import (AreaDetector, PixiradDetectorCam, ImagePlugin,
-                                TIFFPlugin, StatsPlugin, HDF5Plugin,
-                                ProcessPlugin, ROIPlugin, TransformPlugin,
-                                OverlayPlugin)
+
+import h5py
 from ophyd.areadetector.plugins import PluginBase
-from ophyd.areadetector.cam import AreaDetectorCam
-from ophyd.device import BlueskyInterface
-from ophyd.areadetector.trigger_mixins import SingleTrigger
-from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
-                                                 FileStoreHDF5IterativeWrite,
-                                                 FileStoreTIFFSquashing,
-                                                 FileStoreTIFF,
-                                                 FileStoreHDF5, new_short_uid,
-                                                 FileStoreBase
-                                                 )
 from ophyd import Signal
 from ophyd import Component as C
-from hxntools.detectors.merlin import MerlinDetector
-from hxntools.handlers import register
-import itertools
 
-from pathlib import PurePath
 from hxntools.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
-                                         Xspress3Channel, Xspress3FileStore,
-                                         logger)
+                                         Xspress3Channel, Xspress3FileStore)
 from databroker.assets.handlers import Xspress3HDF5Handler, HandlerBase
 from ophyd.areadetector.filestore_mixins import FileStorePluginBase
 
@@ -37,9 +20,9 @@ class BulkXSPRESS(HandlerBase):
     def __call__(self):
         return self._handle['entry/instrument/detector/data'][:]
 
-
 db.reg.register_handler(BulkXSPRESS.HANDLER_NAME, BulkXSPRESS,
                         overwrite=True)
+
 
 class Xspress3FileStoreFlyable(Xspress3FileStore):
     def __init__(self, *args, **kwargs):
@@ -76,7 +59,7 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
         Also modified the stage sigs.
 
         """
-        print("warming up the hdf5 plugin...")
+        print("Warming up the hdf5 plugin...", end='')
         set_and_wait(self.enable, 1)
         sigs = OrderedDict([(self.parent.settings.array_callbacks, 1),
                             (self.parent.settings.image_mode, 'Single'),
@@ -114,7 +97,6 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
             return super().describe()
 
 
-
 class SRXXspressTrigger(XspressTrigger):
     def trigger(self):
         if self._staged != Staged.yes:
@@ -135,6 +117,7 @@ class SRXXspressTrigger(XspressTrigger):
             raise Exception(f"unexpected mode {self._mode}")
         self._abs_trigger_count += 1
         return self._status
+
 
 class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
     # TODO: garth, the ioc is missing some PVs?

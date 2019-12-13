@@ -1,16 +1,12 @@
 print(f'Loading {__file__}...')
 
-from ophyd.areadetector import (AreaDetector, PixiradDetectorCam, ImagePlugin,
-                                TIFFPlugin, StatsPlugin, HDF5Plugin,
-                                ProcessPlugin, ROIPlugin, TransformPlugin,
+
+from ophyd.areadetector import (AreaDetector, ImagePlugin,
+                                TIFFPlugin, StatsPlugin, 
+                                ROIPlugin, TransformPlugin,
                                 OverlayPlugin)
 from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
-                                                 FileStoreHDF5IterativeWrite,
-                                                 FileStoreTIFFSquashing,
-                                                 FileStoreTIFF,
-                                                 FileStoreHDF5, new_short_uid,
-                                                 FileStoreBase
-                                                 )
+                                                 FileStoreTIFF)
 from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.areadetector.cam import AreaDetectorCam
 
@@ -39,6 +35,7 @@ class SRXTIFFPlugin(TIFFPlugin, FileStoreTIFF,
                     FileStoreIterativeWrite):
     file_number_sync = None
 
+
 class BPMCam(SingleTrigger, AreaDetector):
     cam = C(AreaDetectorCam, '')
     image_plugin = C(ImagePlugin, 'image1:')
@@ -59,7 +56,8 @@ class BPMCam(SingleTrigger, AreaDetector):
     stats4 = C(StatsPlugin, 'Stats4:')
     # this is flakey?
     # stats5 = C(StatsPlugin, 'Stats5:')
-    pass
+    # pass  # is this needed?
+
 
 bpmAD = BPMCam('XF:05IDA-BI:1{BPM:1-Cam:1}', name='bpmAD', read_attrs=[])
 bpmAD.read_attrs = ['stats1', 'stats2', 'stats3', 'stats4']
@@ -70,7 +68,8 @@ bpmAD.stats4.read_attrs = ['total']
 
 
 ### HF VLM
-class SRXHFVLMCam(SingleTrigger,AreaDetector):
+# Does this belong here or in microES?
+class SRXHFVLMCam(SingleTrigger, AreaDetector):
     cam = C(AreaDetectorCam, '')
     image_plugin = C(ImagePlugin, 'image1:')
     stats1 = C(StatsPlugin, 'Stats1:')
@@ -89,11 +88,11 @@ class SRXHFVLMCam(SingleTrigger,AreaDetector):
              write_path_template='/nsls2/xf05id1/data/hfvlm/%Y/%m/%d/',
              root='/nsls2/xf05id1')
 
-# hfvlmAD = SRXHFVLMCam('XF:05IDD-BI:1{Mscp:1-Cam:1}', name='hfvlm', read_attrs=['tiff'])
-# hfvlmAD.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
-# hfvlmAD.tiff.read_attrs = []
-# hfvlmAD.stats1.read_attrs = ['total']
-# hfvlmAD.stats2.read_attrs = ['total']
-# hfvlmAD.stats3.read_attrs = ['total']
-# hfvlmAD.stats4.read_attrs = ['total']
+hfvlmAD = SRXHFVLMCam('XF:05IDD-BI:1{Mscp:1-Cam:1}', name='hfvlm', read_attrs=['tiff'])
+hfvlmAD.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
+hfvlmAD.tiff.read_attrs = []
+hfvlmAD.stats1.read_attrs = ['total']
+hfvlmAD.stats2.read_attrs = ['total']
+hfvlmAD.stats3.read_attrs = ['total']
+hfvlmAD.stats4.read_attrs = ['total']
 

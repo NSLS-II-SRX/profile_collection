@@ -1,13 +1,10 @@
 print(f'Loading {__file__}...')
 
-from ophyd import EpicsSignal, Device, EpicsScaler, EpicsSignalRO
-from ophyd import Component as Cpt
-from ophyd.device import (Component as C, DynamicDeviceComponent as DDC)
-from ophyd.ophydobj import StatusBase
-from hxntools.detectors.zebra import Zebra, EpicsSignalWithRBV
-from collections import OrderedDict
 
 import threading
+from ophyd import Device, EpicsSignal, EpicsSignalRO
+from ophyd import Component as Cpt
+from hxntools.detectors.zebra import Zebra, EpicsSignalWithRBV
 
 
 class CurrentPreampZebra(Device):
