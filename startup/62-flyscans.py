@@ -20,10 +20,12 @@ print(f'Loading {__file__}...')
 #
 
 
-import numpy as np
+import os
 import uuid
 import h5py
+import numpy as np
 import time as ttime
+from collections import ChainMap
 
 from ophyd import Device
 from ophyd.sim import NullStatus
@@ -37,8 +39,6 @@ from bluesky.plan_stubs import (one_1d_step, kickoff, collect,
                                 complete, abs_set, mv, checkpoint)
 from bluesky.plans import (scan, )
 from bluesky.callbacks import CallbackBase, LiveGrid
-
-from collections import ChainMap
 
 from hxntools.handlers import register
 register(db)
@@ -60,7 +60,7 @@ def tic():
 
 def toc(t0, str=''):
     dt = ttime.monotonic() - t0
-    # print('%s: dt = %f' % (str, dt))
+    print('%s: dt = %f' % (str, dt))
     return
 
 
@@ -311,7 +311,7 @@ class SRXFlyer1Axis(Device):
         # Yield a (partial) Event document. The RunEngine will put this
         # into metadatastore, as it does all readings.
         self._last_bulk =  {
-            'time': time.time(), 'seq_num': 1,
+            'time': ttime.time(), 'seq_num': 1,
             'data': {'time': time_datum['datum_id'],
                      'enc1': enc1_datum['datum_id'],
                      'i0': sis_datum['datum_id'],
@@ -444,10 +444,10 @@ def export_sis_data(ion, filepath):
         it= ion.mca4.get(timeout=5.)
 
     correct_length = zebra.pc.data.num_down.get()
-    size = (len(t),)
-    size2 = (len(i),)
-    size3 = (len(im),)
-    size4 = (len(it),)
+    # size = (len(t),)
+    # size2 = (len(i),)
+    # size3 = (len(im),)
+    # size4 = (len(it),)
     with h5py.File(filepath, 'w') as f:
         if len(t) != correct_length:
             correction_factor = (correct_length-len(t))
