@@ -30,12 +30,11 @@ logfilename_postfix = str(saf_num)
 cycle = '2019_cycle3'
 
 
-RE.md['proposal']  = {  'proposal_num': str(proposal_num),
-                         'proposal_title': str(proposal_title),
-                            'PI_lastname': str(PI_lastname),
-                                'saf_num': str(saf_num),
-                                  'cycle': str(cycle)
-                        }
+RE.md['proposal']  = {'proposal_num': str(proposal_num),
+                      'proposal_title': str(proposal_title),
+                      'PI_lastname': str(PI_lastname),
+                      'saf_num': str(saf_num),
+                      'cycle': str(cycle)}
 
 # Changed from NFS to GPFS
 # userdatadir = '/nfs/xf05id1/userdata/'+str(cycle)+'/'+str(saf_num)+'_'+str(PI_lastname)+'/'
@@ -91,7 +90,7 @@ def logscan_event0info(scantype, event0info = []):
     userlogf.write('\n')
     userlogf.close()
 
-def metadata_record(scan_md):
+def get_stock_md(scan_md):
     scan_md['beamline_status']  = {'energy':  energy.energy.position}
     scan_md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
                                           'hf_stage_y': hf_stage.y.position,
@@ -140,7 +139,7 @@ def timestamp_batchoutput(filename = 'timestamplog.text', initial_scanid = None,
         for scanid in range(initial_scanid, final_scanid+1):
             f.write(str(scanid)+'\n')
             try:
-                start_t, stop_t = scantime(scanid)
+                _, _, start_t, stop_t = scantime(scanid)
                 f.write(start_t)
                 f.write('\n')
                 f.write(stop_t)
