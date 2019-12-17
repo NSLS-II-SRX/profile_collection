@@ -199,7 +199,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     # Record relevant meta data in the Start document, defined in 90-usersetup.py
     # Add user meta data
     scan_md = {}
-    metadata_record(scan_md)
+    get_stock_md(scan_md)
     scan_md['sample'] = {'name' : samplename}
     scan_md['scaninfo'] = {'type' : 'XANES', 
                            'ROI' : roinum, 
