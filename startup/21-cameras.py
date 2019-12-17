@@ -9,6 +9,7 @@ from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreTIFF)
 from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.areadetector.cam import AreaDetectorCam
+from ophyd.device import Component as C
 
 
 ### Triggers for HFM/BPM1/HF VLM cameras
@@ -88,11 +89,18 @@ class SRXHFVLMCam(SingleTrigger, AreaDetector):
              write_path_template='/nsls2/xf05id1/data/hfvlm/%Y/%m/%d/',
              root='/nsls2/xf05id1')
 
-hfvlmAD = SRXHFVLMCam('XF:05IDD-BI:1{Mscp:1-Cam:1}', name='hfvlm', read_attrs=['tiff'])
-hfvlmAD.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
-hfvlmAD.tiff.read_attrs = []
-hfvlmAD.stats1.read_attrs = ['total']
-hfvlmAD.stats2.read_attrs = ['total']
-hfvlmAD.stats3.read_attrs = ['total']
-hfvlmAD.stats4.read_attrs = ['total']
+try:
+    hfvlmAD = SRXHFVLMCam('XF:05IDD-BI:1{Mscp:1-Cam:1}', name='hfvlm', read_attrs=['tiff'])
+    hfvlmAD.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
+    hfvlmAD.tiff.read_attrs = []
+    hfvlmAD.stats1.read_attrs = ['total']
+    hfvlmAD.stats2.read_attrs = ['total']
+    hfvlmAD.stats3.read_attrs = ['total']
+    hfvlmAD.stats4.read_attrs = ['total']
+except TimeoutError:
+    hfvlmAD = None
+    print('\nCannot connect to HF VLM Camera. Continuing without device.\n')
+except:
+    hfvlmAD = None
+    print('\nUnexpected error connecting to HF VLM Camera.\n', sys.exc_info()[0], end='\n\n')
 

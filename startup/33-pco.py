@@ -2,11 +2,11 @@ print(f'Loading {__file__}...')
 
 from ophyd.areadetector import AreaDetector, SingleTrigger, HDF5Plugin
 from ophyd.areadetector.cam import AreaDetectorCam
-from ophyd.areadetector.plugins import ROIPlugin, StatsPlugin, ImagePlugin
+from ophyd.areadetector.plugins import ROIPlugin, ImagePlugin
 from ophyd import Component as C
 from ophyd.areadetector.filestore_mixins import FileStoreHDF5IterativeWrite
+from nslsii.ad33 import StatsPluginV33
 
-from nslsii.ad33 import SingleTriggerV33, StatsPluginV33, CamV33Mixin
 
 class HDF5PluginWithFileStore(HDF5Plugin, FileStoreHDF5IterativeWrite):
     file_number_sync = None
@@ -30,7 +30,8 @@ class PCOEdgeCamV33(AreaDetectorCam):
                 continue
             if hasattr(cpt, 'ensure_nonblocking'):
                 cpt.ensure_nonblocking()
-    
+
+
 class SRXPCOEDGE(SingleTrigger, AreaDetector):
     cam = C(PCOEdgeCamV33, 'cam1:')
     image_plugin = C(ImagePlugin, 'image1:')
@@ -47,7 +48,6 @@ class SRXPCOEDGE(SingleTrigger, AreaDetector):
             read_path_template=r'/nsls2/xf05id1/XF05ID1/PCO/%Y/%m/%d/',
             write_path_template=r'Z:\%Y\%m\%d\\',
             root='/nsls2/xf05id1/XF05ID1/')
-
 
 try:
     pcoedge = SRXPCOEDGE('XF05IDD-ES{PCO:1}:', name='pcoedge')
