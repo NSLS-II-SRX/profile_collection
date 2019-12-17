@@ -2,6 +2,8 @@ print(f'Loading {__file__}...')
 
 
 import h5py
+import sys
+import time as ttime
 from ophyd.areadetector.plugins import PluginBase
 from ophyd import Signal
 from ophyd import Component as C
