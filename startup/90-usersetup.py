@@ -91,27 +91,22 @@ def logscan_event0info(scantype, event0info = []):
     userlogf.write('\n')
     userlogf.close()
 
-def metadata_record():
-    RE.md['beamline_status']  = {'energy':  energy.energy.position
-                                #'slt_wb': str(slt_wb.position),
-                                #'slt_ssa': str(slt_ssa.position)
-                                }
-
-    RE.md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
-                                       'hf_stage_y': hf_stage.y.position,
-                                       'hf_stage_z': hf_stage.z.position}
-    RE.md['wb_slits'] = {'v_gap' : slt_wb.v_gap.position,
-                            'h_gap' : slt_wb.h_gap.position,
-                            'v_cen' : slt_wb.v_cen.position,
-                            'h_cen' : slt_wb.h_cen.position
-                            }
-    RE.md['hfm'] = {'y' : hfm.y.position,
-                               'bend' : hfm.bend.position}
-    RE.md['ssa_slits'] = {'v_gap' : slt_ssa.v_gap.position,
+def metadata_record(scan_md):
+    scan_md['beamline_status']  = {'energy':  energy.energy.position}
+    scan_md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
+                                          'hf_stage_y': hf_stage.y.position,
+                                          'hf_stage_z': hf_stage.z.position}
+    scan_md['wb_slits'] = {'v_gap' : slt_wb.v_gap.position,
+                           'h_gap' : slt_wb.h_gap.position,
+                           'v_cen' : slt_wb.v_cen.position,
+                           'h_cen' : slt_wb.h_cen.position}
+    scan_md['hfm'] = {'y' : hfm.y.position,
+                      'bend' : hfm.bend.position}
+    scan_md['ssa_slits'] = {'v_gap' : slt_ssa.v_gap.position,
                             'h_gap' : slt_ssa.h_gap.position,
                             'v_cen' : slt_ssa.v_cen.position,
-                            'h_cen' : slt_ssa.h_cen.position
-                             }
+                            'h_cen' : slt_ssa.h_cen.position}
+
 
 def logscan_detailed(scantype):
     h=db[-1]
