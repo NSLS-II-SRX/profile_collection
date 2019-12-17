@@ -3,6 +3,7 @@ print(f'Loading {__file__}...')
 import collections
 import numpy as np
 import time as ttime
+import matplotlib.pyplot as plt
 
 import bluesky.plans as bp
 from bluesky.plans import list_scan
