@@ -84,3 +84,51 @@ i0 = sclr1.channels.chan2
 it = sclr1.channels.chan4
 im = sclr1.channels.chan3
 
+def export_sis_data(ion, filepath):
+    t = ion.mca1.get(timeout=5.)
+    i = ion.mca2.get(timeout=5.)
+    im= ion.mca3.get(timeout=5.)
+    it= ion.mca4.get(timeout=5.)
+    while len(t) == 0 and len(t) != len(i):
+        t = ion.mca1.get(timeout=5.)
+        i = ion.mca2.get(timeout=5.)
+        im= ion.mca3.get(timeout=5.)
+        it= ion.mca4.get(timeout=5.)
+
+    correct_length = zebra.pc.data.num_down.get()
+    # size = (len(t),)
+    # size2 = (len(i),)
+    # size3 = (len(im),)
+    # size4 = (len(it),)
+    with h5py.File(filepath, 'w') as f:
+        if len(t) != correct_length:
+            correction_factor = (correct_length-len(t))
+            new_t = [k for k in t] + [ 1e10 for _ in range(0,int(correction_factor)) ]
+            new_i = [k for k in i] + [ 1e10 for _ in range(0,int(correction_factor)) ]
+            new_im= [k for k in im] + [ 1e10 for _ in range(0,int(correction_factor)) ]
+            new_it= [k for k in it] + [ 1e10 for _ in range(0,int(correction_factor)) ]
+        else:
+            correction_factor = 0
+            new_t = t
+            new_i = i
+            new_im= im
+            new_it= it
+        dset0 = f.create_dataset("time",(correct_length,),dtype='f')
+        dset0[...] = np.array(new_t)
+        dset1 = f.create_dataset("i0",(correct_length,),dtype='f')
+        dset1[...] = np.array(new_i)
+        dset2 = f.create_dataset("im",(correct_length,),dtype='f')
+        dset2[...] = np.array(new_im)
+        dset3 = f.create_dataset("it",(correct_length,),dtype='f')
+        dset3[...] = np.array(new_it)
+        f.close()
+
+class SISHDF5Handler(HandlerBase):
+    HANDLER_NAME = 'SIS_HDF51'
+    def __init__(self, resource_fn):
+        self._handle = h5py.File(resource_fn, 'r')
+
+    def __call__(self, *, column):
+        return self._handle[column][:]
+
+db.reg.register_handler('SIS_HDF51', SISHDF5Handler, overwrite=True)

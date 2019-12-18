@@ -91,6 +91,7 @@ def logscan_event0info(scantype, event0info = []):
     userlogf.close()
 
 def get_stock_md(scan_md):
+    # Should this be ChainMap(scan_md, {...})?
     scan_md['beamline_status']  = {'energy':  energy.energy.position}
     scan_md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
                                           'hf_stage_y': hf_stage.y.position,
