@@ -810,10 +810,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
         def event(self, doc):
             if self.I in doc['data']:
-                print(f'found {self.I}')
                 self._previous_roi = doc['data'][self.I]
             elif self._array_counter_key in doc['data']:
-                print(f'found {self._array_counter_key}')
                 doc = doc.copy()
                 doc['data'][self.I] = self._previous_roi
             else:
@@ -833,7 +831,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         livepopup = ArrayCounterLiveGrid(
             (ynum, xnum + 1),
             xs.channel1.rois.roi01.value.name,
-            array_counter_key=xs.array_counter.name,  # 'XF:05IDD-ES{Xsp:1}:ArrayCounter_RBV',
+            array_counter_key=xs.array_counter.name,
             extent=(xstart, xstop, ystart, ystop),
             x_positive='right', y_positive='down'
         )
@@ -842,7 +840,6 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     @subs_decorator({'start': at_scan})
     @subs_decorator({'stop': finalize_scan})
     # monitor values from xs
-    # @monitor_during_decorator([xs.channel1.rois.roi01.value])
     @monitor_during_decorator([xs.channel1.rois.roi01.value, xs.array_counter])
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
