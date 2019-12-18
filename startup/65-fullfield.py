@@ -147,14 +147,7 @@ def tomo_fullfield(thetastart = -90, thetastop = 90, numproj = 361, ffwait = 2,
     movesampley_in = yield from list_scan([], tomo_stage.y, [tomo_stage.y.position-wf_sam_movry])    
     
     print('done')
-print(f'Loading {__file__}...')
 
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Aug 22 12:40:40 2016
-
-@author: xf05id1
-"""
 from bluesky.plans import scan, count, list_scan
 from bluesky.preprocessors import subs_wrapper
 import numpy as np
