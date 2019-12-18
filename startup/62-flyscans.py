@@ -46,14 +46,12 @@ register(db)
 
 # Define wrapper to time a function
 def timer_wrapper(func):
-    def wrapper():
-        # print('hello: in func %s' % (func.__name__))
+    def wrapper(*args, **kwargs):
         t0 = ttime.monotonic()
-        yield from func()
+        yield from func(*args, **kwargs)
         dt = ttime.monotonic() - t0
         print('%s: dt = %f' % (func.__name__, dt))
-        return
-    yield from wrapper()
+    return wrapper
 
 def tic():
     return ttime.monotonic()
