@@ -2,12 +2,13 @@ print(f'Loading {__file__}...')
 
 import matplotlib.widgets as mwidgets
 import matplotlib.dates as mdates
-from collections import defaultdict
-from cycler import cycler as cy
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
+from collections import defaultdict
+from cycler import cycler as cy
 import bluesky.interactive as bsi   
-        
+
+
 def plot_crab(hdr):
     fig, ax = plt.subplots()
     tab = db.get_table(hdr, stream_name='primary')
@@ -54,6 +55,7 @@ def display_vlm(ax, image_plugin, stage, overlay_read, pixel_scale):
                extent=[left_edge, right_edge, bottom_edge, top_edge])
      ax.axhline(y)
      ax.axvline(x)
+
 
 class SRXPlanner(bsi.OuterProductWidget):
     def __init__(self, *args, write_overlay, pixel_scale, stage, 
