@@ -308,6 +308,44 @@ def ic_energy_batch(estart, estop, npts,
         ion_chamber_fp.close()
 
 
+def hdcm_bragg_temperature(erange, estep, dwell, N, dt=0):
+    # Loop to test the bragg temperature during a XANES scan
+
+    # Convert erange and estep to numpy array
+    ept = np.array([])
+    erange = np.array(erange)
+    estep = np.array(estep)
+    # Calculation for the energy points
+    for i in range(len(estep)):
+        ept = np.append(ept, np.arange(erange[i], erange[i+1], estep[i]))
+    ept = np.append(ept, np.array(erange[-1]))
+
+    dets = [dcm.temp_pitch, energy.energy, dcm.bragg]
+    dets_by_name = [d.name 
+                    for d in dets]
+
+    livecallbacks = LiveTable(dets_by_name)
+
+    def custom_perstep(detectors, motor, step):
+        def move():
+            grp = _short_uid('set')
+            yield Msg('checkpoint')
+            yield Msg('set', motor, step, group=grp)
+            yield Msg('wait', None, group=grp)
+    
+        yield from move()
+        yield from bps.sleep(dwell)
+        yield from trigger_and_read(list(detectors) + [motor])
+
+    myscan = list_scan(dets, energy, list(ept), per_step=custom_perstep)
+    myscan = subs_wrapper(myscan, {'all' : livecallbacks})
+    
+    for i in range(N):
+        yield from myscan
+        yield from bps.sleep(dt)
+
+    return
+
 
 # braggcalib(use_xrf=True)
 # ------------------------------------------------------------------- #
