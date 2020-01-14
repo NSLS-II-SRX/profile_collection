@@ -17,7 +17,7 @@ proposal_title = 'Routine Setup and Testing for Beamline 5-ID'
 PI_lastname = 'Chu'
 saf_num = 304726
 
-cycle = '2019_cycle3'
+cycle = '2020_cycle1'
 
 RE.md['proposal']  = {'proposal_num': str(proposal_num),
                       'proposal_title': str(proposal_title),

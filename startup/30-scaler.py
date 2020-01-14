@@ -5,6 +5,7 @@ from ophyd import Device, EpicsScaler, EpicsSignal, EpicsSignalRO
 from ophyd import Component as Cpt
 from ophyd.device import DynamicDeviceComponent as DDC
 from collections import OrderedDict
+from databroker.assets.handlers import HandlerBase
 
 
 class EpicsSignalROLazyier(EpicsSignalRO):
