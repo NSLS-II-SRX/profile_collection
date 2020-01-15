@@ -11,7 +11,7 @@ from bluesky.plan_stubs import (mv, one_1d_step)
 from bluesky.preprocessors import (finalize_wrapper, subs_wrapper)
 from bluesky.utils import short_uid as _short_uid
 from epics import PV
-from databroker import DataBroker as db
+# from databroker import DataBroker as db
 from databroker import get_events
 
 

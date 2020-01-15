@@ -337,11 +337,12 @@ def hdcm_bragg_temperature(erange, estep, dwell, N, dt=0):
         yield from bps.sleep(dwell)
         yield from trigger_and_read(list(detectors) + [motor])
 
-    myscan = list_scan(dets, energy, list(ept), per_step=custom_perstep)
-    myscan = subs_wrapper(myscan, {'all' : livecallbacks})
-    
+    @subs_decorator({'all' : livecallbacks})
+    def myscan():
+        yield from list_scan(dets, energy, list(ept), per_step=custom_perstep)
+
     for i in range(N):
-        yield from myscan
+        yield from myscan()
         yield from bps.sleep(dt)
 
     return
