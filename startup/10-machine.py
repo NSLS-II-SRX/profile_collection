@@ -337,9 +337,18 @@ class Energy(PseudoPositioner):
 
 # Calibrated 2019-09-12
 # Use scans 30612 - 30617
-cal_data_2019cycle3 = {
+# cal_data_2019cycle3 = {
+#  'd_111': 3.1294298470798565,
+#  'delta_bragg': 0.20569524708214598,
+#  'C2Xcal': 3.6,
+#  'T2cal': 15.0347755916,
+#  'xoffset': 24.770
+# }
+
+# Not Calibrated
+cal_data_2020cycle1 = {
  'd_111': 3.1294298470798565,
- 'delta_bragg': 0.20569524708214598,
+ 'delta_bragg': 0.23339618845435578,
  'C2Xcal': 3.6,
  'T2cal': 15.0347755916,
  'xoffset': 24.770
