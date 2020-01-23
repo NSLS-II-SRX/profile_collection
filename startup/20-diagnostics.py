@@ -1,7 +1,7 @@
 print(f'Loading {__file__}...')
 
 
-from ophyd import EpicsSignal, EpicsSignalRO, Device, TetrAMM
+from ophyd import EpicsSignal, EpicsSignalRO, Device, TetrAMM, Kind
 from ophyd import Component as Cpt
 from ophyd.ophydobj import StatusBase
 from ophyd.status import wait
@@ -77,4 +77,18 @@ class SlitDrainCurrent(Device):
 wbs = SlitDrainCurrent('XF:05IDA-BI{BPM:01}AH501:', name='wbs')
 pbs= SlitDrainCurrent('XF:05IDA-BI{BPM:02}AH501:', name='pbs')
 ssa = SlitDrainCurrent('XF:05IDA-BI{BPM:05}AH501:', name='ssa')
+
+
+### TetrAMM BPM in B-hutch
+class BPM_TETRAMM(Device):
+    "Beam Position Monitor Foil"
+    channel1 = Cpt(EpicsSignalRO, 'Current1:MeanValue_RBV', kind=Kind.omitted)
+    channel2 = Cpt(EpicsSignalRO, 'Current2:MeanValue_RBV', kind=Kind.omitted)
+    channel3 = Cpt(EpicsSignalRO, 'Current3:MeanValue_RBV', kind=Kind.omitted)
+    channel4 = Cpt(EpicsSignalRO, 'Current4:MeanValue_RBV', kind=Kind.omitted)
+
+    x = Cpt(EpicsSignalRO, 'PosX:MeanValue_RBV')
+    y = Cpt(EpicsSignalRO, 'PosY:MeanValue_RBV')
+
+bpm4 = BPM_TETRAMM('XF:05IDA-BI{BPM:4}', name='bpm4')
 

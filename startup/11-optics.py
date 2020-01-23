@@ -119,10 +119,10 @@ class SRXSSAVC(PVPositionerPC):
     readback = Cpt(EpicsSignalRO, 'Y}t2.D')
 
 class SRXSSACalc(Device):
-    h_cen = SRXSSAHC('XF:05IDB-OP:1{Slt:SSA-Ax:')
-    h_gap = SRXSSAHG('XF:05IDB-OP:1{Slt:SSA-Ax:')
-    v_cen = SRXSSAVC('XF:05IDB-OP:1{Slt:SSA-Ax:')
-    v_gap = SRXSSAVG('XF:05IDB-OP:1{Slt:SSA-Ax:')
+    h_cen = SRXSSAHC('XF:05IDB-OP:1{Slt:SSA-Ax:', name='h_cen')
+    h_gap = SRXSSAHG('XF:05IDB-OP:1{Slt:SSA-Ax:', name='h_gap')
+    v_cen = SRXSSAVC('XF:05IDB-OP:1{Slt:SSA-Ax:', name='v_cen')
+    v_gap = SRXSSAVG('XF:05IDB-OP:1{Slt:SSA-Ax:', name='v_gap')
 
 slt_ssa = SRXSSACalc('XF:05IDB-OP:1{Slt:SSA-Ax:',name='slt_ssa')
 

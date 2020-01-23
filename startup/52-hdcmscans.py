@@ -320,9 +320,12 @@ def hdcm_bragg_temperature(erange, estep, dwell, N, dt=0):
         ept = np.append(ept, np.arange(erange[i], erange[i+1], estep[i]))
     ept = np.append(ept, np.array(erange[-1]))
 
-    dets = [dcm.temp_pitch, energy.energy, dcm.bragg]
+    dets = [dcm.temp_pitch, energy.energy, dcm.bragg, dcm.c1_roll, dcm.c2_pitch, bpm4]
     dets_by_name = [d.name 
                     for d in dets]
+    if ('bpm4' in dets_by_name):
+        dets_by_name.append('bpm4_x')
+        dets_by_name.append('bpm4_y')
 
     livecallbacks = LiveTable(dets_by_name)
 
