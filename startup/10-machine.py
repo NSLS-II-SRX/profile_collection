@@ -354,7 +354,7 @@ cal_data_2020cycle1 = {
  'xoffset': 24.770
 }
 
-energy = Energy(prefix='', name='energy', **cal_data_2019cycle3)
+energy = Energy(prefix='', name='energy', **cal_data_2020cycle1)
 energy.synch_with_epics()
 energy.value = 1.0
 
