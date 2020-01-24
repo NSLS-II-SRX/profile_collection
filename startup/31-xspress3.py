@@ -7,11 +7,17 @@ import time as ttime
 from ophyd.areadetector.plugins import PluginBase
 from ophyd import Signal
 from ophyd import Component as C
+from enum import Enum
 
 from hxntools.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
                                          Xspress3Channel, Xspress3FileStore)
 from databroker.assets.handlers import Xspress3HDF5Handler, HandlerBase
 from ophyd.areadetector.filestore_mixins import FileStorePluginBase
+
+
+class SRXMode(Enum):
+    step = 1
+    fly = 2
 
 
 class BulkXSPRESS(HandlerBase):
@@ -160,7 +166,8 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
 
     hdf5 = Cpt(Xspress3FileStoreFlyable, 'HDF5:',
                read_path_template='/nsls2/xf05id1/XF05ID1/XSPRESS3/%Y/%m/%d/',
-               write_path_template='/epics/data/%Y/%m/%d/',
+               # write_path_template='/epics/data/%Y/%m/%d/',
+               write_path_template='/home/xspress3/data/%Y/%m/%d/',
                root='/nsls2/xf05id1/XF05ID1')
 
     # this is used as a latch to put the xspress3 into 'bulk' mode
@@ -184,7 +191,9 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
         # in the parent class it looks at if the extrenal_trig signal is high
         self._mode = SRXMode.step
 
-        self.create_dir.put(-3)
+        # 2020-01-24
+        # Commented out by AMK for using the xs3-server-IOC from TES
+        # self.create_dir.put(-3)
 
     def stop(self, *, success=False):
         ret = super().stop()
@@ -253,9 +262,10 @@ try:
 except TimeoutError:
     xs = None
     print('\nCannot connect to xs. Continuing without device.\n')
-except:
+except BaseException as b:
     xs = None
-    print('\nUnexpected error connecting to xs.\n', sys.exc_info()[0], end='\n\n')
+    print('\nUnexpected error connecting to xs.\n', sys.exc_info()[0])
+    print(b, end='\n\n')
 
 
 # Working xs2 detector

@@ -16,11 +16,6 @@ from ophyd.areadetector import (AreaDetector, PixiradDetectorCam, ImagePlugin,
                                 ProcessPlugin, ROIPlugin, TransformPlugin,
                                 OverlayPlugin)
 from ophyd.areadetector.trigger_mixins import SingleTrigger
-from enum import Enum
-
-class SRXMode(Enum):
-    step = 1
-    fly = 2
 
 
 # monkey patch for trailing slash problem (from XPD's profile, see
