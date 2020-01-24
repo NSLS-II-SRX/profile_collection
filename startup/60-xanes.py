@@ -295,7 +295,8 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
         scanrecord.current_scan.put(doc['uid'][:6])
         scanrecord.current_scan_id.put(str(doc['scan_id']))
         # Not sure if RE should be here, but not sure what to make it
-        scanrecord.current_type.put(RE.md['scaninfo']['type'])
+        # scanrecord.current_type.put(RE.md['scaninfo']['type'])
+        scanrecord.current_type.put(scan_md['scaninfo']['type'])
         scanrecord.scanning.put(True)
 
 
