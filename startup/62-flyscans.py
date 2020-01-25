@@ -332,6 +332,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Not sure if this is always true
     xs = dets_by_name[flying_zebra.detectors[0].name]
 
+    yield from mv(xs.erase, 0)
+
     # Setup LivePlot
     if (ynum == 1):
         livepopup = LivePlot(xs.channel1.rois.roi01.value.name,
@@ -341,11 +343,19 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                              xs.channel1.rois.roi01.value.name,
                              extent=(xstart, xstop, ystart, ystop),
                              x_positive='right', y_positive='down')
+        # livepopup = ArrayCounterLiveGrid(
+        #     (ynum, xnum + 1),
+        #     xs.channel1.rois.roi01.value.name,
+        #     array_counter_key=xs.array_counter.name,
+        #     extent=(xstart, xstop, ystart, ystop),
+        #     x_positive='right', y_positive='down'
+        # )
     @subs_decorator([livepopup])
     @subs_decorator({'start': at_scan})
     @subs_decorator({'stop': finalize_scan})
     # monitor values from xs
-    @monitor_during_decorator([xs.channel1.rois.roi01.value])
+    # @monitor_during_decorator([xs.channel1.rois.roi01.value])
+    @monitor_during_decorator([xs.channel1.rois.roi01.value, xs.array_counter])
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
     def plan():
@@ -386,9 +396,6 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         # t_open = tic()
         yield from mv(shut_b, 'Open')
         # toc(t_open, str='Open shutter')
-
-    # Clear the xs3
-    xs.erase.put(0)
 
     # Run the scan
     uid = yield from final_plan
@@ -520,6 +527,24 @@ class RowBasedLiveGrid(LiveGrid):
         self._last_row = None
         self._column_counter = None
         self._pad = None
+
+
+class ArrayCounterLiveGrid(LiveGrid):
+        def __init__(self, *args, array_counter_key, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._array_counter_key = array_counter_key
+            self._previous_roi = 0
+
+        def event(self, doc):
+            if self.I in doc['data']:
+                self._previous_roi = doc['data'][self.I]
+            elif self._array_counter_key in doc['data']:
+                doc = doc.copy()
+                doc['data'][self.I] = self._previous_roi
+            else:
+                # how did we get here?
+                print(f'did not find {self.I} or {self._array_counter_key}')
+            super().event(doc)
 
 
 ###############################################################################################

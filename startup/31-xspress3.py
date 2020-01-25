@@ -152,6 +152,8 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
 
     erase = Cpt(EpicsSignal, 'ERASE')
 
+    array_counter = Cpt(EpicsSignal, 'ArrayCounter_RBV')
+
     # Currently only using three channels. Uncomment these to enable more
     channel1 = C(Xspress3Channel, 'C1_', channel_num=1, read_attrs=['rois'])
     channel2 = C(Xspress3Channel, 'C2_', channel_num=2, read_attrs=['rois'])

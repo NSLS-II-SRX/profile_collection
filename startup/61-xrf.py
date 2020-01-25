@@ -50,10 +50,10 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
                             'raster' : True}
 
     # Setup detectors
-    det = [sclr1, xs]
-    det.append(extra_dets)
+    dets = [sclr1, xs]
+    dets = dets + extra_dets
     dets_by_name = {d.name : d
-                    for d in detectors}
+                    for d in dets}
     # Scaler
     if (acqtime < 0.001):
         acqtime = 0.001
@@ -155,7 +155,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         scanrecord.scanning.put(False)
 
     # Setup the scan
-    hf2dxrf_scanplan = outer_product_scan(det,
+    hf2dxrf_scanplan = outer_product_scan(dets,
                                           ymotor, ystart, ystop, ynumstep+1,
                                           xmotor, xstart, xstop, xnumstep+1, snake,
                                           md=scan_md)
