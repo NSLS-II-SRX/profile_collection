@@ -5,7 +5,7 @@ import h5py
 import sys
 import time as ttime
 from ophyd.areadetector.plugins import PluginBase
-from ophyd import Signal
+from ophyd import Signal, DeviceStatus
 from ophyd import Component as C
 from enum import Enum
 
@@ -13,6 +13,7 @@ from hxntools.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
                                          Xspress3Channel, Xspress3FileStore)
 from databroker.assets.handlers import Xspress3HDF5Handler, HandlerBase
 from ophyd.areadetector.filestore_mixins import FileStorePluginBase
+from ophyd.device import Staged
 
 
 class SRXMode(Enum):

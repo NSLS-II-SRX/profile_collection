@@ -310,9 +310,9 @@ class SRXFlyer1Axis(Device):
         pxsize = extent / (xnum-1)
         # 2 ms delay between pulses
         decrement = ((pxsize / dwell) * 0.002)
-        if decrement < 4e-6:
+        if decrement < 1e-5:
             # print('Changing the pulse width')
-            decrement = 4e-6
+            decrement = 1e-5
         self._encoder.pc.gate_start.put(xstart)
         self._encoder.pc.gate_step.put(extent+0.0005)
         self._encoder.pc.gate_width.put(extent+0.0001)

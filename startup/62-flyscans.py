@@ -387,6 +387,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         yield from mv(shut_b, 'Open')
         # toc(t_open, str='Open shutter')
 
+    # Clear the xs3
+    xs.erase.put(0)
+
     # Run the scan
     uid = yield from final_plan
 
