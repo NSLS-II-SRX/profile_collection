@@ -345,10 +345,10 @@ class Energy(PseudoPositioner):
 #  'xoffset': 24.770
 # }
 
-# Not Calibrated
+# Calibrated 2020-01-24
 cal_data_2020cycle1 = {
- 'd_111': 3.1294298470798565,
- 'delta_bragg': 0.23339618845435578,
+ 'd_111': 3.1291959235957125,
+ 'delta_bragg': 0.20856783348751973,
  'C2Xcal': 3.6,
  'T2cal': 15.0347755916,
  'xoffset': 24.770
