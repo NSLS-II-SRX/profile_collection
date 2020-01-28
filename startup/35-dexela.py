@@ -3,6 +3,7 @@ print(f'Loading {__file__}...')
 import os
 import ophyd
 from hxntools.detectors.dexela import (DexelaDetector,)
+from hxntools.detectors.xspress3 import (logger, )
 from databroker.assets.handlers import HandlerBase
 from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreHDF5IterativeWrite,
@@ -147,7 +148,7 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
                configuration_attrs=[],
                # write_path_template='Z:\\%Y\\%m\\%d\\',
                # write_path_template='C:\\temp\\dexela\\%Y\\%m\\%d\\',
-               write_path_template='C:\\data\\304976_Turney\\%Y\\%m\\%d\\',
+               write_path_template='C:\\data\\305482_Tang\\%Y\\%m\\%d\\',
                # write_path_template='C:\\temp\\write_here\\',
                read_path_template='/nsls2/xf05id1/XF05ID1/dexela/%Y/%m/%d/',
                root='/nsls2/xf05id1/XF05ID1/dexela/')
