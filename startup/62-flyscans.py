@@ -153,7 +153,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     if ('dexela' in dets_by_name):
         xrd = dets_by_name['dexela']
         xrd.cam.stage_sigs['acquire_time'] = 0.50 * dwell - 0.050
-        xrd.cam.stage_sigs['acquire_period'] = 1.00 * dwell - 0.020
+        xrd.cam.stage_sigs['acquire_period'] = 0.50 * dwell - 0.020
         del xrd
 
     # If delta is None, set delta based on time for acceleration
