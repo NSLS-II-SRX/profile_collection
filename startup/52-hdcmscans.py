@@ -158,7 +158,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
         E = E * 1000
 
     # Define the detector
-    det = [sclr1, dcm.c1_roll, dcm.c2_pitch]
+    det = [sclr1, bpm4, dcm.c1_roll, dcm.c2_pitch]
 
     # Set the roll piezo to its default value (3.0)
     # and return the roll to its original value
@@ -185,17 +185,24 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     yield from bps.mov(dcm.c2_pitch_kill, 1.0)
 
     # Set limits
-    pitch_lim = (2.5, 3.5)
-    pitch_num = 51
+    pitch_lim = (2.0, 4.0)
+    pitch_num = 101
 
     # Use calibration
     if (use_calib):
         # 2020-01-24
         roll_guess = -0.605
+        # 2020-01-29
+        roll_guess = 0.230
+        # 2020-02-03
+        roll_guess = 0.181
         yield from bps.mov(dcm.c1_roll, roll_guess)
         # 2020-01-24
         B = energy.energy_to_positions((E/1000), 3, 0)[0]
         pitch_guess = 0.0012797605*B - 0.4051099354
+        # 2020-02-03
+        B = energy.energy_to_positions((E/1000), 3, 0)[0]
+        pitch_guess = 0.0009145473*B + 0.0141488665
         yield from bps.mov(dcm.c2_pitch, pitch_guess)
         yield from bps.mov(dcm.c2_pitch_kill, 1.0)
 
