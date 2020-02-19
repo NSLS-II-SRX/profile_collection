@@ -235,6 +235,9 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     yield from abs_set(xs.settings.acquire_time, acqtime)
     yield from abs_set(xs.total_points, len(ept))
 
+    # Setup the scaler
+    yield from abs_set(sclr1.preset_time, acqtime)
+
     # Setup DCM/energy options
     if (harmonic != 1):
         yield from abs_set(energy.harmonic, harmonic)
