@@ -89,6 +89,7 @@ class BPM_TETRAMM(Device):
 
     x = Cpt(EpicsSignalRO, 'PosX:MeanValue_RBV')
     y = Cpt(EpicsSignalRO, 'PosY:MeanValue_RBV')
+    total_current = Cpt(EpicsSignalRO, 'SumAll:MeanValue_RBV')
 
 bpm4 = BPM_TETRAMM('XF:05IDA-BI{BPM:4}', name='bpm4')
 

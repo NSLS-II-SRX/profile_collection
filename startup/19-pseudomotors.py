@@ -31,6 +31,7 @@ class FineSampleLabX(PseudoPositioner, NamedDevice):
 
         # if theta changes, update the pseudo position
         self._theta0.subscribe(self.parameter_updated)
+        self.real_theta.subscribe(self.parameter_updated)
 
     def parameter_updated(self, value=None, **kwargs):
         self._update_position()
