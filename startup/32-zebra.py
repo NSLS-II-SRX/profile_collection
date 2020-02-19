@@ -484,8 +484,14 @@ class SRXFlyer1Axis(Device):
         self.unstage()
         self.stage()
 
-flying_zebra = SRXFlyer1Axis(zebra, [xs], sclr1, 'HOR', name='flying_zebra')
-flying_zebra_y = SRXFlyer1Axis(zebra, [xs], sclr1, 'VER', name='flying_zebra_y')
+try:
+    flying_zebra = SRXFlyer1Axis(zebra, [xs], sclr1, 'HOR', name='flying_zebra')
+    flying_zebra_y = SRXFlyer1Axis(zebra, [xs], sclr1, 'VER', name='flying_zebra_y')
+except:
+    print('Cannot connect to Zebra. Continuing without device.\n')
+    flying_zebra = None
+    flying_zebra_y = None
+
 
 # For confocal
 if xs2 is not None:
