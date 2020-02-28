@@ -32,8 +32,8 @@ def mv_position(pos = []):
     the schitillator(pos2), or the Cu wire(pos3).
 
     pos     <list> 1 = [22.7, 25.66, 52.596] # phosphor paper
-                   2 = [29.18, 19.33, 51.82] # scintillator
-                   3 = [27.166, 25.217, 45.859] # Cu wire
+                   2 = [32.11,17.646,61.374] # scintillator
+                   3 = [[30.114,22.464,53.874] # ANT Siemens star
                    [x, y, z] # any positions defined
     """
     print('To go to position 1,2,3; Assuming topx, topz at 0; rotation at 45 deg.')
@@ -50,11 +50,11 @@ def mv_position(pos = []):
         yield from mv(hf_stage.x, pos[0], hf_stage.y, pos[1], hf_stage.z, pos[2])
     elif (pos == 2):
         print('Will go to scintillator position.')
-        pos = [29.18, 19.33, 51.82]
+        pos = [32.11, 17.064, 61.454]
         yield from mv(hf_stage.x, pos[0], hf_stage.y, pos[1], hf_stage.z, pos[2])
     elif (pos == 3):
-        print('Will go to Cu horizontal wire position.')
-        pos = [27.166, 25.217, 45.859]
+        print('Will go to Simens Star position.')
+        pos = [30.114,22.464,53.874]
         yield from mv(hf_stage.x, pos[0], hf_stage.y, pos[1], hf_stage.z, pos[2])
     elif (len(pos) > 2):
         print('You will move to the defined positions now.')

@@ -4,7 +4,7 @@ print(f'Loading {__file__}...')
 from ophyd.areadetector import (AreaDetector, ImagePlugin,
                                 TIFFPlugin, StatsPlugin, 
                                 ROIPlugin, TransformPlugin,
-                                OverlayPlugin)
+                                OverlayPlugin, ProcessPlugin)
 from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreTIFF)
 from ophyd.areadetector.trigger_mixins import SingleTrigger
@@ -71,8 +71,9 @@ bpmAD.stats4.read_attrs = ['total']
 ### HF VLM
 # Does this belong here or in microES?
 class SRXHFVLMCam(SingleTrigger, AreaDetector):
-    cam = C(AreaDetectorCam, '')
+    cam = C(AreaDetectorCam, 'cam1:')
     image_plugin = C(ImagePlugin, 'image1:')
+    proc1 = C(ProcessPlugin, 'Proc1:')
     stats1 = C(StatsPlugin, 'Stats1:')
     stats2 = C(StatsPlugin, 'Stats2:')
     stats3 = C(StatsPlugin, 'Stats3:')
@@ -84,10 +85,10 @@ class SRXHFVLMCam(SingleTrigger, AreaDetector):
     over1 = C(OverlayPlugin, 'Over1:')
     trans1 = C(TransformPlugin, 'Trans1:')
     tiff = C(SRXTIFFPlugin, 'TIFF1:',
-             #write_path_template='/epicsdata/hfvlm/%Y/%m/%d/',
-             #root='/epicsdata',
-             write_path_template='/nsls2/xf05id1/data/hfvlm/%Y/%m/%d/',
-             root='/nsls2/xf05id1')
+             write_path_template='/epicsdata/hfvlm/%Y/%m/%d/',
+             root='/epicsdata')
+             # write_path_template='/nsls2/xf05id1/data/hfvlm/%Y/%m/%d/',
+             # root='/nsls2/xf05id1')
 
 try:
     hfvlmAD = SRXHFVLMCam('XF:05IDD-BI:1{Mscp:1-Cam:1}', name='hfvlm', read_attrs=['tiff'])

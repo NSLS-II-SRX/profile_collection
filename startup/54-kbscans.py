@@ -82,8 +82,8 @@ def knife_edge(motor, start, stop, stepsize, acqtime,
     if (use_trans == True):
         y = tbl['it'].values[0] / tbl['im'].values[0]
     else:
-        y = np.sum(np.array(tbl['fluor'])[0][:, :, 794:814], axis=(1, 2))
-        y = y / np.array(tbl['i0'])[0]
+        y = np.sum(np.array(tbl['fluor'])[0][:, :, 961:981], axis=(1, 2))
+        #y = y / np.array(tbl['i0'])[0]
     x = np.array(tbl[pos])[0]
     x = x.astype(np.float64)
     y = y.astype(np.float64)
