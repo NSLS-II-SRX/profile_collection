@@ -42,19 +42,31 @@ microKB = SRXMICROKB('XF:05IDD-OP:1{Mir:', name='microKB')
 
 ### High flux sample stages
 class HFSampleStage(Device):
-    x = Cpt(EpicsMotor, '{Stg:Smpl1-Ax:X}Mtr')
-    y = Cpt(EpicsMotor, '{Stg:Smpl1-Ax:Y}Mtr')
+    x = Cpt(EpicsMotor, '{Stg:Smpl2-Ax:X}Mtr')
+    y = Cpt(EpicsMotor, '{Stg:Smpl2-Ax:Y}Mtr')
     z = Cpt(EpicsMotor, '{Stg:Smpl1-Ax:Z}Mtr')
     th = Cpt(EpicsMotor, '{Smpl:1-Ax:Rot}Mtr')
     topx = Cpt(EpicsMotor, '{Smpl:1-Ax:XF}Mtr')
     topz = Cpt(EpicsMotor, '{Smpl:1-Ax:ZF}Mtr')
 
-    RETRY_DEADBAND_X = EpicsSignal('XF:05IDD-ES:1{Stg:Smpl1-Ax:X}Mtr.RDBD')
-    RETRY_DEADBAND_Y = EpicsSignal('XF:05IDD-ES:1{Stg:Smpl1-Ax:Y}Mtr.RDBD')
+    RETRY_DEADBAND_X = EpicsSignal('XF:05IDD-ES:1{Stg:Smpl2-Ax:X}Mtr.RDBD')
+    RETRY_DEADBAND_Y = EpicsSignal('XF:05IDD-ES:1{Stg:Smpl2-Ax:Y}Mtr.RDBD')
+    _RETRY_DEADBAND_DEFAULT = 0.0001
+
+    BACKLASH_SPEED_X = EpicsSignal('XF:05IDD-ES:1{Stg:Smpl2-Ax:X}Mtr.BVEL')
+    BACKLASH_SPEED_Y = EpicsSignal('XF:05IDD-ES:1{Stg:Smpl2-Ax:Y}Mtr.BVEL')
+    _BACKLASH_SPEED_DEFAULT = 0.1
+
+    def reset_stage_defaults(self):
+        self.RETRY_DEADBAND_X.put(self._RETRY_DEADBAND_DEFAULT)
+        self.RETRY_DEADBAND_Y.put(self._RETRY_DEADBAND_DEFAULT)
+        self.BACKLASH_SPEED_X.put(self._BACKLASH_SPEED_DEFAULT)
+        self.BACKLASH_SPEED_Y.put(self._BACKLASH_SPEED_DEFAULT)
 
 hf_stage = HFSampleStage('XF:05IDD-ES:1', name='hf_stage')
 if 'velocity' not in hf_stage.x.configuration_attrs:
     hf_stage.x.configuration_attrs.append('velocity')
+hf_stage.reset_stage_defaults()
 
 
 ### SDD motion

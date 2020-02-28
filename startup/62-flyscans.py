@@ -107,6 +107,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
     # t_setup = tic()
 
+    # Check for negative number of points
+    if (xnum < 1 or ynum < 1):
+        print('Error: Number of points is negative.')
+        return
+
     # Set metadata
     if md is None:
         md = {}
@@ -226,6 +231,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         v = ((xstop - xstart) / (xnum-1)) / dwell  # compute "stage speed"
         # yield from abs_set(xmotor.velocity, v, wait=True)  # set the "stage speed"
         yield from mv(xmotor.velocity, v)
+        # Change backlash speed for hf_stage.x and hf_stage.y
+        if (hf_stage.x is xmotor):
+            yield from mv(hf_stage.BACKLASH_SPEED_X, v)
+        if (hf_stage.y is xmotor):
+            yield from mv(hf_stage.BACKLASH_SPEED_Y, v)
 
         # set up all of the detectors
         # TODO we should be able to move this out of the per-line call?!
@@ -405,6 +415,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     #     # t_close = tic()
     #     yield from mv(shut_b, 'Close')
     #     # toc(t_close, str='Close shutter')
+
+    # Return sample stage defaults
+    hf_stage.reset_stage_defaults()
 
     return uid
 

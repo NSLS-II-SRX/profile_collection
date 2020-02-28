@@ -174,7 +174,7 @@ class SRXZebra(Zebra):
                          configuration_attrs=configuration_attrs, **kwargs)
 
 zebra = SRXZebra('XF:05IDD-ES:1{Dev:Zebra1}:', name='zebra')
-zebra.read_attrs = ['pc.data.enc1', 'pc.data.time']
+zebra.read_attrs = ['pc.data.enc1', 'pc.data.enc2', 'pc.data.time']
 
 class SRXFlyer1Axis(Device):
 #    LARGE_FILE_DIRECTORY_READ_PATH = '/tmp/test_data'
@@ -278,7 +278,7 @@ class SRXFlyer1Axis(Device):
         }
 
         desc = OrderedDict()
-        for chan in ('time', 'enc1'):
+        for chan in ('time', 'enc1', 'enc2'):
             desc[chan] = spec
             desc[chan]['source'] = getattr(self._encoder.pc.data, chan).pvname
 
@@ -390,6 +390,7 @@ class SRXFlyer1Axis(Device):
 
         time_datum = datum_factory_z({'column': 'time'})
         enc1_datum = datum_factory_z({'column': 'enc1'})
+        enc2_datum = datum_factory_z({'column': 'enc2'})
         sis_datum =  datum_factory_sis({'column': 'i0'})
         sis_datum_im =  datum_factory_sis({'column': 'im'})
         sis_datum_it =  datum_factory_sis({'column': 'it'})
@@ -397,7 +398,7 @@ class SRXFlyer1Axis(Device):
 
         self._document_cache.extend(('resource', d) for d in (self.__filestore_resource,
                                                              self.__filestore_resource_sis))
-        self._document_cache.extend(('datum', d) for d in (time_datum, enc1_datum,
+        self._document_cache.extend(('datum', d) for d in (time_datum, enc1_datum, enc2_datum,
                                                           sis_datum, sis_time, sis_datum_im, sis_datum_it))
 
         # grab the asset documents from all of the child detectors
@@ -426,12 +427,14 @@ class SRXFlyer1Axis(Device):
             'time': ttime.time(), 'seq_num': 1,
             'data': {'time': time_datum['datum_id'],
                      'enc1': enc1_datum['datum_id'],
+                     'enc2': enc2_datum['datum_id'],
                      'i0': sis_datum['datum_id'],
                      'i0_time': sis_time['datum_id'],
                      'im': sis_datum_im['datum_id'],
                      'it': sis_datum_it['datum_id']},
             'timestamps': {'time': time_datum['datum_id'],  # not a typo#
                            'enc1': time_datum['datum_id'],
+                           'enc2': time_datum['datum_id'],
                            'i0': sis_time['datum_id'],
                            'i0_time': sis_time['datum_id'],
                            'im': sis_datum_im['datum_id'],
@@ -519,12 +522,14 @@ def export_zebra_data(zebra, filepath, fast_axis):
     time_d = zebra.pc.data.time.get()
     if fast_axis == 'HOR':
         enc1_d = zebra.pc.data.enc2.get()
+        enc2_d = zebra.pc.data.enc1.get()
     elif fast_axis == 'DET2HOR':
         enc1_d = zebra.pc.data.enc3.get()
     elif fast_axis == 'DET2VER':
         enc1_d = zebra.pc.data.enc4.get()
     else:
         enc1_d = zebra.pc.data.enc1.get()
+        enc2_d = zebra.pc.data.enc2.get()
 
     while len(time_d) == 0 or len(time_d) != len(enc1_d):
         time_d = zebra.pc.data.time.get()
@@ -539,6 +544,8 @@ def export_zebra_data(zebra, filepath, fast_axis):
         dset0[...] = np.array(time_d)
         dset1 = f.create_dataset("enc1",size,dtype='f')
         dset1[...] = np.array(enc1_d)
+        dset2 = f.create_dataset("enc2",size,dtype='f')
+        dset2[...] = np.array(enc2_d)
         f.close()
 
 class ZebraHDF5Handler(HandlerBase):
