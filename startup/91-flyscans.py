@@ -471,26 +471,6 @@ def export_sis_data(ion, filepath):
         dset3[...] = np.array(new_it)
         f.close()
 
-class ZebraHDF5Handler(HandlerBase):
-    HANDLER_NAME = 'ZEBRA_HDF51'
-    def __init__(self, resource_fn):
-        self._handle = h5py.File(resource_fn, 'r')
-
-    def __call__(self, *, column):
-        return self._handle[column][:]
-
-class SISHDF5Handler(HandlerBase):
-    HANDLER_NAME = 'SIS_HDF51'
-    def __init__(self, resource_fn):
-        self._handle = h5py.File(resource_fn, 'r')
-
-    def __call__(self, *, column):
-        return self._handle[column][:]
-
-
-db.reg.register_handler('SIS_HDF51', SISHDF5Handler, overwrite=True)
-db.reg.register_handler('ZEBRA_HDF51', ZebraHDF5Handler, overwrite=True)
-
 
 class LiveZebraPlot(CallbackBase):
     """
