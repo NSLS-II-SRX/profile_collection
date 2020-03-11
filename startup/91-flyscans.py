@@ -911,17 +911,6 @@ class RowBasedLiveGrid(LiveGrid):
         self._pad = None
 
 
-class SrxXSP3Handler:
-    XRF_DATA_KEY = 'entry/instrument/detector/data'
-
-    def __init__(self, filepath, **kwargs):
-        self._filepath = filepath
-
-    def __call__(self, **kwargs):
-        with h5py.File(self._filepath, 'r') as f:
-            return np.asarray(f[self.XRF_DATA_KEY])
-
-
 def batch_fly(paramlist, kwlist=None, zlist=None):
     '''
     paramlist   list    list of positional and dwell time arguments to scan_and_fly
