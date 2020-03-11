@@ -168,39 +168,7 @@ from pathlib import PurePath
 from hxntools.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
                                          Xspress3Channel, Xspress3FileStore,
                                          logger)
-from databroker.assets.handlers import Xspress3HDF5Handler, HandlerBase
 
-
-class BulkXSPRESS(HandlerBase):
-    HANDLER_NAME = 'XPS3_FLY'
-    def __init__(self, resource_fn):
-        self._handle = h5py.File(resource_fn, 'r')
-
-    def __call__(self):
-        return self._handle['entry/instrument/detector/data'][:]
-
-
-class BulkMerlin(BulkXSPRESS):
-    HANDLER_NAME = 'MERLIN_FLY_STREAM_V1'
-    def __call__(self):
-        return self._handle['entry/instrument/detector/data'][:]
-
-
-class BulkMerlinDEBUG(BulkXSPRESS):
-    # This is for data take in 'capture' mode, only used for debugging
-    # once.
-    HANDLER_NAME = 'MERLIN_FLY'
-    def __call__(self):
-        return self._handle['entry/instrument/detector/data'][1:]
-
-
-db.reg.register_handler(BulkXSPRESS.HANDLER_NAME, BulkXSPRESS,
-                        overwrite=True)
-# needed to get at some debugging data
-db.reg.register_handler('MERLIN_FLY', BulkMerlinDEBUG,
-                        overwrite=True)
-db.reg.register_handler(BulkMerlin.HANDLER_NAME, BulkMerlin,
-                        overwrite=True)
 
 from ophyd.areadetector.filestore_mixins import FileStorePluginBase
 class Xspress3FileStoreFlyable(Xspress3FileStore):
@@ -215,8 +183,8 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
     @property
     def filestore_spec(self):
         if self.parent._mode is SRXMode.fly:
-           return BulkXSPRESS.HANDLER_NAME
-        return Xspress3HDF5Handler.HANDLER_NAME
+           return 'XPS3_FLY'
+        return 'XSP3'
 
     def generate_datum(self, key, timestamp, datum_kwargs):
         if self.parent._mode is SRXMode.step:
@@ -535,7 +503,7 @@ class MerlinFileStoreHDF5(FileStoreBase):
     @property
     def filestore_spec(self):
         if self.parent._mode is SRXMode.fly:
-            return BulkMerlin.HANDLER_NAME
+            return 'MERLIN_FLY_STREAM_V1'
         return 'TPX_HDF5'
 
     def generate_datum(self, key, timestamp, datum_kwargs):
