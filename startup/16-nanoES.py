@@ -44,3 +44,12 @@ class SRXNANODET(Device):
 
 nano_det = SRXNANODET('XF:05IDD-ES:1{nKB:Det-Ax:', name='nano_det')
 
+
+# Lakeshore temperature monitors
+class SRXNANOTEMP(Device):
+    temp_nanoKB_horz = Cpt(EpicsSignalRO, '2}T:C-I')
+    temp_nanoKB_vert = Cpt(EpicsSignalRO, '1}T:C-I')
+    temp_nanoKB_base = Cpt(EpicsSignalRO, '4}T:C-I')
+
+temp_nanoKB = SRXNANOTEMP('XF:05IDD-ES{LS:1-Chan:', name='temp_nanoKB')
+
