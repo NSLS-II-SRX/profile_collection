@@ -186,7 +186,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
 
     # Set limits
     pitch_lim = (2.0, 4.0)
-    pitch_num = 101
+    pitch_num = 51
 
     # Use calibration
     if (use_calib):
@@ -196,6 +196,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
         roll_guess = 0.230
         # 2020-02-03
         roll_guess = 0.181
+        roll_guess = 0.071
         yield from bps.mov(dcm.c1_roll, roll_guess)
         # 2020-01-24
         B = energy.energy_to_positions((E/1000), 3, 0)[0]

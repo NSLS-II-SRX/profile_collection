@@ -291,8 +291,8 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
     create_dir = Cpt(EpicsSignal, 'HDF5:FileCreateDir')
 
     hdf5 = Cpt(Xspress3FileStoreFlyable, 'HDF5:',
-               read_path_template='/nsls2/xf05id1/data/2019-3/XS3MINI',
-               write_path_template='/home/xspress3/data/SRX/2019-3',
+               read_path_template='/nsls2/xf05id1/data/2020-1/XS3MINI',
+               write_path_template='/home/xspress3/data/SRX/2020-1',
                root='/nsls2/xf05id1')
 
     # this is used as a latch to put the xspress3 into 'bulk' mode

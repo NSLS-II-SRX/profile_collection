@@ -110,7 +110,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
                           x_positive='right', y_positive='down',
                           ax=fig.gca())
         livecallbacks.append(roimap)
-    
+
     if ('xs2' in dets_by_name):
         for roi_idx in range(numrois):
             roi_key = getattr(xs2.channel1.rois, roi_name).value.name
@@ -170,7 +170,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     # Peak up monochromator at this energy
     if (align):
         yield from peakup_fine(shutter=shutter)
-    
+
     # Open shutter
     if (shutter):
         yield from mv(shut_b,'Open')
@@ -268,11 +268,142 @@ def hf2dxrf_ioc(samplename=None, align=False, numrois=1, shutter=True, waittime=
     scanrecord.current_scan.put('')
 
 
-def fermat_master_plan(*args, exp_time=0.2, testing=True, **kwargs):
+# def fermat_plan(x_range, y_range, dr, factor, exp_time=0.2):
+def fermat_plan(*args, **kwargs):
+    x_range = args[0]
+    y_range = args[1]
+    dr = args[2]
+    factor = args[3]
+    # print(f'{x_range}\t{y_range}')
+    # print(args)
+    kwargs.setdefault('exp_time', 0.2)
+
+    # Setup motors
+    x_motor = nano_stage.x
+    y_motor = nano_stage.y
+
+    # Setup detectors
+    dets = [sclr1, xs2, merlin, bpm4, temp_nanoKB]
+
+    # print("ready to call fermat_master...")
+    yield from fermat_master_plan(dets, x_motor, y_motor, *args, **kwargs)
+
+
+def fermat_master_plan(*args, exp_time=None, **kwargs):
+    # Synchronize exposure times
+    sclr1.preset_time.put(exp_time)
+    xs2.external_trig.put(False)
+    xs2.settings.acquire_time.put(exp_time)
+    merlin.cam.acquire_time.put(exp_time)
+    merlin.cam.acquire_period.put(exp_time + 0.005)
+
+    scan_md = {}
+    get_stock_md(scan_md)
+    scan_md['merlin'] = {'merlin_exp_time' : exp_time,
+                         'merlin_exp_period' : exp_time + 0.005}
+
     plan = bp.rel_spiral_fermat(*args, **kwargs)
     d = plot_raster_path(plan, args[1].name, args[2].name, probe_size=.001, lw=0.5)
     num_points = d['path'].get_path().vertices.shape[0]
+
     print(f"Number of points: {num_points}")
-    if not testing:
-        yield from bps.mv(merlin.total_points, num_points)
-        yield from rel_spiral_fermat(*args, **kwargs)
+    xs2.total_points.put(num_points)
+    yield from bps.mv(merlin.total_points, num_points,
+                      merlin.hdf5.num_capture, num_points)
+    merlin.hdf5.stage_sigs['num_capture'] = num_points
+    yield from rel_spiral_fermat(*args, **kwargs, md=scan_md)
+
+
+def export_merlin2tiff(scanid=-1, wd=None):
+    if wd is None:
+        wd = '/home/xf05id1/current_user_data/'
+
+    print('Loading data...')
+    h = db[int(scanid)]
+    d = h.data('merlin_image', fill=True)
+    d = np.array(list(d))
+    d = np.squeeze(d)
+    d = np.array(d, dtype='float32')
+    x = np.array(list(h.data('nano_stage_x', fill=True)))
+    y = np.array(list(h.data('nano_stage_y', fill=True)))
+    I0= np.array(list(h.data('sclr_it', fill=True)))
+
+    # Get scanid
+    if (scanid < 0):
+        scanid = h.start['scan_id']
+
+    print('Writing data...')
+    fn = 'scan%d.tif' % scanid
+    fn_txt = 'scan%d.txt' % scanid
+    io.imsave(wd + fn, d)
+    np.savetxt(wd + fn_txt, np.array((x, y, I0)))
+
+
+def nano_xrf(xstart, xstop, xstep,
+             ystart, ystop, ystep, acqtime,
+             shutter=True, extra_dets=None,
+             xmotor=nano_stage.x, ymotor=nano_stage.y):
+
+    # define motors
+    # xmotor = nano_stage.x
+    # ymotor = nano_stage.y
+
+    # Record relevant metadata in the Start document, defined in 90-usersetup.py
+    scan_md = {}
+    get_stock_md(scan_md)
+    scan_md['scan_input'] = str([xstart, xstop, xstep, ystart, ystop, ystep, acqtime])
+    scan_md['scaninfo']  = {'type': 'XRF',
+                            'raster' : True}
+
+    # calculate number of points
+    xnum = np.int(np.abs(np.round((xstop - xstart)/xstep)) + 1)
+    ynum = np.int(np.abs(np.round((ystop - ystart)/ystep)) + 1)
+
+    # Setup detectors
+    if extra_dets is None:
+        extra_dets = []
+    dets = [sclr1, xs2, xmotor, ymotor] + extra_dets
+
+    # Set counting time
+    sclr1.preset_time.put(acqtime)
+    xs2.external_trig.put(False)
+    xs2.settings.acquire_time.put(acqtime)
+    xs2.total_points.put(xnum * ynum)
+    if (merlin in dets):
+        merlin.cam.acquire_time.put(acqtime)
+        merlin.cam.acquire_period.put(acqtime + 0.005)
+        merlin.hdf5.stage_sigs['num_capture'] = xnum * ynum
+        scan_md['merlin'] = {'merlin_exp_time' : acqtime,
+                             'merlin_exp_period' : acqtime + 0.005}
+
+    # LiveGrid
+    livecallbacks = []
+    livecallbacks.append(LiveTable([xmotor.name, ymotor.name]))
+    roi_name = 'roi{:02}'.format(1)
+    roi_key = getattr(xs2.channel1.rois, roi_name).value.name
+    livecallbacks.append(LiveGrid((ynum, xnum), roi_key,
+                                  clim=None, cmap='viridis',
+                                  xlabel='x [um]', ylabel='y [um]',
+                                  extent=[xstart, xstop, ystart, ystop],
+                                  x_positive='right', y_positive='down'))
+
+    myplan = grid_scan(dets,
+                       ymotor, ystart, ystop, ynum,
+                       xmotor, xstart, xstop, xnum, True,
+                       md=scan_md)
+    myplan = subs_wrapper(myplan,
+                          {'all': livecallbacks})
+
+    # Open shutter
+    if (shutter):
+        yield from mv(shut_b,'Open')
+
+    # grid scan
+    uid = yield from myplan
+
+    # Open shutter
+    if (shutter):
+        yield from mv(shut_b,'Close')
+
+    return uid
+

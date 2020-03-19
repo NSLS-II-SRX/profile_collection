@@ -10,6 +10,8 @@ from bluesky.plans import relative_scan
 from bluesky.callbacks import LiveFit,LiveFitPlot
 from bluesky.callbacks.fitting import PeakStats
 from bluesky.plan_stubs import mv
+from bluesky.utils import short_uid
+from bluesky.plan_stubs import checkpoint, abs_set, wait, trigger_and_read
 import lmfit
 import time
 
@@ -25,6 +27,20 @@ def f_gauss(x, A, sigma, x0, y0, m):
 def f_int_gauss(x, A, sigma, x0, y0, m):
     x_star = (x - x0) / sigma
     return A * erf(x_star / np.sqrt(2)) + y0 + m*x
+
+# Error function with offset
+def f_offset_erf(x, A, sigma, x0, y0):
+    x_star = (x - x0) / sigma
+    return A * erf(x_star / np.sqrt(2)) + y0
+
+# Let's fit two error functions
+def f_two_erfs(x, A1, sigma1, x1, y1,
+                  A2, sigma2, x2, y2):
+    x1_star = (x - x1) / sigma1
+    x2_star = (x - x2) / sigma2
+
+    f_combo = f_offset_erf(x, A1, sigma1, x1, y1) + f_offset_erf(x, A2, sigma2, x2, y2)
+    return f_combo
 
 def mv_position(pos = []):
     """
@@ -107,3 +123,37 @@ def estimate_scan_duration(xnum, ynum, dwell, scantype=None, event_delay=None):
 
     return result
 
+
+def custom_one_nd_step(detectors, step, pos_cache):
+    """
+    Inner loop of an N-dimensional step scan
+
+    This is the default function for ``per_step`` param in ND plans.
+
+    Parameters
+    ----------
+    detectors : iterable
+        devices to read
+    step : dict
+        mapping motors to positions in this step
+    pos_cache : dict
+        mapping motors to their last-set positions
+    """
+    def move():
+        yield from checkpoint()
+        grp = short_uid('set')
+        for motor, pos in step.items():
+            if pos == pos_cache[motor]:
+                # This step does not move this motor.
+                continue
+            yield from abs_set(motor, pos, group=grp)
+            pos_cache[motor] = pos
+        yield from wait(group=grp)
+
+    motors = step.keys()
+    yield from move()
+
+    # Here is the custom part, add a 1 second delay
+    yield from bps.sleep(1)
+
+    yield from trigger_and_read(list(detectors) + list(motors))
