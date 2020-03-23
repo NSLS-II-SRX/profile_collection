@@ -24,13 +24,13 @@ import itertools
 from pathlib import PurePath
 from ophyd.areadetector.filestore_mixins import FileStorePluginBase
 
-class BulkMerlin(BulkXSPRESS):
+class BulkMerlin(BulkXspress):
     HANDLER_NAME = 'MERLIN_FLY_STREAM_V1'
     def __call__(self):
         return self._handle['entry/instrument/detector/data'][:]
 
 
-class BulkMerlinDEBUG(BulkXSPRESS):
+class BulkMerlinDebug(BulkXspress):
     # This is for data take in 'capture' mode, only used for debugging
     # once.
     HANDLER_NAME = 'MERLIN_FLY'
@@ -39,7 +39,7 @@ class BulkMerlinDEBUG(BulkXSPRESS):
 
 
 # needed to get at some debugging data
-db.reg.register_handler('MERLIN_FLY', BulkMerlinDEBUG,
+db.reg.register_handler('MERLIN_FLY', BulkMerlinDebug,
                         overwrite=True)
 db.reg.register_handler(BulkMerlin.HANDLER_NAME, BulkMerlin,
                         overwrite=True)

@@ -21,7 +21,7 @@ class SRXMode(Enum):
     fly = 2
 
 
-class BulkXSPRESS(HandlerBase):
+class BulkXspress(HandlerBase):
     HANDLER_NAME = 'XPS3_FLY'
     def __init__(self, resource_fn):
         self._handle = h5py.File(resource_fn, 'r')
@@ -29,7 +29,7 @@ class BulkXSPRESS(HandlerBase):
     def __call__(self):
         return self._handle['entry/instrument/detector/data'][:]
 
-db.reg.register_handler(BulkXSPRESS.HANDLER_NAME, BulkXSPRESS,
+db.reg.register_handler(BulkXspress.HANDLER_NAME, BulkXspress,
                         overwrite=True)
 
 
@@ -45,7 +45,7 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
     @property
     def filestore_spec(self):
         if self.parent._mode is SRXMode.fly:
-           return BulkXSPRESS.HANDLER_NAME
+           return BulkXspress.HANDLER_NAME
         return Xspress3HDF5Handler.HANDLER_NAME
 
     def generate_datum(self, key, timestamp, datum_kwargs):
