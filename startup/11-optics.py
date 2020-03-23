@@ -57,20 +57,20 @@ hfm = SRXHFM('XF:05IDA-OP:1{Mir:1-Ax:', name='hfm')
 
 
 ### Setup HDCM
-class HDCMPIEZOROLL(PVPositionerPC):
+class HDCMPiezoRoll(PVPositionerPC):
     setpoint = Cpt(EpicsSignal, '')
     readback = Cpt(EpicsSignalRO, '')
-    pid_enabled = EpicsSignal('XF:05IDD-CT{FbPid:01}PID:on')
-    pid_I = EpicsSignal('XF:05IDD-CT{FbPid:01}PID.I')
+    pid_enabled = Cpt(EpicsSignal, 'XF:05IDD-CT{FbPid:01}PID:on', name='pid_enabled', add_prefix=())
+    pid_I = Cpt(EpicsSignal, 'XF:05IDD-CT{FbPid:01}PID.I', name='pid_I', add_prefix=())
 
     def reset_pid(self):
         yield from bps.mov(self.pid_I, 0.0)
 
-class HDCMPIEZOPITCH(PVPositionerPC):
+class HDCMPiezoPitch(PVPositionerPC):
     setpoint = Cpt(EpicsSignal, '')
     readback = Cpt(EpicsSignalRO, '')
-    pid_enabled = EpicsSignal('XF:05IDD-CT{FbPid:02}PID:on')
-    pid_I = EpicsSignal('XF:05IDD-CT{FbPid:02}PID.I')
+    pid_enabled = Cpt(EpicsSignal, 'XF:05IDD-CT{FbPid:02}PID:on', name='pid_enabled', add_prefix=())
+    pid_I = Cpt(EpicsSignal, 'XF:05IDD-CT{FbPid:02}PID.I', name='pid_I', add_prefix=())
 
     def reset_pid(self):
         yield from bps.mov(self.pid_I, 0.0)
@@ -78,10 +78,10 @@ class HDCMPIEZOPITCH(PVPositionerPC):
 class SRXDCM(Device):
     bragg = Cpt(EpicsMotor, 'P}Mtr')
     c1_roll = Cpt(EpicsMotor, 'R1}Mtr')
-    c1_fine = HDCMPIEZOROLL('XF:05ID-BI{EM:BPM1}DAC0', name='c1_roll')
+    c1_fine = Cpt(HDCMPiezoRoll, 'XF:05ID-BI{EM:BPM1}DAC0', name='c1_fine', add_prefix=())
     c2_x = Cpt(EpicsMotor, 'X2}Mtr')
     c2_pitch = Cpt(EpicsMotor, 'P2}Mtr')
-    c2_fine = HDCMPIEZOPITCH('XF:05ID-BI{EM:BPM1}DAC1', name='c2_fine')
+    c2_fine = Cpt(HDCMPiezoPitch, 'XF:05ID-BI{EM:BPM1}DAC1', name='c2_fine', add_prefix=())
     c2_pitch_kill = Cpt(EpicsSignal, 'P2}Cmd:Kill-Cmd')
     x = Cpt(EpicsMotor, 'X}Mtr')
     y = Cpt(EpicsMotor, 'Y}Mtr')
@@ -119,10 +119,10 @@ class SRXSSAVC(PVPositionerPC):
     readback = Cpt(EpicsSignalRO, 'Y}t2.D')
 
 class SRXSSACalc(Device):
-    h_cen = SRXSSAHC('XF:05IDB-OP:1{Slt:SSA-Ax:', name='h_cen')
-    h_gap = SRXSSAHG('XF:05IDB-OP:1{Slt:SSA-Ax:', name='h_gap')
-    v_cen = SRXSSAVC('XF:05IDB-OP:1{Slt:SSA-Ax:', name='v_cen')
-    v_gap = SRXSSAVG('XF:05IDB-OP:1{Slt:SSA-Ax:', name='v_gap')
+    h_cen = Cpt(SRXSSAHC, '', name='h_cen')
+    h_gap = Cpt(SRXSSAHG, '', name='h_gap')
+    v_cen = Cpt(SRXSSAVC, '', name='v_cen')
+    v_gap = Cpt(SRXSSAVG, '', name='v_gap')
 
 slt_ssa = SRXSSACalc('XF:05IDB-OP:1{Slt:SSA-Ax:',name='slt_ssa')
 
