@@ -8,17 +8,17 @@ from ophyd.status import wait
 
 
 ### BPM1 Statistics
-class BpmStats(Device):
+class BPMStats(Device):
     tot1 = Cpt(EpicsSignal, 'Stats1:Total_RBV')
     tot2 = Cpt(EpicsSignal, 'Stats2:Total_RBV')
     tot3 = Cpt(EpicsSignal, 'Stats3:Total_RBV')
     tot4 = Cpt(EpicsSignal, 'Stats4:Total_RBV')
 
-bpm1_stats = BpmStats('XF:05IDA-BI:1{BPM:1-Cam:1}', name='bpm1_stats')
+bpm1_stats = BPMStats('XF:05IDA-BI:1{BPM:1-Cam:1}', name='bpm1_stats')
 
 
 ### BPM Diode
-class BpmDiode(Device):
+class BPMDiode(Device):
     "Beam Position Monitor Diode"
     diode0 = Cpt(EpicsSignalRO, '_Ch1')
     diode1 = Cpt(EpicsSignalRO, '_Ch2')
@@ -34,8 +34,8 @@ class BpmDiode(Device):
         status._finished()
         return status
 
-# bpm1 = BpmDiode('xf05bpm03:DataRead', name='bpm1')
-# bpm2 = BpmDiode('xf05bpm04:DataRead', name='bpm2')
+# bpm1 = BPMDiode('xf05bpm03:DataRead', name='bpm1')
+# bpm2 = BPMDiode('xf05bpm04:DataRead', name='bpm2')
 # BPM IOC disabled 2019-04-15
 # bpm1 = TetrAMM('XF:05IDA-BI{BPM:3}',name='bpm1')
 # bpm2 = TetrAMM('XF:05IDA-BI{BPM:4}',name='bpm2')
@@ -80,7 +80,7 @@ ssa = SlitDrainCurrent('XF:05IDA-BI{BPM:05}AH501:', name='ssa')
 
 
 ### TetrAMM BPM in B-hutch
-class BPM_TETRAMM(Device):
+class BPM_TetrAMM(Device):
     "Beam Position Monitor Foil"
     channel1 = Cpt(EpicsSignalRO, 'Current1:MeanValue_RBV', kind=Kind.omitted)
     channel2 = Cpt(EpicsSignalRO, 'Current2:MeanValue_RBV', kind=Kind.omitted)
@@ -91,5 +91,5 @@ class BPM_TETRAMM(Device):
     y = Cpt(EpicsSignalRO, 'PosY:MeanValue_RBV')
     total_current = Cpt(EpicsSignalRO, 'SumAll:MeanValue_RBV')
 
-bpm4 = BPM_TETRAMM('XF:05IDA-BI{BPM:4}', name='bpm4')
+bpm4 = BPM_TetrAMM('XF:05IDA-BI{BPM:4}', name='bpm4')
 
