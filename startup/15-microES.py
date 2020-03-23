@@ -66,10 +66,8 @@ class HFSampleStage(Device):
 hf_stage = HFSampleStage('XF:05IDD-ES:1', name='hf_stage')
 if 'velocity' not in hf_stage.x.configuration_attrs:
     hf_stage.x.configuration_attrs.append('velocity')
-# Group this with all other setting functions
-# Maybe ask in startup if we want to set defaults
-# How would we run this in startup if it needs to run inside the RE?
-# hf_stage.reset_stage_defaults()
+if 'TOUCHBEAMLINE' in os.environ and os.environ['TOUCHBEAMLINE'] == 1:
+    RE(hf_stage.reset_stage_defaults())
 
 
 ### SDD motion

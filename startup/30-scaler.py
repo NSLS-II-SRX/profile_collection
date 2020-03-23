@@ -87,16 +87,16 @@ i0 = sclr1.channels.chan2
 it = sclr1.channels.chan4
 im = sclr1.channels.chan3
 
-def export_sis_data(ion, filepath):
+def export_sis_data(ion, filepath, zebra):
     t = ion.mca1.get(timeout=5.)
     i = ion.mca2.get(timeout=5.)
-    im= ion.mca3.get(timeout=5.)
-    it= ion.mca4.get(timeout=5.)
+    im = ion.mca3.get(timeout=5.)
+    it = ion.mca4.get(timeout=5.)
     while len(t) == 0 and len(t) != len(i):
         t = ion.mca1.get(timeout=5.)
         i = ion.mca2.get(timeout=5.)
-        im= ion.mca3.get(timeout=5.)
-        it= ion.mca4.get(timeout=5.)
+        im = ion.mca3.get(timeout=5.)
+        it = ion.mca4.get(timeout=5.)
 
     correct_length = zebra.pc.data.num_down.get()
     # size = (len(t),)

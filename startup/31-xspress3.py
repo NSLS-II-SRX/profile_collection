@@ -222,53 +222,55 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
             self._mode = SRXMode.step
         return ret
 
+
 try:
     xs = SrxXspress3Detector('XF:05IDD-ES{Xsp:1}:', name='xs')
-    xs.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
-    xs.channel2.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
-    xs.channel3.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
-    xs.hdf5.num_extra_dims.put(0)
-    xs.channel2.vis_enabled.put(1)
-    xs.channel3.vis_enabled.put(1)
-    xs.settings.num_channels.put(3)
+    if 'TOUCHBEAMLINE' in os.environ and os.environ['TOUCHBEAMLINE'] == 1:
+        xs.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
+        xs.channel2.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
+        xs.channel3.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
+        xs.hdf5.num_extra_dims.put(0)
+        xs.channel2.vis_enabled.put(1)
+        xs.channel3.vis_enabled.put(1)
+        xs.settings.num_channels.put(3)
     
-    xs.settings.configuration_attrs = ['acquire_period',
-    			                       'acquire_time',
-    			                       'gain',
-    			                       'image_mode',
-    			                       'manufacturer',
-    			                       'model',
-    			                       'num_exposures',
-    			                       'num_images',
-    			                       'temperature',
-    			                       'temperature_actual',
-    			                       'trigger_mode',
-    			                       'config_path',
-    			                       'config_save_path',
-    			                       'invert_f0',
-    			                       'invert_veto',
-    			                       'xsp_name',
-    			                       'num_channels',
-    			                       'num_frames_config',
-    			                       'run_flags',
-    			                       'trigger_signal']
+        xs.settings.configuration_attrs = ['acquire_period',
+                                        'acquire_time',
+                                        'gain',
+                                        'image_mode',
+                                        'manufacturer',
+                                        'model',
+                                        'num_exposures',
+                                        'num_images',
+                                        'temperature',
+                                        'temperature_actual',
+                                        'trigger_mode',
+                                        'config_path',
+                                        'config_save_path',
+                                        'invert_f0',
+                                        'invert_veto',
+                                        'xsp_name',
+                                        'num_channels',
+                                        'num_frames_config',
+                                        'run_flags',
+                                        'trigger_signal']
+        
+        # This is necessary for when the IOC restarts
+        # We have to trigger one image for the hdf5 plugin to work correctly
+        # else, we get file writing errors
+        xs.hdf5.warmup()
     
-    # This is necessary for when the ioc restarts
-    # we have to trigger one image for the hdf5 plugin to work correclty
-    # else, we get file writing errors
-    xs.hdf5.warmup()
-    
-    # Rename the ROIs
-    for i in range(1,4):
-        ch=getattr(xs.channel1.rois,'roi{:02}.value'.format(i))
-        ch.name = 'ROI_{:02}'.format(i)
+        # Rename the ROIs
+        for i in range(1, 4):
+            ch = getattr(xs.channel1.rois, 'roi{:02}.value'.format(i))
+            ch.name = 'ROI_{:02}'.format(i)
 except TimeoutError:
     xs = None
     print('\nCannot connect to xs. Continuing without device.\n')
-except BaseException as b:
+except Exception as ex:
     xs = None
-    print('\nUnexpected error connecting to xs.\n', sys.exc_info()[0])
-    print(b, end='\n\n')
+    print('\nUnexpected error connecting to xs.\n')
+    print(ex, end='\n\n')
 
 
 # Working xs2 detector
@@ -342,14 +344,13 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
 
 try:
     xs2 = SrxXspress3Detector2('XF:05IDD-ES{Xsp:2}:', name='xs2', f_key='fluor_xs2')
-    # xs2 = SrxXspress3Detector2('XF:05IDD-ES{Xsp:2}:', name='xs2')
-    xs2.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
-    xs2.hdf5.num_extra_dims.put(0)
-    xs2.hdf5.warmup()
+    if 'TOUCHBEAMLINE' in os.environ and os.environ['TOUCHBEAMLINE'] == 1:
+        xs2.channel1.rois.read_attrs = ['roi{:02}'.format(j) for j in [1, 2, 3, 4]]
+        xs2.hdf5.num_extra_dims.put(0)
+        xs2.hdf5.warmup()
 except TimeoutError:
     xs2 = None
     print('\nCannot connect to xs2. Continuing without device.\n')
-except:
+except Exception as ex:
     xs2 = None
-    print('\nUnexpected error connecting to xs2.\n', sys.exc_info()[0], end='\n\n')
-
+    print('\nUnexpected error connecting to xs2.\n', ex, end='\n\n')
