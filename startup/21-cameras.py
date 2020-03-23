@@ -82,7 +82,8 @@ try:
 except TimeoutError:
     hfvlmAD = None
     print('\nCannot connect to HF VLM Camera. Continuing without device.\n')
-except:
+except Exception as ex:
     hfvlmAD = None
-    print('\nUnexpected error connecting to HF VLM Camera.\n', sys.exc_info()[0], end='\n\n')
+    print('\nUnexpected error connecting to HF VLM Camera.\n')
+    print(ex, end='\n\n')
 
