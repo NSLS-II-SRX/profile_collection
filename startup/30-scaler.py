@@ -1,6 +1,8 @@
 print(f'Loading {__file__}...')
 
 
+import h5py
+import numpy as np
 from ophyd import Device, EpicsScaler, EpicsSignal, EpicsSignalRO
 from ophyd import Component as Cpt
 from ophyd.device import DynamicDeviceComponent as DDC
