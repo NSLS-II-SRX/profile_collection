@@ -38,7 +38,7 @@ class FineSampleLabX(PseudoPositioner, NamedDevice):
 
     @property
     def radian_theta(self):
-        return math.radians(self.real_theta.position + self._theta0.get())
+        return math.radians(self.real_theta.get() + self._theta0.get())
 
     @pseudo_position_argument
     def forward(self, position):
