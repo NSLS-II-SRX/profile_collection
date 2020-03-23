@@ -3,7 +3,7 @@ print(f'Loading {__file__}...')
 from ophyd.areadetector import AreaDetector, SingleTrigger, HDF5Plugin
 from ophyd.areadetector.cam import AreaDetectorCam
 from ophyd.areadetector.plugins import ROIPlugin, ImagePlugin
-from ophyd import Component as C
+from ophyd import Component as Cpt
 from ophyd.areadetector.filestore_mixins import FileStoreHDF5IterativeWrite
 from nslsii.ad33 import StatsPluginV33
 
@@ -33,18 +33,18 @@ class PCOEdgeCamV33(AreaDetectorCam):
 
 
 class SRXPCOEdge(SingleTrigger, AreaDetector):
-    cam = C(PCOEdgeCamV33, 'cam1:')
-    image_plugin = C(ImagePlugin, 'image1:')
-    stats1 = C(StatsPluginV33, 'Stats1:')
-    stats2 = C(StatsPluginV33, 'Stats2:')
-    stats3 = C(StatsPluginV33, 'Stats3:')
-    stats4 = C(StatsPluginV33, 'Stats4:')
-    stats5 = C(StatsPluginV33, 'Stats5:')
-    roi1 = C(ROIPlugin, 'ROI1:')
-    roi2 = C(ROIPlugin, 'ROI2:')
-    roi3 = C(ROIPlugin, 'ROI3:')
-    roi4 = C(ROIPlugin, 'ROI4:')
-    hdf = C(HDF5PluginWithFileStore, 'HDF1:',
+    cam = Cpt(PCOEdgeCamV33, 'cam1:')
+    image_plugin = Cpt(ImagePlugin, 'image1:')
+    stats1 = Cpt(StatsPluginV33, 'Stats1:')
+    stats2 = Cpt(StatsPluginV33, 'Stats2:')
+    stats3 = Cpt(StatsPluginV33, 'Stats3:')
+    stats4 = Cpt(StatsPluginV33, 'Stats4:')
+    stats5 = Cpt(StatsPluginV33, 'Stats5:')
+    roi1 = Cpt(ROIPlugin, 'ROI1:')
+    roi2 = Cpt(ROIPlugin, 'ROI2:')
+    roi3 = Cpt(ROIPlugin, 'ROI3:')
+    roi4 = Cpt(ROIPlugin, 'ROI4:')
+    hdf = Cpt(HDF5PluginWithFileStore, 'HDF1:',
             read_path_template=r'/nsls2/xf05id1/XF05ID1/PCO/%Y/%m/%d/',
             write_path_template=r'Z:\%Y\%m\%d\\',
             root='/nsls2/xf05id1/XF05ID1/')

@@ -17,6 +17,7 @@ from ophyd.areadetector import (AreaDetector, PixiradDetectorCam, ImagePlugin,
                                 ProcessPlugin, ROIPlugin, TransformPlugin,
                                 OverlayPlugin)
 from ophyd.areadetector.trigger_mixins import SingleTrigger
+from ophyd import Component as Cpt
 
 
 # monkey patch for trailing slash problem (from XPD's profile, see

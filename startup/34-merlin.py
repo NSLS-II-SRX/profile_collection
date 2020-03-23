@@ -16,7 +16,7 @@ from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreBase
                                                  )
 from ophyd import Signal
-from ophyd import Component as C
+from ophyd import Component as Cpt
 from hxntools.detectors.merlin import MerlinDetector
 from hxntools.handlers import register
 import itertools

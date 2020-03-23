@@ -16,7 +16,7 @@ from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreBase
                                                  )
 from ophyd import Signal
-from ophyd import Component as C
+from ophyd import Component as Cpt
 from hxntools.detectors.merlin import MerlinDetector
 from hxntools.handlers import register
 import itertools
@@ -51,17 +51,17 @@ class FileStoreBulkReadable(FileStoreIterativeWrite):
 
 class SRXPixirad(SingleTrigger,AreaDetector):
 
-    det = C(PixiradDetectorCam, 'cam1:')
-    image = C(ImagePlugin, 'image1:')
-    roi1 = C(ROIPlugin, 'ROI1:')
-    roi2 = C(ROIPlugin, 'ROI2:')
-    roi3 = C(ROIPlugin, 'ROI3:')
-    roi4 = C(ROIPlugin, 'ROI4:')
-    stats1 = C(StatsPlugin, 'Stats1:')
-    stats2 = C(StatsPlugin, 'Stats2:')
-    stats3 = C(StatsPlugin, 'Stats3:')
-    stats4 = C(StatsPlugin, 'Stats4:')
-    tiff = C(SRXTIFFPlugin, 'TIFF1:',
+    det = Cpt(PixiradDetectorCam, 'cam1:')
+    image = Cpt(ImagePlugin, 'image1:')
+    roi1 = Cpt(ROIPlugin, 'ROI1:')
+    roi2 = Cpt(ROIPlugin, 'ROI2:')
+    roi3 = Cpt(ROIPlugin, 'ROI3:')
+    roi4 = Cpt(ROIPlugin, 'ROI4:')
+    stats1 = Cpt(StatsPlugin, 'Stats1:')
+    stats2 = Cpt(StatsPlugin, 'Stats2:')
+    stats3 = Cpt(StatsPlugin, 'Stats3:')
+    stats4 = Cpt(StatsPlugin, 'Stats4:')
+    tiff = Cpt(SRXTIFFPlugin, 'TIFF1:',
              #write_path_template='/epicsdata/pixirad/%Y/%m/%d/',
              #root='/epicsdata')
              write_path_template='/nsls2/xf05id1/data/pixirad/%Y/%m/%d/',
