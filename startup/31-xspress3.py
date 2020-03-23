@@ -6,7 +6,7 @@ import sys
 import time as ttime
 from ophyd.areadetector.plugins import PluginBase
 from ophyd import Signal, DeviceStatus
-from ophyd import Component as C
+from ophyd import Component as Cpt
 from enum import Enum
 
 from hxntools.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
@@ -155,15 +155,15 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
     array_counter = Cpt(EpicsSignal, 'ArrayCounter_RBV')
 
     # Currently only using three channels. Uncomment these to enable more
-    channel1 = C(Xspress3Channel, 'C1_', channel_num=1, read_attrs=['rois'])
-    channel2 = C(Xspress3Channel, 'C2_', channel_num=2, read_attrs=['rois'])
-    channel3 = C(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
+    channel1 = Cpt(Xspress3Channel, 'C1_', channel_num=1, read_attrs=['rois'])
+    channel2 = Cpt(Xspress3Channel, 'C2_', channel_num=2, read_attrs=['rois'])
+    channel3 = Cpt(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
     # channels:
-    # channel4 = C(Xspress3Channel, 'C4_', channel_num=4)
-    # channel5 = C(Xspress3Channel, 'C5_', channel_num=5)
-    # channel6 = C(Xspress3Channel, 'C6_', channel_num=6)
-    # channel7 = C(Xspress3Channel, 'C7_', channel_num=7)
-    # channel8 = C(Xspress3Channel, 'C8_', channel_num=8)
+    # channel4 = Cpt(Xspress3Channel, 'C4_', channel_num=4)
+    # channel5 = Cpt(Xspress3Channel, 'C5_', channel_num=5)
+    # channel6 = Cpt(Xspress3Channel, 'C6_', channel_num=6)
+    # channel7 = Cpt(Xspress3Channel, 'C7_', channel_num=7)
+    # channel8 = Cpt(Xspress3Channel, 'C8_', channel_num=8)
 
     create_dir = Cpt(EpicsSignal, 'HDF5:FileCreateDir')
 
@@ -284,9 +284,9 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
     roi_data = Cpt(PluginBase, 'ROIDATA:')
 
     # XS2 only uses 1 channel. Currently only using three channels. Uncomment these to enable more
-    channel1 = C(Xspress3Channel, 'C1_', channel_num=1, read_attrs=['rois'])
-    # channel2 = C(Xspress3Channel, 'C2_', channel_num=2, read_attrs=['rois'])
-    # channel3 = C(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
+    channel1 = Cpt(Xspress3Channel, 'C1_', channel_num=1, read_attrs=['rois'])
+    # channel2 = Cpt(Xspress3Channel, 'C2_', channel_num=2, read_attrs=['rois'])
+    # channel3 = Cpt(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
 
     create_dir = Cpt(EpicsSignal, 'HDF5:FileCreateDir')
 
