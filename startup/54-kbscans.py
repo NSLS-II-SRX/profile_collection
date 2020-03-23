@@ -260,7 +260,7 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     dydx = np.gradient(y, x)
     try:
         hf = h5py.File('/home/xf05id1/current_user_data/knife_edge_scan.h5', 'a')
-        tmp_str = 'dataset_%s' id_str
+        tmp_str = 'dataset_%s' % id_str
         hf.create_dataset(tmp_str, data=[x,y])
         hf.close()
         ftxt = open('/home/xf05id1/current_user_data/knife_edge_scan.txt','a')
