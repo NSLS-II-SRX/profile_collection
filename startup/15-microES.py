@@ -7,27 +7,27 @@ from ophyd import Component as Cpt
 
 
 ### JJ Slits
-class SRXJJSLITS(Device):
+class SRXJJSlits(Device):
     h_gap = Cpt(EpicsMotor, 'HA}Mtr')
     h_trans = Cpt(EpicsMotor, 'HT}Mtr')
     v_gap = Cpt(EpicsMotor, 'VA}Mtr')
     v_trans = Cpt(EpicsMotor, 'VT}Mtr')
 
-jjslits = SRXJJSLITS('XF:05IDD-OP:1{Slt:KB-Ax:', name='jjslits')
+jjslits = SRXJJSlits('XF:05IDD-OP:1{Slt:KB-Ax:', name='jjslits')
 
 
 ### Attenuator box
-class SRXATTENUATORS(Device):
+class SRXAttenuators(Device):
     Fe_shutter = Cpt(EpicsSignal, '1}Cmd')
     Cu_shutter = Cpt(EpicsSignal, '2}Cmd')
     Si_shutter = Cpt(EpicsSignal, '3}Cmd')
     Mo_shutter = Cpt(EpicsSignal, '4}Cmd')
 
-attenuators = SRXATTENUATORS('XF:05IDA-OP:1{XIAFltr:', name='attenuators')
+attenuators = SRXAttenuators('XF:05IDA-OP:1{XIAFltr:', name='attenuators')
 
 
 ### micro-KB mirrors from XFM
-class SRXMICROKB(Device):
+class SRXMicroKB(Device):
     KBv_y = Cpt(EpicsMotor, 'KBv-Ax:TY}Mtr')
     KBv_pitch = Cpt(EpicsMotor, 'KBv-Ax:Pitch}Mtr')
     KBv_USB = Cpt(EpicsMotor, 'KBv-Ax:UsB}Mtr')
@@ -37,7 +37,7 @@ class SRXMICROKB(Device):
     KBh_USB = Cpt(EpicsMotor, 'KBv-Ax:UsB}Mtr')
     KBh_DSB = Cpt(EpicsMotor, 'KBv-Ax:DsB}Mtr')
 
-microKB = SRXMICROKB('XF:05IDD-OP:1{Mir:', name='microKB')
+microKB = SRXMicroKB('XF:05IDD-OP:1{Mir:', name='microKB')
 
 
 ### High flux sample stages
@@ -49,24 +49,27 @@ class HFSampleStage(Device):
     topx = Cpt(EpicsMotor, '{Smpl:1-Ax:XF}Mtr')
     topz = Cpt(EpicsMotor, '{Smpl:1-Ax:ZF}Mtr')
 
-    RETRY_DEADBAND_X = EpicsSignal('XF:05IDD-ES:1{Stg:Smpl2-Ax:X}Mtr.RDBD')
-    RETRY_DEADBAND_Y = EpicsSignal('XF:05IDD-ES:1{Stg:Smpl2-Ax:Y}Mtr.RDBD')
+    RETRY_DEADBAND_X = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Stg:Smpl2-Ax:X}Mtr.RDBD', add_prefix=())
+    RETRY_DEADBAND_Y = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Stg:Smpl2-Ax:Y}Mtr.RDBD', add_prefix=())
     _RETRY_DEADBAND_DEFAULT = 0.0001
 
-    BACKLASH_SPEED_X = EpicsSignal('XF:05IDD-ES:1{Stg:Smpl2-Ax:X}Mtr.BVEL')
-    BACKLASH_SPEED_Y = EpicsSignal('XF:05IDD-ES:1{Stg:Smpl2-Ax:Y}Mtr.BVEL')
+    BACKLASH_SPEED_X = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Stg:Smpl2-Ax:X}Mtr.BVEL', add_prefix=())
+    BACKLASH_SPEED_Y = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Stg:Smpl2-Ax:Y}Mtr.BVEL', add_prefix=())
     _BACKLASH_SPEED_DEFAULT = 0.1
 
     def reset_stage_defaults(self):
-        self.RETRY_DEADBAND_X.put(self._RETRY_DEADBAND_DEFAULT)
-        self.RETRY_DEADBAND_Y.put(self._RETRY_DEADBAND_DEFAULT)
-        self.BACKLASH_SPEED_X.put(self._BACKLASH_SPEED_DEFAULT)
-        self.BACKLASH_SPEED_Y.put(self._BACKLASH_SPEED_DEFAULT)
+        yield from mv(self.RETRY_DEADBAND_X, self._RETRY_DEADBAND_DEFAULT,
+                      self.RETRY_DEADBAND_Y, self._RETRY_DEADBAND_DEFAULT,
+                      self.BACKLASH_SPEED_X, self._BACKLASH_SPEED_DEFAULT,
+                      self.BACKLASH_SPEED_Y, self._BACKLASH_SPEED_DEFAULT)
 
 hf_stage = HFSampleStage('XF:05IDD-ES:1', name='hf_stage')
 if 'velocity' not in hf_stage.x.configuration_attrs:
     hf_stage.x.configuration_attrs.append('velocity')
-hf_stage.reset_stage_defaults()
+# Group this with all other setting functions
+# Maybe ask in startup if we want to set defaults
+# How would we run this in startup if it needs to run inside the RE?
+# hf_stage.reset_stage_defaults()
 
 
 ### SDD motion
