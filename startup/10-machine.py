@@ -12,6 +12,7 @@ from ophyd import Component as Cpt
 from scipy.interpolate import InterpolatedUnivariateSpline
 import functools
 import math
+from pathlib import Path
 
 '''
 For organization, this file will define objects for the machine. This will
@@ -220,10 +221,12 @@ class Energy(PseudoPositioner):
         self._c2xcal = C2Xcal
         self._t2cal = T2cal
 
-        calib_path = '/nfs/xf05id1/UndulatorCalibration/'
-        calib_file = 'SRXUgapCalibration20170612.txt'
+        # calib_path = '/nfs/xf05id1/UndulatorCalibration/'
+        calib_path = Path(__file__).parent
+        calib_file = '../data/SRXUgapCalibration20170612.txt'
 
-        with open(os.path.join(calib_path, calib_file), 'r') as f:
+        # with open(os.path.join(calib_path, calib_file), 'r') as f:
+        with open(calib_path / calib_file, 'r') as f:
             next(f)
             uposlistIn=[]
             elistIn=[]
