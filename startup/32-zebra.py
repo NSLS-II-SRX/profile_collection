@@ -214,6 +214,13 @@ class SRXFlyer1Axis(Device):
     KNOWN_DETS = {"xs", "xs2", "merlin", "dexela"}
     fast_axis = Cpt(Signal, value="HOR", kind="config")
 
+    _encoder = Cpt(
+        SRXZebra,
+        "XF:05IDD-ES:1{Dev:Zebra1}:",
+        name="zebra",
+        add_prefix=(),
+        read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
+    )
     @property
     def encoder(self):
         return self._encoder
@@ -242,12 +249,6 @@ class SRXFlyer1Axis(Device):
     def __init__(self, dets, sclr1, *, reg=db.reg, **kwargs):
         super().__init__("", parent=None, **kwargs)
         self._mode = "idle"
-        self._encoder = Cpt(
-            SRXZebra,
-            "XF:05IDD-ES:1{Dev:Zebra1}:",
-            name="zebra",
-            read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
-        )
         self._dets = dets
         self._sis = sclr1
         self._filestore_resource = None
@@ -581,8 +582,8 @@ try:
     flying_zebra = SRXFlyer1Axis(
         list(xs for xs in [xs] if xs is not None), sclr1, name="flying_zebra"
     )
-except Exception:
-    print("Cannot connect to Zebra. Continuing without device.\n")
+except Exception as ex:
+    print("Cannot connect to Zebra. Continuing without device.\n", ex)
     flying_zebra = None
     # flying_zebra_y = None
 
