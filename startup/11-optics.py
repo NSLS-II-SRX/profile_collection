@@ -76,10 +76,10 @@ class HDCMPiezoPitch(PVPositionerPC):
         yield from bps.mov(self.pid_I, 0.0)
 
 class SRXDCM(Device):
-    bragg = Cpt(EpicsMotor, 'P}Mtr')
+    bragg = energy.bragg
     c1_roll = Cpt(EpicsMotor, 'R1}Mtr')
     c1_fine = Cpt(HDCMPiezoRoll, 'XF:05ID-BI{EM:BPM1}DAC0', name='c1_fine', add_prefix=())
-    c2_x = Cpt(EpicsMotor, 'X2}Mtr')
+    c2_x = energy.c2_x
     c2_pitch = Cpt(EpicsMotor, 'P2}Mtr')
     c2_fine = Cpt(HDCMPiezoPitch, 'XF:05ID-BI{EM:BPM1}DAC1', name='c2_fine', add_prefix=())
     c2_pitch_kill = Cpt(EpicsSignal, 'P2}Cmd:Kill-Cmd')
@@ -87,6 +87,7 @@ class SRXDCM(Device):
     y = Cpt(EpicsMotor, 'Y}Mtr')
 
     temp_pitch = Cpt(EpicsSignalRO, 'P}T-I')
+
 
 dcm = SRXDCM('XF:05IDA-OP:1{Mono:HDCM-Ax:' , name='dcm')
 
