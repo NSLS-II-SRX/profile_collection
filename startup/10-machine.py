@@ -212,12 +212,12 @@ class Energy(PseudoPositioner):
     def __init__(self, *args,
                  xoffset=None, d_111=None, delta_bragg=None, C2Xcal=None, T2cal=None,
                  **kwargs):
-        super().__init__(*args, **kwargs)
         self._xoffset = xoffset
         self._d_111 = d_111
         self._delta_bragg = delta_bragg
         self._c2xcal = C2Xcal
         self._t2cal = T2cal
+        super().__init__(*args, **kwargs)
 
         # calib_path = '/nfs/xf05id1/UndulatorCalibration/'
         calib_path = Path(__file__).parent
