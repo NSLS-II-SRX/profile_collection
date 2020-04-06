@@ -7,13 +7,18 @@ import time as ttime
 from ophyd.areadetector.plugins import PluginBase
 from ophyd import Signal, DeviceStatus
 from ophyd import Component as Cpt
+from ophyd.areadetector.filestore_mixins import FileStorePluginBase
+from ophyd.device import Staged
 from enum import Enum
 
 from hxntools.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
                                          Xspress3Channel, Xspress3FileStore)
-from databroker.assets.handlers import Xspress3HDF5Handler, HandlerBase
-from ophyd.areadetector.filestore_mixins import FileStorePluginBase
-from ophyd.device import Staged
+try:
+    from area_detector_handlers import HandlerBase
+    from area_detector_handlers.handlers import Xspress3HDF5Handler
+except ImportError:
+    from databroker.assets.handlers import Xspress3HDF5Handler, HandlerBase
+
 
 
 class SRXMode(Enum):
