@@ -1,11 +1,17 @@
-print(f'Loading {__file__}...')
+print(f"Loading {__file__}...")
 
-import os
 import numpy as np
-from ophyd import (EpicsSignal, EpicsSignalRO, EpicsMotor,
-                   Device, Signal, PseudoPositioner, PseudoSingle)
+from ophyd import (
+    EpicsSignal,
+    EpicsSignalRO,
+    EpicsMotor,
+    Device,
+    Signal,
+    PseudoPositioner,
+    PseudoSingle,
+)
 from ophyd.utils.epics_pvs import set_and_wait
-from ophyd.pseudopos import (pseudo_position_argument, real_position_argument)
+from ophyd.pseudopos import pseudo_position_argument, real_position_argument
 from ophyd.positioner import PositionerBase
 from ophyd import Component as Cpt
 
@@ -14,37 +20,37 @@ import functools
 import math
 from pathlib import Path
 
-'''
+
+"""
 For organization, this file will define objects for the machine. This will
 include the undulator (and energy axis) and front end slits.
-'''
+"""
 
 
-### Constants
+# Constants
 ANG_OVER_EV = 12.3984
 
 
-### Signals
-ring_current = EpicsSignalRO('SR:C03-BI{DCCT:1}I:Real-I', name='ring_current')
+# Signals
+ring_current = EpicsSignalRO("SR:C03-BI{DCCT:1}I:Real-I", name="ring_current")
 
 
-### Setup undulator
+# Setup undulator
 class InsertionDevice(Device, PositionerBase):
-    gap = Cpt(EpicsMotor, '-Ax:Gap}-Mtr',
-              kind='hinted', name='')
-    brake = Cpt(EpicsSignal, '}BrakesDisengaged-Sts',
-                write_pv='}BrakesDisengaged-SP',
-                kind='omitted', add_prefix=('read_pv', 'write_pv', 'suffix'))
+    gap = Cpt(EpicsMotor, "-Ax:Gap}-Mtr", kind="hinted", name="")
+    brake = Cpt(
+        EpicsSignal,
+        "}BrakesDisengaged-Sts",
+        write_pv="}BrakesDisengaged-SP",
+        kind="omitted",
+        add_prefix=("read_pv", "write_pv", "suffix"),
+    )
 
     # These are debugging values, not even connected to by default
-    elev = Cpt(EpicsSignalRO, '-Ax:Elev}-Mtr.RBV',
-               kind='omitted')
-    taper = Cpt(EpicsSignalRO, '-Ax:Taper}-Mtr.RBV',
-                kind='omitted')
-    tilt = Cpt(EpicsSignalRO, '-Ax:Tilt}-Mtr.RBV',
-               kind='omitted')
-    elev_u = Cpt(EpicsSignalRO, '-Ax:E}-Mtr.RBV',
-                 kind='omitted')
+    elev = Cpt(EpicsSignalRO, "-Ax:Elev}-Mtr.RBV", kind="omitted")
+    taper = Cpt(EpicsSignalRO, "-Ax:Taper}-Mtr.RBV", kind="omitted")
+    tilt = Cpt(EpicsSignalRO, "-Ax:Tilt}-Mtr.RBV", kind="omitted")
+    elev_u = Cpt(EpicsSignalRO, "-Ax:E}-Mtr.RBV", kind="omitted")
 
     def set(self, *args, **kwargs):
         set_and_wait(self.brake, 1)
@@ -87,11 +93,13 @@ class InsertionDevice(Device, PositionerBase):
 
     def move(self, *args, moved_cb=None, **kwargs):
         if moved_cb is not None:
+
             @functools.wraps(moved_cb)
             def inner(obj=None):
                 if obj is not None:
                     obj = self
                 return moved_cb(obj=obj)
+
         else:
             inner = None
         return self.set(*args, moved_cb=inner, **kwargs)
@@ -112,26 +120,32 @@ class InsertionDevice(Device, PositionerBase):
         return self.gap.subscribe(inner, *args, **kwargs)
 
 
-### Setup energy axis
+# Setup energy axis
 class Energy(PseudoPositioner):
     # Synthetic axis
     energy = Cpt(PseudoSingle)
+
     # Real motors
-    u_gap = Cpt(InsertionDevice, 'SR:C5-ID:G1{IVU21:1')
-    # bragg = dcm.bragg
-    # bragg = Cpt(dcm.bragg)
-    bragg = Cpt(EpicsMotor, 'XF:05IDA-OP:1{Mono:HDCM-Ax:P}Mtr', add_prefix=(),
-                read_attrs=['user_readback'])
-    # c2_x = Cpt(dcm.c2_x)
-    c2_x = Cpt(EpicsMotor, 'XF:05IDA-OP:1{Mono:HDCM-Ax:X2}Mtr', add_prefix=(),
-               read_attrs=['user_readback'])
-    epics_d_spacing = EpicsSignal('XF:05IDA-CT{IOC:Status01}DCMDspacing.VAL')
-    epics_bragg_offset = EpicsSignal('XF:05IDA-CT{IOC:Status01}BraggOffset.VAL')
+    u_gap = Cpt(InsertionDevice, "SR:C5-ID:G1{IVU21:1")
+    bragg = Cpt(
+        EpicsMotor,
+        "XF:05IDA-OP:1{Mono:HDCM-Ax:P}Mtr",
+        add_prefix=(),
+        read_attrs=["user_readback"],
+    )
+    c2_x = Cpt(
+        EpicsMotor,
+        "XF:05IDA-OP:1{Mono:HDCM-Ax:X2}Mtr",
+        add_prefix=(),
+        read_attrs=["user_readback"],
+    )
+    epics_d_spacing = EpicsSignal("XF:05IDA-CT{IOC:Status01}DCMDspacing.VAL")
+    epics_bragg_offset = EpicsSignal("XF:05IDA-CT{IOC:Status01}BraggOffset.VAL")
 
     # Motor enable flags
     move_u_gap = Cpt(Signal, None, add_prefix=(), value=True)
     move_c2_x = Cpt(Signal, None, add_prefix=(), value=True)
-    harmonic = Cpt(Signal, None, add_prefix=(), value=0, kind='config')
+    harmonic = Cpt(Signal, None, add_prefix=(), value=0, kind="config")
     selected_harmonic = Cpt(Signal, None, add_prefix=(), value=0)
 
     # Experimental
@@ -169,15 +183,13 @@ class Energy(PseudoPositioner):
 
         # Calculate Bragg RBV
         BraggRBV = (
-            np.arcsin((ANG_OVER_EV / target_energy) / (2 * d_111)) /
-            np.pi * 180 -
-            delta_bragg)
+            np.arcsin((ANG_OVER_EV / target_energy) / (2 * d_111)) / np.pi * 180
+            - delta_bragg
+        )
 
         # Calculate C2X
         Bragg = BraggRBV + delta_bragg
-        T2 = (Xoffset *
-              np.sin(Bragg * np.pi / 180) /
-              np.sin(2 * Bragg * np.pi / 180))
+        T2 = Xoffset * np.sin(Bragg * np.pi / 180) / np.sin(2 * Bragg * np.pi / 180)
         dT2 = T2 - T2cal
         C2X = C2Xcal - dT2
 
@@ -186,8 +198,8 @@ class Energy(PseudoPositioner):
         #  TODO make this more sohpisticated to stay a fixed distance
         #  off the peak of the undulator energy
         ugap = float(
-            etoulookup((target_energy + u_detune) /
-                       undulator_harmonic))  # in mm
+            etoulookup((target_energy + u_detune) / undulator_harmonic)
+        )  # in mm
         ugap *= 1000  # convert to um
 
         return BraggRBV, C2X, ugap
@@ -209,9 +221,16 @@ class Energy(PseudoPositioner):
 
         return energy
 
-    def __init__(self, *args,
-                 xoffset=None, d_111=None, delta_bragg=None, C2Xcal=None, T2cal=None,
-                 **kwargs):
+    def __init__(
+        self,
+        *args,
+        xoffset=None,
+        d_111=None,
+        delta_bragg=None,
+        C2Xcal=None,
+        T2cal=None,
+        **kwargs,
+    ):
         self._xoffset = xoffset
         self._d_111 = d_111
         self._delta_bragg = delta_bragg
@@ -221,13 +240,13 @@ class Energy(PseudoPositioner):
 
         # calib_path = '/nfs/xf05id1/UndulatorCalibration/'
         calib_path = Path(__file__).parent
-        calib_file = '../data/SRXUgapCalibration20170612.txt'
+        calib_file = "../data/SRXUgapCalibration20170612.txt"
 
         # with open(os.path.join(calib_path, calib_file), 'r') as f:
-        with open(calib_path / calib_file, 'r') as f:
+        with open(calib_path / calib_file, "r") as f:
             next(f)
-            uposlistIn=[]
-            elistIn=[]
+            uposlistIn = []
+            elistIn = []
             for line in f:
                 num = [float(x) for x in line.split()]
                 uposlistIn.append(num[0])
@@ -237,7 +256,6 @@ class Energy(PseudoPositioner):
         self.utoelookup = InterpolatedUnivariateSpline(uposlistIn, elistIn)
 
         self.u_gap.gap.user_readback.name = self.u_gap.name
-
 
     def crystal_gap(self):
         """
@@ -251,12 +269,12 @@ class Energy(PseudoPositioner):
         d_111 = self._d_111
         c2x_cal = self._c2xcal
 
-        Bragg = np.pi/180 * (bragg + delta_bragg)
+        Bragg = np.pi / 180 * (bragg + delta_bragg)
 
         dT2 = c2x_cal - C2X
         T2 = dT2 + T2cal
 
-        XoffsetVal = T2/(np.sin(Bragg)/np.sin(2*Bragg))
+        XoffsetVal = T2 / (np.sin(Bragg) / np.sin(2 * Bragg))
 
         return XoffsetVal
 
@@ -265,20 +283,26 @@ class Energy(PseudoPositioner):
         energy = p_pos.energy
         harmonic = int(self.harmonic.get())
         if harmonic < 0 or ((harmonic % 2) == 0 and harmonic != 0):
-            raise RuntimeError(f"The harmonic must be 0 or odd and positive, you set {harmonic}.  "
-                               "Set `energy.harmonic` to a positive odd integer or 0.")
+            raise RuntimeError(
+                f"The harmonic must be 0 or odd and positive, you set {harmonic}.  "
+                "Set `energy.harmonic` to a positive odd integer or 0."
+            )
         detune = self.detune.get()
         if energy <= 4.4:
-            raise ValueError("The energy you entered is too low ({} keV). "
-                             "Minimum energy = 4.4 keV".format(energy))
-        if (energy > 25.):
-            if (energy < 4400.) or (energy > 25000.):
-            # Energy is invalid
-                raise ValueError('The requested photon energy is invalid ({} keV). '
-                             'Values must be in the range of 4.4 - 25 keV'.format(energy))
+            raise ValueError(
+                "The energy you entered is too low ({} keV). "
+                "Minimum energy = 4.4 keV".format(energy)
+            )
+        if energy > 25.0:
+            if (energy < 4400.0) or (energy > 25000.0):
+                # Energy is invalid
+                raise ValueError(
+                    "The requested photon energy is invalid ({} keV). "
+                    "Values must be in the range of 4.4 - 25 keV".format(energy)
+                )
             else:
-            # Energy is in eV
-                energy = energy / 1000.
+                # Energy is in eV
+                energy = energy / 1000.0
 
         # harmonic cannot be None, it is an undesired datatype
         # Previously, we were finding the harmonic with the highest flux, this
@@ -286,17 +310,23 @@ class Energy(PseudoPositioner):
         # None
         # Here, we are programming it in
         # if harmonic is None:
-        if (harmonic < 3):
+        if harmonic < 3:
             harmonic = 3
             # Choose the right harmonic
-            braggcal, c2xcal, ugapcal = self.energy_to_positions(energy, harmonic, detune)
+            braggcal, c2xcal, ugapcal = self.energy_to_positions(
+                energy, harmonic, detune
+            )
             # Try higher harmonics until the required gap is too small
             while True:
-                braggcal, c2xcal, ugapcal = self.energy_to_positions(energy, harmonic + 2, detune)
+                braggcal, c2xcal, ugapcal = self.energy_to_positions(
+                    energy, harmonic + 2, detune
+                )
                 if ugapcal < self.u_gap.low_limit:
                     break
                 harmonic += 2
+
         self.selected_harmonic.put(harmonic)
+
         # Compute where we would move everything to in a perfect world
         bragg, c2_x, u_gap = self.energy_to_positions(energy, harmonic, detune)
 
@@ -313,7 +343,9 @@ class Energy(PseudoPositioner):
     @real_position_argument
     def inverse(self, r_pos):
         bragg = r_pos.bragg
-        e = ANG_OVER_EV / (2 * self._d_111 * math.sin(math.radians(bragg + self._delta_bragg)))
+        e = ANG_OVER_EV / (
+            2 * self._d_111 * math.sin(math.radians(bragg + self._delta_bragg))
+        )
         return self.PseudoPosition(energy=float(e))
 
     @pseudo_position_argument
@@ -324,32 +356,32 @@ class Energy(PseudoPositioner):
         self.epics_d_spacing.put(self._d_111)
         self.epics_bragg_offset.put(self._delta_bragg)
 
-
-def retune_undulator():
-    energy.detune.put(0.)
-    energy.move(energy.energy.get()[0])
+    def retune_undulator(self):
+        self.detune.put(0.0)
+        self.move(self.energy.get()[0])
 
 
 # Let's try to only keep one "old" value in for ease of use
 # Recalibrated 2020-02-03
 cal_data_2020cycle1 = {
- 'd_111': 3.131352507914365,
- 'delta_bragg': 0.20665186999563231,
- 'C2Xcal': 3.6,
- 'T2cal': 15.0347755916,
- 'xoffset': 24.6965235
+    "d_111": 3.131352507914365,
+    "delta_bragg": 0.20665186999563231,
+    "C2Xcal": 3.6,
+    "T2cal": 15.0347755916,
+    "xoffset": 24.6965235,
 }
 
-energy = Energy(prefix='', name='energy', **cal_data_2020cycle1)
+energy = Energy(prefix="", name="energy", **cal_data_2020cycle1)
 energy.synch_with_epics()
 energy.value = 1.0
 
-### Setup front end slits (primary slits)
+
+# Setup front end slits (primary slits)
 class SRXSlitsFE(Device):
-    top = Cpt(EpicsMotor, '3-Ax:T}Mtr')
-    bot = Cpt(EpicsMotor, '4-Ax:B}Mtr')
-    inb = Cpt(EpicsMotor, '3-Ax:I}Mtr')
-    out = Cpt(EpicsMotor, '4-Ax:O}Mtr')
+    top = Cpt(EpicsMotor, "3-Ax:T}Mtr")
+    bot = Cpt(EpicsMotor, "4-Ax:B}Mtr")
+    inb = Cpt(EpicsMotor, "3-Ax:I}Mtr")
+    out = Cpt(EpicsMotor, "4-Ax:O}Mtr")
 
 
-fe = SRXSlitsFE('FE:C05A-OP{Slt:', name='fe')
+fe = SRXSlitsFE("FE:C05A-OP{Slt:", name="fe")
