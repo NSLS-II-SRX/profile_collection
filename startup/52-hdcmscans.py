@@ -13,10 +13,13 @@ from scipy.optimize import curve_fit
 
 This program provides functionality to calibrate HDCM energy:
     With provided XANES scan rstuls, it will calculate their edge DCM location
-    It will then fit the E vs Bragg RBV with four values, provide fitting results: dtheta, dlatticeSpace
+    It will then fit the E vs Bragg RBV with four values,
+    provide fitting results: dtheta, dlatticeSpace
 
-#1. collected xanes at 3-5 different energies - e.g. Ti(5 keV), Fe(7 keV), Cu (9 keV), Se (12 keV)
-    They can be in XRF mode or in transmission mode; note the scan id in bluesky
+#1. collected xanes at 3-5 different energies
+    e.g. Ti(5 keV), Fe(7 keV), Cu (9 keV), Se (12 keV)
+    They can be in XRF mode or in transmission mode;
+    note the scan id in bluesky
 #2. setup the scadid in scanlogDic dictionary
     scanlogDic = {'Fe': 264, 'Ti': 265, 'Cr':267, 'Cu':271, 'Se': 273}
 #3. pass scanlogDic to braggcalib()
@@ -48,7 +51,7 @@ def find_edge(scanid=-1, use_xrf=True, element=''):
         norm_tau = (tau - tau[0]) / (tau[-1] - tau[0])
         mu = -1 * np.log(np.abs(norm_tau))
     else:
-        if (element is ''):
+        if (element == ''):
             print('Please send the element name')
         else:
             try:
@@ -59,7 +62,7 @@ def find_edge(scanid=-1, use_xrf=True, element=''):
                 ch_name = 'Det3_' + element + '_ka1'
                 mu = mu + tbl[ch_name]
                 mu = np.array(mu)
-            except:
+            except Exception:
                 ch_name = 'ROI_01'
                 mu = tbl[ch_name]
                 ch_name = 'ROI_02'
@@ -67,7 +70,6 @@ def find_edge(scanid=-1, use_xrf=True, element=''):
                 ch_name = 'ROI_03'
                 mu = mu + tbl[ch_name]
                 mu = np.array(mu)
-
 
     p, xaxis, yaxis, edge = scanderive(braggpoints, mu)
 
@@ -78,17 +80,18 @@ def braggcalib(scanlogDic={}, use_xrf=True):
     # If scanlogDic is empty, we will use this hard coded dictionary
     # 2019-1 Apr 23
     if (scanlogDic == {}):
-        scanlogDic = {'V'  : 26058,
-                      'Cr' : 26059,
-                      'Se' : 26060,
-                      'Zr' : 26061}
+        scanlogDic = {'V':  26058,
+                      'Cr': 26059,
+                      'Se': 26060,
+                      'Zr': 26061}
 
-    fitfunc = lambda pa, x: 12.3984/(2*pa[0]*numpy.sin((x+pa[1])*numpy.pi/180))
-    errfunc = lambda pa, x, y: fitfunc(pa,x) - y
+    fitfunc = lambda pa, x: (12.3984 /
+                             (2 * pa[0] * np.sin((x + pa[1]) * np.pi / 180)))
+    errfunc = lambda pa, x, y: fitfunc(pa, x) - y
 
-    energyDic = {'Cu':8.979, 'Se': 12.658, 'Zr':17.998, 'Nb':18.986, 'Fe':7.112,
-                 'Ti':4.966, 'Cr': 5.989, 'Co': 7.709, 'V': 5.465, 'Mn':6.539,
-                 'Ni':8.333}
+    energyDic = {'Cu': 8.979, 'Se': 12.658, 'Zr': 17.998, 'Nb': 18.986,
+                 'Ti': 4.966, 'Cr': 5.989, 'Co': 7.709, 'V': 5.465,
+                 'Ni': 8.333, 'Fe': 7.112, 'Mn': 6.539}
     BraggRBVDic = {}
     fitBragg = []
     fitEnergy = []
@@ -102,7 +105,7 @@ def braggcalib(scanlogDic={}, use_xrf=True):
                                           element=element)
 
         BraggRBVDic[element] = round(edge, 6)
-        print('Edge position is at Bragg RBV', BraggRBVDic[element])
+        print('Edge position is at Bragg RBV ', BraggRBVDic[element])
         plt.show(p)
 
         fitBragg.append(BraggRBVDic[element])
@@ -112,21 +115,23 @@ def braggcalib(scanlogDic={}, use_xrf=True):
     fitBragg = np.sort(fitBragg)[-1::-1]
 
     guess = [3.1356, 0.32]
-    fitted_dcm, success = sp.optimize.leastsq(errfunc, guess, args=(fitBragg, fitEnergy))
+    fitted_dcm, success = sp.optimize.leastsq(errfunc,
+                                              guess,
+                                              args=(fitBragg, fitEnergy))
 
     print('(111) d spacing:\t', fitted_dcm[0])
     print('Bragg RBV offset:\t', fitted_dcm[1])
-    print('success:\t', success)
+    print('Success:\t', success)
 
-    newEnergy=fitfunc(fitted_dcm, fitBragg)
+    newEnergy = fitfunc(fitted_dcm, fitBragg)
 
     print(fitBragg)
     print(newEnergy)
 
     plt.figure(1)
-    plt.plot(fitBragg, fitEnergy,'b^', label = 'raw scan')
-    bragg = numpy.linspace(fitBragg[0], fitBragg[-1], 200)
-    plt.plot(bragg, fitfunc(fitted_dcm, bragg), 'k-', label = 'fitting')
+    plt.plot(fitBragg, fitEnergy, 'b^', label='raw scan')
+    bragg = np.linspace(fitBragg[0], fitBragg[-1], 200)
+    plt.plot(bragg, fitfunc(fitted_dcm, bragg), 'k-', label='fitting')
     plt.legend()
     plt.xlabel('Bragg RBV (deg)')
     plt.ylabel('Energy (keV)')
@@ -134,7 +139,6 @@ def braggcalib(scanlogDic={}, use_xrf=True):
     pyplot.show()
     print('(111) d spacing:', fitted_dcm[0])
     print('Bragg RBV offset:', fitted_dcm[1])
-
 
 
 def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
@@ -225,11 +229,17 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # Run the C2 pitch fine scan
     @subs_decorator(livecallbacks)
     def myplan():
-        return (yield from scan(det, dcm.c2_fine, pitch_lim[0], pitch_lim[1], pitch_num))
+        return (
+            yield from scan(det,
+                            dcm.c2_fine,
+                            pitch_lim[0],
+                            pitch_lim[1],
+                            pitch_num)
+        )
     uid = yield from myplan()
 
     # Close the shutter
-    if (shutter == True):
+    if (shutter is True):
         yield from bps.mov(shut_b, 'Close')
 
     # Add scan to scanlog
@@ -284,7 +294,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     yield from bps.mov(dcm.c2_fine.pid_enabled, 1)
 
     # Plot the results
-    if (plot == True):
+    if (plot is True):
         plt.figure('Peakup')
         x_plot = np.linspace(x[0], x[-1], num=101)
         y_plot = f_gauss(x_plot, *popt)

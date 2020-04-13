@@ -1,7 +1,9 @@
 print(f'Loading {__file__}...')
 
-from ophyd import EpicsSignal,EpicsSignalRO,Device
+
+from ophyd import EpicsSignal, EpicsSignalRO, Device
 from ophyd import Component as Cpt
+
 
 class SRXScanRecord(Device):
 
@@ -44,75 +46,77 @@ class SRXScanRecord(Device):
         detune = Cpt(EpicsSignal, 'DETUNE')
 
 #    scans = [ Cpt(OneScan,'Scan'+str(i)+':') for i in range(0,8) ]
-    scan0 = Cpt(OneScan,'Scan0:')
-    scan1 = Cpt(OneScan,'Scan1:')
-    scan2 = Cpt(OneScan,'Scan2:')
-    scan3 = Cpt(OneScan,'Scan3:')
-    scan4 = Cpt(OneScan,'Scan4:')
-    scan5 = Cpt(OneScan,'Scan5:')
-    scan6 = Cpt(OneScan,'Scan6:')
-    scan7 = Cpt(OneScan,'Scan7:')
-    scan8 = Cpt(OneScan,'Scan8:')
-    scan9 = Cpt(OneScan,'Scan9:')
-    scan10 = Cpt(OneScan,'Scan10:')
-    scan11 = Cpt(OneScan,'Scan11:')
-    scan12 = Cpt(OneScan,'Scan12:')
-    scan13 = Cpt(OneScan,'Scan13:')
-    scan14 = Cpt(OneScan,'Scan14:')
-    scan15 = Cpt(OneScan,'Scan15:')
+    scan0 = Cpt(OneScan, 'Scan0:')
+    scan1 = Cpt(OneScan, 'Scan1:')
+    scan2 = Cpt(OneScan, 'Scan2:')
+    scan3 = Cpt(OneScan, 'Scan3:')
+    scan4 = Cpt(OneScan, 'Scan4:')
+    scan5 = Cpt(OneScan, 'Scan5:')
+    scan6 = Cpt(OneScan, 'Scan6:')
+    scan7 = Cpt(OneScan, 'Scan7:')
+    scan8 = Cpt(OneScan, 'Scan8:')
+    scan9 = Cpt(OneScan, 'Scan9:')
+    scan10 = Cpt(OneScan, 'Scan10:')
+    scan11 = Cpt(OneScan, 'Scan11:')
+    scan12 = Cpt(OneScan, 'Scan12:')
+    scan13 = Cpt(OneScan, 'Scan13:')
+    scan14 = Cpt(OneScan, 'Scan14:')
+    scan15 = Cpt(OneScan, 'Scan15:')
 
-    def cp(self,src,dest):
+    def cp(self, src, dest):
         '''
-        Copy all elements of the scan object from src to dest.  
+        Copy all elements of the scan object from src to dest.
         src and dest must be the string names of the scans
         scans are indexed starting at 0
         '''
-        for i in ['p1s','p2s','p1i','p2i','p1stp','p2stp',\
-                  'p1ena','p2ena','curpt','tpp','ena','acq',\
-                  'e1s','e1i','e1npts','e1e','e2s','e2i','e2npts','e2e','e3s',\
-                  'e3i','e3npts','e3e','efs','Eena','Ewait','filename',
-                  'sampname','roi','detune']:
-            getattr(getattr(self,dest),i).put(getattr(getattr(scanrecord,src),i).value)
+        for i in ['p1s', 'p2s', 'p1i', 'p2i', 'p1stp', 'p2stp',
+                  'p1ena', 'p2ena', 'curpt', 'tpp', 'ena', 'acq',
+                  'e1s', 'e1i', 'e1npts', 'e1e', 'e2s', 'e2i', 'e2npts', 'e2e',
+                  'e3s', 'e3i', 'e3npts', 'e3e', 'efs', 'Eena', 'Ewait',
+                  'filename', 'sampname', 'roi', 'detune']:
+            getattr(getattr(self, dest), i).put(getattr(getattr(scanrecord, src), i).value)
 
-    def cp_XANES(self,src_num,dest_num):
+    def cp_XANES(self, src_num, dest_num):
         '''
         Copy all energy elements of scan number src_num to scan number dest_num
         scan numbers are indexed starting at 1
         '''
         src = 'scan{}'.format(src_num-1)
         dest = 'scan{}'.format(dest_num-1)
-        for i in ['p1s','p2s','p1i',\
-                  'p1ena','p2ena','curpt','tpp','acq',\
-                  'e1s','e1i','e1npts','e1e','e2s','e2i','e2npts','e2e','e3s',\
-                  'e3i','e3npts','e3e','efs','Eena','Ewait','filename',
-                  'sampname','roi','detune']:
+        for i in ['p1s', 'p2s', 'p1i', 'p2i', 'p1stp', 'p2stp',
+                  'p1ena', 'p2ena', 'curpt', 'tpp', 'ena', 'acq',
+                  'e1s', 'e1i', 'e1npts', 'e1e', 'e2s', 'e2i', 'e2npts', 'e2e',
+                  'e3s', 'e3i', 'e3npts', 'e3e', 'efs', 'Eena', 'Ewait',
+                  'filename', 'sampname', 'roi', 'detune']:
             pass
-            getattr(getattr(self,dest),i).put(getattr(getattr(scanrecord,src),i).value)
-    def cp_XRF(self,src_num,dest_num):
+            getattr(getattr(self, dest), i).put(getattr(getattr(scanrecord, src), i).value)
+
+    def cp_XRF(self, src_num, dest_num):
         '''
-        Copy all positional elements of scan number src_num to scan number dest_num
-        scan numbers are indexed starting at 1
+        Copy all positional elements of scan number src_num to scan number
+        dest_num scan numbers are indexed starting at 1
         '''
         src = 'scan{}'.format(src_num-1)
         dest = 'scan{}'.format(dest_num-1)
-        for i in ['p1s','p2s','p1i','p2i','p1stp','p2stp',\
-                  'p1ena','p2ena','curpt','tpp','ena','acq',\
+        for i in ['p1s', 'p2s', 'p1i', 'p2i', 'p1stp', 'p2stp',
+                  'p1ena', 'p2ena', 'curpt', 'tpp', 'ena', 'acq',
                   'sampname']:
-            getattr(getattr(self,dest),i).put(getattr(getattr(scanrecord,src),i).value)
+            getattr(getattr(self, dest), i).put(getattr(getattr(scanrecord, src), i).value)
 
     def disable_scans(self):
-        for i in range(0,16):
+        for i in range(0, 16):
             scan = 'scan{}'.format(i)
-            getattr(getattr(scanrecord,scan),'ena').put(0)
-            getattr(getattr(scanrecord,scan),'Eena').put(0)
-        
-    current_scan = Cpt(EpicsSignal,'Scan:CUR')
-    current_scan_id = Cpt(EpicsSignal,'Scan:CUR_ID')
-    current_type = Cpt(EpicsSignal,'Scan:TYPE')
-    time_remaining = Cpt(EpicsSignal,'Scan:REMTIME')
+            getattr(getattr(scanrecord, scan), 'ena').put(0)
+            getattr(getattr(scanrecord, scan), 'Eena').put(0)
+
+    current_scan = Cpt(EpicsSignal, 'Scan:CUR')
+    current_scan_id = Cpt(EpicsSignal, 'Scan:CUR_ID')
+    current_type = Cpt(EpicsSignal, 'Scan:TYPE')
+    time_remaining = Cpt(EpicsSignal, 'Scan:REMTIME')
     scanning = Cpt(EpicsSignal, 'Scan:ENA')
 
-scanrecord = SRXScanRecord('XF:05IDA-CT{IOC:ScanBroker01}', name='scanrecord')
+scanrecord = SRXScanRecord('XF:05IDA-CT{IOC:ScanBroker01}',
+                           name='scanrecord')
 scanrecord.scan0.p1s.put(25.0)
 scanrecord.scan0.p2s.put(20.0)
 scanrecord.scan0.p1i.put(0.010)

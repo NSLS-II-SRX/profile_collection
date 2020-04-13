@@ -1,6 +1,10 @@
 print(f'Loading {__file__}...')
 
+
 import os
+import h5py
+import datetime
+
 import ophyd
 from hxntools.detectors.dexela import (DexelaDetector,)
 from hxntools.detectors.xspress3 import (logger, )
@@ -9,14 +13,15 @@ from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreHDF5IterativeWrite,
                                                  FileStoreTIFFSquashing,
                                                  FileStoreTIFF,
-                                                 FileStoreHDF5, new_short_uid,
-                                                 FileStoreBase
+                                                 FileStoreHDF5,
+                                                 new_short_uid,
+                                                 FileStoreBase,
+                                                 SingleTrigger,
                                                  )
 from ophyd.areadetector import (AreaDetector, PixiradDetectorCam, ImagePlugin,
                                 TIFFPlugin, StatsPlugin, HDF5Plugin,
                                 ProcessPlugin, ROIPlugin, TransformPlugin,
                                 OverlayPlugin)
-from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd import Component as Cpt
 
 
@@ -35,18 +40,23 @@ def _ensure_trailing_slash(path):
         newpath = newpath[:-1]
     return newpath
 
+
 ophyd.areadetector.filestore_mixins._ensure_trailing_slash = _ensure_trailing_slash
+
 
 class BulkDexela(HandlerBase):
     HANDLER_NAME = 'DEXELA_FLY_V1'
+
     def __init__(self, resource_fn):
         self._handle = h5py.File(resource_fn, 'r')
 
     def __call__(self):
         return self._handle['entry/instrument/detector/data'][:]
 
+
 db.reg.register_handler(BulkDexela.HANDLER_NAME, BulkDexela,
                         overwrite=True)
+
 
 class DexelaFileStoreHDF5(FileStoreBase):
     @property
@@ -60,7 +70,7 @@ class DexelaFileStoreHDF5(FileStoreBase):
         self.stage_sigs.update([('auto_increment', 'Yes'),
                                 ('array_counter', 0),
                                 ('auto_save', 'Yes'),
-                                ('num_capture', 0),  # this will be updated later
+                                ('num_capture', 0),  # will be updated later
                                 (self.file_template, '%s%s_%6.6d.h5'),
                                 (self.file_write_mode, 'Stream'),
                                 # (self.compression, 'zlib'),
@@ -77,7 +87,6 @@ class DexelaFileStoreHDF5(FileStoreBase):
         formatter = datetime.datetime.now().strftime
         write_path = formatter(self.write_path_template)
         read_path = formatter(self.read_path_template)
-
 
         fn, read_path, write_path = filename, read_path, write_path
         return fn, read_path, write_path
@@ -110,10 +119,10 @@ class DexelaFileStoreHDF5(FileStoreBase):
 
         # AD does this same templating in C, but we can't access it
         # so we do it redundantly here in Python.
+        # file_number is *next* iteration
         self._fn = self.file_template.get() % (read_path,
                                                filename,
                                                self.file_number.get() - 1)
-                                               # file_number is *next* iteration
         self._fp = read_path
         if not self.file_path_exists.get():
             raise IOError("Path %s does not exist on IOC."
@@ -136,14 +145,16 @@ class DexelaFileStoreHDF5(FileStoreBase):
 class DexelaHDFWithFileStore(HDF5Plugin, DexelaFileStoreHDF5):
     def stage(self):
         if np.array(self.array_size.get()).sum() == 0:
-            raise Exception("you must warmup the hdf plugin via the `warmup()` "
-                            "method on the hdf5 plugin.")
+            raise Exception("You must warmup the hdf plugin via the `warmup()`"
+                            " method on the hdf5 plugin.")
 
         return super().stage()
 
 
 class SRXDexelaDetector(SingleTrigger, DexelaDetector):
-    total_points = Cpt(Signal, value=1, doc="The total number of points to be taken")
+    total_points = Cpt(Signal,
+                       value=1,
+                       doc="The total number of points to be taken")
     hdf5 = Cpt(DexelaHDFWithFileStore, 'HDF1:',
                read_attrs=[],
                configuration_attrs=[],
@@ -157,7 +168,6 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
     # for fly scanning.  Do this is a signal (rather than as a local variable
     # or as a method so we can modify this as part of a plan
     fly_next = Cpt(Signal, value=False)
-
 
     roi1 = Cpt(ROIPlugin, 'ROI1:')
 
@@ -177,7 +187,6 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
         else:
             self.cam.stage_sigs['trigger_mode'] = 'Int. Fixed Rate'
 
-
         return super().stage()
 
     def unstage(self):
@@ -194,7 +203,8 @@ try:
 except TimeoutError:
     dexela = None
     print('\nCannot connect to Dexela. Continuing without device.\n')
-except:
+except Exception:
     dexela = None
-    print('\nUnexpected error connecting to Dexela.\n', sys.exc_info()[0], end='\n\n')
-
+    print('\nUnexpected error connecting to Dexela.\n',
+          sys.exc_info()[0],
+          end='\n\n')

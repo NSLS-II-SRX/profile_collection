@@ -390,8 +390,9 @@ class SRXFlyer1Axis(Device):
 
         st = (
             NullStatus()
-        )  # TODO Return a status object *first*
-           # and do the above asynchronously.
+        )
+        # TODO Return a status object *first*
+        # and do the above asynchronously.
         return st
 
     def complete(self):

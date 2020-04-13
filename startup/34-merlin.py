@@ -1,5 +1,14 @@
 print(f'Loading {__file__}...')
 
+import datetime
+import itertools
+import sys
+import numpy as np
+from pathlib import PurePath
+
+from ophyd import Signal
+from ophyd import Component as Cpt
+
 from ophyd.areadetector import (AreaDetector, PixiradDetectorCam, ImagePlugin,
                                 TIFFPlugin, StatsPlugin, HDF5Plugin,
                                 ProcessPlugin, ROIPlugin, TransformPlugin,
@@ -12,17 +21,15 @@ from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreHDF5IterativeWrite,
                                                  FileStoreTIFFSquashing,
                                                  FileStoreTIFF,
-                                                 FileStoreHDF5, new_short_uid,
-                                                 FileStoreBase
+                                                 FileStoreHDF5,
+                                                 new_short_uid,
+                                                 FileStoreBase,
+                                                 FileStorePluginBase,
                                                  )
-from ophyd import Signal
-from ophyd import Component as Cpt
+
 from hxntools.detectors.merlin import MerlinDetector
 from hxntools.handlers import register
-import itertools
 
-from pathlib import PurePath
-from ophyd.areadetector.filestore_mixins import FileStorePluginBase
 
 class BulkMerlin(BulkXspress):
     HANDLER_NAME = 'MERLIN_FLY_STREAM_V1'
@@ -44,6 +51,7 @@ db.reg.register_handler('MERLIN_FLY', BulkMerlinDebug,
 db.reg.register_handler(BulkMerlin.HANDLER_NAME, BulkMerlin,
                         overwrite=True)
 
+
 class MerlinFileStoreHDF5(FileStoreBase):
 
     _spec = 'TPX_HDF5'
@@ -53,7 +61,7 @@ class MerlinFileStoreHDF5(FileStoreBase):
         self.stage_sigs.update([('auto_increment', 'Yes'),
                                 ('array_counter', 0),
                                 ('auto_save', 'Yes'),
-                                ('num_capture', 0),  # this will be updated later
+                                ('num_capture', 0),  # will be updated later
                                 (self.file_template, '%s%s_%6.6d.h5'),
                                 (self.file_write_mode, 'Stream'),
                                 # (self.compression, 'zlib'),
@@ -70,7 +78,6 @@ class MerlinFileStoreHDF5(FileStoreBase):
         formatter = datetime.datetime.now().strftime
         write_path = formatter(self.write_path_template)
         read_path = formatter(self.read_path_template)
-
 
         fn, read_path, write_path = filename, read_path, write_path
         return fn, read_path, write_path
@@ -106,10 +113,10 @@ class MerlinFileStoreHDF5(FileStoreBase):
 
         # AD does this same templating in C, but we can't access it
         # so we do it redundantly here in Python.
+        # file_number is *next* iteration
         self._fn = self.file_template.get() % (read_path,
                                                filename,
                                                self.file_number.get() - 1)
-                                               # file_number is *next* iteration
         self._fp = read_path
         if not self.file_path_exists.get():
             raise IOError("Path %s does not exist on IOC."
@@ -126,6 +133,7 @@ class MerlinFileStoreHDF5(FileStoreBase):
 
         return staged
 
+
 class HDF5PluginWithFileStoreMerlin(HDF5Plugin, MerlinFileStoreHDF5):
 
     def stage(self):
@@ -136,10 +144,13 @@ class HDF5PluginWithFileStoreMerlin(HDF5Plugin, MerlinFileStoreHDF5):
         return super().stage()
 
 
-
 class SRXMerlin(SingleTrigger, MerlinDetector):
-    total_points = Cpt(Signal, value=1, doc="The total number of points to be taken")
-    fly_next = Cpt(Signal, value=False, doc="latch to put the detector in 'fly' mode")
+    total_points = Cpt(Signal,
+                       value=1,
+                       doc="The total number of points to be taken")
+    fly_next = Cpt(Signal,
+                   value=False,
+                   doc="latch to put the detector in 'fly' mode")
 
     hdf5 = Cpt(HDF5PluginWithFileStoreMerlin, 'HDF1:',
                read_attrs=[],
@@ -210,13 +221,16 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
             self._mode = SRXMode.step
         return ret
 
+
 try:
-    merlin = SRXMerlin('XF:05IDD-ES{Merlin:1}', name='merlin', read_attrs=['hdf5', 'cam', 'stats1'])
+    merlin = SRXMerlin('XF:05IDD-ES{Merlin:1}',
+                       name='merlin',
+                       read_attrs=['hdf5', 'cam', 'stats1'])
     merlin.hdf5.read_attrs = []
     merlin.hdf5.warmup()
 except TimeoutError:
     print('\nCannot connect to Merlin. Continuing without device.\n')
-except:
-    print('\nUnexpected error connecting to Merlin.\n', sys.exc_info()[0], end='\n\n')
-
-
+except Exception:
+    print('\nUnexpected error connecting to Merlin.\n',
+          sys.exc_info()[0],
+          end='\n\n')

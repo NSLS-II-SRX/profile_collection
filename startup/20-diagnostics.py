@@ -7,17 +7,18 @@ from ophyd.ophydobj import StatusBase
 from ophyd.status import wait
 
 
-### BPM1 Statistics
+# BPM1 Statistics
 class BPMStats(Device):
     tot1 = Cpt(EpicsSignal, 'Stats1:Total_RBV')
     tot2 = Cpt(EpicsSignal, 'Stats2:Total_RBV')
     tot3 = Cpt(EpicsSignal, 'Stats3:Total_RBV')
     tot4 = Cpt(EpicsSignal, 'Stats4:Total_RBV')
 
+
 bpm1_stats = BPMStats('XF:05IDA-BI:1{BPM:1-Cam:1}', name='bpm1_stats')
 
 
-### BPM Diode
+# BPM Diode
 class BPMDiode(Device):
     "Beam Position Monitor Diode"
     diode0 = Cpt(EpicsSignalRO, '_Ch1')
@@ -41,7 +42,7 @@ class BPMDiode(Device):
 # bpm2 = TetrAMM('XF:05IDA-BI{BPM:4}',name='bpm2')
 
 
-### Diamond BPM
+# Diamond BPM
 class DiamondBPM(Device):
     diode_top = Cpt(EpicsSignalRO, 'Current1:MeanValue_RBV')
     diode_inb = Cpt(EpicsSignalRO, 'Current2:MeanValue_RBV')
@@ -56,10 +57,11 @@ class DiamondBPM(Device):
     x_sigma = Cpt(EpicsSignalRO, 'PosX:Sigma_RBV')
     y_sigma = Cpt(EpicsSignalRO, 'PosY:Sigma_RBV')
 
+
 dbpm = DiamondBPM('XF:05ID-BI:1{BPM:01}:', name='dbpm')
 
 
-### Setup Slit Drain Current
+# Setup Slit Drain Current
 class SlitDrainCurrent(Device):
     t = Cpt(EpicsSignalRO, 'Current1:MeanValue_RBV')
     b = Cpt(EpicsSignalRO, 'Current2:MeanValue_RBV')
@@ -74,12 +76,13 @@ class SlitDrainCurrent(Device):
         status._finished()
         return status
 
+
 wbs = SlitDrainCurrent('XF:05IDA-BI{BPM:01}AH501:', name='wbs')
-pbs= SlitDrainCurrent('XF:05IDA-BI{BPM:02}AH501:', name='pbs')
+pbs = SlitDrainCurrent('XF:05IDA-BI{BPM:02}AH501:', name='pbs')
 ssa = SlitDrainCurrent('XF:05IDA-BI{BPM:05}AH501:', name='ssa')
 
 
-### TetrAMM BPM in B-hutch
+# TetrAMM BPM in B-hutch
 class BPM_TetrAMM(Device):
     "Beam Position Monitor Foil"
     channel1 = Cpt(EpicsSignalRO, 'Current1:MeanValue_RBV', kind=Kind.omitted)
@@ -91,5 +94,5 @@ class BPM_TetrAMM(Device):
     y = Cpt(EpicsSignalRO, 'PosY:MeanValue_RBV')
     total_current = Cpt(EpicsSignalRO, 'SumAll:MeanValue_RBV')
 
-bpm4 = BPM_TetrAMM('XF:05IDA-BI{BPM:4}', name='bpm4')
 
+bpm4 = BPM_TetrAMM('XF:05IDA-BI{BPM:4}', name='bpm4')

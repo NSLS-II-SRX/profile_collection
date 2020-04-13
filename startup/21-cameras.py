@@ -3,7 +3,7 @@ print(f'Loading {__file__}...')
 
 import sys
 from ophyd.areadetector import (AreaDetector, ImagePlugin,
-                                TIFFPlugin, StatsPlugin, 
+                                TIFFPlugin, StatsPlugin,
                                 ROIPlugin, TransformPlugin,
                                 OverlayPlugin, ProcessPlugin)
 from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
@@ -13,8 +13,9 @@ from ophyd.areadetector.cam import AreaDetectorCam
 from ophyd.device import Component as Cpt
 
 
-### BPM Camera
-class SRXTIFFPlugin(TIFFPlugin, FileStoreTIFF,
+# BPM Camera
+class SRXTIFFPlugin(TIFFPlugin,
+                    FileStoreTIFF,
                     FileStoreIterativeWrite):
     file_number_sync = None
 
@@ -49,7 +50,7 @@ bpmAD.stats3.read_attrs = ['total']
 bpmAD.stats4.read_attrs = ['total']
 
 
-### HF VLM
+# HF VLM
 # Does this belong here or in microES?
 class SRXHFVLMCam(SingleTrigger, AreaDetector):
     cam = Cpt(AreaDetectorCam, 'cam1:')
@@ -68,11 +69,12 @@ class SRXHFVLMCam(SingleTrigger, AreaDetector):
     tiff = Cpt(SRXTIFFPlugin, 'TIFF1:',
                write_path_template='/epicsdata/hfvlm/%Y/%m/%d/',
                root='/epicsdata')
-               # write_path_template='/nsls2/xf05id1/data/hfvlm/%Y/%m/%d/',
-               # root='/nsls2/xf05id1')
+
 
 try:
-    hfvlmAD = SRXHFVLMCam('XF:05IDD-BI:1{Mscp:1-Cam:1}', name='hfvlm', read_attrs=['tiff'])
+    hfvlmAD = SRXHFVLMCam('XF:05IDD-BI:1{Mscp:1-Cam:1}',
+                          name='hfvlm',
+                          read_attrs=['tiff'])
     hfvlmAD.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
     hfvlmAD.tiff.read_attrs = []
     hfvlmAD.stats1.read_attrs = ['total']
@@ -86,4 +88,3 @@ except Exception as ex:
     hfvlmAD = None
     print('\nUnexpected error connecting to HF VLM Camera.\n')
     print(ex, end='\n\n')
-

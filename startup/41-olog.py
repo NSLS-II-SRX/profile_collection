@@ -1,14 +1,10 @@
 print(f'Loading {__file__}...')
 
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Mar  2 09:50:38 2016
 
-@author: xf05id1
-"""
 from functools import partial
 import queue
 import pyOlog
+import jinja2
 
 from io import StringIO
 
@@ -38,13 +34,17 @@ Metadata
 {%- if k not in ['plan_type', 'plan_args'] -%}{{ k }} : {{ v }}
 {% endif -%}
 {%- endfor -%}"""
+
 TEMPLATES['desc'] = """
-{{- start.plan_type }} ['{{ start.uid[:6] }}'] (scan num: {{ start.scan_id }})"""
+{{- start.plan_type }} ['{{ start.uid[:6] }}'] (scan num: {{ start.scan_id }})
+"""
+
 TEMPLATES['call'] = """RE({{ start.plan_type }}(
 {%- for k, v in start.plan_args.items() %}{%- if not loop.first %}   {% endif %}{{ k }}={{ v }}
 {%- if not loop.last %},
 {% endif %}{% endfor %}))
 """
+
 
 def logbook_cb_factory(logbook_func, desc_template=None, long_template=None):
     """Create a logbook run_start callback
@@ -54,8 +54,9 @@ def logbook_cb_factory(logbook_func, desc_template=None, long_template=None):
     ----------
     logbook_func : callable
         The required signature is ::
-            def logbok_func(text=None, logbooks=None, tags=None, properties=None,
-                            attachments=None, verify=True, ensure=False):
+            def logbok_func(text=None, logbooks=None, tags=None,
+                            properties=None, attachments=None, verify=True,
+                            ensure=False):
                 '''
                 Parameters
                 ----------
@@ -80,7 +81,6 @@ def logbook_cb_factory(logbook_func, desc_template=None, long_template=None):
                 pass
         This matches the API on `SimpleOlogClient.log`
     """
-    import jinja2
     env = jinja2.Environment()
     if long_template is None:
         long_template = TEMPLATES['long']
@@ -108,15 +108,14 @@ def logbook_cb_factory(logbook_func, desc_template=None, long_template=None):
         desc = desc + '\n\n' + long_desc
         logbook_func(text=desc, attachments=[atch], ensure=True)
     return lbcb
-    
-    
+
+
 # this pulls configuration from _someplace_
 # TODO move configuration information here
 logbook = pyOlog.SimpleOlogClient()
 
 _olog_log_partial = partial(logbook.log, logbooks=['Data Acquisition'])
 _olog_cb = logbook_cb_factory(_olog_log_partial)
-
 
 
 def submit_to_olog(queue, cb):
@@ -128,14 +127,19 @@ def submit_to_olog(queue, cb):
             warn('This olog is giving errors. This will not be logged.'
                  'Error:' + str(exc))
 
+
 olog_queue = queue.Queue(maxsize=100)
-olog_thread = threading.Thread(target=submit_to_olog, args=(olog_queue, _olog_cb), daemon=True)
+olog_thread = threading.Thread(target=submit_to_olog,
+                               args=(olog_queue, _olog_cb),
+                               daemon=True)
 olog_thread.start()
+
 
 def send_to_olog_queue(name, doc):
     try:
         olog_queue.put((name, doc), block=False)
     except queue.Full:
         warn('The olog queue is full. This will not be logged.')
+
 
 RE.subscribe(send_to_olog_queue, 'start')

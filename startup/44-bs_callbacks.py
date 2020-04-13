@@ -1,12 +1,14 @@
 print(f'Loading {__file__}...')
 
+
 from bluesky.callbacks import CallbackBase,LivePlot
 from xray_vision.backend.mpl.cross_section_2d import CrossSection
 
 
 i0_baseline = 7.24e-10
 
-### LivePlot for XANES measurements
+
+# LivePlot for XANES measurements
 #   Need to remove i0_baseline (not using current anymore and we won't have
 #     1e-10 counts
 #   Can we incorporate all the detector channels, instead of only one?
@@ -16,15 +18,14 @@ class NormalizeLivePlot(LivePlot):
         if norm_key is None:
             raise RuntimeError("norm key is required kwarg")
         self._norm = norm_key
-      
-        
+
     def event(self, doc):
         "Update line with data from this Event."
         try:
             if self.x is not None:
-                # this try/except block is needed because multiple event streams
-                # will be emitted by the RunEngine and not all event streams will
-                # have the keys we want
+                # this try/except block is needed because multiple event
+                # streams will be emitted by the RunEngine and not all event
+                # streams will have the keys we want
                 new_x = doc['data'][self.x]
             else:
                 new_x = doc['seq_num']
@@ -42,8 +43,8 @@ class NormalizeLivePlot(LivePlot):
         self.ax.figure.canvas.draw_idle()
 
 
-### I don't think anything below here is used...
-### Can be removed once this is confirmed.
+# I don't think anything below here is used...
+# Can be removed once this is confirmed.
 def make_live_image(image_axes, key):
     """
     Example
@@ -86,4 +87,3 @@ class SRXLiveImage(CallbackBase):
         data = db.reg.retrieve(uid)
         self.cs.update_image(data)
         self.cs._fig.canvas.draw_idle()
-

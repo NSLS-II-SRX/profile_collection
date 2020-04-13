@@ -1,5 +1,6 @@
 print(f'Loading {__file__}...')
 
+
 from ophyd.areadetector import (AreaDetector, PixiradDetectorCam, ImagePlugin,
                                 TIFFPlugin, StatsPlugin, HDF5Plugin,
                                 ProcessPlugin, ROIPlugin, TransformPlugin,
@@ -21,11 +22,13 @@ from hxntools.detectors.merlin import MerlinDetector
 from hxntools.handlers import register
 import itertools
 
+
 register(db)
 
 
 class HDF5PluginWithFileStore(HDF5Plugin, FileStoreHDF5IterativeWrite):
     file_number_sync = None
+
 
 class FileStoreBulkReadable(FileStoreIterativeWrite):
 
@@ -40,7 +43,7 @@ class FileStoreBulkReadable(FileStoreIterativeWrite):
 
         uids = [self.generate_datum(self.image_name, ts, {}) for ts in timestamps]
 
-        #clear so unstage will not save the images twice:
+        # clear so unstage will not save the images twice:
         self._reset_data()
         return {image_name: uids}
 
@@ -62,15 +65,14 @@ class SRXPixirad(SingleTrigger,AreaDetector):
     stats3 = Cpt(StatsPlugin, 'Stats3:')
     stats4 = Cpt(StatsPlugin, 'Stats4:')
     tiff = Cpt(SRXTIFFPlugin, 'TIFF1:',
-             #write_path_template='/epicsdata/pixirad/%Y/%m/%d/',
-             #root='/epicsdata')
-             write_path_template='/nsls2/xf05id1/data/pixirad/%Y/%m/%d/',
-             root='/nsls2/xf05id1')
+               # write_path_template='/epicsdata/pixirad/%Y/%m/%d/',
+               # root='/epicsdata')
+               write_path_template='/nsls2/xf05id1/data/pixirad/%Y/%m/%d/',
+               root='/nsls2/xf05id1')
 
-#pixi = SRXPixirad('XF:05IDD-ES:1{Det:Pixi}', name='pixi', read_attrs=['stats1','stats2','stats3','stats4','tiff'])
-#pixi.stats1.read_attrs = ['total','centroid','sigma_x','sigma_y']
-#pixi.stats2.read_attrs = ['total','centroid','sigma_x','sigma_y']
-#pixi.stats3.read_attrs = ['total','centroid','sigma_x','sigma_y']
-#pixi.stats4.read_attrs = ['total','centroid','sigma_x','sigma_y']
-#pixi.tiff.read_attrs = []
-
+# pixi = SRXPixirad('XF:05IDD-ES:1{Det:Pixi}', name='pixi', read_attrs=['stats1','stats2','stats3','stats4','tiff'])
+# pixi.stats1.read_attrs = ['total','centroid','sigma_x','sigma_y']
+# pixi.stats2.read_attrs = ['total','centroid','sigma_x','sigma_y']
+# pixi.stats3.read_attrs = ['total','centroid','sigma_x','sigma_y']
+# pixi.stats4.read_attrs = ['total','centroid','sigma_x','sigma_y']
+# pixi.tiff.read_attrs = []

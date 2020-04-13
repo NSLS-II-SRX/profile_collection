@@ -1,6 +1,8 @@
 print(f'Loading {__file__}...')
 
 
+import os
+import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 from bluesky.callbacks.fitting import PeakStats
@@ -24,9 +26,13 @@ def bpmAD_exposuretime_adjust():
             yield from bps.sleep(0.5)
 
 
-def undulator_calibration(outfile=None,
-                          UCalibDir = '/nsls2/xf05id1/shared/config/undulator_calibration/',
-                          u_gap_start=6500, u_gap_end=12000, u_gap_step = 500):
+def undulator_calibration(
+    outfile=None,
+    UCalibDir='/nsls2/xf05id1/shared/config/undulator_calibration/',
+    u_gap_start=6500,
+    u_gap_end=12000,
+    u_gap_step=500
+):
     '''
     outfile  string   filename for a txt file for the lookup table
                       desirable to name it with the date of the calibration
@@ -35,8 +41,8 @@ def undulator_calibration(outfile=None,
         u_gap_start  float
         u_gap_end    float
         u_gap_step   float
-    '''  
-    
+    '''
+
     bpmAD.cam.read_attrs = ['acquire_time']
     bpmAD.configuration_attrs = ['cam']
 
@@ -49,7 +55,7 @@ def undulator_calibration(outfile=None,
         f = open(UCalibDir + outfile, 'w')
         f.write('Undulator_gap\tFundemental_energy\n')
         f.close()
-    
+
     # Bragg scan setup default
     energy_res = 0.002     # keV
     bragg_scanwidth = 0.1  # keV
@@ -57,22 +63,25 @@ def undulator_calibration(outfile=None,
     harmonic = 3
 
     energy.harmonic.put(harmonic)
-    
+
     # Generate lookup table by scanning Bragg at each undulator gap set point
-    for u_gap_setpoint in np.arange(u_gap_start, u_gap_end+u_gap_step, u_gap_step):
+    for u_gap_setpoint in np.arange(u_gap_start,
+                                    u_gap_end + u_gap_step,
+                                    u_gap_step):
         # Look up the energy from the previous lookup table
         # Right now, the lookup table is in mm, not um!
         # A new lookup table should be created with the correct units
-        energy_setpoint = float(energy.utoelookup(u_gap_setpoint / 1000)) * harmonic
+        energy_setpoint = (float(energy.utoelookup(u_gap_setpoint / 1000))
+                           * harmonic)
         print('Move u_gap to:\t', u_gap_setpoint)
         print('Move Bragg energy to:\t', energy_setpoint)
-        
+
         energy.move_c2_x.put(False)
         energy.move_u_gap.put(True)
-        yield from bps.sleep(0.2)    
+        yield from bps.sleep(0.2)
         yield from mv(energy, energy_setpoint)
 
-        yield from bpmAD_exposuretime_adjust()    
+        yield from bpmAD_exposuretime_adjust()
         energy.move_u_gap.put(False)
 
         # Setup LiveCallbacks
@@ -82,7 +91,8 @@ def undulator_calibration(outfile=None,
         liveplotx = energy.energy.name
         ps = PeakStats(energy.energy.name, bpmAD.stats1.total.name)
         livecallbacks = [LiveTable(livetableitem),
-                         LivePlot(liveploty, x=liveplotx, fig=liveplotfig1), ps]
+                         LivePlot(liveploty, x=liveplotx, fig=liveplotfig1),
+                         ps]
 
         # Setup the scan
         @subs_decorator(livecallbacks)
@@ -102,8 +112,7 @@ def undulator_calibration(outfile=None,
         fwhm = ps.fwhm
         print('Max energy is:\t', maxenergy)
         print('Fundemental energy:\t', maxenergy / harmonic)
-        
-        f = open(UCalibDir + outfile, 'a')
-        f.write(str(energy.u_gap.position) + '\t' + str(maxenergy / harmonic) + '\n')
-        f.close()
 
+        f = open(UCalibDir + outfile, 'a')
+        f.write(f"{str(energy.u_gap.position)}\t{str(maxenergy / harmonic)}\n")
+        f.close()
