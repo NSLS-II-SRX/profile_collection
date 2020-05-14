@@ -359,3 +359,15 @@ except TimeoutError:
 except Exception as ex:
     xs2 = None
     print('\nUnexpected error connecting to xs2.\n', ex, end='\n\n')
+
+
+from ophyd import Device
+
+class TimeSeriesPlugin(Device):
+    current_point = Cpt(EpicsSignal, ':TSCurrentPoint')
+    acquire_mode = Cpt(EpicsSignal, ':TSAcquireMode')
+    time_per_point = Cpt(EpicsSignal, ':TSTimePerPoint')
+    time_series = Cpt(EpicsSignal, ':1:TimeSeries')
+
+ts_plugin = TimeSeriesPlugin('XF:05IDD-ES{Xsp:1}:C1SCA:TS', name='ts_plugin')
+
