@@ -184,7 +184,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         'shape': (xnum, ynum),
         'scaninfo': {'type': 'XRF_fly',
                      'raster': False,
-                     'fast_axis': flying_zebra._fast_axis},
+                     'fast_axis': flying_zebra.fast_axis},
                      'theta': hf_stage.th.position,
         'scan_params': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
         'scan_input': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],

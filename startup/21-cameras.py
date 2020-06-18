@@ -21,7 +21,7 @@ class SRXTIFFPlugin(TIFFPlugin,
 
 
 class BPMCam(SingleTrigger, AreaDetector):
-    cam = Cpt(AreaDetectorCam, '')
+    cam = Cpt(AreaDetectorCam, 'cam1:')
     image_plugin = Cpt(ImagePlugin, 'image1:')
 
     # tiff = C(SRXTIFFPlugin, 'TIFF1:',

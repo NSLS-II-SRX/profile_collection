@@ -67,11 +67,11 @@ class FineSampleLabX(PseudoPositioner, NamedDevice):
         return self.PseudoPosition(lab_x=x, lab_z=z)
 
 
-lab_stage = FineSampleLabX('XF:05IDD-ES:1{Smpl:1-Ax:', name='lab_stage')
-lab_stage.read_attrs = [
-    'lab_x',
-    'lab_z',
-    'real_topx',
-    'real_topz',
-    'real_theta',
-]
+# lab_stage = FineSampleLabX('XF:05IDD-ES:1{Smpl:1-Ax:', name='lab_stage')
+# lab_stage.read_attrs = [
+#     'lab_x',
+#     'lab_z',
+#     'real_topx',
+#     'real_topz',
+#     'real_theta',
+# ]
