@@ -16,8 +16,8 @@ from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreHDF5,
                                                  new_short_uid,
                                                  FileStoreBase,
-                                                 SingleTrigger,
                                                  )
+from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.areadetector import (AreaDetector, PixiradDetectorCam, ImagePlugin,
                                 TIFFPlugin, StatsPlugin, HDF5Plugin,
                                 ProcessPlugin, ROIPlugin, TransformPlugin,
