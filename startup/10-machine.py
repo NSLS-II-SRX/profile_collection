@@ -371,7 +371,16 @@ cal_data_2020cycle1 = {
     "xoffset": 24.6965235,
 }
 
-energy = Energy(prefix="", name="energy", **cal_data_2020cycle1)
+# Recalibrated 2020-07-17
+cal_data_2020cycle2 = {
+    "d_111": 3.129361366291239,
+    "delta_bragg": 0.2118452386517794,
+    "C2Xcal": 3.6,
+    "T2cal": 15.0347755916,
+    "xoffset": 24.6965235,
+}
+
+energy = Energy(prefix="", name="energy", **cal_data_2020cycle2)
 energy.synch_with_epics()
 energy.value = 1.0
 

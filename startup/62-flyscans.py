@@ -119,11 +119,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Change retry deadband for hf_stage.x and hf_stage.y
     if (hf_stage.x in (xmotor, ymotor)):
         OLD_RDBD_X = hf_stage.RETRY_DEADBAND_X.value
-        NEW_RDBD_X = 5e-4
+        NEW_RDBD_X = 2e-4
         hf_stage.RETRY_DEADBAND_X.put(NEW_RDBD_X)
     if (hf_stage.y in (xmotor, ymotor)):
         OLD_RDBD_Y = hf_stage.RETRY_DEADBAND_Y.value
-        NEW_RDBD_Y = 5e-4
+        NEW_RDBD_Y = 2e-4
         hf_stage.RETRY_DEADBAND_Y.put(NEW_RDBD_Y)
 
     # assign detectors to flying_zebra, this may fail
@@ -184,7 +184,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         'shape': (xnum, ynum),
         'scaninfo': {'type': 'XRF_fly',
                      'raster': False,
-                     'fast_axis': flying_zebra.fast_axis},
+                     'fast_axis': flying_zebra.fast_axis.value},
                      'theta': hf_stage.th.position,
         'scan_params': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
         'scan_input': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
@@ -201,7 +201,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         def move_to_start_fly():
             "See http://nsls-ii.github.io/bluesky/plans.html#the-per-step-hook"
             yield from abs_set(xmotor, xstart-delta, group='row')
-            yield from one_1d_step([], motor, step)
+            yield from one_1d_step([temp_nanoKB], motor, step)
             yield from bps.wait(group='row')
 
         # t_mvstartfly = tic()
@@ -427,6 +427,7 @@ def scan_and_fly(*args, extra_dets=None, **kwargs):
     kwargs.setdefault('xmotor', hf_stage.x)
     kwargs.setdefault('ymotor', hf_stage.y)
     kwargs.setdefault('flying_zebra', flying_zebra)
+    yield from abs_set(flying_zebra.fast_axis, 'HOR')
 
     _xs = kwargs.pop('xs', xs)
     if extra_dets is None:
@@ -445,7 +446,8 @@ def y_scan_and_fly(*args, extra_dets=None, **kwargs):
 
     kwargs.setdefault('xmotor', hf_stage.y)
     kwargs.setdefault('ymotor', hf_stage.x)
-    kwargs.setdefault('flying_zebra', flying_zebra_y)
+    kwargs.setdefault('flying_zebra', flying_zebra)
+    yield from abs_set(flying_zebra.fast_axis, 'VER')
 
     _xs = kwargs.pop('xs', xs)
     if (extra_dets is None):

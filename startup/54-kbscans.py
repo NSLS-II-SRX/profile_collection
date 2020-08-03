@@ -69,7 +69,10 @@ def knife_edge(motor, start, stop, stepsize, acqtime,
     
     # Get the position information
     if fly:
-        pos = 'enc1'
+        if motor.name == 'hf_stage_x':
+            pos = 'enc2'
+        elif motor.name == 'hf_stage_y':
+            pos = 'enc1'
     else:
         pos = motor.name
     # if (motor == hf_stage.y):
@@ -101,6 +104,7 @@ def knife_edge(motor, start, stop, stepsize, acqtime,
         p_guess[0] = -0.5 * np.amin(y)
     try:
         popt, _ = curve_fit(f_int_gauss, x, y, p0=p_guess)
+        # popt, _ = curve_fit(f_two_erfs, x, y, p0=p_guess)
     except:
         print('Raw fit failed.')
         popt = p_guess
@@ -115,6 +119,7 @@ def knife_edge(motor, start, stop, stepsize, acqtime,
     plt.clf()
     plt.plot(x, y, '*', label='Raw Data')
     plt.plot(x_plot, f_int_gauss(x_plot, *p_guess), '-', label='Guess fit')
+    # plt.plot(x_plot, f_two_erfs(x_plot, *p_guess), '-', label='Guess fit')
     plt.plot(x_plot, y_plot, '-', label='Final fit')
     plt.legend()
 
@@ -144,8 +149,8 @@ def knife_edge(motor, start, stop, stepsize, acqtime,
 
     # Report findings
     C = 2 * np.sqrt(2 * np.log(2))
-    print('\nThe beam size isf um' % (1000 * C * popt2[1]))
-    print('The edge is at.4f mm\n' % (popt2[2]))
+    print('\nThe beam size is %f um' % (1000 * C * popt2[1]))
+    print('The edge is at %.4f mm\n' % (popt2[2]))
 
 # Run a knife-edge scan
 def nano_knife_edge(motor, start, stop, stepsize, acqtime,
@@ -247,13 +252,18 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     if (use_trans == True):
         y = tbl['it'].values[0] / tbl['im'].values[0]
     else:
-        d = np.array(list(db[-1].data('xs2_channel1', fill=True)))
+        # d = np.array(list(db[-1].data('xs2_channel1', fill=True)))
+        d = np.array(list(db[-1].data('fluor', stream_name='stream0', fill=True)))
         # y = np.sum(d[:, 934:954], axis=(1))#if Pt lines
-        y = np.sum(d[:, 934:954], axis=(1))/tbl['sclr_im'].values[0]#if Pt lines
-        # y = np.sum(d[:, 961:981], axis=(1))/tbl['sclr_it'].values[0] #if Au lines
+        # y = np.sum(d[:, 934:954], axis=(1))/tbl['sclr_im'].values[0]#if Pt lines
+        # y = np.sum(d[:, 961:981], axis=(1))/tbl['sclr_im'].values[0] #if Au lines
         # y = np.sum(d[:, 531:551], axis=(1)) #if Au lines
         # y = np.sum(np.array(tbl['xs2_channel1'])[0][:, 934:954], axis=(1))
         # y = y / np.array(tbl['i0'])[0]
+        y = np.sum(d[:, :, :, 961:981], axis=(-1, -2))
+        y = np.squeeze(y)
+        I0 = np.array(list(db[-1].data('i0', stream_name='stream0', fill=True)))
+        y = y / np.squeeze(I0)
     x = np.array(tbl[pos])
     x = x.astype(np.float64)
     y = y.astype(np.float64)
@@ -276,11 +286,11 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     #                   A2, sigma2, x2, y2):
     p_guess = [0.5*np.amax(y),
                1.000,
-               0.5*(x[0] + x[-1]) - 2.5,
+               0.5*(x[0] + x[-1]) - 0.1,
                np.amin(y) + 0.5*np.amax(y),
                -0.5*np.amax(y),
                1.000,
-               0.5*(x[0] + x[-1]) + 2.5,
+               0.5*(x[0] + x[-1]) + 0.1,
                np.amin(y) + 0.5*np.amax(y)]
     # if high2low:
     #     p_guess[0] = -0.5 * np.amin(y)

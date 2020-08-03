@@ -109,19 +109,46 @@ class SRXScanRecord(Device):
             getattr(getattr(scanrecord, scan), 'ena').put(0)
             getattr(getattr(scanrecord, scan), 'Eena').put(0)
 
+    def update_metadata(self):
+        md = RE.md['proposal']
+        # print(self.cycle.pvname)
+        # print(self.cycle.connected)
+        # if (self.cycle.connected is True):
+        if True:
+            self.proposal_num.put(str(md['proposal_num']))
+            self.proposal_title.put(str(md['proposal_title']))
+            self.SAF.put(str(md['saf_num']))
+            self.PI.put(str(md['PI_lastname']))
+            self.cycle.put(str(md['cycle']))
+            print('Scanrecord updated.')
+        else:
+            print('Scanrecord NOT updated...')
+
     current_scan = Cpt(EpicsSignal, 'Scan:CUR')
     current_scan_id = Cpt(EpicsSignal, 'Scan:CUR_ID')
     current_type = Cpt(EpicsSignal, 'Scan:TYPE')
     time_remaining = Cpt(EpicsSignal, 'Scan:REMTIME')
     scanning = Cpt(EpicsSignal, 'Scan:ENA')
 
-scanrecord = SRXScanRecord('XF:05IDA-CT{IOC:ScanBroker01}',
+    proposal_num = Cpt(EpicsSignal, 'PROPOSAL_NUM')
+    # If len(string) > 40 characters, then it needs to be a waveform on the IOC
+    proposal_title = Cpt(EpicsSignal, 'PROPOSAL_TITLE', string=True)
+    SAF = Cpt(EpicsSignal, 'SAF_NUM')
+    PI = Cpt(EpicsSignal, 'PI_NAME')
+    cycle = Cpt(EpicsSignal, 'CYCLE')
+
+scanrecord = SRXScanRecord('XF:05IDA-CT{IOC:ScanBroker02}',
                            name='scanrecord')
-scanrecord.scan0.p1s.put(25.0)
-scanrecord.scan0.p2s.put(20.0)
-scanrecord.scan0.p1i.put(0.010)
-scanrecord.scan0.p2i.put(0.010)
-scanrecord.scan0.p1stp.put(3)
-scanrecord.scan0.p2stp.put(3)
-scanrecord.scan0.ena.put(1)
-scanrecord.scan0.acq.put(1)
+
+# Set defaults
+try:
+    scanrecord.scan0.p1s.put(25.0)
+    scanrecord.scan0.p2s.put(20.0)
+    scanrecord.scan0.p1i.put(0.010)
+    scanrecord.scan0.p2i.put(0.010)
+    scanrecord.scan0.p1stp.put(3)
+    scanrecord.scan0.p2stp.put(3)
+    scanrecord.scan0.ena.put(1)
+    scanrecord.scan0.acq.put(1)
+except:
+    print('\nError connecting to scanrecord...\n')

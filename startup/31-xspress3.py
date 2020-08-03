@@ -191,8 +191,8 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
         Xspress3FileStoreFlyable,
         "HDF5:",
         read_path_template="/nsls2/xf05id1/XF05ID1/XSPRESS3/%Y/%m/%d/",
-        # write_path_template='/epics/data/%Y/%m/%d/',
-        write_path_template="/home/xspress3/data/%Y/%m/%d/",
+        write_path_template='/epics/data/%Y/%m/%d/',
+        # write_path_template="/home/xspress3/data/%Y/%m/%d/",#TES xspress3
         root="/nsls2/xf05id1/XF05ID1",
     )
 

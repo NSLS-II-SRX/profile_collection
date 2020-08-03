@@ -194,13 +194,10 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
 
     # Use calibration
     if (use_calib):
-        # 2020-01-24
-        roll_guess = -0.605
-        # 2020-01-29
-        roll_guess = 0.230
         # 2020-02-03
-        roll_guess = 0.181
-        roll_guess = 0.071
+        roll_guess = 0.071  # For getting X-rays to nanoKB
+        # 2020-07-20
+        roll_guess = 0.121
         yield from bps.mov(dcm.c1_roll, roll_guess)
         # 2020-01-24
         B = energy.energy_to_positions((E/1000), 3, 0)[0]

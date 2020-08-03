@@ -12,19 +12,22 @@ import shutil
 # PI_lastname = None
 # saf_num = None
 
-proposal_num = 304923
-proposal_title = 'Routine Setup and Testing for Beamline 5-ID'
-PI_lastname = 'Chu'
-saf_num = 304726
+proposal_num = 307426
+proposal_title = 'SRX Beamline Commissioning'
+PI_lastname = 'Kiss'
+saf_num = 305921
 
-cycle = '2020_cycle1'
+cycle = '2020_cycle2'
 
+# Set user data in bluesky
 RE.md['proposal']  = {'proposal_num': str(proposal_num),
                       'proposal_title': str(proposal_title),
                       'PI_lastname': str(PI_lastname),
                       'saf_num': str(saf_num),
                       'cycle': str(cycle)}
 
+# Set user data in scanbroker
+scanrecord.update_metadata()
 
 # User data directory and simple scripts
 userdatadir = '/nsls2/xf05id1/experiments/' + str(cycle) + '/' + str(saf_num) + '_' + str(PI_lastname) + '/'

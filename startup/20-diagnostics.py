@@ -5,6 +5,7 @@ from ophyd import EpicsSignal, EpicsSignalRO, Device, TetrAMM, Kind
 from ophyd import Component as Cpt
 from ophyd.ophydobj import StatusBase
 from ophyd.status import wait
+from ophyd.quadem import NSLS_EM
 
 
 # BPM1 Statistics
@@ -96,3 +97,29 @@ class BPM_TetrAMM(Device):
 
 
 bpm4 = BPM_TetrAMM('XF:05IDA-BI{BPM:4}', name='bpm4')
+
+# Diamond XBPM in D-hutch
+class SRX_NSLS_EM(NSLS_EM):
+    sumX = Cpt(EpicsSignalRO, 'SumX:MeanValue_RBV')
+    sumY = Cpt(EpicsSignalRO, 'SumY:MeanValue_RBV')
+    diffX = Cpt(EpicsSignalRO, 'DiffX:MeanValue_RBV')
+    diffY = Cpt(EpicsSignalRO, 'DiffY:MeanValue_RBV')
+    posX = Cpt(EpicsSignalRO, 'PosX:MeanValue_RBV')
+    posY = Cpt(EpicsSignalRO, 'PosY:MeanValue_RBV')
+
+    motorX = Cpt(EpicsMotor, 'XF:05IDD-ES:1{Stg:Xbpm-Ax:X}Mtr', add_prefix=(), name='motorX')
+    motorY = Cpt(EpicsMotor, 'XF:05IDD-ES:1{Stg:Xbpm-Ax:Y}Mtr', add_prefix=(), name='motorY')
+
+    def balanceX(self):
+        return (np.abs(self.sumX.get()) - np.abs(self.diffX.get())) / np.abs(self.sumX.get())
+
+    def balanceY(self):
+        return (np.abs(self.sumY.get()) - np.abs(self.diffY.get())) / np.abs(self.sumY.get())
+
+    @property
+    def balance(self):
+       return np.sqrt(np.power(self.balanceX(), 2) + np.power(self.balanceY(), 2)) / np.sqrt(2)
+
+xbpm2 = SRX_NSLS_EM('XF:05ID-BI{EM:BPM2}', name='xbpm2')
+
+
