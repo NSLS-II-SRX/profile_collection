@@ -160,7 +160,7 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
                configuration_attrs=[],
                # write_path_template='Z:\\%Y\\%m\\%d\\',
                # write_path_template='C:\\temp\\dexela\\%Y\\%m\\%d\\',
-               write_path_template='C:\\data\\305482_Tang\\%Y\\%m\\%d\\',
+               write_path_template='C:\\data\\305921_Kiss\\%Y\\%m\\%d\\',
                # write_path_template='C:\\temp\\write_here\\',
                read_path_template='/nsls2/xf05id1/XF05ID1/dexela/%Y/%m/%d/',
                root='/nsls2/xf05id1/XF05ID1/dexela/')

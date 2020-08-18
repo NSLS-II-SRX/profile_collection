@@ -169,10 +169,14 @@ def collect_xrd_map(xstart, xstop, xnum,
     if shutter:
         yield from mv(shut_b, 'Open')
 
-    scan_dets = xrd_det.append(sclr1)
-    yield from outer_product_scan(scan_dets,
-                                  hf_stage.x, xstart, xstop, xnum,
-                                  hf_stage.y, ystart, ystop, ynum)
+    #scan_dets = xrd_det.append(sclr1)
+    #print(xrd_det)
+    # yield from outer_product_scan(scan_dets,
+    #                               hf_stage.x, xstart, xstop, xnum,
+    #                               hf_stage.y, ystart, ystop, ynum, False)
+    yield from grid_scan(xrd_det,
+                         hf_stage.x, xstart, xstop, xnum,
+                         hf_stage.y, ystart, ystop, ynum, False)
 
     if shutter:
         yield from mv(shut_b, 'Close')
