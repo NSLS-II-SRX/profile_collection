@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import subprocess
 import scipy as sp
 import scipy.optimize
+import lmfit
 from scipy.optimize import curve_fit
 
 
@@ -192,21 +193,22 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     pitch_lim = (2.0, 4.0)
     pitch_num = 51
 
+    # Find approximate values
+    # 2020-02-03
+    roll_guess = 0.071  # For getting X-rays to nanoKB
+    # 2020-07-20
+    roll_guess = 0.121
+    # 2020-02-03
+    B = energy.energy_to_positions((E/1000), 3, 0)[0]
+    pitch_guess = 0.0009145473*B + 0.0141488665
+
     # Use calibration
     if (use_calib):
-        # 2020-02-03
-        roll_guess = 0.071  # For getting X-rays to nanoKB
-        # 2020-07-20
-        roll_guess = 0.121
-        yield from bps.mov(dcm.c1_roll, roll_guess)
-        # 2020-01-24
-        B = energy.energy_to_positions((E/1000), 3, 0)[0]
-        pitch_guess = 0.0012797605*B - 0.4051099354
-        # 2020-02-03
-        B = energy.energy_to_positions((E/1000), 3, 0)[0]
-        pitch_guess = 0.0009145473*B + 0.0141488665
-        yield from bps.mov(dcm.c2_pitch, pitch_guess)
-        yield from bps.mov(dcm.c2_pitch_kill, 1.0)
+        if (fix_roll):
+           yield from bps.mov(dcm.c1_roll, roll_guess)
+        if (fix_pitch):
+            yield from bps.mov(dcm.c2_pitch, pitch_guess)
+            yield from bps.mov(dcm.c2_pitch_kill, 1.0)
 
     # Set counting time
     sclr1.preset_time.put(1.0)
@@ -216,22 +218,38 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
         yield from bps.mov(shut_b, 'Open')
 
     # Setup LiveCallbacks
-    plt.figure('Peakup')
-    plt.clf()
+    fig, ax = plt.subplots()
+    fig.canvas.set_window_title('Peakup')
+    ax.clear()
     livecallbacks = [LivePlot(scaler, dcm.c2_pitch.name,
                               linestyle='', marker='*', color='C0',
                               label='raw',
-                              fig=plt.figure('Peakup'))]
+                              ax=ax)]
+
+    # Setup LiveFit
+    # f_gauss(x, A, sigma, x0, y0, m)
+    model = lmfit.Model(f_gauss, ['x'])
+    init_guess = {'A': lmfit.Parameter('A', 10, min=0),
+                  'sigma': lmfit.Parameter('sigma', 0.005, min=0),
+                  'x0': lmfit.Parameter('x0', pitch_guess),
+                  'y0': lmfit.Parameter('y0', 0),
+                  'm': lmfit.Parameter('m', 0, min=-1e-8, max=1e-8)}
+    lf = LiveFit(model, scaler, {'x': dcm.c2_pitch.name}, init_guess)
+    lpf = LiveFitPlot(lf, ax=ax, color='r')
 
     # Run the C2 pitch fine scan
     @subs_decorator(livecallbacks)
+    @subs_decorator(lpf)
     def myplan():
         return (
-            yield from scan(det,
-                            dcm.c2_fine,
-                            pitch_lim[0],
-                            pitch_lim[1],
-                            pitch_num)
+            # yield from scan(det,
+            #                 dcm.c2_fine,
+            #                 pitch_lim[0],
+            #                 pitch_lim[1],
+            #                 pitch_num)
+            yield from adaptive_scan(det, 'sclr_i0', dcm.c2_fine,
+                                     pitch_lim[0], pitch_lim[1],
+                                     0.01, 0.1, 10000, True)
         )
     uid = yield from myplan()
 
@@ -242,8 +260,12 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # Add scan to scanlog
     logscan('peakup_fine_pitch')
 
+    # Display results of livefit
+    print(lf.result.values)
+
     # Collect the data
-    h = db[-1]
+    # h = db[-1]
+    h = db[uid]
     x = h.table()['dcm_c2_pitch'].values
     y = h.table()[scaler].values
 
@@ -292,11 +314,11 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
 
     # Plot the results
     if (plot is True):
-        plt.figure('Peakup')
+        # plt.figure('Peakup')
         x_plot = np.linspace(x[0], x[-1], num=101)
         y_plot = f_gauss(x_plot, *popt)
-        plt.plot(x_plot, y_plot, 'C0--', label='fit')
-        plt.plot((pitch_new, pitch_new), (y_min, y_max), '--k', label='max')
+        ax.plot(x_plot, y_plot, 'C0--', label='fit')
+        ax.plot((pitch_new, pitch_new), (y_min, y_max), '--k', label='max')
         plt.legend()
 
 
