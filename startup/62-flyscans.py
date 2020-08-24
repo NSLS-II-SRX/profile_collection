@@ -42,7 +42,15 @@ from bluesky.plans import (scan, )
 from bluesky.callbacks import CallbackBase, LiveGrid
 
 from hxntools.handlers import register
-register(db)
+
+# Note: commenting the following line out due to the error during 2020-2
+# deployment:
+#   DuplicateHandler: There is already a handler registered for the spec 'XSP3'.
+#   Use overwrite=True to deregister the original.
+#   Original: <class 'area_detector_handlers._xspress3.Xspress3HDF5Handler'>
+#   New: <class 'databroker.assets.handlers.Xspress3HDF5Handler'>
+#
+# register(db)
 
 
 # Define wrapper to time a function
