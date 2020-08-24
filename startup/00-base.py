@@ -36,11 +36,10 @@ bec.disable_table()
 bec.disable_plots()
 
 
-# Uncomment the following lines to turn on verbose messages for
-# debugging.
-# import logging
-# ophyd.logger.setLevel(logging.DEBUG)
-# logging.basicConfig(level=logging.DEBUG)
+# Temporary fix before it's fixed in ophyd
+import logging
+logger = logging.getLogger('ophyd')
+logger.setLevel('WARNING')
 
 from pathlib import Path
 
