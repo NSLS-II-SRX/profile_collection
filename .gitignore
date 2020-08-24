@@ -61,7 +61,6 @@ log
 pid
 security
 history.sqlite
-profile_default
 
 # swap files
 *.swp
