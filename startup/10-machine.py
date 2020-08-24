@@ -95,14 +95,14 @@ class InsertionDevice(Device, PositionerBase):
         if moved_cb is not None:
 
             @functools.wraps(moved_cb)
-            def inner(obj=None):
+            def inner_move(status, obj=None):
                 if obj is not None:
                     obj = self
-                return moved_cb(obj=obj)
+                return moved_cb(status, obj=obj)
 
         else:
-            inner = None
-        return self.set(*args, moved_cb=inner, **kwargs)
+            inner_move = None
+        return self.set(*args, moved_cb=inner_move, **kwargs)
 
     @property
     def position(self):
