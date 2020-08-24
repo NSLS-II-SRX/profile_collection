@@ -110,11 +110,19 @@ class SRX_NSLS_EM(NSLS_EM):
     motorX = Cpt(EpicsMotor, 'XF:05IDD-ES:1{Stg:Xbpm-Ax:X}Mtr', add_prefix=(), name='motorX')
     motorY = Cpt(EpicsMotor, 'XF:05IDD-ES:1{Stg:Xbpm-Ax:Y}Mtr', add_prefix=(), name='motorY')
 
-    def balanceX(self):
+    def _balanceX(self):
         return (np.abs(self.sumX.get()) - np.abs(self.diffX.get())) / np.abs(self.sumX.get())
 
-    def balanceY(self):
+    def _balanceY(self):
         return (np.abs(self.sumY.get()) - np.abs(self.diffY.get())) / np.abs(self.sumY.get())
+
+    @property
+    def balanceX(self, name='xbpm2_balanceX'):
+       return self._balanceX()
+
+    @property
+    def balanceY(self):
+       return self._balanceY()
 
     @property
     def balance(self):

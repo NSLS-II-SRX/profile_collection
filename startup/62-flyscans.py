@@ -215,7 +215,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         x_dial = xmotor.user_readback.get()
         # Get retry deadband value and check against that
         i = 0
-        while (np.abs(x_set - x_dial) > 0.0005):
+        if (xmotor.egu == 'mm'):
+            DEADBAND = 0.0005
+        else:
+            DEADBAND = 0.1
+        while (np.abs(x_set - x_dial) > DEADBAND):
             if (i == 0):
                 print('Waiting for motor to reach starting position...',
                       end='', flush=True)
@@ -315,6 +319,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         if ('e_tomo' in xmotor.name):
             v_return = min(4, xmotor.velocity.high_limit)
             yield from mv(xmotor.velocity, v_return)
+        if ('nano_stage' in xmotor.name):
+            yield from mv(xmotor.velocity, 30)
         else:
             # set the "stage speed"
             yield from mv(xmotor.velocity, 1.0)
@@ -418,9 +424,48 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     #     # toc(t_close, str='Close shutter')
 
     # Return sample stage defaults
-    hf_stage.reset_stage_defaults()
+    if ('hf_stage' in xmotor.name):
+        hf_stage.reset_stage_defaults()
 
     return uid
+
+def nano_scan_and_fly(*args, extra_dets=None, **kwargs):
+    kwargs.setdefault('xmotor', nano_stage.sx)
+    kwargs.setdefault('ymotor', nano_stage.sy)
+    kwargs.setdefault('flying_zebra', nano_flying_zebra)
+    yield from abs_set(nano_flying_zebra.fast_axis, 'NANOHOR')
+
+    _xs = kwargs.pop('xs', xs)
+    if extra_dets is None:
+        extra_dets = []
+    dets = [_xs] + extra_dets
+    yield from scan_and_fly_base(dets, *args, **kwargs)
+
+
+def nano_y_scan_and_fly(*args, extra_dets=None, **kwargs):
+    kwargs.setdefault('xmotor', nano_stage.sy)
+    kwargs.setdefault('ymotor', nano_stage.sx)
+    kwargs.setdefault('flying_zebra', nano_flying_zebra)
+    yield from abs_set(nano_flying_zebra.fast_axis, 'NANOVER')
+
+    _xs = kwargs.pop('xs', xs)
+    if extra_dets is None:
+        extra_dets = []
+    dets = [_xs] + extra_dets
+    yield from scan_and_fly_base(dets, *args, **kwargs)
+
+
+def nano_z_scan_and_fly(*args, extra_dets=None, **kwargs):
+    kwargs.setdefault('xmotor', nano_stage.sz)
+    kwargs.setdefault('ymotor', nano_stage.sx)
+    kwargs.setdefault('flying_zebra', nano_flying_zebra)
+    yield from abs_set(nano_flying_zebra.fast_axis, 'NANOZ')
+
+    _xs = kwargs.pop('xs', xs)
+    if extra_dets is None:
+        extra_dets = []
+    dets = [_xs] + extra_dets
+    yield from scan_and_fly_base(dets, *args, **kwargs)
 
 
 def scan_and_fly(*args, extra_dets=None, **kwargs):

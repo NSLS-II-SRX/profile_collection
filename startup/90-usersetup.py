@@ -12,10 +12,16 @@ import shutil
 # PI_lastname = None
 # saf_num = None
 
-proposal_num = 307426
-proposal_title = 'SRX Beamline Commissioning'
-PI_lastname = 'Kiss'
-saf_num = 305921
+#proposal_num = 307426
+#proposal_title = 'SRX Beamline Commissioning'
+#PI_lastname = 'Kiss'
+#saf_num = 305921
+
+proposal_num = 306378
+proposal_title = 'Investigating the charge distribution of Ni-ricj LiNi1-x-yCosMnyO2 cathode in high-energy resources'
+PI_lastname = 'Zuli'
+saf_num = 306149
+
 
 cycle = '2020_cycle2'
 

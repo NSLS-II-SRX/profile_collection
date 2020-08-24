@@ -130,6 +130,7 @@ class ZebraPositionCapture(Device):
 
     # Configuration settings and status PVs
     enc = Cpt(EpicsSignalWithRBV, "PC_ENC")
+    egu = Cpt(EpicsSignalRO, "M1:EGU")
     dir = Cpt(EpicsSignalWithRBV, "PC_DIR")
     tspre = Cpt(EpicsSignalWithRBV, "PC_TSPRE")
     trig_source = Cpt(EpicsSignalWithRBV, "PC_ARM_SEL")
@@ -214,13 +215,20 @@ class SRXFlyer1Axis(Device):
     KNOWN_DETS = {"xs", "xs2", "merlin", "dexela"}
     fast_axis = Cpt(Signal, value="HOR", kind="config")
 
-    _encoder = Cpt(
-        SRXZebra,
-        "XF:05IDD-ES:1{Dev:Zebra1}:",
-        name="zebra",
-        add_prefix=(),
-        read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
-    )
+    # _encoder = Cpt(
+    #     SRXZebra,
+    #     "XF:05IDD-ES:1{Dev:Zebra1}:",
+    #     name="zebra",
+    #     add_prefix=(),
+    #     read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
+    # )
+    # _encoder = Cpt(
+    #     SRXZebra,
+    #     self._zebra_pvname,
+    #     name="zebra",
+    #     add_prefix=(),
+    #     read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
+    # )
     @property
     def encoder(self):
         return self._encoder
@@ -246,13 +254,22 @@ class SRXFlyer1Axis(Device):
 
     # def __init__(self, encoder, dets, sclr1, fast_axis, *,
     #              reg=db.reg, **kwargs):
-    def __init__(self, dets, sclr1, *, reg=db.reg, **kwargs):
+    def __init__(self, dets, sclr1, zebra, *, reg=db.reg, **kwargs):
         super().__init__("", parent=None, **kwargs)
         self._mode = "idle"
         self._dets = dets
         self._sis = sclr1
         self._filestore_resource = None
+        self._encoder = zebra
         # self._fast_axis = self.fast_axis
+        # _encoder = Cpt(
+        #     SRXZebra,
+        #     zebra_pvname,
+        #     name="zebra",
+        #     add_prefix=(),
+        #     read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
+        # )
+        # print(zebra_pvname)
 
         # Gating info for encoder capture
         self.stage_sigs[self._encoder.pc.gate_num] = 1
@@ -308,6 +325,18 @@ class SRXFlyer1Axis(Device):
             self.stage_sigs[self._encoder.pc.enc] = "Enc4"
             self.stage_sigs[self._encoder.pc.dir] = "Positive"
             self.stage_sigs[self._encoder.pc.enc_res1] = 5e-5
+        elif dir == "NANOHOR":
+            self.stage_sigs[self._encoder.pc.enc] = "Enc1"
+            self.stage_sigs[self._encoder.pc.dir] = "Positive"
+            self.stage_sigs[self._encoder.pc.enc_res2] = 9.5368e-05
+        elif dir == "NANOVER":
+            self.stage_sigs[self._encoder.pc.enc] = "Enc2"
+            self.stage_sigs[self._encoder.pc.dir] = "Positive"
+            self.stage_sigs[self._encoder.pc.enc_res2] = 9.5368e-05
+        elif dir == "NANOZ":
+            self.stage_sigs[self._encoder.pc.enc] = "Enc3"
+            self.stage_sigs[self._encoder.pc.dir] = "Positive"
+            self.stage_sigs[self._encoder.pc.enc_res2] = 9.5368e-05
 
         super().stage()
 
@@ -357,8 +386,12 @@ class SRXFlyer1Axis(Device):
             # print('Changing the pulse width')
             decrement = 1e-5
         self._encoder.pc.gate_start.put(xstart)
-        self._encoder.pc.gate_step.put(extent + 0.0005)
-        self._encoder.pc.gate_width.put(extent + 0.0001)
+        if (self.encoder.pc.egu.value == 'mm'):
+            self._encoder.pc.gate_step.put(extent + 0.0005)
+            self._encoder.pc.gate_width.put(extent + 0.001)
+        else:
+            self._encoder.pc.gate_step.put(extent + 0.050)
+            self._encoder.pc.gate_width.put(extent + 0.100)
 
         self._encoder.pc.pulse_start.put(0.0)
         self._encoder.pc.pulse_max.put(xnum)
@@ -568,25 +601,35 @@ class SRXFlyer1Axis(Device):
         self.unstage()
         self.stage()
 
-
+# For microES
 try:
     # flying_zebra = SRXFlyer1Axis(
-    #     zebra,
-    #     list(xs for xs in [xs] if xs is not None),
-    #     sclr1,
-    #     "HOR",
-    #     name="flying_zebra",
+    #     list(xs for xs in [xs] if xs is not None), sclr1, name="flying_zebra"
     # )
-    # flying_zebra_y = SRXFlyer1Axis(
-    #   zebra, [xs], sclr1, "VER", name="flying_zebra_y"
-    # )
-    flying_zebra = SRXFlyer1Axis(
-        list(xs for xs in [xs] if xs is not None), sclr1, name="flying_zebra"
+    microZebra = SRXZebra("XF:05IDD-ES:1{Dev:Zebra1}:", name="microZebra",
+        read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
     )
+    flying_zebra = SRXFlyer1Axis(
+        list(xs for xs in [xs] if xs is not None), sclr1, microZebra, name="flying_zebra"
+    )
+    print('huge success!')
 except Exception as ex:
     print("Cannot connect to Zebra. Continuing without device.\n", ex)
     flying_zebra = None
-    # flying_zebra_y = None
+
+
+# For nanoES
+try:
+    nanoZebra = SRXZebra("XF:05IDD-ES:1{Dev:Zebra2}:", name="nanoZebra",
+        read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
+    )
+    nano_flying_zebra = SRXFlyer1Axis(
+        list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="nano_flying_zebra"
+    )
+    print('huge success!')
+except Exception as ex:
+    print("Cannot connect to nanoZebra. Continuing without device.\n", ex)
+    nano_flying_zebra = None
 
 
 # For confocal
