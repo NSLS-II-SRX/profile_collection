@@ -86,5 +86,7 @@ except ImportError:
 # runengine_metadata_dir = appdirs.user_data_dir(appname="bluesky") / Path("runengine-metadata")
 runengine_metadata_dir = Path('/nsls2/xf05id1/shared/config/runengine-metadata')
 
+# TODO: uncomment before switching to 2020-2.0 environment for production
+# and update the new md.
 # PersistentDict will create the directory if it does not exist
-RE.md = PersistentDict(runengine_metadata_dir)
+# RE.md = PersistentDict(runengine_metadata_dir)
