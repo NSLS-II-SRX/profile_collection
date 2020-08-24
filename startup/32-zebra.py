@@ -646,6 +646,7 @@ if xs2 is not None:
     flying_zebra_xs2 = SRXFlyer1Axis(
         list(xs2 for xs2 in [xs2] if xs2 is not None),
         sclr1,
+        nanoZebra,
         name="flying_zebra_xs2"
     )
 
