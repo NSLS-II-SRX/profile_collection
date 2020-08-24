@@ -386,7 +386,7 @@ class SRXFlyer1Axis(Device):
             # print('Changing the pulse width')
             decrement = 1e-5
         self._encoder.pc.gate_start.put(xstart)
-        if (self.encoder.pc.egu.value == 'mm'):
+        if (self.encoder.pc.egu.get() == 'mm'):
             self._encoder.pc.gate_step.put(extent + 0.0005)
             self._encoder.pc.gate_width.put(extent + 0.001)
         else:

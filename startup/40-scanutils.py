@@ -74,7 +74,7 @@ class SRXScanRecord(Device):
                   'e1s', 'e1i', 'e1npts', 'e1e', 'e2s', 'e2i', 'e2npts', 'e2e',
                   'e3s', 'e3i', 'e3npts', 'e3e', 'efs', 'Eena', 'Ewait',
                   'filename', 'sampname', 'roi', 'detune']:
-            getattr(getattr(self, dest), i).put(getattr(getattr(scanrecord, src), i).value)
+            getattr(getattr(self, dest), i).put(getattr(getattr(scanrecord, src), i).get())
 
     def cp_XANES(self, src_num, dest_num):
         '''
@@ -89,7 +89,7 @@ class SRXScanRecord(Device):
                   'e3s', 'e3i', 'e3npts', 'e3e', 'efs', 'Eena', 'Ewait',
                   'filename', 'sampname', 'roi', 'detune']:
             pass
-            getattr(getattr(self, dest), i).put(getattr(getattr(scanrecord, src), i).value)
+            getattr(getattr(self, dest), i).put(getattr(getattr(scanrecord, src), i).get())
 
     def cp_XRF(self, src_num, dest_num):
         '''
@@ -101,7 +101,7 @@ class SRXScanRecord(Device):
         for i in ['p1s', 'p2s', 'p1i', 'p2i', 'p1stp', 'p2stp',
                   'p1ena', 'p2ena', 'curpt', 'tpp', 'ena', 'acq',
                   'sampname']:
-            getattr(getattr(self, dest), i).put(getattr(getattr(scanrecord, src), i).value)
+            getattr(getattr(self, dest), i).put(getattr(getattr(scanrecord, src), i).get())
 
     def disable_scans(self):
         for i in range(0, 16):
