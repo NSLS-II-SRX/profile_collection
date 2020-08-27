@@ -7,7 +7,10 @@ import subprocess
 import scipy as sp
 import scipy.optimize
 import lmfit
+import threading
 from scipy.optimize import curve_fit
+
+from bluesky.callbacks.mpl_plotting import QtAwareCallback
 
 
 '''
@@ -142,6 +145,64 @@ def braggcalib(scanlogDic={}, use_xrf=True):
     print('Bragg RBV offset:', fitted_dcm[1])
 
 
+class PairedCallback(QtAwareCallback):
+    def __init__(self, scaler, dcm_c2_pitch_name, pitch_guess, *args, **kwargs):
+        super().__init__(use_teleporter=kwargs.pop('use_teleporter', None))
+        self.__setup_lock = threading.Lock()
+        self.__setup_event = threading.Event()
+
+        def setup():
+            fig, ax = plt.subplots()
+            self.ax = ax
+            fig.canvas.set_window_title('Peakup')
+            self.ax.clear()
+            # Setup LiveCallbacks
+            self.live_plot = LivePlot(scaler, dcm_c2_pitch_name,
+                                      linestyle='', marker='*', color='C0',
+                                      label='raw',
+                                      ax=self.ax,
+                                      use_teleporter=False)
+
+            # Setup LiveFit
+            # f_gauss(x, A, sigma, x0, y0, m)
+            model = lmfit.Model(f_gauss, ['x'])
+            init_guess = {'A': lmfit.Parameter('A', 10, min=0),
+                          'sigma': lmfit.Parameter('sigma', 0.005, min=0),
+                          'x0': lmfit.Parameter('x0', pitch_guess),
+                          'y0': lmfit.Parameter('y0', 0),
+                          'm': lmfit.Parameter('m', 0, min=-1e-8, max=1e-8)}
+            self.lf = LiveFit(model, scaler, {'x': dcm_c2_pitch_name}, init_guess)
+            self.lpf = LiveFitPlot(self.lf, ax=self.ax, color='r', use_teleporter=False)
+
+        self.__setup = setup
+
+    def start(self, doc):
+        self.__setup()
+        self.live_plot.start(doc)
+        self.lpf.start(doc)
+        super().start(doc)
+
+    def descriptor(self, doc):
+        self.live_plot.descriptor(doc)
+        self.lpf.descriptor(doc)
+        super().descriptor(doc)
+
+    def event(self, doc):
+        self.live_plot.event(doc)
+        self.lpf.event(doc)
+        super().event(doc)
+
+    def event_page(self, doc):
+        self.live_plot.event_page(doc)
+        self.lpf.event_page(doc)
+        super().event_page(doc)
+
+    def stop(self, doc):
+        self.live_plot.stop(doc)
+        self.lpf.stop(doc)
+        super().stop(doc)
+
+
 def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
                 fix_roll=True, fix_pitch=True):
     """
@@ -217,29 +278,12 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     if (shutter == True):
         yield from bps.mov(shut_b, 'Open')
 
-    # Setup LiveCallbacks
-    fig, ax = plt.subplots()
-    fig.canvas.set_window_title('Peakup')
-    ax.clear()
-    livecallbacks = [LivePlot(scaler, dcm.c2_pitch.name,
-                              linestyle='', marker='*', color='C0',
-                              label='raw',
-                              ax=ax)]
-
-    # Setup LiveFit
-    # f_gauss(x, A, sigma, x0, y0, m)
-    model = lmfit.Model(f_gauss, ['x'])
-    init_guess = {'A': lmfit.Parameter('A', 10, min=0),
-                  'sigma': lmfit.Parameter('sigma', 0.005, min=0),
-                  'x0': lmfit.Parameter('x0', pitch_guess),
-                  'y0': lmfit.Parameter('y0', 0),
-                  'm': lmfit.Parameter('m', 0, min=-1e-8, max=1e-8)}
-    lf = LiveFit(model, scaler, {'x': dcm.c2_pitch.name}, init_guess)
-    lpf = LiveFitPlot(lf, ax=ax, color='r')
+    paired_callback = PairedCallback(scaler, dcm.c2_pitch.name, pitch_guess)
 
     # Run the C2 pitch fine scan
-    @subs_decorator(livecallbacks)
-    @subs_decorator(lpf)
+    # @subs_decorator(livecallbacks)
+    # @subs_decorator(lpf)
+    @subs_decorator(paired_callback)
     def myplan():
         return (
             # yield from scan(det,
@@ -261,7 +305,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     logscan('peakup_fine_pitch')
 
     # Display results of livefit
-    print(lf.result.values)
+    print(paired_callback.lf.result.values)
 
     # Collect the data
     # h = db[-1]
@@ -317,9 +361,9 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
         # plt.figure('Peakup')
         x_plot = np.linspace(x[0], x[-1], num=101)
         y_plot = f_gauss(x_plot, *popt)
-        ax.plot(x_plot, y_plot, 'C0--', label='fit')
-        ax.plot((pitch_new, pitch_new), (y_min, y_max), '--k', label='max')
-        plt.legend()
+        paired_callback.ax.plot(x_plot, y_plot, 'C0--', label='fit')
+        paired_callback.ax.plot((pitch_new, pitch_new), (y_min, y_max), '--k', label='max')
+        paired_callback.ax.legend()
 
 
 def ic_energy_batch(estart, estop, npts,
