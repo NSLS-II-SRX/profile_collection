@@ -31,6 +31,32 @@ This program provides functionality to calibrate HDCM energy:
     currently, the xanes needs to be collected on roi1 in xrf mode
 '''
 
+def mono_calib(Element):
+    """
+    SRX mono_calib(Element)
+
+    Go to the edge of the specified element, do a peakup, setroi, and automatic perform a xanes scan (+-50eV) on the specified element
+
+    Parameters
+    ----------
+    Element : str
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> mono_calib('V')
+
+    """
+
+    getemissionE(Element)
+    EnergyX = getbindingE(Element)
+    energy.move(EnergyX)
+    yield from peakup_fine(use_calib=True)
+    setroi(1,Element)
+    yield from xanes_plan(erange=[EnergyX-50,EnergyX+50],estep=[1.0], samplename=f'{Element}Foil',filename=f'{Element}Foilstd',acqtime=1.0)
 
 def scanderive(xaxis, yaxis):
     dyaxis = np.gradient(yaxis, xaxis)

@@ -12,7 +12,7 @@ i0_baseline = 7.24e-10
 #   Need to remove i0_baseline (not using current anymore and we won't have
 #     1e-10 counts
 #   Can we incorporate all the detector channels, instead of only one?
-class NormalizeLivePlot(LivePlot):
+class NormalizeLivePlot(HackLivePlot):
     def __init__(self, *args, norm_key=None,  **kwargs):
         super().__init__(*args, **kwargs)
         if norm_key is None:

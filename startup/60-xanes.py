@@ -271,19 +271,30 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     livecallbacks.append(LiveTable(livetableitem))
     liveploty = roi_key[0]
     liveplotx = energy.energy.name
-    liveplotfig = plt.figure('Raw XANES')
     
-    livecallbacks.append(LivePlot(liveploty, x=liveplotx, fig=liveplotfig))
+    def my_factory(name):
+        fig = plt.figure(num=name)
+        ax = fig.gca()
+        return fig, ax
+
+    # liveplotfig = plt.figure('Raw XANES')
+    # livecallbacks.append(LivePlot(liveploty, x=liveplotx, fig=liveplotfig))
+    livecallbacks.append(HackLivePlot(liveploty, x=liveplotx,
+                                      fig_factory=partial(my_factory, name='Raw XANES')))
 
     # Setup normalization
     liveploty = 'sclr_i0'
     i0 = 'sclr_i0'
-    liveplotfig2 = plt.figure('I0')
-    livecallbacks.append(LivePlot(liveploty, x=liveplotx, fig=liveplotfig2))
+    # liveplotfig2 = plt.figure('I0')
+    # livecallbacks.append(LivePlot(liveploty, x=liveplotx, fig=liveplotfig2))
+    livecallbacks.append(HackLivePlot(liveploty, x=liveplotx,
+                                      fig_factory=partial(my_factory, name='I0')))
 
     # Setup normalized XANES    
-    livenormfig = plt.figure('Normalized XANES')
-    livecallbacks.append(NormalizeLivePlot(roi_key[0], x=liveplotx, norm_key = i0, fig=livenormfig))
+    # livenormfig = plt.figure('Normalized XANES')
+    # livecallbacks.append(NormalizeLivePlot(roi_key[0], x=liveplotx, norm_key = i0, fig=livenormfig))
+    livecallbacks.append(NormalizeLivePlot(roi_key[0], x=liveplotx, norm_key = i0,
+                                           fig_factory=partial(my_factory, name='Normalized XANES')))
 
 
     def after_scan(name, doc):
