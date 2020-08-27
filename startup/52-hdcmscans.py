@@ -172,7 +172,7 @@ class PairedCallback(QtAwareCallback):
                           'y0': lmfit.Parameter('y0', 0),
                           'm': lmfit.Parameter('m', 0, min=-1e-8, max=1e-8)}
             self.lf = LiveFit(model, scaler, {'x': dcm_c2_pitch_name}, init_guess)
-            self.lpf = LiveFitPlot(self.lf, ax=self.ax, color='r', use_teleporter=False)
+            self.lpf = LiveFitPlot(self.lf, ax=self.ax, color='r', use_teleporter=False, label='Gaussian fit')
 
         self.__setup = setup
 
