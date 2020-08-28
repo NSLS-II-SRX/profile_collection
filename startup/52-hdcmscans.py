@@ -192,11 +192,11 @@ class PairedCallback(QtAwareCallback):
             # Setup LiveFit
             # f_gauss(x, A, sigma, x0, y0, m)
             model = lmfit.Model(f_gauss, ['x'])
-            init_guess = {'A': lmfit.Parameter('A', 10, min=0),
-                          'sigma': lmfit.Parameter('sigma', 0.005, min=0),
+            init_guess = {'A': lmfit.Parameter('A', 100000, min=0),
+                          'sigma': lmfit.Parameter('sigma', 0.001, min=0),
                           'x0': lmfit.Parameter('x0', pitch_guess),
-                          'y0': lmfit.Parameter('y0', 0),
-                          'm': lmfit.Parameter('m', 0, min=-1e-8, max=1e-8)}
+                          'y0': lmfit.Parameter('y0', 0, min=0),
+                          'm': lmfit.Parameter('m', 0, vary=False)}
             self.lf = LiveFit(model, scaler, {'x': dcm_c2_pitch_name}, init_guess)
             self.lpf = LiveFitPlot(self.lf, ax=self.ax, color='r', use_teleporter=False, label='Gaussian fit')
 

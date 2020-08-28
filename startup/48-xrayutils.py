@@ -242,8 +242,8 @@ def getbindingE(element, edge=None):
             # print("{0:s}\t{1:8.2f}\t{2:5.3}".format(i,xrfC.XrayLibWrap(elements[element].Z,'binding_e')[i]*1000.,
             #                                       xrfC.XrayLibWrap(elements[element].Z,'yield')[i]))
             print(f"{i}\t"
-                  "{xrfC.XrayLibWrap(elements[element].Z,'binding_e')[i]*1000.:8.2f}\t"
-                  "{xrfC.XrayLibWrap(elements[element].Z,'yield')[i]:5.3f}")
+                  f"{xrfC.XrayLibWrap(elements[element].Z,'binding_e')[i]*1000.:8.2f}\t"
+                  f"{xrfC.XrayLibWrap(elements[element].Z,'yield')[i]:5.3f}")
             if (y[0] < xrfC.XrayLibWrap(elements[element].Z, 'yield')[i] and
                xrfC.XrayLibWrap(elements[element].Z, 'binding_e')[i] < 25.):
                 y[0] = xrfC.XrayLibWrap(elements[element].Z, 'yield')[i]

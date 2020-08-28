@@ -129,12 +129,23 @@ def xanes_afterscan_plan(scanid, filename, roinum):
             roi_key.append(getattr(xs.channel3.rois, roi_name).value.name)
 
         [columnitem.append(roi) for roi in roi_key]
+    if ('xs2' in h.start['detectors']):
+        if (type(roinum) is not list):
+            roinum = [roinum]
+        for i in roinum:
+            roi_name = 'roi{:02}'.format(i)
+            roi_key = []
+            roi_key.append(getattr(xs2.channel1.rois, roi_name).value.name)
+
+        [columnitem.append(roi) for roi in roi_key]
     # Construct user convenience columns allowing prescaling of ion chamber, diode and
     # fluorescence detector data
     usercolumnitem = {}
     datatablenames = []
 
     if ('xs' in h.start['detectors']):
+        datatablenames = datatablenames + [str(roi) for roi in roi_key]
+    if ('xs2' in h.start['detectors']):
         datatablenames = datatablenames + [str(roi) for roi in roi_key]
     if ('sclr1' in  h.start['detectors']):
         datatablenames = datatablenames + ['sclr_im', 'sclr_i0', 'sclr_it']
@@ -153,6 +164,12 @@ def xanes_afterscan_plan(scanid, filename, roinum):
             roisum = roisum + datatable[getattr(xs.channel3.rois, roi_name).value.name]
             usercolumnitem['If-{:02}'.format(i)] = roisum
             usercolumnitem['If-{:02}'.format(i)].round(0)
+    if ('xs2' in h.start['detectors']):
+        for i in roinum:
+            roi_name = 'roi{:02}'.format(i)
+            roisum = datatable[getattr(xs2.channel1.rois, roi_name).value.name]
+            usercolumnitem['If-{:02}'.format(i)] = roisum
+            usercolumnitem['If-{:02}'.format(i)].round(0)
 
     xanes_textout(scan = scanid, header = headeritem,
                   userheader = userheaderitem, column = columnitem,
@@ -162,7 +179,7 @@ def xanes_afterscan_plan(scanid, filename, roinum):
 
 
 def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
-               harmonic=1, detune=0, align=False, align_at=None,
+               det_xs=xs, harmonic=1, detune=0, align=False, align_at=None,
                roinum=1, shutter=True, per_step=None):
 
     '''
@@ -172,6 +189,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     samplename (string): sample name to be saved in the scan metadata
     filename (string): filename to be added to the scan id as the text output filename
 
+    det_xs (xs3 detector): the xs3 detector used for the measurement
     harmonic (odd integer): when set to 1, use the highest harmonic achievable automatically.
                                     when set to an odd integer, force the XANES scan to use that harmonic
     detune:  add this value to the gap of the undulator to reduce flux [keV]
@@ -229,11 +247,11 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
         exgap = np.append(exgap, ex)
 
     # Register the detectors
-    det = [ring_current, sclr1, xs]
+    det = [ring_current, sclr1, det_xs]
     # Setup xspress3
-    yield from abs_set(xs.external_trig, False)
-    yield from abs_set(xs.settings.acquire_time, acqtime)
-    yield from abs_set(xs.total_points, len(ept))
+    yield from abs_set(det_xs.external_trig, False)
+    yield from abs_set(det_xs.settings.acquire_time, acqtime)
+    yield from abs_set(det_xs.total_points, len(ept))
 
     # Setup the scaler
     yield from abs_set(sclr1.preset_time, acqtime)
@@ -264,9 +282,12 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     livetableitem = ['energy_energy', 'sclr_i0', 'sclr_it']
     roi_name = 'roi{:02}'.format(roinum[0])
     roi_key = []
-    roi_key.append(getattr(xs.channel1.rois, roi_name).value.name)
-    roi_key.append(getattr(xs.channel2.rois, roi_name).value.name)
-    roi_key.append(getattr(xs.channel3.rois, roi_name).value.name)
+    roi_key.append(getattr(det_xs.channel1.rois, roi_name).value.name)
+    try:
+        roi_key.append(getattr(xs.channel2.rois, roi_name).value.name)
+        roi_key.append(getattr(xs.channel3.rois, roi_name).value.name)
+    except NameError:
+        pass
     livetableitem.append(roi_key[0])
     livecallbacks.append(LiveTable(livetableitem))
     liveploty = roi_key[0]

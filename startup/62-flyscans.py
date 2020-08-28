@@ -193,7 +193,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         'scaninfo': {'type': 'XRF_fly',
                      'raster': False,
                      'fast_axis': flying_zebra.fast_axis.get()},
-                     'theta': hf_stage.th.position,
+                     # 'slow_axis': flying_zebra.slow_axis.get(),
+                     # 'theta': hf_stage.th.position}
         'scan_params': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
         'scan_input': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
         'delta': delta,
@@ -441,9 +442,12 @@ def nano_scan_and_fly(*args, extra_dets=None, **kwargs):
     kwargs.setdefault('xmotor', nano_stage.sx)
     kwargs.setdefault('ymotor', nano_stage.sy)
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
+    print(kwargs['xmotor'].name)
+    print(kwargs['ymotor'].name)
     yield from abs_set(nano_flying_zebra.fast_axis, 'NANOHOR')
+    yield from abs_set(nano_flying_zebra.slow_axis, 'NANOVER')
 
-    _xs = kwargs.pop('xs', xs)
+    _xs = kwargs.pop('xs', xs2)
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
@@ -455,8 +459,9 @@ def nano_y_scan_and_fly(*args, extra_dets=None, **kwargs):
     kwargs.setdefault('ymotor', nano_stage.sx)
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
     yield from abs_set(nano_flying_zebra.fast_axis, 'NANOVER')
+    yield from abs_set(nano_flying_zebra.slow_axis, 'NANOHOR')
 
-    _xs = kwargs.pop('xs', xs)
+    _xs = kwargs.pop('xs', xs2)
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
@@ -469,7 +474,7 @@ def nano_z_scan_and_fly(*args, extra_dets=None, **kwargs):
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
     yield from abs_set(nano_flying_zebra.fast_axis, 'NANOZ')
 
-    _xs = kwargs.pop('xs', xs)
+    _xs = kwargs.pop('xs', xs2)
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
