@@ -101,14 +101,11 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         roi_name = 'roi{:02}'.format(roi_idx+1)
         roi_key = getattr(xs.channel1.rois, roi_name).value.name
         livetableitem.append(roi_key)
-        fig = plt.figure('xs_ROI{:02}'.format(roi_idx+1))
-        fig.clf()
         roimap = LiveGrid((ynumstep+1, xnumstep+1), roi_key,
                           clim=None, cmap='viridis',
                           xlabel='x (mm)', ylabel='y (mm)',
                           extent=[xstart, xstop, ystart, ystop],
-                          x_positive='right', y_positive='down',
-                          ax=fig.gca())
+                          x_positive='right', y_positive='down')
         livecallbacks.append(roimap)
 
     if ('xs2' in dets_by_name):

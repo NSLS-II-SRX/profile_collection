@@ -154,7 +154,7 @@ def knife_edge(motor, start, stop, stepsize, acqtime,
 
 # Run a knife-edge scan
 def nano_knife_edge(motor, start, stop, stepsize, acqtime,
-                    fly=True, high2low=False, use_trans=True,
+                    fly=True, high2low=False, use_trans=False,
                     scan_only=False, extra_dets=None):
     """
     motor       motor   motor used for scan
