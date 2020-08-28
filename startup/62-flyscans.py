@@ -42,7 +42,15 @@ from bluesky.plans import (scan, )
 from bluesky.callbacks import CallbackBase, LiveGrid
 
 from hxntools.handlers import register
-register(db)
+
+# Note: commenting the following line out due to the error during 2020-2
+# deployment:
+#   DuplicateHandler: There is already a handler registered for the spec 'XSP3'.
+#   Use overwrite=True to deregister the original.
+#   Original: <class 'area_detector_handlers._xspress3.Xspress3HDF5Handler'>
+#   New: <class 'databroker.assets.handlers.Xspress3HDF5Handler'>
+#
+# register(db)
 
 
 # Define wrapper to time a function
@@ -118,11 +126,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
     # Change retry deadband for hf_stage.x and hf_stage.y
     if (hf_stage.x in (xmotor, ymotor)):
-        OLD_RDBD_X = hf_stage.RETRY_DEADBAND_X.value
+        OLD_RDBD_X = hf_stage.RETRY_DEADBAND_X.get()
         NEW_RDBD_X = 2e-4
         hf_stage.RETRY_DEADBAND_X.put(NEW_RDBD_X)
     if (hf_stage.y in (xmotor, ymotor)):
-        OLD_RDBD_Y = hf_stage.RETRY_DEADBAND_Y.value
+        OLD_RDBD_Y = hf_stage.RETRY_DEADBAND_Y.get()
         NEW_RDBD_Y = 2e-4
         hf_stage.RETRY_DEADBAND_Y.put(NEW_RDBD_Y)
 
@@ -184,8 +192,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         'shape': (xnum, ynum),
         'scaninfo': {'type': 'XRF_fly',
                      'raster': False,
-                     'fast_axis': flying_zebra.fast_axis.value},
-                     'theta': hf_stage.th.position,
+                     'fast_axis': flying_zebra.fast_axis.get()},
+                     # 'slow_axis': flying_zebra.slow_axis.get(),
+                     # 'theta': hf_stage.th.position}
         'scan_params': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
         'scan_input': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
         'delta': delta,
@@ -433,9 +442,12 @@ def nano_scan_and_fly(*args, extra_dets=None, **kwargs):
     kwargs.setdefault('xmotor', nano_stage.sx)
     kwargs.setdefault('ymotor', nano_stage.sy)
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
+    print(kwargs['xmotor'].name)
+    print(kwargs['ymotor'].name)
     yield from abs_set(nano_flying_zebra.fast_axis, 'NANOHOR')
+    yield from abs_set(nano_flying_zebra.slow_axis, 'NANOVER')
 
-    _xs = kwargs.pop('xs', xs)
+    _xs = kwargs.pop('xs', xs2)
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
@@ -447,8 +459,9 @@ def nano_y_scan_and_fly(*args, extra_dets=None, **kwargs):
     kwargs.setdefault('ymotor', nano_stage.sx)
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
     yield from abs_set(nano_flying_zebra.fast_axis, 'NANOVER')
+    yield from abs_set(nano_flying_zebra.slow_axis, 'NANOHOR')
 
-    _xs = kwargs.pop('xs', xs)
+    _xs = kwargs.pop('xs', xs2)
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
@@ -461,7 +474,7 @@ def nano_z_scan_and_fly(*args, extra_dets=None, **kwargs):
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
     yield from abs_set(nano_flying_zebra.fast_axis, 'NANOZ')
 
-    _xs = kwargs.pop('xs', xs)
+    _xs = kwargs.pop('xs', xs2)
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets

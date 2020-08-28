@@ -214,6 +214,7 @@ class SRXFlyer1Axis(Device):
     )
     KNOWN_DETS = {"xs", "xs2", "merlin", "dexela"}
     fast_axis = Cpt(Signal, value="HOR", kind="config")
+    slow_axis = Cpt(Signal, value="VER", kind="config")
 
     # _encoder = Cpt(
     #     SRXZebra,
@@ -352,7 +353,7 @@ class SRXFlyer1Axis(Device):
         }
 
         desc = OrderedDict()
-        for chan in ("time", "enc1", "enc2"):
+        for chan in ("time", "enc1", "enc2", "enc3"):
             desc[chan] = spec
             desc[chan]["source"] = getattr(self._encoder.pc.data, chan).pvname
 
@@ -386,7 +387,7 @@ class SRXFlyer1Axis(Device):
             # print('Changing the pulse width')
             decrement = 1e-5
         self._encoder.pc.gate_start.put(xstart)
-        if (self.encoder.pc.egu.value == 'mm'):
+        if (self.encoder.pc.egu.get() == 'mm'):
             self._encoder.pc.gate_step.put(extent + 0.0005)
             self._encoder.pc.gate_width.put(extent + 0.001)
         else:
@@ -479,6 +480,7 @@ class SRXFlyer1Axis(Device):
         time_datum = datum_factory_z({"column": "time"})
         enc1_datum = datum_factory_z({"column": "enc1"})
         enc2_datum = datum_factory_z({"column": "enc2"})
+        enc3_datum = datum_factory_z({"column": "enc3"})
         sis_datum = datum_factory_sis({"column": "i0"})
         sis_datum_im = datum_factory_sis({"column": "im"})
         sis_datum_it = datum_factory_sis({"column": "it"})
@@ -494,6 +496,7 @@ class SRXFlyer1Axis(Device):
                 time_datum,
                 enc1_datum,
                 enc2_datum,
+                enc3_datum,
                 sis_datum,
                 sis_time,
                 sis_datum_im,
@@ -508,9 +511,10 @@ class SRXFlyer1Axis(Device):
         # Write the file.
         # @timer_wrapper
         def get_zebra_data():
-            export_zebra_data(
-                self._encoder, self.__write_filepath, self.fast_axis
-            )
+            if 'nano' in self.name:
+                export_nano_zebra_data(self._encoder, self.__write_filepath)
+            else:
+                export_zebra_data(self._encoder, self.__write_filepath, self.fast_axis)
 
         # t_getzebradata = tic()
         get_zebra_data()
@@ -535,6 +539,7 @@ class SRXFlyer1Axis(Device):
                 "time": time_datum["datum_id"],
                 "enc1": enc1_datum["datum_id"],
                 "enc2": enc2_datum["datum_id"],
+                "enc3": enc3_datum["datum_id"],
                 "i0": sis_datum["datum_id"],
                 "i0_time": sis_time["datum_id"],
                 "im": sis_datum_im["datum_id"],
@@ -544,6 +549,7 @@ class SRXFlyer1Axis(Device):
                 "time": time_datum["datum_id"],  # not a typo#
                 "enc1": time_datum["datum_id"],
                 "enc2": time_datum["datum_id"],
+                "enc3": time_datum["datum_id"],
                 "i0": sis_time["datum_id"],
                 "i0_time": sis_time["datum_id"],
                 "im": sis_datum_im["datum_id"],
@@ -612,7 +618,7 @@ try:
     flying_zebra = SRXFlyer1Axis(
         list(xs for xs in [xs] if xs is not None), sclr1, microZebra, name="flying_zebra"
     )
-    print('huge success!')
+    # print('huge success!')
 except Exception as ex:
     print("Cannot connect to Zebra. Continuing without device.\n", ex)
     flying_zebra = None
@@ -621,12 +627,12 @@ except Exception as ex:
 # For nanoES
 try:
     nanoZebra = SRXZebra("XF:05IDD-ES:1{Dev:Zebra2}:", name="nanoZebra",
-        read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
+        read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.enc3", "pc.data.time"],
     )
     nano_flying_zebra = SRXFlyer1Axis(
-        list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="nano_flying_zebra"
+        list(xs2 for xs2 in [xs2] if xs2 is not None), sclr1, nanoZebra, name="nano_flying_zebra"
     )
-    print('huge success!')
+    # print('huge success!')
 except Exception as ex:
     print("Cannot connect to nanoZebra. Continuing without device.\n", ex)
     nano_flying_zebra = None
@@ -636,22 +642,23 @@ except Exception as ex:
 # For plans that call xs2,
 # should we simply add xs2 to flying_zebra.dets
 # and set dir to 'DET2HOR'?
-if xs2 is not None:
-    # flying_zebra_x_xs2 = SRXFlyer1Axis(
-    #     zebra, [xs2], sclr1, "HOR", name="flying_zebra_x_xs2"
-    # )
-    # flying_zebra_y_xs2 = SRXFlyer1Axis(
-    #     zebra, [xs2], sclr1, "VER", name="flying_zebra_y_xs2"
-    # )
-    flying_zebra_xs2 = SRXFlyer1Axis(
-        list(xs2 for xs2 in [xs2] if xs2 is not None),
-        sclr1,
-        name="flying_zebra_xs2"
-    )
-
-else:
-    flying_zebra_xs2 = None
-    # flying_zebra_y_xs2 = None
+# if xs2 is not None:
+#     # flying_zebra_x_xs2 = SRXFlyer1Axis(
+#     #     zebra, [xs2], sclr1, "HOR", name="flying_zebra_x_xs2"
+#     # )
+#     # flying_zebra_y_xs2 = SRXFlyer1Axis(
+#     #     zebra, [xs2], sclr1, "VER", name="flying_zebra_y_xs2"
+#     # )
+#     flying_zebra_xs2 = SRXFlyer1Axis(
+#         list(xs2 for xs2 in [xs2] if xs2 is not None),
+#         sclr1,
+#         nanoZebra,
+#         name="flying_zebra_xs2"
+#     )
+#
+# else:
+#     flying_zebra_xs2 = None
+#     # flying_zebra_y_xs2 = None
 # For chip imaging
 # flying_zebra_x_xs2 = SRXFlyer1Axis(
 #   zebra, xs2, sclr1, 'DET2HOR', name='flying_zebra'
@@ -662,7 +669,36 @@ else:
 # flying_zebra = SRXFlyer1Axis(zebra)
 
 
+def export_nano_zebra_data(zebra, filepath):
+    j = 0
+    while zebra.pc.data_in_progress.get() == 1:
+        print("Waiting for zebra...")
+        ttime.sleep(0.1)
+        j += 1
+        if j > 10:
+            print("THE ZEBRA IS BEHAVING BADLY CARRYING ON")
+            break
+
+    time_d = zebra.pc.data.time.get()
+    enc1_d = zebra.pc.data.enc1.get()
+    enc2_d = zebra.pc.data.enc2.get()
+    enc3_d = zebra.pc.data.enc3.get()
+
+    size = (len(time_d),)
+    with h5py.File(filepath, "w") as f:
+        print('writing data...')
+        dset0 = f.create_dataset("time", size, dtype="f")
+        dset0[...] = np.array(time_d)
+        dset1 = f.create_dataset("enc1", size, dtype="f")
+        dset1[...] = np.array(enc1_d)
+        dset2 = f.create_dataset("enc2", size, dtype="f")
+        dset2[...] = np.array(enc2_d)
+        dset3 = f.create_dataset("enc3", size, dtype="f")
+        dset3[...] = np.array(enc3_d)
+
+
 def export_zebra_data(zebra, filepath, fast_axis):
+    print('\n\n\nI am in micro export\n\n\n\n')
     j = 0
     while zebra.pc.data_in_progress.get() == 1:
         print("waiting zebra")
@@ -684,6 +720,8 @@ def export_zebra_data(zebra, filepath, fast_axis):
         enc1_d = zebra.pc.data.enc1.get()
         enc2_d = zebra.pc.data.enc2.get()
 
+    enc3_d = 0*enc2_d
+
     while len(time_d) == 0 or len(time_d) != len(enc1_d):
         time_d = zebra.pc.data.time.get()
         if fast_axis == "HOR":
@@ -699,7 +737,8 @@ def export_zebra_data(zebra, filepath, fast_axis):
         dset1[...] = np.array(enc1_d)
         dset2 = f.create_dataset("enc2", size, dtype="f")
         dset2[...] = np.array(enc2_d)
-        f.close()
+        dset3 = f.create_dataset("enc3", size, dtype="f")
+        dset3[...] = np.array(enc3_d)
 
 
 class ZebraHDF5Handler(HandlerBase):

@@ -3,8 +3,7 @@ print(f'Loading {__file__}...')
 
 from ophyd import EpicsSignal, EpicsSignalRO, Device, TetrAMM, Kind
 from ophyd import Component as Cpt
-from ophyd.ophydobj import StatusBase
-from ophyd.status import wait
+from ophyd.status import StatusBase, wait
 from ophyd.quadem import NSLS_EM
 
 

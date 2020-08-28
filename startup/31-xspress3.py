@@ -333,13 +333,17 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
     # channel2 = Cpt(Xspress3Channel, 'C2_', channel_num=2, read_attrs=['rois'])
     # channel3 = Cpt(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
 
+    erase = Cpt(EpicsSignal, "ERASE")
+
+    array_counter = Cpt(EpicsSignal, "ArrayCounter_RBV")
+
     create_dir = Cpt(EpicsSignal, "HDF5:FileCreateDir")
 
     hdf5 = Cpt(
         Xspress3FileStoreFlyable,
         "HDF5:",
-        read_path_template="/nsls2/xf05id1/data/2020-1/XS3MINI",
-        write_path_template="/home/xspress3/data/SRX/2020-1",
+        read_path_template="/nsls2/xf05id1/data/2020-2/XS3MINI",
+        write_path_template="/home/xspress3/data/SRX/2020-2",
         root="/nsls2/xf05id1",
     )
 

@@ -25,25 +25,6 @@ from ophyd.areadetector import (AreaDetector, PixiradDetectorCam, ImagePlugin,
 from ophyd import Component as Cpt
 
 
-# monkey patch for trailing slash problem (from XPD's profile, see
-# https://github.com/NSLS-II-XPD/profile_collection/blob/master/startup/80-areadetector.py#L17-L32)
-def _ensure_trailing_slash(path):
-    """
-    'a/b/c' -> 'a/b/c/'
-    EPICS adds the trailing slash itself if we do not, so in order for the
-    setpoint filepath to match the readback filepath, we need to add the
-    trailing slash ourselves.
-    """
-    newpath = os.path.join(path, '')
-    if newpath[0] != '/' and newpath[-1] == '/':
-        # make it a windows slash
-        newpath = newpath[:-1]
-    return newpath
-
-
-ophyd.areadetector.filestore_mixins._ensure_trailing_slash = _ensure_trailing_slash
-
-
 class BulkDexela(HandlerBase):
     HANDLER_NAME = 'DEXELA_FLY_V1'
 
