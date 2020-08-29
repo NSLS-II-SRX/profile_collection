@@ -154,8 +154,8 @@ def knife_edge(motor, start, stop, stepsize, acqtime,
 
 # Run a knife-edge scan
 def nano_knife_edge(motor, start, stop, stepsize, acqtime,
-                    fly=True, high2low=False, use_trans=False,
-                    scan_only=False, extra_dets=None):
+                    normalize=True, use_trans=False,
+                    scan_only=False, shutter=True, plot=True):
     """
     motor       motor   motor used for scan
     start       float   starting position
@@ -167,49 +167,70 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
                         ex. start will full beam and then block with object (knife/wire)
     """
 
-    # Set detectors
-    dets = [sclr1]
-    # Add fluorescence detector
-    if (use_trans == False):
-        dets.append(xs2)
-    # Add extra detectors
-    if extra_dets is None:
-        extra_dets = []
-    dets = dets + extra_dets
-
     # Need to convert stepsize to number of points
     num = np.round((stop - start) / stepsize) + 1
 
-    # Set counting time
-    sclr1.preset_time.put(acqtime)
-    if (use_trans == False):
-        xs2.settings.acquire_time.put(acqtime)
-        yield from abs_set(xs2.total_points, num)
-    
-    yield from mv(shut_b,'Open')
-
     # Run the scan
-    if (motor.name == 'hf_stage_y'):
-        if fly:
-            yield from y_scan_and_fly(start, stop, num,
-                                      hf_stage.x.position, hf_stage.x.position+0.001, 1,
-                                      acqtime)
-        else:
-            yield from scan(dets, motor, start, stop, num)
+    if (motor.name == 'nano_stage_sx'):
+        fly = True
+        pos = 'enc1'
+        fluor_key = 'fluor_xs2'
+        y0 = nano_stage.sy.user_readback.get()
+        yield from nano_scan_and_fly(start, stop, num,
+                                     y0, y0, 1, acqtime,
+                                     shutter=shutter)
+    elif (motor.name == 'nano_stage_sy'):
+        fly = True
+        pos = 'enc2'
+        fluor_key = 'fluor_xs2'
+        x0 = nano_stage.sx.user_readback.get()
+        yield from nano_y_scan_and_fly(start, stop, num,
+                                       x0, x0, 1, acqtime,
+                                       shutter=shutter)
+    elif (motor.name == 'nano_stage_x'):
+        fly = False
+        pos = motor.name
+        fluor_key = 'xs2_channel1'
+        y0 = nano_stage.y.user_readback.get()
+        dets = [xs2, sclr1]
+        yield from abs_set(xs2.total_points, num)
+        livecallbacks = [LiveTable([motor.name,
+                                    xs2.channel1.rois.roi01.value.name])]
+        livecallbacks.append(LivePlot(xs2.channel1.rois.roi01.value.name,
+                                      motor.name))
+        if (shutter):
+            yield from mov(shut_b, 'Open')
+        yield from subs_wrapper(scan(dets, motor, start, stop, num),
+                                {'all' : livecallbacks})
+        if (shutter):
+            yield from mov(shut_b, 'Close')
+    elif (motor.name == 'nano_stage_y'):
+        fly = False
+        pos = motor.name
+        fluor_key = 'xs2_channel1'
+        x0 = nano_stage.x.user_readback.get()
+        dets = [xs2, sclr1]
+        yield from abs_set(xs2.total_points, num)
+        livecallbacks = [LiveTable([motor.name,
+                                    xs2.channel1.rois.roi01.value.name])]
+        livecallbacks.append(LivePlot(xs2.channel1.rois.roi01.value.name,
+                                      motor.name))
+        if (shutter):
+            yield from mov(shut_b, 'Open')
+        yield from subs_wrapper(scan(dets, motor, start, stop, num),
+                                {'all' : livecallbacks})
+        if (shutter):
+            yield from mov(shut_b, 'Close')
     else:
-        if fly:
-            yield from scan_and_fly(start, stop, num,
-                                    hf_stage.y.position, hf_stage.y.position+0.001, 1,
-                                    acqtime)
-        else:
-            # table = LiveTable([motor])
-            # @subs_decorator(table)
-            # LiveTable([motor])
-            yield from scan(dets, motor, start, stop, num)
+        print(f'{motor.name} is not implemented in this scan.')
+        return
 
     # Do not do fitting, only do the scan
     if (scan_only):
         return
+
+    # Get the scanid
+    id_str = db[-1].start['scan_id']
 
     # Get the information from the previous scan
     haz_data = False
@@ -218,53 +239,47 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     print('Waiting for data...', end='', flush=True)
     while (loop_counter < MAX_LOOP_COUNTER):
         try:
-            if (fly == True):
-                tbl = db[-1].table('stream0', fill=True)
+            if (fly):
+                tbl = db[int(id_str)].table('stream0', fill=True)
             else:
-                tbl = db[-1].table(fill=True)
+                tbl = db[int(id_str)].table(fill=True)
             haz_data = True
             print('done')
             break
         except:
             loop_counter += 1
-            time.sleep(1)
+            yield from bps.sleep(1)
 
     # Check if we haz data
     if (not haz_data):
         print('Data collection timed out!')
         return
     
-    id_str = db[-1].start['scan_id']
-
-    # Get the position information
-    if fly:
-        pos = 'enc1'
-    else:
-        pos = motor.name
-    # if (motor == hf_stage.y):
-    #     pos = 'hf_stage_y'
-    # elif (motor == hf_stage.x):
-    #     pos = 'hf_stage_x'
-    # else:
-    #     pos = 'pos'
-
     # Get the data
     if (use_trans == True):
         y = tbl['it'].values[0] / tbl['im'].values[0]
     else:
-        # d = np.array(list(db[-1].data('xs2_channel1', fill=True)))
-        d = np.array(list(db[-1].data('fluor', stream_name='stream0', fill=True)))
-        # y = np.sum(d[:, 934:954], axis=(1))#if Pt lines
-        # y = np.sum(d[:, 934:954], axis=(1))/tbl['sclr_im'].values[0]#if Pt lines
-        # y = np.sum(d[:, 961:981], axis=(1))/tbl['sclr_im'].values[0] #if Au lines
-        # y = np.sum(d[:, 531:551], axis=(1)) #if Au lines
-        # y = np.sum(np.array(tbl['xs2_channel1'])[0][:, 934:954], axis=(1))
-        # y = y / np.array(tbl['i0'])[0]
-        y = np.sum(d[:, :, :, 961:981], axis=(-1, -2))
-        y = np.squeeze(y)
-        I0 = np.array(list(db[-1].data('i0', stream_name='stream0', fill=True)))
-        y = y / np.squeeze(I0)
-    x = np.array(tbl[pos])
+        bin_low = xs2.channel1.rois.roi01.bin_low.get()
+        bin_high = xs2.channel1.rois.roi01.bin_high.get()
+        d = np.array(tbl[fluor_key])[0]
+        if (d.ndim == 1):
+            d = np.array(tbl[fluor_key])
+        d = np.stack(d)
+        if (d.ndim == 2):
+            d = np.sum(d[:, bin_low:bin_high], axis=1)
+        elif (d.ndim == 3):
+            d = np.sum(d[:, :, bin_low:bin_high], axis=(1, 2))
+        try:
+            I0 = np.array(tbl['i0'])[0]
+        except KeyError:
+            I0 = np.array(tbl['sclr_i0'])
+        if (normalize):
+            y = d / I0
+        else:
+            y = d
+    x = np.array(tbl[pos])[0]
+    if (x.size == 1):
+        x = np.array(tbl[pos])
     x = x.astype(np.float64)
     y = y.astype(np.float64)
     dydx = np.gradient(y, x)
@@ -286,14 +301,12 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     #                   A2, sigma2, x2, y2):
     p_guess = [0.5*np.amax(y),
                1.000,
-               0.5*(x[0] + x[-1]) - 0.1,
+               0.5*(x[0] + x[-1]) - 1.0,
                np.amin(y) + 0.5*np.amax(y),
                -0.5*np.amax(y),
                1.000,
-               0.5*(x[0] + x[-1]) + 0.1,
+               0.5*(x[0] + x[-1]) + 1.0,
                np.amin(y) + 0.5*np.amax(y)]
-    # if high2low:
-    #     p_guess[0] = -0.5 * np.amin(y)
     try:
         # popt, _ = curve_fit(f_offset_erf, x, y, p0=p_guess)
         popt, _ = curve_fit(f_two_erfs, x, y, p0=p_guess)
@@ -302,8 +315,8 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
         popt = p_guess
 
     C = 2 * np.sqrt(2 * np.log(2))
-    print('\nThe beam size isf um' % (C * popt[1]))
-    print('\nThe beam size isf um' % (C * popt[5]))
+    print(f'\nThe beam size is {C * popt[1]:.4f} um')
+    print(f'\nThe beam size is {C * popt[5]:.4f} um')
 
     # Plot variables
     x_plot = np.linspace(np.amin(x), np.amax(x), num=100)
@@ -312,13 +325,15 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     dydx_plot = np.gradient(y_plot, x_plot)
 
     # Display fit of raw data
-    plt.figure('Raw')
-    plt.clf()
-    plt.plot(x, y, '*', label='Raw Data')
-    #plt.plot(x_plot, f_int_gauss(x_plot, *p_guess), '-', label='Guess fit')
-    plt.plot(x_plot, y_plot, '-', label='Final fit')
-    plt.title('Scans' % (id_str))
-    plt.legend()
+    if (plot):
+        plt.figure('Fitting')
+        plt.clf()
+        plt.plot(x, y, '*', label='Raw Data')
+        plt.plot(x_plot, f_two_erfs(x_plot, *p_guess), '--', label='Guess fit')
+        plt.plot(x_plot, y_plot, '-', label='Final fit')
+        plt.title(f'Scan {id_str}')
+        plt.legend()
+        plt.show()
 
     # Use the fitted raw data to fit a Gaussian
     # def f_gauss(x, A, sigma, x0, y0, m):
@@ -333,40 +348,40 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     # except:
     #     print('Fit failed.')
     #     popt2 = p_guess
-    C = 2 * np.sqrt(2 * np.log(2))
-    try:
-        p_guess = [np.amin(dydx), 1, x[np.argmin(dydx)], 0, 0]
-        popt2, _ = curve_fit(f_gauss, x, dydx, p0=p_guess)
-        print('beamsize =f' % (C*popt2[1]))
-    except:
-        print('fail')
-        popt2 = p_guess
-        pass
-    try:
-        p_guess = [np.amax(dydx), 1, x[np.argmax(dydx)], 0, 0]
-        popt3, _ = curve_fit(f_gauss, x, dydx, p0=p_guess)
-        print('beamsize =f' % (C*popt3[1]))
-    except:
-        print('fail')
-        popt3 = p_guess
-        pass
+    # C = 2 * np.sqrt(2 * np.log(2))
+    # try:
+    #     p_guess = [np.amin(dydx), 1, x[np.argmin(dydx)], 0, 0]
+    #     popt2, _ = curve_fit(f_gauss, x, dydx, p0=p_guess)
+    #     print('beamsize =f' % (C*popt2[1]))
+    # except:
+    #     print('fail')
+    #     popt2 = p_guess
+    #     pass
+    # try:
+    #     p_guess = [np.amax(dydx), 1, x[np.argmax(dydx)], 0, 0]
+    #     popt3, _ = curve_fit(f_gauss, x, dydx, p0=p_guess)
+    #     print('beamsize =f' % (C*popt3[1]))
+    # except:
+    #     print('fail')
+    #     popt3 = p_guess
+    #     pass
 
 
-    # Plot the fit
-    plt.figure('Derivative')
-    plt.clf()
-    plt.plot(x, dydx, '*', label='dydx raw')
-    plt.plot(x_plot, dydx_plot, '-', label='dydx fit')
-    #plt.plot(x_plot, f_gauss(x_plot, *p_guess), '-', label='Guess')
-    plt.plot(x_plot, f_gauss(x_plot, *popt2), '-', label='Fit')
-    plt.plot(x_plot, f_gauss(x_plot, *popt3), '-', label='Fit')
-    plt.title('Scans' % (id_str))
-    plt.legend()
+    # # Plot the fit
+    # plt.figure('Derivative')
+    # plt.clf()
+    # plt.plot(x, dydx, '*', label='dydx raw')
+    # plt.plot(x_plot, dydx_plot, '-', label='dydx fit')
+    # #plt.plot(x_plot, f_gauss(x_plot, *p_guess), '-', label='Guess')
+    # plt.plot(x_plot, f_gauss(x_plot, *popt2), '-', label='Fit')
+    # plt.plot(x_plot, f_gauss(x_plot, *popt3), '-', label='Fit')
+    # plt.title('Scans' % (id_str))
+    # plt.legend()
 
-    # Report findings
-    C = 2 * np.sqrt(2 * np.log(2))
-    print('\nThe beam size isf um' % (C * popt2[1]))
-    print('The edge is at.4f mm\n' % (popt2[2]))
+    # # Report findings
+    # C = 2 * np.sqrt(2 * np.log(2))
+    # print('\nThe beam size isf um' % (C * popt2[1]))
+    # print('The edge is at.4f mm\n' % (popt2[2]))
 
 # Run a knife-edge scan
 # def nano_knife_edge_scanonly(motor, start, stop, stepsize, acqtime,
