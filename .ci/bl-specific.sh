@@ -10,4 +10,4 @@ sudo mkdir -v -p /nsls2/xf05id1/shared/config/ \
 sudo chmod -Rv go+rw /nsls2/xf05id1/
 
 touch /nsls2/xf05id1/shared/src/bluesky_scripts/simple_batch.py
-
+touch /nsls2/xf05id1/shared/src/bluesky_scripts/fly_batch.py
