@@ -32,8 +32,9 @@ RE.md['proposal']  = {'proposal_num': str(proposal_num),
                       'saf_num': str(saf_num),
                       'cycle': str(cycle)}
 
-# Set user data in scanbroker
-scanrecord.update_metadata()
+if 'TOUCHBEAMLINE' in os.environ and os.environ['TOUCHBEAMLINE'] == 1:
+    # Set user data in scanbroker
+    scanrecord.update_metadata()
 
 # User data directory and simple scripts
 userdatadir = '/nsls2/xf05id1/experiments/' + str(cycle) + '/' + str(saf_num) + '_' + str(PI_lastname) + '/'
