@@ -171,11 +171,14 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
     # If delta is None, set delta based on time for acceleration
     if (delta is None):
-        MIN_DELTA = 0.002  # old default value
-        v = ((xstop - xstart) / (xnum-1)) / dwell  # compute "stage speed"
-        t_acc = 1.0  # acceleration time, default 1.0 s
-        delta = t_acc * v  # distance the stage will travel in t_acc
-        delta = np.amax((delta, MIN_DELTA))
+        if (flying_zebra.encoder.pc.egu.get() == 'mm'):
+            MIN_DELTA = 0.002  # old default value
+            v = ((xstop - xstart) / (xnum-1)) / dwell  # compute "stage speed"
+            t_acc = 1.0  # acceleration time, default 1.0 s
+            delta = t_acc * v  # distance the stage will travel in t_acc
+            delta = np.amax((delta, MIN_DELTA))
+        else:
+            delta = 0.100
 
     # Move to start scanning location
     yield from mv(xmotor, xstart - delta,
@@ -227,7 +230,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         if (xmotor.egu == 'mm'):
             DEADBAND = 0.0005
         else:
-            DEADBAND = 0.1
+            DEADBAND = 0.050
         while (np.abs(x_set - x_dial) > DEADBAND):
             if (i == 0):
                 print('Waiting for motor to reach starting position...',

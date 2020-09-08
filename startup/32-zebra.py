@@ -391,8 +391,8 @@ class SRXFlyer1Axis(Device):
             self._encoder.pc.gate_step.put(extent + 0.0005)
             self._encoder.pc.gate_width.put(extent + 0.001)
         else:
-            self._encoder.pc.gate_step.put(extent + 0.050)
-            self._encoder.pc.gate_width.put(extent + 0.100)
+            self._encoder.pc.gate_step.put(extent + 0.010)
+            self._encoder.pc.gate_width.put(extent + 0.025)
 
         self._encoder.pc.pulse_start.put(0.0)
         self._encoder.pc.pulse_max.put(xnum)
