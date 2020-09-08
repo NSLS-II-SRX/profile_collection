@@ -127,6 +127,40 @@ class SRX_NSLS_EM(NSLS_EM):
     def balance(self):
        return np.sqrt(np.power(self.balanceX(), 2) + np.power(self.balanceY(), 2)) / np.sqrt(2)
 
-xbpm2 = SRX_NSLS_EM('XF:05ID-BI{EM:BPM2}', name='xbpm2')
+class HACK_SRX_NSLS_EM(Device):
+    current1 = Cpt(EpicsSignalRO, 'Current1:MeanValue_RBV')
+    current2 = Cpt(EpicsSignalRO, 'Current2:MeanValue_RBV')
+    current3 = Cpt(EpicsSignalRO, 'Current3:MeanValue_RBV')
+    current4 = Cpt(EpicsSignalRO, 'Current4:MeanValue_RBV')
+
+    sumX = Cpt(EpicsSignalRO, 'SumX:MeanValue_RBV')
+    sumY = Cpt(EpicsSignalRO, 'SumY:MeanValue_RBV')
+    diffX = Cpt(EpicsSignalRO, 'DiffX:MeanValue_RBV')
+    diffY = Cpt(EpicsSignalRO, 'DiffY:MeanValue_RBV')
+    posX = Cpt(EpicsSignalRO, 'PosX:MeanValue_RBV')
+    posY = Cpt(EpicsSignalRO, 'PosY:MeanValue_RBV')
+
+    xmotor = Cpt(EpicsMotor, 'XF:05IDD-ES:1{Stg:Xbpm-Ax:X}Mtr', add_prefix=(), name='xmotor')
+    ymotor = Cpt(EpicsMotor, 'XF:05IDD-ES:1{Stg:Xbpm-Ax:Y}Mtr', add_prefix=(), name='ymotor')
+
+    def _balanceX(self):
+        return (np.abs(self.sumX.get()) - np.abs(self.diffX.get())) / np.abs(self.sumX.get())
+
+    def _balanceY(self):
+        return (np.abs(self.sumY.get()) - np.abs(self.diffY.get())) / np.abs(self.sumY.get())
+
+    @property
+    def balanceX(self, name='xbpm2_balanceX'):
+       return self._balanceX()
+
+    @property
+    def balanceY(self):
+       return self._balanceY()
+
+    @property
+    def balance(self):
+       return np.sqrt(np.power(self.balanceX(), 2) + np.power(self.balanceY(), 2)) / np.sqrt(2)
+    
+xbpm2 = HACK_SRX_NSLS_EM('XF:05ID-BI{EM:BPM2}', name='xbpm2')
 
 
