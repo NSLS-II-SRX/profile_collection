@@ -9,6 +9,9 @@ from cycler import cycler as cy
 import bluesky.interactive as bsi   
 
 
+from bluesky.log import config_bluesky_logging
+config_bluesky_logging(file='/var/log/bluesky/bluesky_ipython.log', level='DEBUG')
+
 def plot_crab(hdr):
     fig, ax = plt.subplots()
     tab = db.get_table(hdr, stream_name='primary')
