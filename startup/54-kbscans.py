@@ -156,7 +156,7 @@ def knife_edge(motor, start, stop, stepsize, acqtime,
 # Run a knife-edge scan
 def nano_knife_edge(motor, start, stop, stepsize, acqtime,
                     normalize=True, use_trans=False,
-                    scan_only=False, shutter=True, plot=True):
+                    scan_only=False, shutter=True, plot=True, plot_guess=False):
     """
     motor       motor   motor used for scan
     start       float   starting position
@@ -327,14 +327,13 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
 
     # Display fit of raw data
     if (plot):
-        plt.figure('Fitting')
-        plt.clf()
-        plt.plot(x, y, '*', label='Raw Data')
-        plt.plot(x_plot, f_two_erfs(x_plot, *p_guess), '--', label='Guess fit')
-        plt.plot(x_plot, y_plot, '-', label='Final fit')
-        plt.title(f'Scan {id_str}')
-        plt.legend()
-        plt.show()
+        plotme = SRXJustPlotSomething(title='Fitting')
+        plotme.ax.plot(x, y, '*', label='Raw Data')
+        if (plot_guess):
+            plotme.ax.plot(x_plot, f_two_erfs(x_plot, *p_guess), '--', label='Guess fit')
+        plotme.ax.plot(x_plot, y_plot, '-', label='Final fit')
+        plotme.ax.set_title('Scan {id_str}')
+        plotme.ax.legend()
 
     # Use the fitted raw data to fit a Gaussian
     # def f_gauss(x, A, sigma, x0, y0, m):

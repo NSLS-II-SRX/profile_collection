@@ -89,3 +89,29 @@ class HackLivePlot(LivePlot):
             self._epoch = epoch
 
         self._LivePlot__setup = setup
+
+
+class SRXJustPlotSomething(QtAwareCallback):
+    def __init__(self, *args, **kwargs):
+        super().__init__(use_teleporter=kwargs.pop('use_teleporter', None))
+        self.__setup_lock = threading.Lock()
+        self.__setup_event = threading.Event()
+        print(kwargs['title'])
+
+        def setup(self):
+            fig, ax = plt.subplots()
+            self.ax = ax
+            fig.canvas.set_window_title(f"{kwargs['title']}")
+            self.ax.clear()
+
+        setup(self)
+
+
+def test_fig():
+    x = np.linspace(0, 2*np.pi, num=100)
+    y = np.sin(x)
+    plotme = SRXJustPlotSomething(title='Fitting')
+    plotme.ax.plot(x, y, '*', label='Raw Data')
+    plotme.ax.set_title('Scan testing')
+    plotme.ax.legend()
+
