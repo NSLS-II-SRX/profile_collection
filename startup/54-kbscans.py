@@ -1,5 +1,6 @@
 print(f'Loading {__file__}...')
 import h5py
+import time as ttime
 
 # Run a knife-edge scan
 def knife_edge(motor, start, stop, stepsize, acqtime,
@@ -383,74 +384,119 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     # print('\nThe beam size isf um' % (C * popt2[1]))
     # print('The edge is at.4f mm\n' % (popt2[2]))
 
-# Run a knife-edge scan
-# def nano_knife_edge_scanonly(motor, start, stop, stepsize, acqtime,
-#                fly=True, high2low=False, use_trans=True):
-#     """
-#     motor       motor   motor used for scan
-#     start       float   starting position
-#     stop        float   stopping position
-#     stepsize    float   distance between data points
-#     acqtime     float   counting time per step
-#     fly         bool    if the motor can fly, then fly that motor
-#     high2low    bool    scan from high transmission to low transmission
-#                         ex. start will full beam and then block with object (knife/wire)
-#     """
-# 
-#     # Set detectors
-#     det = [sclr1]
-#     if (use_trans == False):
-#         det.append(xs2)
-# 
-#     # Need to convert stepsize to number of points
-#     num = np.round((stop - start) / stepsize) + 1
-# 
-#     # Set counting time
-#     sclr1.preset_time.put(acqtime)
-#     if (use_trans == False):
-#         xs2.settings.acquire_time.put(acqtime)
-#         yield from abs_set(xs2.total_points, num)
-# 
-#     # Run the scan
-#     if (motor.name == 'hf_stage_y'):
-#         if fly:
-#             yield from y_scan_and_fly(start, stop, num,
-#                                       hf_stage.x.position, hf_stage.x.position+0.001, 1,
-#                                       acqtime)
-#         else:
-#             yield from scan(det, motor, start, stop, num)
-#     else:
-#         if fly:
-#             yield from scan_and_fly(start, stop, num,
-#                                     hf_stage.y.position, hf_stage.y.position+0.001, 1,
-#                                     acqtime)
-#         else:
-#             # table = LiveTable([motor])
-#             # @subs_decorator(table)
-#             # LiveTable([motor])
-#             yield from scan(det, motor, start, stop, num)
-# 
-#     # Get the information from the previous scan
-#     haz_data = False
-#     loop_counter = 0
-#     MAX_LOOP_COUNTER = 30
-#     print('Waiting for data...', end='', flush=True)
-#     while (loop_counter < MAX_LOOP_COUNTER):
-#         try:
-#             if (fly == True):
-#                 tbl = db[-1].table('stream0', fill=True)
-#             else:
-#                 tbl = db[-1].table(fill=True)
-#             haz_data = True
-#             print('done')
-#             break
-#         except:
-#             loop_counter += 1
-#             time.sleep(1)
-# 
-#     # Check if we haz data
-#     if (not haz_data):
-#         print('Data collection timed out!')
-#         return
-#     
-# 
+# Written quickly
+def plot_knife_edge(scanid=-1, fluor_key='fluor_xs2', use_trans=False, normalize=True, plot_guess=False):
+    # Get the scanid
+    h = db[int(scanid)]
+    id_str = h.start['scan_id']
+
+    try:
+        if (h.start['scaninfo']['fast_axis'] == 'NANOHOR'):
+            pos = 'enc1'
+        else:
+            pos = 'enc2'
+    except:
+        print('Not a knife-edge scan')
+        return
+
+    # Get the information from the previous scan
+    haz_data = False
+    loop_counter = 0
+    MAX_LOOP_COUNTER = 30
+    print('Waiting for data...', end='', flush=True)
+    while (loop_counter < MAX_LOOP_COUNTER):
+        try:
+            if (fly):
+                tbl = db[int(id_str)].table('stream0', fill=True)
+            else:
+                tbl = db[int(id_str)].table(fill=True)
+            haz_data = True
+            print('done')
+            break
+        except:
+            loop_counter += 1
+            ttime.sleep(1)
+
+    # Check if we haz data
+    if (not haz_data):
+        print('Data collection timed out!')
+        return
+    
+    # Get the data
+    if (use_trans == True):
+        y = tbl['it'].values[0] / tbl['im'].values[0]
+    else:
+        bin_low = xs2.channel1.rois.roi01.bin_low.get()
+        bin_high = xs2.channel1.rois.roi01.bin_high.get()
+        d = np.array(tbl[fluor_key])[0]
+        if (d.ndim == 1):
+            d = np.array(tbl[fluor_key])
+        d = np.stack(d)
+        if (d.ndim == 2):
+            d = np.sum(d[:, bin_low:bin_high], axis=1)
+        elif (d.ndim == 3):
+            d = np.sum(d[:, :, bin_low:bin_high], axis=(1, 2))
+        try:
+            I0 = np.array(tbl['i0'])[0]
+        except KeyError:
+            I0 = np.array(tbl['sclr_i0'])
+        if (normalize):
+            y = d / I0
+        else:
+            y = d
+    x = np.array(tbl[pos])[0]
+    if (x.size == 1):
+        x = np.array(tbl[pos])
+    x = x.astype(np.float64)
+    y = y.astype(np.float64)
+    dydx = np.gradient(y, x)
+    try:
+        hf = h5py.File('/home/xf05id1/current_user_data/knife_edge_scan.h5', 'a')
+        tmp_str = 'dataset_%s' % id_str
+        hf.create_dataset(tmp_str, data=[x,y])
+        hf.close()
+        ftxt = open('/home/xf05id1/current_user_data/knife_edge_scan.txt','a')
+        ftxt.write(data=[x,y])
+        ftxt.close()
+    except:
+        pass
+
+    # Fit the raw data
+    # def f_int_gauss(x, A, sigma, x0, y0, m)
+    # def f_offset_erf(x, A, sigma, x0, y0):
+    # def f_two_erfs(x, A1, sigma1, x1, y1,
+    #                   A2, sigma2, x2, y2):
+    p_guess = [0.5*np.amax(y),
+               1.000,
+               0.5*(x[0] + x[-1]) - 1.0,
+               np.amin(y) + 0.5*np.amax(y),
+               -0.5*np.amax(y),
+               1.000,
+               0.5*(x[0] + x[-1]) + 1.0,
+               np.amin(y) + 0.5*np.amax(y)]
+    try:
+        # popt, _ = curve_fit(f_offset_erf, x, y, p0=p_guess)
+        popt, _ = curve_fit(f_two_erfs, x, y, p0=p_guess)
+    except:
+        print('Raw fit failed.')
+        popt = p_guess
+
+    C = 2 * np.sqrt(2 * np.log(2))
+    print(f'\nThe beam size is {C * popt[1]:.4f} um')
+    print(f'\nThe beam size is {C * popt[5]:.4f} um')
+
+    # Plot variables
+    x_plot = np.linspace(np.amin(x), np.amax(x), num=100)
+    y_plot = f_two_erfs(x_plot, *popt)
+    # y_plot = f_offset_erf(x_plot, *popt)
+    dydx_plot = np.gradient(y_plot, x_plot)
+
+    # Display fit of raw data
+    fig, ax = plt.subplots()
+    ax.plot(x, y, '*', label='Raw Data')
+    if (plot_guess):
+        ax.plot(x_plot, f_two_erfs(x_plot, *p_guess), '--', label='Guess fit')
+    ax.plot(x_plot, y_plot, '-', label='Final fit')
+    ax.set_title(f'Scan {id_str}')
+    ax.legend()
+
