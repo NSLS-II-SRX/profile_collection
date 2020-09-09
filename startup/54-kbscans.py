@@ -177,9 +177,13 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
         pos = 'enc1'
         fluor_key = 'fluor_xs2'
         y0 = nano_stage.sy.user_readback.get()
-        yield from nano_scan_and_fly(start, stop, num,
-                                     y0, y0, 1, acqtime,
-                                     shutter=shutter)
+        plotme = SRXJustPlotSomething()
+        @subs_decorator(plotme)
+        def _plan():
+            yield from nano_scan_and_fly(start, stop, num,
+                                         y0, y0, 1, acqtime,
+                                         shutter=shutter)
+        yield from _plan()
     elif (motor.name == 'nano_stage_sy'):
         fly = True
         pos = 'enc2'
@@ -327,7 +331,7 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
 
     # Display fit of raw data
     if (plot):
-        plotme = SRXJustPlotSomething(title='Fitting')
+        # plotme = SRXJustPlotSomething(title='Fitting')
         plotme.ax.plot(x, y, '*', label='Raw Data')
         if (plot_guess):
             plotme.ax.plot(x_plot, f_two_erfs(x_plot, *p_guess), '--', label='Guess fit')

@@ -3,7 +3,7 @@ from functools import partial
 import matplotlib.pyplot as plt
 import threading
 from bluesky.callbacks.core import CallbackBase, get_obj_fields, make_class_safe
-
+from ophyd.sim import det1, det2, motor
 
 class HackLivePlot(LivePlot):
     """
@@ -91,27 +91,85 @@ class HackLivePlot(LivePlot):
         self._LivePlot__setup = setup
 
 
-class SRXJustPlotSomething(QtAwareCallback):
-    def __init__(self, *args, **kwargs):
-        super().__init__(use_teleporter=kwargs.pop('use_teleporter', None))
+class SRXJustPlotSomething(LivePlot):
+    def __init__(self, y='', x=None, *, legend_keys=None, xlim=None, ylim=None,
+                 ax=None, fig=None, epoch='run', **kwargs):
+        super().__init__(y, use_teleporter=kwargs.pop('use_teleporter', None))
         self.__setup_lock = threading.Lock()
         self.__setup_event = threading.Event()
-        print(kwargs['title'])
 
-        def setup(self):
-            fig, ax = plt.subplots()
+        def setup():
+            # Run this code in start() so that it runs on the correct thread.
+            # nonlocal y, x, legend_keys, xlim, ylim, ax, fig, epoch, kwargs
+            nonlocal legend_keys, xlim, ylim, ax, fig, epoch, kwargs
+            import matplotlib.pyplot as plt
+            with self.__setup_lock:
+                if self.__setup_event.is_set():
+                    return
+                self.__setup_event.set()
+            if fig is not None:
+                if ax is not None:
+                    raise ValueError("Values were given for both `fig` and `ax`. "
+                                     "Only one can be used; prefer ax.")
+                warnings.warn("The `fig` keyword arugment of LivePlot is "
+                              "deprecated and will be removed in the future. "
+                              "Instead, use the new keyword argument `ax` to "
+                              "provide specific Axes to plot on.")
+                ax = fig.gca()
+            if ax is None:
+                fig, ax = plt.subplots()
             self.ax = ax
-            fig.canvas.set_window_title(f"{kwargs['title']}")
-            self.ax.clear()
 
-        setup(self)
+            if legend_keys is None:
+                legend_keys = []
+            self.legend_keys = ['scan_id'] + legend_keys
+            if x is not None:
+                self.x, *others = get_obj_fields([x])
+            else:
+                self.x = 'seq_num'
+            self.y, *others = get_obj_fields([y])
+            self.ax.set_ylabel(y)
+            self.ax.set_xlabel(x or 'sequence #')
+            if xlim is not None:
+                self.ax.set_xlim(*xlim)
+            if ylim is not None:
+                self.ax.set_ylim(*ylim)
+            self.ax.margins(.1)
+            self.kwargs = kwargs
+            self.lines = []
+            self.legend = None
+            self.legend_title = " :: ".join([name for name in self.legend_keys])
+            self._epoch_offset = None  # used if x == 'time'
+            self._epoch = epoch
+
+        self.__setup = setup
 
 
 def test_fig():
+    # x = np.linspace(0, 2*np.pi, num=100)
+    # y = np.sin(x)
+    # plotme = SRXJustPlotSomething(title='Fitting')
+    # plotme.ax.plot(x, y, '*', label='Raw Data')
+    # plotme.ax.set_title('Scan testing')
+    # plotme.ax.legend()
+
+    cb = SRXJustPlotSomething()
+
+    @subs_decorator(cb)
+    def _plan():
+        yield from scan([det1, det2], motor, -5, 5, num=11)
+
+    yield from _plan()
+
+    h = db[-1]
+    x = np.array(list(h.table()['motor']))
+    y = np.array(list(h.table()['det2']))
+
+    cb.ax.cla()
+    cb.ax.plot(x, y)
     x = np.linspace(0, 2*np.pi, num=100)
     y = np.sin(x)
-    plotme = SRXJustPlotSomething(title='Fitting')
-    plotme.ax.plot(x, y, '*', label='Raw Data')
-    plotme.ax.set_title('Scan testing')
-    plotme.ax.legend()
+    cb.ax.plot(x, y)
+    cb.ax.set_xlabel('X axis')
+    cb.ax.set_ylabel('Y axis')
 
