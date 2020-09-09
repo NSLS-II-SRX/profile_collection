@@ -177,7 +177,6 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
         pos = 'enc1'
         fluor_key = 'fluor_xs2'
         y0 = nano_stage.sy.user_readback.get()
-        # plotme = SRXJustPlotSomething()
         plotme = LivePlot('')
         @subs_decorator(plotme)
         def _plan():
@@ -190,12 +189,12 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
         pos = 'enc2'
         fluor_key = 'fluor_xs2'
         x0 = nano_stage.sx.user_readback.get()
-        plotme = SRXJustPlotSomething()
+        plotme = LivePlot('')
         @subs_decorator(plotme)
         def _plan():
-            yield from nano_scan_and_fly(start, stop, num,
-                                         x0, x0, 1, acqtime,
-                                         shutter=shutter)
+            yield from nano_y_scan_and_fly(start, stop, num,
+                                           x0, x0, 1, acqtime,
+                                           shutter=shutter)
         yield from _plan()
     elif (motor.name == 'nano_stage_x'):
         fly = False
