@@ -367,7 +367,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         # livepopup = LivePlot(xs.channel1.rois.roi01.value.name)
         livepopup = SRX1DFlyerPlot(xs.channel1.rois.roi01.value.name,
                                    xstart=xstart,
-                                   xstep=(xstop-xstart)/(xnum-1))
+                                   xstep=(xstop-xstart)/(xnum-1),
+                                   xlabel=xmotor.name)
     else:
         livepopup = LiveGrid((ynum, xnum+1),
                              xs.channel1.rois.roi01.value.name,

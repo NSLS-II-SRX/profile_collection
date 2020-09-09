@@ -132,7 +132,7 @@ class SRX1DFlyerPlot(QtAwareCallback):
     >>> my_plotter = LivePlot('det', 'motor', legend_keys=['sample'])
     >>> RE(my_scan, my_plotter)
     """
-    def __init__(self, y, x=None, xstart=0, xstep=1, *, legend_keys=None, xlim=None, ylim=None,
+    def __init__(self, y, x=None, xstart=0, xstep=1, xlabel=None, *, legend_keys=None, xlim=None, ylim=None,
                  ax=None, fig=None, epoch='run', **kwargs):
         super().__init__(use_teleporter=kwargs.pop('use_teleporter', None))
         self.__setup_lock = threading.Lock()
@@ -141,6 +141,7 @@ class SRX1DFlyerPlot(QtAwareCallback):
         self._xstart = xstart
         self._xstep = xstep
         self._xind = 0
+        self._xlabel = xlabel
 
         def setup():
             # Run this code in start() so that it runs on the correct thread.
@@ -172,7 +173,10 @@ class SRX1DFlyerPlot(QtAwareCallback):
                 self.x = 'seq_num'
             self.y, *others = get_obj_fields([y])
             self.ax.set_ylabel(y)
-            self.ax.set_xlabel(x or 'sequence #')
+            if (self._xlabel is None):
+                self.ax.set_xlabel(x or 'sequence #')
+            else:
+                self.ax.set_xlabel(self._xlabel)
             if xlim is not None:
                 self.ax.set_xlim(*xlim)
             if ylim is not None:
