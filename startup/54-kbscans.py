@@ -177,7 +177,8 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
         pos = 'enc1'
         fluor_key = 'fluor_xs2'
         y0 = nano_stage.sy.user_readback.get()
-        plotme = SRXJustPlotSomething()
+        # plotme = SRXJustPlotSomething()
+        plotme = LivePlot('')
         @subs_decorator(plotme)
         def _plan():
             yield from nano_scan_and_fly(start, stop, num,
@@ -189,9 +190,13 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
         pos = 'enc2'
         fluor_key = 'fluor_xs2'
         x0 = nano_stage.sx.user_readback.get()
-        yield from nano_y_scan_and_fly(start, stop, num,
-                                       x0, x0, 1, acqtime,
-                                       shutter=shutter)
+        plotme = SRXJustPlotSomething()
+        @subs_decorator(plotme)
+        def _plan():
+            yield from nano_scan_and_fly(start, stop, num,
+                                         x0, x0, 1, acqtime,
+                                         shutter=shutter)
+        yield from _plan()
     elif (motor.name == 'nano_stage_x'):
         fly = False
         pos = motor.name
@@ -330,13 +335,19 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     dydx_plot = np.gradient(y_plot, x_plot)
 
     # Display fit of raw data
-    if (plot):
+    if (plot and 'plotme' in locals()):
         # plotme = SRXJustPlotSomething(title='Fitting')
+        plotme.ax.cla()
         plotme.ax.plot(x, y, '*', label='Raw Data')
         if (plot_guess):
             plotme.ax.plot(x_plot, f_two_erfs(x_plot, *p_guess), '--', label='Guess fit')
         plotme.ax.plot(x_plot, y_plot, '-', label='Final fit')
-        plotme.ax.set_title('Scan {id_str}')
+        plotme.ax.set_title(f'Scan {id_str}')
+        plotme.ax.set_xlabel(motor.name)
+        if (normalize):
+            plotme.ax.set_ylabel('Normalized ROI Counts')
+        else:
+            plotme.ax.set_ylabel('ROI Counts')
         plotme.ax.legend()
 
     # Use the fitted raw data to fit a Gaussian
