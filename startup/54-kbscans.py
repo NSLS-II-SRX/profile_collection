@@ -326,7 +326,11 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
 
     C = 2 * np.sqrt(2 * np.log(2))
     print(f'\nThe beam size is {C * popt[1]:.4f} um')
-    print(f'\nThe beam size is {C * popt[5]:.4f} um')
+    print(f'The beam size is {C * popt[5]:.4f} um')
+
+    print(f'\nThe left edge is at\t{popt[2]:.4f}.')
+    print(f'The right edge is at\t{popt[6]:.4f}.')
+    print(f'The center is at\t{(popt[2]+popt[6])/2:.4f}.\n')
 
     # Plot variables
     x_plot = np.linspace(np.amin(x), np.amax(x), num=100)
@@ -336,7 +340,6 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
 
     # Display fit of raw data
     if (plot and 'plotme' in locals()):
-        # plotme = SRXJustPlotSomething(title='Fitting')
         plotme.ax.cla()
         plotme.ax.plot(x, y, '*', label='Raw Data')
         if (plot_guess):
