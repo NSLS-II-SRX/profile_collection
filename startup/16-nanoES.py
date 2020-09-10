@@ -71,3 +71,21 @@ class SRXNanoTemp(Device):
 
 
 temp_nanoKB = SRXNanoTemp('XF:05IDD-ES{LS:1-Chan:', name='temp_nanoKB')
+
+
+# Center scanner
+# Move the coarse stages and center the nPoint scanner
+def center_scanner():
+    del_sx = nano_stage.sx.user_readback.get()
+    del_sy = nano_stage.sy.user_readback.get()
+    del_sz = nano_stage.sz.user_readback.get()
+
+    yield from mv(nano_stage.sx, 0)
+    yield from mvr(nano_stage.x, del_sx)
+
+    yield from mv(nano_stage.sy, 0)
+    yield from mvr(nano_stage.y, del_sy)
+
+    yield from mv(nano_stage.sz, 0)
+    yield from mvr(nano_stage.z, del_sz)
+
