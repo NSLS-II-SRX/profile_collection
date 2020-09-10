@@ -159,6 +159,21 @@ class SrxXSP3Handler:
             return np.asarray(f[self.XRF_DATA_KEY])
 
 
+class ADTimeSeriesPlugin(Device):
+    acquire = Cpt(EpicsSignal, ":TSAcquire")
+    _read = Cpt(EpicsSignal, ":TSRead")
+    num_points = Cpt(EpicsSignal, ":TSNumPoints")
+    current_point = Cpt(EpicsSignal, ":TSCurrentPoint")
+    acquire_mode = Cpt(EpicsSignal, ":TSAcquireMode")
+    time_per_point = Cpt(EpicsSignal, ":TSTimePerPoint")
+    averaging_time = Cpt(EpicsSignal, ":TSAveragingTime")
+    num_average = Cpt(EpicsSignal, ":TSNumAverage")
+    elapsed_time = Cpt(EpicsSignal, ":TSElapsedTime")
+    time_axis = Cpt(EpicsSignal, ":TSTimeAxis")
+    time_stamp = Cpt(EpicsSignal, ":TSTimeStamp")
+    time_series_1 = Cpt(EpicsSignal, ":1:TimeSeries")
+
+
 class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
     # TODO: garth, the ioc is missing some PVs?
     #   det_settings.erase_array_counters
@@ -174,6 +189,11 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
 
     array_counter = Cpt(EpicsSignal, "ArrayCounter_RBV")
 
+    # experimental NDPluginTimeSeries
+    # mca1_roi_time_series_plugin_control = Cpt(EpicsSignal, ":MCA1ROI:TSControl")
+    # mca1_roi_time_series_plugin = Cpt(ADTimeSeriesPlugin, ":MCA1ROI:TS", name="time_series_plugin")
+
+
     # Currently only using three channels. Uncomment these to enable more
     channel1 = Cpt(Xspress3Channel, "C1_", channel_num=1, read_attrs=["rois"])
     channel2 = Cpt(Xspress3Channel, "C2_", channel_num=2, read_attrs=["rois"])
@@ -185,11 +205,11 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
     # channel7 = Cpt(Xspress3Channel, 'C7_', channel_num=7)
     # channel8 = Cpt(Xspress3Channel, 'C8_', channel_num=8)
 
-    create_dir = Cpt(EpicsSignal, "HDF5:FileCreateDir")
+    create_dir = Cpt(EpicsSignal, "HDF1:FileCreateDir")
 
     hdf5 = Cpt(
         Xspress3FileStoreFlyable,
-        "HDF5:",
+        "HDF1:",
         read_path_template="/nsls2/xf05id1/XF05ID1/XSPRESS3/%Y/%m/%d/",
         write_path_template='/epics/data/%Y/%m/%d/',
         # write_path_template="/home/xspress3/data/%Y/%m/%d/",#TES xspress3
@@ -313,6 +333,7 @@ except Exception as ex:
     xs = None
     print("\nUnexpected error connecting to xs.\n")
     print(ex, end="\n\n")
+
 
 
 # Working xs2 detector

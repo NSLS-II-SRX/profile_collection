@@ -142,6 +142,12 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     dets_by_name = {d.name : d
                     for d in detectors}
 
+    # set up the time_series_plugin
+    time_series_plugin = ADTimeSeriesPlugin("XF:05IDD-ES{Xsp:3}:det1:MCA1ROI:TS", name="mca1roi_time_series")
+    # set TSAcquire to 1 for "Acquire"
+    # need to stop at unstage time?
+    yield from mv(time_series_plugin.acquire, 1)
+
     # set up the merlin
     if 'merlin' in dets_by_name:
         dpc = dets_by_name['merlin']
@@ -387,6 +393,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # monitor values from xs
     # @monitor_during_decorator([xs.channel1.rois.roi01.value])
     @monitor_during_decorator([xs.channel1.rois.roi01.value, xs.array_counter])
+    @monitor_during_decorator([time_series_plugin.time_series])
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
     def plan():
