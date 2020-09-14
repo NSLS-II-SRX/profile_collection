@@ -686,7 +686,6 @@ def export_nano_zebra_data(zebra, filepath):
 
     size = (len(time_d),)
     with h5py.File(filepath, "w") as f:
-        print('writing data...')
         dset0 = f.create_dataset("time", size, dtype="f")
         dset0[...] = np.array(time_d)
         dset1 = f.create_dataset("enc1", size, dtype="f")

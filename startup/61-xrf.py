@@ -276,8 +276,8 @@ def fermat_plan(*args, **kwargs):
     kwargs.setdefault('exp_time', 0.2)
 
     # Setup motors
-    x_motor = nano_stage.x
-    y_motor = nano_stage.y
+    x_motor = nano_stage.sx
+    y_motor = nano_stage.sy
 
     # Setup detectors
     dets = [sclr1, xs2, merlin, bpm4, temp_nanoKB]
@@ -311,6 +311,19 @@ def fermat_master_plan(*args, exp_time=None, **kwargs):
     yield from rel_spiral_fermat(*args, **kwargs, md=scan_md)
 
 
+# Check the fermat spiral points
+# This does not run within the run engine
+# plot_raster_path(rel_spiral_fermat([], nano_stage.sx, nano_stage.sy, 2, 2,
+# 0.5, 1), nano_stage.sx.name, nano_stage.sy.name)
+def check_fermat_plan(xrange, yrange, dr, factor):
+    xmotor = nano_stage.sx
+    ymotor = nano_stage.sy
+    plot_raster_path(rel_spiral_fermat([], xmotor, ymotor, xrange, yrange, dr, factor), xmotor.name, ymotor.name)
+    ax = plt.gca()
+    line = ax.lines[0]
+    print(f'The scan will have {len(line.get_xdata())} points.')
+
+
 def export_merlin2tiff(scanid=-1, wd=None):
     if wd is None:
         wd = '/home/xf05id1/current_user_data/'
@@ -321,8 +334,8 @@ def export_merlin2tiff(scanid=-1, wd=None):
     d = np.array(list(d))
     d = np.squeeze(d)
     d = np.array(d, dtype='float32')
-    x = np.array(list(h.data('nano_stage_x', fill=True)))
-    y = np.array(list(h.data('nano_stage_y', fill=True)))
+    x = np.array(list(h.data('nano_stage_sx', fill=True)))
+    y = np.array(list(h.data('nano_stage_sy', fill=True)))
     I0= np.array(list(h.data('sclr_it', fill=True)))
 
     # Get scanid
@@ -339,7 +352,7 @@ def export_merlin2tiff(scanid=-1, wd=None):
 def nano_xrf(xstart, xstop, xstep,
              ystart, ystop, ystep, acqtime,
              shutter=True, extra_dets=None,
-             xmotor=nano_stage.x, ymotor=nano_stage.y):
+             xmotor=nano_stage.sx, ymotor=nano_stage.sy):
 
     # define motors
     # xmotor = nano_stage.x
