@@ -293,13 +293,12 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     y = y.astype(np.float64)
     dydx = np.gradient(y, x)
     try:
-        hf = h5py.File('/home/xf05id1/current_user_data/knife_edge_scan.h5', 'a')
-        tmp_str = 'dataset_%s' % id_str
-        hf.create_dataset(tmp_str, data=[x,y])
-        hf.close()
-        ftxt = open('/home/xf05id1/current_user_data/knife_edge_scan.txt','a')
-        ftxt.write(data=[x,y])
-        ftxt.close()
+        with h5py.File('/home/xf05id1/current_user_data/nano_knife_edge_scan.h5', 'a') as hf:
+            tmp_str = f'dataset_{id_str}'
+            hf.create_dataset(tmp_str, data=[d, y, x, y]) #raw_cts,norm_cts,x_pos,y_pos
+        #ftxt = open('/home/xf05id1/current_user_data/nano_knife_edge_scan.txt','a')
+        #ftxt.write(data=[d,y,x,y])
+        #ftxt.close()
     except:
         pass
 
@@ -401,7 +400,8 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     # print('The edge is at.4f mm\n' % (popt2[2]))
 
 # Written quickly
-def plot_knife_edge(scanid=-1, fluor_key='fluor_xs2', use_trans=False, normalize=True, plot_guess=False):
+def plot_knife_edge(scanid=-1, fluor_key='fluor_xs2', use_trans=False, normalize=True, plot_guess=False,
+                    bin_low=None, bin_high=None):
     # Get the scanid
     h = db[int(scanid)]
     id_str = h.start['scan_id']
@@ -442,8 +442,10 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor_xs2', use_trans=False, normalize
     if (use_trans == True):
         y = tbl['it'].values[0] / tbl['im'].values[0]
     else:
-        bin_low = xs2.channel1.rois.roi01.bin_low.get()
-        bin_high = xs2.channel1.rois.roi01.bin_high.get()
+        if bin_low is None:
+            bin_low = xs2.channel1.rois.roi01.bin_low.get()
+        if bin_high is None:
+            bin_high = xs2.channel1.rois.roi01.bin_high.get()
         d = np.array(tbl[fluor_key])[0]
         if (d.ndim == 1):
             d = np.array(tbl[fluor_key])
@@ -466,16 +468,16 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor_xs2', use_trans=False, normalize
     x = x.astype(np.float64)
     y = y.astype(np.float64)
     dydx = np.gradient(y, x)
-    try:
-        hf = h5py.File('/home/xf05id1/current_user_data/knife_edge_scan.h5', 'a')
-        tmp_str = 'dataset_%s' % id_str
-        hf.create_dataset(tmp_str, data=[x,y])
-        hf.close()
-        ftxt = open('/home/xf05id1/current_user_data/knife_edge_scan.txt','a')
-        ftxt.write(data=[x,y])
-        ftxt.close()
-    except:
-        pass
+    #try:
+    #    hf = h5py.File('/home/xf05id1/current_user_data/knife_edge_scan.h5', 'a')
+    #    tmp_str = 'dataset_%s' % id_str
+    #    hf.create_dataset(tmp_str, data=[d,y,x,y]) #raw cts, norm_cts, x_pos, y_pos
+    #    hf.close()
+    #    ftxt = open('/home/xf05id1/current_user_data/knife_edge_scan.txt','a')
+    #    ftxt.write(data=[d,y,x,y])
+    #    ftxt.close()
+    #except:
+    #    pass
 
     # Fit the raw data
     # def f_int_gauss(x, A, sigma, x0, y0, m)
