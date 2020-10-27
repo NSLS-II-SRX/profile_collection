@@ -23,7 +23,7 @@ saf_num = 305921
 # saf_num = 306149
 
 
-cycle = '2020_cycle2'
+cycle = '2020_cycle3'
 
 # Set user data in bluesky
 RE.md['proposal']  = {'proposal_num': str(proposal_num),

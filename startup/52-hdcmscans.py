@@ -285,9 +285,15 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     roll_guess = 0.071  # For getting X-rays to nanoKB
     # 2020-07-20
     roll_guess = 0.121
+    # 2020-10-26
+    roll_guess = 0.351
     # 2020-02-03
     B = energy.energy_to_positions((E/1000), 3, 0)[0]
     pitch_guess = 0.0009145473*B + 0.0141488665
+    # 2020-10-26
+    B = energy.energy_to_positions((E/1000), 3, 0)[0]
+    pitch_guess = 0.0010913788*B - 0.0139213806
+
 
     # Use calibration
     if (use_calib):
@@ -301,8 +307,9 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     sclr1.preset_time.put(1.0)
 
     # Open the shutter
-    if (shutter == True):
-        yield from bps.mov(shut_b, 'Open')
+    # if (shutter == True):
+    #     yield from bps.mov(shut_b, 'Open')
+    yield from check_shutters(shutter, 'Open')
 
     paired_callback = PairedCallback(scaler, dcm.c2_pitch.name, pitch_guess)
 
@@ -324,8 +331,9 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     uid = yield from myplan()
 
     # Close the shutter
-    if (shutter is True):
-        yield from bps.mov(shut_b, 'Close')
+    # if (shutter is True):
+    #     yield from bps.mov(shut_b, 'Close')
+    yield from check_shutters(shutter, 'Open')
 
     # Add scan to scanlog
     logscan('peakup_fine_pitch')
