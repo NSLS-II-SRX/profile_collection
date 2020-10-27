@@ -8,15 +8,16 @@ def ssa_hcen_scan(start, stop, num, shutter=True):
     # Setup LiveCallbacks
     liveplotfig1 = plt.figure()
     liveplotx = 'h_cen_readback'
-    liveploty = im.name
-    livetableitem = ['h_cen_readback', im.name, i0.name]
-    livecallbacks = [LiveTable(livetableitem),
-                     LivePlot(liveploty, x=liveplotx, fig=liveplotfig1)]
+    # liveploty = im.name
+    liveploty = 'xbpm2_sumX'
+    livetableitem = ['h_cen_readback', im.name, i0.name, xbpm2_sumX]
+    livecallbacks = [LiveTable(livetableitem)]
+    #                  LivePlot(liveploty, x=liveplotx, fig=liveplotfig1)]
 
     # Setup the scan
     @subs_decorator(livecallbacks)
     def myscan():
-        yield from scan([slt_ssa.h_cen, sclr1],
+        yield from scan([slt_ssa.h_cen, sclr1, xbpm2],
                         slt_ssa.h_cen,
                         start,
                         stop,

@@ -14,6 +14,38 @@ shut_a = TwoButtonShutter("XF:05IDA-PPS:1{PSh:2}", name="shut_a")
 shut_b = TwoButtonShutter("XF:05IDB-PPS:1{PSh:4}", name="shut_b")
 
 
+# Check if shutters are open
+def check_shutters(check, status):
+    '''
+    Check if the shutters are in the desired position. At the beginning of
+    a scan, they will open. At the end of the scan, they will close.
+
+    Inputs:
+    check   <bool>      Move the shutters
+    status  <string>    'Open' or 'Close' Should the function be openning
+                        or closing the shutters
+
+    Returns:
+     -
+
+    '''
+
+    if check is False:
+        print("\n********************")
+        print("WARNING: Shutters are not controlled in this scan.")
+        print("********************\n")
+    else:
+        if status == 'Open':
+            if shut_b.status.get() == 'Not Open':
+                print('Opening B-hutch shutter..')
+                yield from mov(shut_b, "Open")
+        print('Opening D-hutch shutter...')
+        yield from mov(shut_d, 0)
+        else:
+            print('Closing D-hutch shutter...')
+            yield from mov(shut_d, 1)
+
+
 # Setup white/pink beam slits
 class SRXSlitsWB(Device):
     # Real synthetic axes

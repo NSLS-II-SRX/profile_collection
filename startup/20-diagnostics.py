@@ -160,7 +160,8 @@ class HACK_SRX_NSLS_EM(Device):
     @property
     def balance(self):
        return np.sqrt(np.power(self.balanceX(), 2) + np.power(self.balanceY(), 2)) / np.sqrt(2)
-    
+
+xbpm1 = HACK_SRX_NSLS_EM('XF:05ID-BI{EM:BPM1}', name='xbpm1')
 xbpm2 = HACK_SRX_NSLS_EM('XF:05ID-BI{EM:BPM2}', name='xbpm2')
 
 
