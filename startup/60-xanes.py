@@ -127,6 +127,7 @@ def xanes_afterscan_plan(scanid, filename, roinum):
             roi_key.append(getattr(xs.channel1.rois, roi_name).value.name)
             roi_key.append(getattr(xs.channel2.rois, roi_name).value.name)
             roi_key.append(getattr(xs.channel3.rois, roi_name).value.name)
+            roi_key.append(getattr(xs.channel4.rois, roi_name).value.name)
 
         [columnitem.append(roi) for roi in roi_key]
     if ('xs2' in h.start['detectors']):
@@ -162,6 +163,7 @@ def xanes_afterscan_plan(scanid, filename, roinum):
             roisum = datatable[getattr(xs.channel1.rois, roi_name).value.name]
             roisum = roisum + datatable[getattr(xs.channel2.rois, roi_name).value.name]
             roisum = roisum + datatable[getattr(xs.channel3.rois, roi_name).value.name]
+            roisum = roisum + datatable[getattr(xs.channel4.rois, roi_name).value.name]
             usercolumnitem['If-{:02}'.format(i)] = roisum
             usercolumnitem['If-{:02}'.format(i)].round(0)
     if ('xs2' in h.start['detectors']):
@@ -247,7 +249,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
         exgap = np.append(exgap, ex)
 
     # Register the detectors
-    det = [ring_current, sclr1, det_xs]
+    det = [ring_current, sclr1, xbpm2, det_xs]
     # Setup xspress3
     yield from abs_set(det_xs.external_trig, False)
     yield from abs_set(det_xs.settings.acquire_time, acqtime)
@@ -284,8 +286,9 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     roi_key = []
     roi_key.append(getattr(det_xs.channel1.rois, roi_name).value.name)
     try:
-        roi_key.append(getattr(xs.channel2.rois, roi_name).value.name)
-        roi_key.append(getattr(xs.channel3.rois, roi_name).value.name)
+        roi_key.append(getattr(det_xs.channel2.rois, roi_name).value.name)
+        roi_key.append(getattr(det_xs.channel3.rois, roi_name).value.name)
+        roi_key.append(getattr(det_xs.channel4.rois, roi_name).value.name)
     except NameError:
         pass
     livetableitem.append(roi_key[0])

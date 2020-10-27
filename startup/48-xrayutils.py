@@ -192,7 +192,7 @@ def setroi(roinum, element, edge=None, det=None):
         cpt = getattr(det.channel1.rois, f'roi{roinum:02d}')
         cpt.kind = 'hinted'
     else:
-        for d in [xs.channel1, xs.channel2, xs.channel3]:
+        for d in [xs.channel1, xs.channel2, xs.channel3, xs.channel4]:
             d.set_roi(roinum, e_ch-100, e_ch+100, name=element + '_' + e)
             cpt = getattr(d.rois, f'roi{roinum:02d}')
             cpt.kind = 'hinted'
@@ -208,7 +208,7 @@ def clearroi(roinum=None):
         roinum = [roinum]
 
     # xs.channel1.rois.roi01.clear
-    for d in [xs.channel1.rois, xs.channel2.rois, xs.channel3.rois]:
+    for d in [xs.channel1.rois, xs.channel2.rois, xs.channel3.rois, xs.channel4.rois]:
         for roi in roinum:
             cpt = getattr(d, f'roi{roi:02d}')
             cpt.clear()

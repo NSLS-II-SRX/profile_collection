@@ -178,8 +178,8 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
     channel1 = Cpt(Xspress3Channel, "C1_", channel_num=1, read_attrs=["rois"])
     channel2 = Cpt(Xspress3Channel, "C2_", channel_num=2, read_attrs=["rois"])
     channel3 = Cpt(Xspress3Channel, "C3_", channel_num=3, read_attrs=["rois"])
+    channel4 = Cpt(Xspress3Channel, "C4_", channel_num=4, read_attrs=["rois"])
     # channels:
-    # channel4 = Cpt(Xspress3Channel, 'C4_', channel_num=4)
     # channel5 = Cpt(Xspress3Channel, 'C5_', channel_num=5)
     # channel6 = Cpt(Xspress3Channel, 'C6_', channel_num=6)
     # channel7 = Cpt(Xspress3Channel, 'C7_', channel_num=7)
@@ -191,8 +191,8 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
         Xspress3FileStoreFlyable,
         "HDF5:",
         read_path_template="/nsls2/xf05id1/XF05ID1/XSPRESS3/%Y/%m/%d/",
-        write_path_template='/epics/data/%Y/%m/%d/',
-        # write_path_template="/home/xspress3/data/%Y/%m/%d/",#TES xspress3
+        # write_path_template='/epics/data/%Y/%m/%d/', #SRX old xspress3
+        write_path_template="/home/xspress3/data/%Y/%m/%d/",#TES xspress3
         root="/nsls2/xf05id1/XF05ID1",
     )
 
@@ -220,7 +220,7 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
                 "rewindable",
             ]
         if read_attrs is None:
-            read_attrs = ["channel1", "channel2", "channel3", "hdf5"]
+            read_attrs = ["channel1", "channel2", "channel3", "channel4", "hdf5"]
         super().__init__(
             prefix,
             configuration_attrs=configuration_attrs,
@@ -269,10 +269,13 @@ try:
                                        for j in [1, 2, 3, 4]]
         xs.channel3.rois.read_attrs = ["roi{:02}".format(j)
                                        for j in [1, 2, 3, 4]]
+        xs.channel4.rois.read_attrs = ["roi{:02}".format(j)
+                                       for j in [1, 2, 3, 4]]
         xs.hdf5.num_extra_dims.put(0)
         xs.channel2.vis_enabled.put(1)
         xs.channel3.vis_enabled.put(1)
-        xs.settings.num_channels.put(3)
+        xs.channel4.vis_enabled.put(1)
+        xs.settings.num_channels.put(4) #4 for ME4 detector
 
         xs.settings.configuration_attrs = [
             "acquire_period",
