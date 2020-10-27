@@ -31,7 +31,7 @@ This program provides functionality to calibrate HDCM energy:
     currently, the xanes needs to be collected on roi1 in xrf mode
 '''
 
-def mono_calib(Element):
+def mono_calib(Element, acqtime=1.0):
     """
     SRX mono_calib(Element)
 
@@ -54,18 +54,21 @@ def mono_calib(Element):
     getemissionE(Element)
     EnergyX = getbindingE(Element)
     energy.move(EnergyX)
-    yield from peakup_fine(use_calib=True)
     setroi(1,Element)
-    yield from xanes_plan(erange=[EnergyX-50,EnergyX+50],estep=[1.0], samplename=f'{Element}Foil',filename=f'{Element}Foilstd',acqtime=1.0)
+    yield from bps.sleep(5)
+    yield from peakup_fine(use_calib=False)
+    yield from xanes_plan(erange=[EnergyX-50,EnergyX+50],estep=[1.0], samplename=f'{Element}Foil',filename=f'{Element}Foilstd',acqtime=acqtime, shutter=True)
 
 def scanderive(xaxis, yaxis):
     dyaxis = np.gradient(yaxis, xaxis)
     edge = xaxis[dyaxis.argmin()]
 
-    p = plt.plot(xaxis, dyaxis, '-')
-    ax = plt.gca()
+    fig, ax = plt.subplots()
+    # p = plt.plot(xaxis, dyaxis, '-')
+    ax.plot(xaxis, dyaxis, '-')
+    # ax = plt.gca()
     ax.ticklabel_format(useOffset=False)
-    p = pyplot.plot(edge, dyaxis[dyaxis.argmin()], '*r', markersize=25)
+    p = ax.plot(edge, dyaxis[dyaxis.argmin()], '*r', markersize=25)
 
     return p, xaxis, dyaxis, edge
 
@@ -73,6 +76,7 @@ def scanderive(xaxis, yaxis):
 def find_edge(scanid=-1, use_xrf=True, element=''):
     tbl = db.get_table(db[scanid], stream_name='primary')
     braggpoints = np.array(tbl['energy_bragg'])
+    energypoints = np.array(tbl['energy_energy_setpoint'])
 
     if use_xrf is False:
         it = np.array(tbl['sclr_it'])
@@ -91,6 +95,8 @@ def find_edge(scanid=-1, use_xrf=True, element=''):
                 mu = mu + tbl[ch_name]
                 ch_name = 'Det3_' + element + '_ka1'
                 mu = mu + tbl[ch_name]
+                ch_name = 'Det4_' + element + '_ka1'
+                mu = mu + tbl[ch_name]
                 mu = np.array(mu)
             except Exception:
                 ch_name = 'ROI_01'
@@ -99,16 +105,20 @@ def find_edge(scanid=-1, use_xrf=True, element=''):
                 mu = mu + tbl[ch_name]
                 ch_name = 'ROI_03'
                 mu = mu + tbl[ch_name]
+                ch_name = 'ROI_04'
+                mu = mu + tbl[ch_name]
                 mu = np.array(mu)
 
     p, xaxis, yaxis, edge = scanderive(braggpoints, mu)
+    Ep, Exaxis, Eyaxis, Eedge = scanderive(energypoints, mu)
 
-    return p, xaxis, yaxis, edge
+    return p, xaxis, yaxis, edge, Eedge
 
 
-def braggcalib(scanlogDic={}, use_xrf=True):
+def braggcalib(scanlogDic={}, use_xrf=True, man_correction={}):
     # If scanlogDic is empty, we will use this hard coded dictionary
     # 2019-1 Apr 23
+
     if (scanlogDic == {}):
         scanlogDic = {'V':  26058,
                       'Cr': 26059,
@@ -123,6 +133,7 @@ def braggcalib(scanlogDic={}, use_xrf=True):
                  'Ti': 4.966, 'Cr': 5.989, 'Co': 7.709, 'V': 5.465,
                  'Ni': 8.333, 'Fe': 7.112, 'Mn': 6.539}
     BraggRBVDic = {}
+    EnergyRBVDic = {}
     fitBragg = []
     fitEnergy = []
 
@@ -130,16 +141,26 @@ def braggcalib(scanlogDic={}, use_xrf=True):
         print(scanlogDic[element])
         current_scanid = scanlogDic[element]
 
-        p, xaxis, yaxis, edge = find_edge(scanid=current_scanid,
+        p, xaxis, yaxis, edge, Eedge = find_edge(scanid=current_scanid,
                                           use_xrf=use_xrf,
                                           element=element)
 
         BraggRBVDic[element] = round(edge, 6)
-        print('Edge position is at Bragg RBV ', BraggRBVDic[element])
-        plt.show(p)
+        EnergyRBVDic[element] = round(Eedge, 6)
 
+        # plt.show(p)
         fitBragg.append(BraggRBVDic[element])
         fitEnergy.append(energyDic[element])
+        
+        if element in man_correction:
+            fitBragg[-1] = man_correction[element]
+            man_correction.pop(element)
+        
+        # print('Edge position is at Bragg RBV: \t ', BraggRBVDic[element])
+        print('Edge position is at Bragg RBV: \t ', fitBragg[-1])
+        # print('Edge position is at Energy RBV (not calibrated): \t ', EnergyRBVDic[element])
+        # print('Difference in Energy in Edge position: \t', EnergyRBVDic[element]-energyDic[element]*1000)
+
 
     fitEnergy = np.sort(fitEnergy)
     fitBragg = np.sort(fitBragg)[-1::-1]
