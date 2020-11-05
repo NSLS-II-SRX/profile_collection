@@ -280,7 +280,7 @@ def fermat_plan(*args, **kwargs):
     y_motor = nano_stage.sy
 
     # Setup detectors
-    dets = [sclr1, xs2, merlin, bpm4, temp_nanoKB]
+    dets = [sclr1, xs, xbpm2, merlin, bpm4, temp_nanoKB]
 
     # print("ready to call fermat_master...")
     yield from fermat_master_plan(dets, x_motor, y_motor, *args, **kwargs)
@@ -289,8 +289,8 @@ def fermat_plan(*args, **kwargs):
 def fermat_master_plan(*args, exp_time=None, **kwargs):
     # Synchronize exposure times
     sclr1.preset_time.put(exp_time)
-    xs2.external_trig.put(False)
-    xs2.settings.acquire_time.put(exp_time)
+    xs.external_trig.put(False)
+    xs.settings.acquire_time.put(exp_time)
     merlin.cam.acquire_time.put(exp_time)
     merlin.cam.acquire_period.put(exp_time + 0.005)
 
@@ -304,7 +304,7 @@ def fermat_master_plan(*args, exp_time=None, **kwargs):
     num_points = d['path'].get_path().vertices.shape[0]
 
     print(f"Number of points: {num_points}")
-    xs2.total_points.put(num_points)
+    xs.total_points.put(num_points)
     yield from bps.mv(merlin.total_points, num_points,
                       merlin.hdf5.num_capture, num_points)
     merlin.hdf5.stage_sigs['num_capture'] = num_points
@@ -336,7 +336,7 @@ def export_merlin2tiff(scanid=-1, wd=None):
     d = np.array(d, dtype='float32')
     x = np.array(list(h.data('nano_stage_sx', fill=True)))
     y = np.array(list(h.data('nano_stage_sy', fill=True)))
-    I0= np.array(list(h.data('sclr_it', fill=True)))
+    I0= np.array(list(h.data('sclr_i0', fill=True)))
 
     # Get scanid
     if (scanid < 0):
@@ -372,13 +372,13 @@ def nano_xrf(xstart, xstop, xstep,
     # Setup detectors
     if extra_dets is None:
         extra_dets = []
-    dets = [sclr1, xs2, xmotor, ymotor] + extra_dets
+    dets = [sclr1, xs, xbpm2, xmotor, ymotor] + extra_dets
 
     # Set counting time
     sclr1.preset_time.put(acqtime)
-    xs2.external_trig.put(False)
-    xs2.settings.acquire_time.put(acqtime)
-    xs2.total_points.put(xnum * ynum)
+    xs.external_trig.put(False)
+    xs.settings.acquire_time.put(acqtime)
+    xs.total_points.put(xnum * ynum)
     if (merlin in dets):
         merlin.cam.acquire_time.put(acqtime)
         merlin.cam.acquire_period.put(acqtime + 0.005)
@@ -390,7 +390,7 @@ def nano_xrf(xstart, xstop, xstep,
     livecallbacks = []
     livecallbacks.append(LiveTable([xmotor.name, ymotor.name]))
     roi_name = 'roi{:02}'.format(1)
-    roi_key = getattr(xs2.channel1.rois, roi_name).value.name
+    roi_key = getattr(xs.channel1.rois, roi_name).value.name
     livecallbacks.append(LiveGrid((ynum, xnum), roi_key,
                                   clim=None, cmap='viridis',
                                   xlabel='x [um]', ylabel='y [um]',
