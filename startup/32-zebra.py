@@ -280,7 +280,8 @@ class SRXFlyer1Axis(Device):
         self.stage_sigs[self._encoder.output1.ttl.addr] = 31
         self.stage_sigs[self._encoder.output3.ttl.addr] = 31
         # This is for the merlin
-        self.stage_sigs[self._encoder.output2.ttl.addr] = 53
+        self.stage_sigs[self._encoder.output2.ttl.addr] = 31
+        # self.stage_sigs[self._encoder.output2.ttl.addr] = 53
         # This is for the dexela
         # self.stage_sigs[self._encoder.output4.ttl.addr] = 55
         # This is for the xs2
@@ -391,8 +392,8 @@ class SRXFlyer1Axis(Device):
             self._encoder.pc.gate_step.put(extent + 0.0005)
             self._encoder.pc.gate_width.put(extent + 0.001)
         else:
-            self._encoder.pc.gate_step.put(extent + 0.010)
-            self._encoder.pc.gate_width.put(extent + 0.025)
+            self._encoder.pc.gate_step.put(extent + 0.25)
+            self._encoder.pc.gate_width.put(extent + 0.2)
 
         self._encoder.pc.pulse_start.put(0.0)
         self._encoder.pc.pulse_max.put(xnum)
@@ -414,13 +415,21 @@ class SRXFlyer1Axis(Device):
         # If both values are not synced, then the X-position was not updating
         # during the scan and will remain at the initial value
         # - AMK
+        # ttime.sleep(1)
         self._encoder.pc.enc_pos1_sync.put(1)  # Sample Y
         self._encoder.pc.enc_pos2_sync.put(1)  # Sample X
         self._encoder.pc.enc_pos3_sync.put(1)  # Det2 Stage X
         self._encoder.pc.enc_pos4_sync.put(1)  # Det2 Stage Y
+        # ttime.sleep(1)
+
+        # yield from mov(self._encoder.pc.enc_pos1_sync, 1)
+        # yield from mov(self._encoder.pc.enc_pos2_sync, 1)
+        # yield from mov(self._encoder.pc.enc_pos3_sync, 1)
+        # yield from mov(self._encoder.pc.enc_pos4_sync, 1)
 
         # Arm the zebra
         self._encoder.pc.arm.put(1)
+        # ttime.sleep(1)
 
         st = (
             NullStatus()
@@ -630,7 +639,7 @@ try:
         read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.enc3", "pc.data.time"],
     )
     nano_flying_zebra = SRXFlyer1Axis(
-        list(xs2 for xs2 in [xs2] if xs2 is not None), sclr1, nanoZebra, name="nano_flying_zebra"
+        list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="nano_flying_zebra"
     )
     # print('huge success!')
 except Exception as ex:

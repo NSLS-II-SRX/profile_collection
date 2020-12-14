@@ -324,6 +324,37 @@ def check_fermat_plan(xrange, yrange, dr, factor):
     print(f'The scan will have {len(line.get_xdata())} points.')
 
 
+def export_flying_merlin2tiff(scanid=-1, wd=None):
+    if wd is None:
+        wd = '/home/xf05id1/current_user_data/'
+
+    print('Loading data...')
+    h = db[int(scanid)]
+    d = h.data('merlin_image', stream_name='stream0', fill=True)
+    d = np.array(list(d))
+    d = np.squeeze(d)
+    d = np.array(d, dtype='float32')
+    x = np.array(list(h.data('enc1', stream_name='stream0', fill=True)))
+    y = np.array(list(h.data('enc2', stream_name='stream0', fill=True)))
+    I0= np.array(list(h.data('i0', stream_name='stream0', fill=True)))
+
+    # Flatten arrays
+    (N, M) = x.shape
+    x_flat = np.reshape(x, (N*M, ))
+    y_flat = np.reshape(y, (N*M, ))
+    I0_flat = np.reshape(I0, (N*M, ))
+
+    # Get scanid
+    if (scanid < 0):
+        scanid = h.start['scan_id']
+
+    print('Writing data...')
+    fn = 'scan%d.tif' % scanid
+    fn_txt = 'scan%d.txt' % scanid
+    io.imsave(wd + fn, d)
+    np.savetxt(wd + fn_txt, np.array((x_flat, y_flat, I0_flat)))
+
+
 def export_merlin2tiff(scanid=-1, wd=None):
     if wd is None:
         wd = '/home/xf05id1/current_user_data/'

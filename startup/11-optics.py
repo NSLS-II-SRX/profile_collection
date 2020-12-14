@@ -31,16 +31,16 @@ def check_shutters(check, status):
     '''
 
     if check is False:
-        print("\n********************")
+        print("\n**************************************************")
         print("WARNING: Shutters are not controlled in this scan.")
-        print("********************\n")
+        print("**************************************************\n")
     else:
         if status == 'Open':
             if shut_b.status.get() == 'Not Open':
                 print('Opening B-hutch shutter..')
                 yield from mov(shut_b, "Open")
-        print('Opening D-hutch shutter...')
-        yield from mov(shut_d, 0)
+            print('Opening D-hutch shutter...')
+            yield from mov(shut_d, 0)
         else:
             print('Closing D-hutch shutter...')
             yield from mov(shut_d, 1)

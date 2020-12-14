@@ -24,12 +24,12 @@ class BPMCam(SingleTrigger, AreaDetector):
     cam = Cpt(AreaDetectorCam, 'cam1:')
     image_plugin = Cpt(ImagePlugin, 'image1:')
 
-    # tiff = C(SRXTIFFPlugin, 'TIFF1:',
-    #          #write_path_template='/epicsdata/bpm1-cam1/2016/2/24/')
-    #          #write_path_template='/epicsdata/bpm1-cam1/%Y/%m/%d/',
-    #          #root='/epicsdata', reg=db.reg)
-    #          write_path_template='/nsls2/xf05id1/data/bpm1-cam1/%Y/%m/%d/',
-    #          root='/nsls2/xf05id1')
+    tiff = Cpt(SRXTIFFPlugin, 'TIFF1:',
+               write_path_template='/epicsdata/bpm1-cam1/2020/11/07/')
+               #write_path_template='/epicsdata/bpm1-cam1/%Y/%m/%d/',
+               #root='/epicsdata', reg=db.reg)
+               # write_path_template='/nsls2/xf05id1/data/bpm1-cam1/%Y/%m/%d/',
+               # root='/nsls2/xf05id1')
     roi1 = Cpt(ROIPlugin, 'ROI1:')
     roi2 = Cpt(ROIPlugin, 'ROI2:')
     roi3 = Cpt(ROIPlugin, 'ROI3:')
@@ -87,4 +87,44 @@ except TimeoutError:
 except Exception as ex:
     hfvlmAD = None
     print('\nUnexpected error connecting to HF VLM Camera.\n')
+    print(ex, end='\n\n')
+
+
+# Transmission Camera
+# Does this belong here or in microES?
+class SRXCam05(SingleTrigger, AreaDetector):
+    cam = Cpt(AreaDetectorCam, 'cam1:')
+    image_plugin = Cpt(ImagePlugin, 'image1:')
+    proc1 = Cpt(ProcessPlugin, 'Proc1:')
+    stats1 = Cpt(StatsPlugin, 'Stats1:')
+    stats2 = Cpt(StatsPlugin, 'Stats2:')
+    stats3 = Cpt(StatsPlugin, 'Stats3:')
+    stats4 = Cpt(StatsPlugin, 'Stats4:')
+    roi1 = Cpt(ROIPlugin, 'ROI1:')
+    roi2 = Cpt(ROIPlugin, 'ROI2:')
+    roi3 = Cpt(ROIPlugin, 'ROI3:')
+    roi4 = Cpt(ROIPlugin, 'ROI4:')
+    over1 = Cpt(OverlayPlugin, 'Over1:')
+    trans1 = Cpt(TransformPlugin, 'Trans1:')
+    tiff = Cpt(SRXTIFFPlugin, 'TIFF1:',
+               write_path_template='/epicsdata/cam05/%Y/%m/%d/',
+               root='/epicsdata')
+
+
+try:
+    cam05 = SRXCam05('XF:05IDD-BI:1{Cam:5}',
+                          name='cam05',
+                          read_attrs=['tiff'])
+    cam05.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
+    cam05.tiff.read_attrs = []
+    cam05.stats1.read_attrs = ['total']
+    cam05.stats2.read_attrs = ['total']
+    cam05.stats3.read_attrs = ['total']
+    cam05.stats4.read_attrs = ['total']
+except TimeoutError:
+    cam05 = None
+    print('\nCannot connect to camera 5. Continuing without device.\n')
+except Exception as ex:
+    hfvlmAD = None
+    print('\nUnexpected error connecting to camera 5.\n')
     print(ex, end='\n\n')

@@ -175,7 +175,7 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     if (motor.name == 'nano_stage_sx'):
         fly = True
         pos = 'enc1'
-        fluor_key = 'fluor_xs2'
+        fluor_key = 'fluor'
         y0 = nano_stage.sy.user_readback.get()
         plotme = LivePlot('')
         @subs_decorator(plotme)
@@ -187,7 +187,7 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     elif (motor.name == 'nano_stage_sy'):
         fly = True
         pos = 'enc2'
-        fluor_key = 'fluor_xs2'
+        fluor_key = 'fluor'
         x0 = nano_stage.sx.user_readback.get()
         plotme = LivePlot('')
         @subs_decorator(plotme)
@@ -268,8 +268,8 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     if (use_trans == True):
         y = tbl['it'].values[0] / tbl['im'].values[0]
     else:
-        bin_low = xs2.channel1.rois.roi01.bin_low.get()
-        bin_high = xs2.channel1.rois.roi01.bin_high.get()
+        bin_low = xs.channel1.rois.roi01.bin_low.get()
+        bin_high = xs.channel1.rois.roi01.bin_high.get()
         d = np.array(tbl[fluor_key])[0]
         if (d.ndim == 1):
             d = np.array(tbl[fluor_key])
@@ -400,7 +400,7 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     # print('The edge is at.4f mm\n' % (popt2[2]))
 
 # Written quickly
-def plot_knife_edge(scanid=-1, fluor_key='fluor_xs2', use_trans=False, normalize=True, plot_guess=False,
+def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=True, plot_guess=False,
                     bin_low=None, bin_high=None):
     # Get the scanid
     h = db[int(scanid)]
@@ -443,9 +443,9 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor_xs2', use_trans=False, normalize
         y = tbl['it'].values[0] / tbl['im'].values[0]
     else:
         if bin_low is None:
-            bin_low = xs2.channel1.rois.roi01.bin_low.get()
+            bin_low = xs.channel1.rois.roi01.bin_low.get()
         if bin_high is None:
-            bin_high = xs2.channel1.rois.roi01.bin_high.get()
+            bin_high = xs.channel1.rois.roi01.bin_high.get()
         d = np.array(tbl[fluor_key])[0]
         if (d.ndim == 1):
             d = np.array(tbl[fluor_key])
@@ -500,8 +500,13 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor_xs2', use_trans=False, normalize
         popt = p_guess
 
     C = 2 * np.sqrt(2 * np.log(2))
+    cent_position = (popt[2]+popt[6])/2
     print(f'\nThe beam size is {C * popt[1]:.4f} um')
     print(f'\nThe beam size is {C * popt[5]:.4f} um')
+
+    print(f'\nThe left edge is at\t{popt[2]:.4f}.')
+    print(f'The right edge is at\t{popt[6]:.4f}.')
+    print(f'The center is at\t{(popt[2]+popt[6])/2:.4f}.\n')
 
     # Plot variables
     x_plot = np.linspace(np.amin(x), np.amax(x), num=100)
@@ -517,4 +522,4 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor_xs2', use_trans=False, normalize
     ax.plot(x_plot, y_plot, '-', label='Final fit')
     ax.set_title(f'Scan {id_str}')
     ax.legend()
-
+    return cent_position 

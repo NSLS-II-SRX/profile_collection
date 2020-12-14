@@ -354,7 +354,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # Close the shutter
     # if (shutter is True):
     #     yield from bps.mov(shut_b, 'Close')
-    yield from check_shutters(shutter, 'Open')
+    yield from check_shutters(shutter, 'Close')
 
     # Add scan to scanlog
     logscan('peakup_fine_pitch')

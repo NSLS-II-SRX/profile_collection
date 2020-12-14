@@ -104,18 +104,18 @@ def slit_nanoKB_scan(slit_motor, sstart, sstop, sstep,
     enum = np.int(np.abs(np.round((estop - estart)/estep)) + 1)
 
     # Setup detectors
-    dets = [sclr1, xs2]
+    dets = [sclr1, xs]
 
     # Set counting time
     sclr1.preset_time.put(acqtime)
-    xs2.external_trig.put(False)
-    xs2.settings.acquire_time.put(acqtime)
-    xs2.total_points.put(enum * snum)
+    xs.external_trig.put(False)
+    xs.settings.acquire_time.put(acqtime)
+    xs.total_points.put(enum * snum)
 
     # LiveGrid
     livecallbacks = []
     roi_name = 'roi{:02}'.format(1)
-    roi_key = getattr(xs2.channel1.rois, roi_name).value.name
+    roi_key = getattr(xs.channel1.rois, roi_name).value.name
     livecallbacks.append(LiveTable([slit_motor.name, edge_motor.name, roi_key]))
     livecallbacks.append(LivePlot(roi_key, x=edge_motor.name))
     # xlabel='Position [um]', ylabel='Intensity [cts]'))
@@ -141,7 +141,7 @@ def slit_nanoKB_scan(slit_motor, sstart, sstop, sstep,
     if (shutter):
         yield from mv(shut_b,'Close')
 
-    scan_id = db(uid).start['scan_id']
+    scan_id = db[uid].start['scan_id']
     slit_nanoKB_scan_corr(scan_id, from_RE=[plot_lines1, plot_lines2, plot_fit])
 
     return uid
@@ -179,11 +179,11 @@ def slit_nanoKB_scan_corr(scan_id, from_RE=[], orthogonality=0, interp_range=Non
     #df.dtypes
     
     #vertical scan
-    cts = np.array(list(h.data('xs2_channel1', fill=True)))
+    cts = np.array(list(h.data('xs_channel1', fill=True)))
     if bin_low is None:
-        bin_low = xs2.channel1.rois.roi01.bin_low.get()
+        bin_low = xs.channel1.rois.roi01.bin_low.get()
     if bin_high is None:
-       bin_high = xs2.channel1.rois.roi01.bin_high.get()
+       bin_high = xs.channel1.rois.roi01.bin_high.get()
     cts = np.sum(cts[:, bin_low:bin_high], axis=1) #Pt
 
     if 'nano_stage_sy' in h.start['motors']:
@@ -285,28 +285,48 @@ def slit_nanoKB_scan_corr(scan_id, from_RE=[], orthogonality=0, interp_range=Non
     calpoly_fit = np.polyfit(slit_pos_seq[interp_range], line_pos_seq[interp_range]/1000, orthogonality+1, full=True)
     p = np.poly1d(calpoly_fit[0])
     line_plt = p(slit_pos_seq[interp_range])
+    p2v_line_pos = np.max(line_pos_seq[interp_range])-np.min(line_pos_seq[interp_range])
 
     # Mirror parameters
     f_v = 295*1e+3  # um
     f_h = 125*1e+3
     theta_v = 3 #mrad
     theta_h = 3 #mrad
+    conversion_factor_orth = np.array([-1.6581375e-4, 5.89e-4]) #unit: p/urad (V x H)
+    pitch_motion_conversion = np.array([225, 100]) # unit: mm (V x H)
+    delta_fine_pitch = 0.0 # unit: um
+    
     if flag_dir == 'VER':
         C_f = f_v
         C_theta = theta_v
+        conversion_factor_orth = conversion_factor_orth[0]
+        pitch_motion_conversion = pitch_motion_conversion[0] 
     else:
         C_f = f_h
         C_theta = theta_h
+        conversion_factor_orth = conversion_factor_orth[1]
+        pitch_motion_conversion = pitch_motion_conversion[1] 
+
 
     print(f'p is {calpoly_fit[0]}')
-    print(f'residual is {calpoly_fit[1]*1e+6} nm')
+    #print(f'residual is {calpoly_fit[1]*1e+6} nm')
+    print(f'P2V of line position is {p2v_line_pos} um')
     defocus = -calpoly_fit[0][0] * C_f
-    delta_theta = -calpoly_fit[0][0] * C_theta
+    delta_theta = calpoly_fit[0][0] * C_theta
     line_move = 2 * delta_theta * C_f * 1e-3
-    print('defocus is' '{:7.3f}'.format(defocus), 'um.')
-    print('equivalent to' '{:7.6f}'.format(delta_theta), 'mrad.')
+    print('defocus is ' '{:7.3f}'.format(defocus), 'um. Vkb correct by this amount.')
+    print('equivalent to ' '{:7.6f}'.format(delta_theta), 'mrad. Hkb correct by this amount.')
     #print('actuator should move by' '{:7.3f}'.format(actuator_move), 'um.')
     print('Line feature should move' '{:7.3f}'.format(line_move), 'um.')
+
+    if orthogonality == 1:
+        delta_fine_pitch = calpoly_fit[0][0]/conversion_factor_orth*1e-3*pitch_motion_conversion
+        delta_theta_quad = calpoly_fit[0][0]/conversion_factor_orth
+        delta_focal_plane_z = delta_theta_quad*1e-3/C_theta*C_f
+        print('quadratic term corresponds to pitch angle' '{:7.3f}'.format(delta_theta_quad), 'urad.')
+        print('quadratic term corresponds to fine pitch move' '{:7.3f}'.format(delta_fine_pitch), 'um.')
+        print('quadratic term corresponds to coarse Z ' '{:7.3f}'.format(delta_focal_plane_z), 'um.')
+
 
     if from_RE == []:
         _, ax = plt.subplots()

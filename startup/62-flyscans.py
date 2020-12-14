@@ -155,8 +155,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             dwell = 0.007
         # According to Ken's comments in hxntools, this is a de-bounce time
         # when in external trigger mode
-        dpc.cam.stage_sigs['acquire_time'] = .25 * dwell - 0.0016392
-        dpc.cam.stage_sigs['acquire_period'] = .5 * dwell
+        dpc.cam.stage_sigs['acquire_time'] = 0.50 * dwell - 0.0016392
+        dpc.cam.stage_sigs['acquire_period'] = 0.75 * dwell
         dpc.cam.stage_sigs['num_images'] = 1
         dpc.stage_sigs['total_points'] = xnum
         dpc.hdf5.stage_sigs['num_capture'] = xnum
@@ -178,9 +178,12 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             delta = t_acc * v  # distance the stage will travel in t_acc
             delta = np.amax((delta, MIN_DELTA))
         else:
-            delta = 0.100
+            delta = 0.500 #was 2.5 when npoint scanner drifted
 
     # Move to start scanning location
+    #if ('nano_stage' in xmotor.name):
+    #    yield from mv(xmotor.velocity, 30)
+    #    yield from mv(xmotor.velocity, 30)
     yield from mv(xmotor, xstart - delta,
                   ymotor, ystart)
 
@@ -230,7 +233,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         if (xmotor.egu == 'mm'):
             DEADBAND = 0.0005
         else:
-            DEADBAND = 0.050
+            DEADBAND = 0.02
         while (np.abs(x_set - x_dial) > DEADBAND):
             if (i == 0):
                 print('Waiting for motor to reach starting position...',
@@ -452,7 +455,7 @@ def nano_scan_and_fly(*args, extra_dets=None, **kwargs):
     yield from abs_set(nano_flying_zebra.fast_axis, 'NANOHOR')
     yield from abs_set(nano_flying_zebra.slow_axis, 'NANOVER')
 
-    _xs = kwargs.pop('xs', xs2)
+    _xs = kwargs.pop('xs', xs)
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
@@ -466,7 +469,7 @@ def nano_y_scan_and_fly(*args, extra_dets=None, **kwargs):
     yield from abs_set(nano_flying_zebra.fast_axis, 'NANOVER')
     yield from abs_set(nano_flying_zebra.slow_axis, 'NANOHOR')
 
-    _xs = kwargs.pop('xs', xs2)
+    _xs = kwargs.pop('xs', xs)
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
@@ -479,7 +482,7 @@ def nano_z_scan_and_fly(*args, extra_dets=None, **kwargs):
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
     yield from abs_set(nano_flying_zebra.fast_axis, 'NANOZ')
 
-    _xs = kwargs.pop('xs', xs2)
+    _xs = kwargs.pop('xs', xs)
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
