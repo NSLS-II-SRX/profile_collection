@@ -12,13 +12,15 @@ from ophyd.areadetector.filestore_mixins import FileStorePluginBase
 from ophyd.device import Staged
 from enum import Enum
 
-from hxntools.detectors.xspress3 import (
+from nslsii.areadetector.xspress3 import (
     XspressTrigger,
-    Xspress3Detector,
     Xspress3Channel,
     Xspress3FileStore,
 )
 
+from ophyd.areadetector import (
+    Xspress3Detector,
+        )
 try:
     from area_detector_handlers import HandlerBase
     from area_detector_handlers.handlers import Xspress3HDF5Handler
@@ -79,7 +81,7 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
 
         NOTE : this comes from:
             https://github.com/NSLS-II/ophyd/blob/master/ophyd/areadetector/plugins.py
-        We had to replace "cam" with "settings" here.
+        We had to replace "cam" with "cam" here.
         Also modified the stage sigs.
 
         """
@@ -87,13 +89,13 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
         set_and_wait(self.enable, 1)
         sigs = OrderedDict(
             [
-                (self.parent.settings.array_callbacks, 1),
-                (self.parent.settings.image_mode, "Single"),
-                (self.parent.settings.trigger_mode, "Internal"),
+                (self.parent.cam.array_callbacks, 1),
+                (self.parent.cam.image_mode, "Single"),
+                (self.parent.cam.trigger_mode, "Internal"),
                 # In case the acquisition time is set very long
-                (self.parent.settings.acquire_time, 1),
-                # (self.parent.settings.acquire_period, 1),
-                (self.parent.settings.acquire, 1),
+                (self.parent.cam.acquire_time, 1),
+                # (self.parent.cam.acquire_period, 1),
+                (self.parent.cam.acquire, 1),
             ]
         )
 
@@ -118,7 +120,7 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
                 "external": "FileStore:",
                 "dtype": "array",
                 # TODO do not hard code
-                "shape": (self.parent.settings.num_images.get(), 3, 4096),
+                "shape": (self.parent.cam.num_images.get(), 3, 4096),
                 "source": self.prefix,
             }
             return {self.parent._f_key: spec}
@@ -132,7 +134,7 @@ class SRXXspressTrigger(XspressTrigger):
             raise RuntimeError("not staged")
 
         self._status = DeviceStatus(self)
-        self.settings.erase.put(1)
+        self.cam.erase.put(1)
         self._acquisition_signal.put(1, wait=False)
         trigger_time = ttime.time()
         if self._mode is SRXMode.step:
@@ -161,39 +163,42 @@ class SrxXSP3Handler:
 
 class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
     # TODO: garth, the ioc is missing some PVs?
-    #   det_settings.erase_array_counters
+    #   det_cam.erase_array_counters
     #       (XF:05IDD-ES{Xsp:1}:ERASE_ArrayCounters)
-    #   det_settings.erase_attr_reset (XF:05IDD-ES{Xsp:1}:ERASE_AttrReset)
-    #   det_settings.erase_proc_reset_filter
+    #   det_cam.erase_attr_reset (XF:05IDD-ES{Xsp:1}:ERASE_AttrReset)
+    #   det_cam.erase_proc_reset_filter
     #       (XF:05IDD-ES{Xsp:1}:ERASE_PROC_ResetFilter)
-    #   det_settings.update_attr (XF:05IDD-ES{Xsp:1}:UPDATE_AttrUpdate)
-    #   det_settings.update (XF:05IDD-ES{Xsp:1}:UPDATE)
-    roi_data = Cpt(PluginBase, "ROIDATA:")
+    #   det_cam.update_attr (XF:05IDD-ES{Xsp:1}:UPDATE_AttrUpdate)
+    #   det_cam.update (XF:05IDD-ES{Xsp:1}:UPDATE)
+    ### OKS roi_data = Cpt(PluginBase, "ROIDATA:")
 
     erase = Cpt(EpicsSignal, "ERASE")
 
     array_counter = Cpt(EpicsSignal, "ArrayCounter_RBV")
 
     # Currently only using three channels. Uncomment these to enable more
-    channel1 = Cpt(Xspress3Channel, "C1_", channel_num=1, read_attrs=["rois"])
-    channel2 = Cpt(Xspress3Channel, "C2_", channel_num=2, read_attrs=["rois"])
-    channel3 = Cpt(Xspress3Channel, "C3_", channel_num=3, read_attrs=["rois"])
-    channel4 = Cpt(Xspress3Channel, "C4_", channel_num=4, read_attrs=["rois"])
+    channel1 = Cpt(Xspress3Channel, "", channel_num=1)
+    ##channel2 = Cpt(Xspress3Channel, "C2_", channel_num=2, read_attrs=["rois"])
+    ##channel3 = Cpt(Xspress3Channel, "C3_", channel_num=3, read_attrs=["rois"])
+    ##channel4 = Cpt(Xspress3Channel, "C4_", channel_num=4, read_attrs=["rois"])
     # channels:
     # channel5 = Cpt(Xspress3Channel, 'C5_', channel_num=5)
     # channel6 = Cpt(Xspress3Channel, 'C6_', channel_num=6)
     # channel7 = Cpt(Xspress3Channel, 'C7_', channel_num=7)
     # channel8 = Cpt(Xspress3Channel, 'C8_', channel_num=8)
 
-    create_dir = Cpt(EpicsSignal, "HDF5:FileCreateDir")
+    create_dir = Cpt(EpicsSignal, "HDF1:FileCreateDir")
 
     hdf5 = Cpt(
         Xspress3FileStoreFlyable,
-        "HDF5:",
-        read_path_template="/nsls2/xf05id1/XF05ID1/XSPRESS3/%Y/%m/%d/",
+        "HDF1:",
+        ##read_path_template="/nsls2/xf05id1/XF05ID1/XSPRESS3/%Y/%m/%d/",
+        read_path_template="/home/oksana/nsls2/",
         # write_path_template='/epics/data/%Y/%m/%d/', #SRX old xspress3
-        write_path_template="/home/xspress3/data/%Y/%m/%d/",#TES xspress3
-        root="/nsls2/xf05id1/XF05ID1",
+        ##write_path_template="/home/xspress3/data/%Y/%m/%d/",#TES xspress3
+        write_path_template="/home/oksana/nsls2/",
+        ##root="/nsls2/xf05id1/XF05ID1",
+        root="/home/oksana/",
     )
 
     # this is used as a latch to put the xspress3 into 'bulk' mode
@@ -216,11 +221,12 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
                 "external_trig",
                 "total_points",
                 "spectra_per_point",
-                "settings",
+                "cam",
                 "rewindable",
             ]
+            pass
         if read_attrs is None:
-            read_attrs = ["channel1", "channel2", "channel3", "channel4", "hdf5"]
+            read_attrs = ["channel1", "hdf5"]
         super().__init__(
             prefix,
             configuration_attrs=configuration_attrs,
@@ -237,15 +243,15 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
 
     def stop(self, *, success=False):
         ret = super().stop()
-        # todo move this into the stop method of the settings object?
-        self.settings.acquire.put(0)
+        # todo move this into the stop method of the cam object?
+        self.cam.acquire.put(0)
         self.hdf5.stop(success=success)
         return ret
 
     def stage(self):
         # Erase what is currently in the system
         # This prevents a single hot pixel in the upper-left corner of a map
-        xs.erase.put(0)
+        xs.cam.erase.put(0)
         # do the latching
         if self.fly_next.get():
             self.fly_next.put(False)
@@ -261,7 +267,7 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
 
 
 try:
-    xs = SrxXspress3Detector("XF:05IDD-ES{Xsp:1}:", name="xs")
+    xs = SrxXspress3Detector("XF:05IDD-ES{Xsp3:1}:", name="xs")
     if "TOUCHBEAMLINE" in os.environ and os.environ["TOUCHBEAMLINE"] == 1:
         xs.channel1.rois.read_attrs = ["roi{:02}".format(j)
                                        for j in [1, 2, 3, 4]]
@@ -275,9 +281,9 @@ try:
         xs.channel2.vis_enabled.put(1)
         xs.channel3.vis_enabled.put(1)
         xs.channel4.vis_enabled.put(1)
-        xs.settings.num_channels.put(4) #4 for ME4 detector
+        xs.cam.num_channels.put(4) #4 for ME4 detector
 
-        xs.settings.configuration_attrs = [
+        xs.cam.configuration_attrs = [
             "acquire_period",
             "acquire_time",
             "gain",
@@ -312,22 +318,22 @@ try:
 except TimeoutError:
     xs = None
     print("\nCannot connect to xs. Continuing without device.\n")
-except Exception as ex:
-    xs = None
-    print("\nUnexpected error connecting to xs.\n")
-    print(ex, end="\n\n")
+# except Exception as ex:
+#     xs = None
+#     print("\nUnexpected error connecting to xs.\n")
+#     print(ex, end="\n\n")
 
 
 # Working xs2 detector
 class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
     # TODO: garth, the ioc is missing some PVs?
-    #   det_settings.erase_array_counters
+    #   det_cam.erase_array_counters
     #       (XF:05IDD-ES{Xsp:1}:ERASE_ArrayCounters)
-    #   det_settings.erase_attr_reset (XF:05IDD-ES{Xsp:1}:ERASE_AttrReset)
-    #   det_settings.erase_proc_reset_filter
+    #   det_cam.erase_attr_reset (XF:05IDD-ES{Xsp:1}:ERASE_AttrReset)
+    #   det_cam.erase_proc_reset_filter
     #       (XF:05IDD-ES{Xsp:1}:ERASE_PROC_ResetFilter)
-    #   det_settings.update_attr (XF:05IDD-ES{Xsp:1}:UPDATE_AttrUpdate)
-    #   det_settings.update (XF:05IDD-ES{Xsp:1}:UPDATE)
+    #   det_cam.update_attr (XF:05IDD-ES{Xsp:1}:UPDATE_AttrUpdate)
+    #   det_cam.update (XF:05IDD-ES{Xsp:1}:UPDATE)
     roi_data = Cpt(PluginBase, "ROIDATA:")
 
     # XS2 only uses 1 channel. Currently only using three channels.
@@ -340,11 +346,11 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
 
     array_counter = Cpt(EpicsSignal, "ArrayCounter_RBV")
 
-    create_dir = Cpt(EpicsSignal, "HDF5:FileCreateDir")
+    create_dir = Cpt(EpicsSignal, "HDF1:FileCreateDir")
 
     hdf5 = Cpt(
         Xspress3FileStoreFlyable,
-        "HDF5:",
+        "HDF1:",
         read_path_template="/nsls2/xf05id1/data/2020-2/XS3MINI",
         write_path_template="/home/xspress3/data/SRX/2020-2",
         root="/nsls2/xf05id1",
@@ -370,7 +376,7 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
                 "external_trig",
                 "total_points",
                 "spectra_per_point",
-                "settings",
+                "cam",
                 "rewindable",
             ]
         if read_attrs is None:
@@ -389,8 +395,8 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
 
     def stop(self, *, success=False):
         ret = super().stop()
-        # todo move this into the stop method of the settings object?
-        self.settings.acquire.put(0)
+        # todo move this into the stop method of the cam object?
+        self.cam.acquire.put(0)
         self.hdf5.stop(success=success)
         return ret
 
@@ -410,7 +416,7 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
 
 
 try:
-    xs2 = SrxXspress3Detector2("XF:05IDD-ES{Xsp:2}:",
+    xs2 = SrxXspress3Detector2("XF:05IDD-ES{Xsp3:2}:",
                                name="xs2",
                                f_key="fluor_xs2")
     if "TOUCHBEAMLINE" in os.environ and os.environ["TOUCHBEAMLINE"] == 1:
