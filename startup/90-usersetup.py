@@ -89,16 +89,17 @@ def get_stock_md(scan_md):
     #                         'h_gap' : slt_ssa.h_gap.position,
     #                         'v_cen' : slt_ssa.v_cen.position,
     #                         'h_cen' : slt_ssa.h_cen.position}
-    scan_md['time_str'] =  ttime.ctime(ttime.monotonic())
+    scan_md['time_str'] =  ttime.ctime(ttime.time())
     scan_md['proposal'] = {'proposal_num': str(proposal_num),
                            'proposal_title': str(proposal_title),
                            'PI_lastname': str(PI_lastname),
                            'saf_num': str(saf_num),
                            'cycle': str(cycle)}
-    if 'scan' is not in scan_md:
+    if 'scan' not in scan_md:
         scan_md['scan'] = {}
     scan_md['scan']['energy'] = energy.energy.readback.get()
 
+    return scan_md
     
 
 
@@ -133,7 +134,7 @@ def logscan_detailed(scantype):
     uid = h.start['uid']
 
     userlogf = open(userlogfile, 'a')
-    userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype + '\t' + str(h['start']['scan_input']) + '\n')
+    userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype + '\t' + str(h['start']['scan']['scan_input']) + '\n')
     userlogf.close()
 
 

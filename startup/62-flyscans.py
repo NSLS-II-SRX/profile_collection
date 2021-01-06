@@ -219,7 +219,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     md['scan']['slow_axis'] = {'motor_name' : ymotor.name,
                                'units' : ymotor.motor_egu.get()}
     md['scan']['theta'] = {'val' : nano_stage.th.user_readback.get(),
-                           'units' : nano_stage.th.motor_egu, get()}
+                           'units' : nano_stage.th.motor_egu.get()}
     md['scan']['delta'] = {'val' : delta,
                            'units' : xmotor.motor_egu.get()}
     md['scan']['snake'] = False
@@ -468,8 +468,8 @@ def nano_scan_and_fly(*args, extra_dets=None, **kwargs):
     kwargs.setdefault('xmotor', nano_stage.sx)
     kwargs.setdefault('ymotor', nano_stage.sy)
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
-    print(kwargs['xmotor'].name)
-    print(kwargs['ymotor'].name)
+    # print(kwargs['xmotor'].name)
+    # print(kwargs['ymotor'].name)
     yield from abs_set(nano_flying_zebra.fast_axis, 'NANOHOR')
     yield from abs_set(nano_flying_zebra.slow_axis, 'NANOVER')
 
