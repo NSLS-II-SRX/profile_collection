@@ -366,7 +366,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         scanrecord.time_remaining.put((dwell*xnum + 3.8)/3600)
 
     def finalize_scan(name, doc):
-        logscan_detailed('xrf_fly')
+        logscan_detailed('XRF_FLY')
         scanrecord.scanning.put(False)
         scanrecord.time_remaining.put(0)
 
