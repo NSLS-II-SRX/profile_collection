@@ -226,8 +226,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     md['scan']['shape'] = (xnum, ynum)
     
 
-    if ('xs2' in dets_by_name):
-        md['scan']['type'] = 'XRF_E_tomo_fly'
+    # if ('xs2' in dets_by_name):
+    #     md['scan']['type'] = 'XRF_E_tomo_fly'
 
     @stage_decorator(flying_zebra.detectors)
     def fly_each_step(motor, step):
