@@ -296,8 +296,8 @@ def fermat_master_plan(*args, exp_time=None, **kwargs):
 
     scan_md = {}
     get_stock_md(scan_md)
-    scan_md['merlin'] = {'merlin_exp_time' : exp_time,
-                         'merlin_exp_period' : exp_time + 0.005}
+    scan_md['scan']['merlin'] = {'merlin_exp_time' : exp_time,
+                                 'merlin_exp_period' : exp_time + 0.005}
 
     plan = bp.rel_spiral_fermat(*args, **kwargs)
     d = plot_raster_path(plan, args[1].name, args[2].name, probe_size=.001, lw=0.5)
@@ -392,9 +392,12 @@ def nano_xrf(xstart, xstop, xstep,
     # Record relevant metadata in the Start document, defined in 90-usersetup.py
     scan_md = {}
     get_stock_md(scan_md)
-    scan_md['scan_input'] = str([xstart, xstop, xstep, ystart, ystop, ystep, acqtime])
-    scan_md['scaninfo']  = {'type': 'XRF',
-                            'raster' : True}
+    # scan_md['scan_input'] = str([xstart, xstop, xstep, ystart, ystop, ystep, acqtime])
+    # scan_md['scaninfo']  = {'type': 'XRF',
+    #                         'raster' : True}
+    scan_md['scan']['type'] = 'XRF_STEP'
+    scan_md['scan']['scan_input'] = [xstart, xstop, xstep, ystart, ystop, ystep, acqtime]
+
 
     # calculate number of points
     xnum = np.int(np.abs(np.round((xstop - xstart)/xstep)) + 1)
@@ -414,8 +417,8 @@ def nano_xrf(xstart, xstop, xstep,
         merlin.cam.acquire_time.put(acqtime)
         merlin.cam.acquire_period.put(acqtime + 0.005)
         merlin.hdf5.stage_sigs['num_capture'] = xnum * ynum
-        scan_md['merlin'] = {'merlin_exp_time' : acqtime,
-                             'merlin_exp_period' : acqtime + 0.005}
+        scan_md['scan']['merlin'] = {'merlin_exp_time' : acqtime,
+                                     'merlin_exp_period' : acqtime + 0.005}
 
     # LiveGrid
     livecallbacks = []
@@ -432,19 +435,25 @@ def nano_xrf(xstart, xstop, xstep,
                        ymotor, ystart, ystop, ynum,
                        xmotor, xstart, xstop, xnum, True,
                        md=scan_md)
-    myplan = subs_wrapper(myplan,
-                          {'all': livecallbacks})
-
-    # Open shutter
+    
     if (shutter):
-        yield from mv(shut_b,'Open')
-
+        # These functions might not be necessary
+        # def mystart():
+        #     yield from mv(shut_b, 'Open')
+        
+        # def mystop():
+        #     yield from mv(shut_b, 'Close')
+        
+        myplan = subs_wrapper(myplan,
+                              {'all' : livecallbacks,
+                               'start' : bps.mov(shut_b, 'Open'),
+                               'stop' : bps.mov(shut_b, 'Close')})
+    else:
+        myplan = subs_wrapper(myplan,
+                              {'all' : livecallbacks})
+    
     # grid scan
     uid = yield from myplan
-
-    # Open shutter
-    if (shutter):
-        yield from mv(shut_b,'Close')
 
     return uid
 

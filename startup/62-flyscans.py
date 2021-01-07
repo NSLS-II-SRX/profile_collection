@@ -437,16 +437,19 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # toc(t_setup, str='Setup time')
 
     # Setup the final scan plan
-    if shutter:
-        final_plan = finalize_wrapper(plan(),
-                                      bps.mov(shut_b, 'Close'))
+    if (shutter):
+        final_plan = subs_wrapper(plan(),
+                                  {'start' : bps.mov(shut_b, 'Open'),
+                                   'stop'  : bps.mov(shut_b, 'Close')})
+        # final_plan = finalize_wrapper(plan(),
+        #                               bps.mov(shut_b, 'Close'))
     else:
         final_plan = plan()
 
     # Open the shutter
-    if shutter:
+    # if shutter:
         # t_open = tic()
-        yield from mv(shut_b, 'Open')
+        # yield from mv(shut_b, 'Open')
         # toc(t_open, str='Open shutter')
 
     # Run the scan
