@@ -381,27 +381,32 @@ def export_merlin2tiff(scanid=-1, wd=None):
 
 
 def nano_xrf(xstart, xstop, xstep,
-             ystart, ystop, ystep, acqtime,
+             ystart, ystop, ystep, dwell,
              shutter=True, extra_dets=None,
-             xmotor=nano_stage.sx, ymotor=nano_stage.sy):
-
-    # define motors
-    # xmotor = nano_stage.x
-    # ymotor = nano_stage.y
-
-    # Record relevant metadata in the Start document, defined in 90-usersetup.py
-    scan_md = {}
-    get_stock_md(scan_md)
-    # scan_md['scan_input'] = str([xstart, xstop, xstep, ystart, ystop, ystep, acqtime])
-    # scan_md['scaninfo']  = {'type': 'XRF',
-    #                         'raster' : True}
-    scan_md['scan']['type'] = 'XRF_STEP'
-    scan_md['scan']['scan_input'] = [xstart, xstop, xstep, ystart, ystop, ystep, acqtime]
-
+             xmotor=nano_stage.sx, ymotor=nano_stage.sy, flag_snake=True):
 
     # calculate number of points
     xnum = np.int(np.abs(np.round((xstop - xstart)/xstep)) + 1)
     ynum = np.int(np.abs(np.round((ystop - ystart)/ystep)) + 1)
+
+    # Record relevant metadata in the Start document, defined in 90-usersetup.py
+    scan_md = {}
+    get_stock_md(scan_md)
+    # scan_md['scan_input'] = str([xstart, xstop, xstep, ystart, ystop, ystep, dwell])
+    # scan_md['scaninfo']  = {'type': 'XRF',
+    #                         'raster' : True}
+    scan_md['scan']['type'] = 'XRF_STEP'
+    scan_md['scan']['scan_input'] = [xstart, xstop, xstep, ystart, ystop, ystep, dwell]
+    scan_md['scan']['fast_axis'] = {'motor_name' : xmotor.name,
+                                    'units' : xmotor.motor_egu.get()}
+    scan_md['scan']['slow_axis'] = {'motor_name' : ymotor.name,
+                                    'units' : ymotor.motor_egu.get()}
+    scan_md['scan']['theta'] = {'val' : nano_stage.th.user_readback.get(),
+                                'units' : nano_stage.th.motor_egu.get()}
+    scan_md['scan']['delta'] = {'val' : 0,
+                                'units' : xmotor.motor_egu.get()}
+    scan_md['scan']['snake'] = 1 if flag_snake else 0
+    scan_md['scan']['shape'] = (xnum, ynum)
 
     # Setup detectors
     if extra_dets is None:
@@ -409,16 +414,16 @@ def nano_xrf(xstart, xstop, xstep,
     dets = [sclr1, xs, xbpm2, xmotor, ymotor] + extra_dets
 
     # Set counting time
-    sclr1.preset_time.put(acqtime)
+    sclr1.preset_time.put(dwell)
     xs.external_trig.put(False)
-    xs.settings.acquire_time.put(acqtime)
+    xs.settings.acquire_time.put(dwell)
     xs.total_points.put(xnum * ynum)
     if (merlin in dets):
-        merlin.cam.acquire_time.put(acqtime)
-        merlin.cam.acquire_period.put(acqtime + 0.005)
+        merlin.cam.acquire_time.put(dwell)
+        merlin.cam.acquire_period.put(dwell + 0.005)
         merlin.hdf5.stage_sigs['num_capture'] = xnum * ynum
-        scan_md['scan']['merlin'] = {'merlin_exp_time' : acqtime,
-                                     'merlin_exp_period' : acqtime + 0.005}
+        scan_md['scan']['merlin'] = {'merlin_exp_time' : dwell,
+                                     'merlin_exp_period' : dwell + 0.005}
 
     # LiveGrid
     livecallbacks = []
@@ -433,7 +438,7 @@ def nano_xrf(xstart, xstop, xstep,
 
     myplan = grid_scan(dets,
                        ymotor, ystart, ystop, ynum,
-                       xmotor, xstart, xstop, xnum, True,
+                       xmotor, xstart, xstop, xnum, flag_snake,
                        md=scan_md)
     myplan = subs_wrapper(myplan,
                           {'all': livecallbacks})
