@@ -34,6 +34,7 @@ bec.disable_table()
 
 # Disable BestEffortCallback to plot ring current
 bec.disable_plots()
+
 from pathlib import Path
 
 import appdirs
