@@ -217,7 +217,17 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     if (detune is not 0):
         yield from abs_set(energy.detune, detune)
 
-    
+    # Record relevant meta data in the Start document, defined in 90-usersetup.py
+    # Add user meta data
+    scan_md = {}
+    get_stock_md(scan_md)
+    scan_md['sample'] = {'name' : samplename}
+    scan_md['scaninfo'] = {'type' : 'XANES',
+                           'ROI' : roinum,
+                           'raster' : False,
+                           'dwell' : acqtime}
+    scan_md['scan_input'] = str(np.around(erange, 2)) + ', ' + str(np.around(estep, 2))
+
     # Convert erange and estep to numpy array
     ept = np.array([])
     erange = np.array(erange)
@@ -278,7 +288,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
         else:
             print("Aligning at ", align_at)
             yield from abs_set(energy, float(align_at), wait=True)
-    
+
     # Peak up DCM at first scan point
     if (align is True):
         yield from peakup_fine(shutter=shutter)
@@ -300,7 +310,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     livecallbacks.append(LiveTable(livetableitem))
     liveploty = roi_key[0]
     liveplotx = energy.energy.name
-    
+
     def my_factory(name):
         fig = plt.figure(num=name)
         ax = fig.gca()
@@ -319,7 +329,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     livecallbacks.append(HackLivePlot(liveploty, x=liveplotx,
                                       fig_factory=partial(my_factory, name='I0')))
 
-    # Setup normalized XANES    
+    # Setup normalized XANES
     # livenormfig = plt.figure('Normalized XANES')
     # livecallbacks.append(NormalizeLivePlot(roi_key[0], x=liveplotx, norm_key = i0, fig=livenormfig))
     livecallbacks.append(NormalizeLivePlot(roi_key[0], x=liveplotx, norm_key = i0,
@@ -489,3 +499,26 @@ def fast_shutter_per_step(detectors, motor, step):
     yield from trigger_and_read(list(detectors) + [motor])
     # Close the shutter
     yield from mv(Mo_shutter, 1)
+
+
+# TODO: add fly scans with flying ID/mono
+
+class FlyerIDMono:
+    def __init__(self, flying_dev):
+        self.flying_dev = flying_dev
+        self.name = 'FlyerIDMono'
+
+    def kickoff(self, *args, **kwargs):
+        self.flying_dev.control.run.put(1)
+        self.status = self.flying_dev.control.scan_in_progress
+
+    def complete(self, *args, **kwargs):
+        # TODO: watch for self.status
+
+    def collect(self, *args, **kwargs):
+        # TODO: generate the events
+        raise NotImplementedError()
+
+    def describe_collect(self, *args, **kwargs):
+        # TODO: describe dictionary for the events
+        raise NotImplementedError()
