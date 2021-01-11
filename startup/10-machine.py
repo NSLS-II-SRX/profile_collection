@@ -385,3 +385,64 @@ class SRXSlitsFE(Device):
 
 
 fe = SRXSlitsFE("FE:C05A-OP{Slt:", name="fe")
+
+
+class FlyScanControl(Device):
+    control = Cpt(EpicsSignal, write_pv='MACROControl-SP', read_pv='MACROControl-RB',
+                  add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    status = Cpt(EpicsSignalRO, 'MACRO-Sts')
+    reset = Cpt(EpicsSignal, 'MACRO-CLRF.PROC')
+
+    scan_type = Cpt(EpicsSignal, write_pv='FlyScan-Type-SP', read_pv='FlyScan-Type-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    run = Cpt(EpicsSignal, 'FlyScan-MvReq-Cmd.PROC')
+    abort = Cpt(EpicsSignal, 'FlyScan-Mtr.STOP')
+    moving = Cpt(EpicsSignalRO, 'FlyScan-Mtr.MOVN')
+    scan_in_progress = Cpt(EpicsSignalRO, 'FlyScan-Running-Sts')
+
+    energy_lut = Cpt(EpicsSignal, write_pv='FlyLUT-Energy-SP', read_pv='FlyLUT-Energy-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    gap_lut = Cpt(EpicsSignal, write_pv='FlyLUT-Gap-SP', read_pv='FlyLUT-Gap-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    # After the LUT are updated, the calc_spline should be called.
+    calc_spline = Cpt(EpicsSignal, 'CalculateSpline.PROC')
+    spline_status = Cpt(EpicsSignalRO, 'FlySplineOK-RB')
+
+
+class FlyScanParameters(Device):
+    harmonic = Cpt(EpicsSignal, write_pv='SR:C5-ID:G1{IVU21:1}FlyHarmonic-SP', read_pv='SR:C5-ID:G1{IVU21:1}FlyHarmonic-RB', add_prefix=(), put_complete=True)
+
+    speed = Cpt(EpicsSignal, write_pv='-Speed-SP', read_pv='-Speed-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    first_trigger = Cpt(EpicsSignal, write_pv='First-SP', read_pv='First-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    last_trigger = Cpt(EpicsSignal,  write_pv='Last-SP', read_pv='Last-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    num_triggers = Cpt(EpicsSignal, write_pv='NTriggers-SP', read_pv='NTriggers-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    trigger_width = Cpt(EpicsSignal, write_pv='TriggerWidth-SP', read_pv='TriggerWidth-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    id_energy_offset = Cpt(EpicsSignal, write_pv='IDOffset_eV-SP', read_pv='IDOffset_eV-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    timing_offset = Cpt(EpicsSignal, write_pv='TriggerOffset-SP', read_pv='TriggerOffset-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    trigger_count = Cpt(EpicsSignalRO, 'TriggerCount-RB')
+    num_scans = Cpt(EpicsSignal, write_pv='NScans-SP', read_pv='NScans-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    current_scan = Cpt(EpicsSignalRO, 'IScan-RB')
+
+
+class HDCMParameters(Device):
+    # 'ang' is for Angstrom, not angle
+    ang_over_ev = Cpt(EpicsSignal, write_pv='AngOverEv-SP', read_pv='AngOverEv-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    d111 = Cpt(EpicsSignal, write_pv='d111-SP', read_pv='d111-SP', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    delta_bragg = Cpt(EpicsSignal, write_pv='DeltaBragg-SP', read_pv='DeltaBragg-SP', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    c2x_cal = Cpt(EpicsSignal, write_pv='C2XCal-SP', read_pv='C2XCal-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    t2_cal = Cpt(EpicsSignal, write_pv='T2Cal-SP', read_pv='T2Cal-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    x_offset = Cpt(EpicsSignal, write_pv='XOffset-SP', read_pv='XOffset-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+
+
+
+class IDFlyDevice(Device):
+    # Fly scan control
+    control = Cpt(FlyScanControl, '')
+
+    parameters = Cpt(FlyScanParameters, 'EScan')
+
+    hdcm_parameters = Cpt(HDCMParameters, 'Fly_')
+
+    # Fly scan parameters
+    energy_motor = Cpt(EpicsMotor, 'FlyScan-Mtr')
+    id_energy = Cpt(EpicsSignal, 'FlyEnergyID-RB')
+
+
+id_fly_device = IDFlyDevice('SR:C5-ID:G1{IVU21:1}', name='id_fly_device')
