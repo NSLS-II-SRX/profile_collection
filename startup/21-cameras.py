@@ -12,17 +12,24 @@ from ophyd.areadetector.trigger_mixins import SingleTrigger
 from ophyd.areadetector.cam import AreaDetectorCam
 from ophyd.device import Component as Cpt
 
+from ophyd.areadetector.plugins import (ImagePlugin_V33, TIFFPlugin_V33,
+                                        ROIPlugin_V33, StatsPlugin_V33)
+
 
 # BPM Camera
-class SRXTIFFPlugin(TIFFPlugin,
+class SRXTIFFPlugin(TIFFPlugin_V33,
                     FileStoreTIFF,
                     FileStoreIterativeWrite):
-    file_number_sync = None
+    ...
+
+
+class SRXAreaDetectorCam(AreaDetectorCam):
+    pool_max_buffers = None
 
 
 class BPMCam(SingleTrigger, AreaDetector):
-    cam = Cpt(AreaDetectorCam, 'cam1:')
-    image_plugin = Cpt(ImagePlugin, 'image1:')
+    cam = Cpt(SRXAreaDetectorCam, 'cam1:')
+    image_plugin = Cpt(ImagePlugin_V33, 'image1:')
 
     tiff = Cpt(SRXTIFFPlugin, 'TIFF1:',
                write_path_template='/epicsdata/bpm1-cam1/2020/11/07/')
@@ -30,19 +37,21 @@ class BPMCam(SingleTrigger, AreaDetector):
                #root='/epicsdata', reg=db.reg)
                # write_path_template='/nsls2/xf05id1/data/bpm1-cam1/%Y/%m/%d/',
                # root='/nsls2/xf05id1')
-    roi1 = Cpt(ROIPlugin, 'ROI1:')
-    roi2 = Cpt(ROIPlugin, 'ROI2:')
-    roi3 = Cpt(ROIPlugin, 'ROI3:')
-    roi4 = Cpt(ROIPlugin, 'ROI4:')
-    stats1 = Cpt(StatsPlugin, 'Stats1:')
-    stats2 = Cpt(StatsPlugin, 'Stats2:')
-    stats3 = Cpt(StatsPlugin, 'Stats3:')
-    stats4 = Cpt(StatsPlugin, 'Stats4:')
+    roi1 = Cpt(ROIPlugin_V33, 'ROI1:')
+    roi2 = Cpt(ROIPlugin_V33, 'ROI2:')
+    roi3 = Cpt(ROIPlugin_V33, 'ROI3:')
+    roi4 = Cpt(ROIPlugin_V33, 'ROI4:')
+    stats1 = Cpt(StatsPlugin_V33, 'Stats1:')
+    stats2 = Cpt(StatsPlugin_V33, 'Stats2:')
+    stats3 = Cpt(StatsPlugin_V33, 'Stats3:')
+    stats4 = Cpt(StatsPlugin_V33, 'Stats4:')
     # this is flakey?
-    # stats5 = C(StatsPlugin, 'Stats5:')
+    # stats5 = Cpt(StatsPlugin_V33, 'Stats5:')
 
 
 bpmAD = BPMCam('XF:05IDA-BI:1{BPM:1-Cam:1}', name='bpmAD', read_attrs=[])
+# bpmAD.wait_for_connection(10)
+
 bpmAD.read_attrs = ['stats1', 'stats2', 'stats3', 'stats4']
 bpmAD.stats1.read_attrs = ['total']
 bpmAD.stats2.read_attrs = ['total']
