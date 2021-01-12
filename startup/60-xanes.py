@@ -13,6 +13,8 @@ from bluesky.utils import short_uid as _short_uid
 from epics import PV
 # from databroker import DataBroker as db
 from databroker import get_events
+from ophyd.status import SubscriptionStatus
+from ophyd.sim import NullStatus
 
 
 def xanes_textout(scan=-1, header=[], userheader={}, column=[], usercolumn={},
@@ -503,17 +505,59 @@ def fast_shutter_per_step(detectors, motor, step):
 
 # TODO: add fly scans with flying ID/mono
 
+
 class FlyerIDMono:
-    def __init__(self, flying_dev):
-        self.flying_dev = flying_dev
+    def __init__(self, flying_dev, zebra, pulse_cpt=None, pulse_width=0.01):
         self.name = 'FlyerIDMono'
 
+        self.flying_dev = flying_dev
+        self.zebra = zebra
+        if pulse_cpt is None:
+            raise RuntimeError(f'pulse_cpt cannot be None. Please provide a valid component name.')
+        self.pulse_cpt = pulse_cpt
+        self.pulse_width = pulse_width
+
     def kickoff(self, *args, **kwargs):
+        getattr(self.zebra, self.pulse_cpt).width.put(self.pulse_width)
+        width_s = self.pulse_width
+        speed = self.flying_dev.parameters.speed.get()
+
+        num_scans = self.flying_dev.parameters.num_scans.get()
+        num_triggers = self.flying_dev.parameters.num_triggers.get()
+        bpmAD.cam.num_images.put(num_scans * num_triggers)
+        bpmAD.cam.array_counter.put(0)
+        bpmAD.cam.acquire.put(1)
+
+        # Convert to eV/s.
+        width_ev = width_s * speed
+        self.flying_dev.parameters.trigger_width.put(width_ev)
+
+        enabled = int(round(self.flying_dev.control.control.get()))
+        if enabled != 5:
+            print(f'Enabling fly scan')
+            self.flying_dev.control.control.put(1)
+
         self.flying_dev.control.run.put(1)
         self.status = self.flying_dev.control.scan_in_progress
 
+        def callback(value, old_value, **kwargs):
+            print(f'{ttime.time()} in kickoff: {old_value} ---> {value}')
+            if int(round(old_value)) == 0 and int(round(value)) == 1:
+                return True
+            return False
+
+        status = SubscriptionStatus(self.status, callback)
+        return status
+
     def complete(self, *args, **kwargs):
-        # TODO: watch for self.status
+        def callback(value, old_value, **kwargs):
+            print(f'{ttime.time()} in complete: {old_value} ---> {value}')
+            if int(round(old_value)) == 1 and int(round(value)) == 0:
+                return True
+            return False
+
+        status = SubscriptionStatus(self.status, callback)
+        return status
 
     def collect(self, *args, **kwargs):
         # TODO: generate the events
@@ -522,3 +566,8 @@ class FlyerIDMono:
     def describe_collect(self, *args, **kwargs):
         # TODO: describe dictionary for the events
         raise NotImplementedError()
+
+flyer_id_mono = FlyerIDMono(flying_dev=id_fly_device,
+                            zebra=microZebra,
+                            pulse_cpt='pulse3',
+                            pulse_width=0.01)
