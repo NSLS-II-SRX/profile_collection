@@ -1,7 +1,7 @@
 print(f"Loading {__file__}...")
 
 from ophyd.signal import EpicsSignalBase, EpicsSignal
-EpicsSignalBase.set_defaults(connection_timeout=2)
+EpicsSignalBase.set_defaults(connection_timeout=10)
 
 def wait_for_connection(self, timeout=0):
     '''Wait for the underlying signals to initialize or connect'''
