@@ -263,14 +263,14 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             # yield from abs_set(xs.hdf5.num_capture, xnum, wait=True)
             # yield from abs_set(xs.settings.num_images, xnum, wait=True)
             yield from mv(xs.hdf5.num_capture, xnum,
-                          xs.settings.num_images, xnum)
+                          xs.cam.num_images, xnum)
 
         if ('xs2' in dets_by_name):
             xs2 = dets_by_name['xs2']
             # yield from abs_set(xs2.hdf5.num_capture, xnum, wait=True)
             # yield from abs_set(xs2.settings.num_images, xnum, wait=True)
             yield from mv(xs2.hdf5.num_capture, xnum,
-                          xs2.settings.num_images, xnum)
+                          xs2.cam.num_images, xnum)
 
         if ('merlin' in dets_by_name):
             merlin = dets_by_name['merlin']
@@ -363,18 +363,18 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Not sure if this is always true
     xs = dets_by_name[flying_zebra.detectors[0].name]
 
-    yield from mv(xs.erase, 0)
+    yield from mv(xs.cam.erase, 0)
 
     # Setup LivePlot
     if (ynum == 1):
         # livepopup = LivePlot(xs.channel1.rois.roi01.value.name)
-        livepopup = SRX1DFlyerPlot(xs.channel1.rois.roi01.value.name,
+        livepopup = SRX1DFlyerPlot(xs.channel1.mca_rois.mcaroi01.roi_name,
                                    xstart=xstart,
                                    xstep=(xstop-xstart)/(xnum-1),
                                    xlabel=xmotor.name)
     else:
         livepopup = LiveGrid((ynum, xnum+1),
-                             xs.channel1.rois.roi01.value.name,
+                             xs.channel1.mca_rois.mcaroi01.roi_name,
                              extent=(xstart, xstop, ystart, ystop),
                              x_positive='right', y_positive='down')
         # livepopup = ArrayCounterLiveGrid(
@@ -389,7 +389,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     @subs_decorator({'stop': finalize_scan})
     # monitor values from xs
     # @monitor_during_decorator([xs.channel1.rois.roi01.value])
-    @monitor_during_decorator([xs.channel1.rois.roi01.value, xs.array_counter])
+    @monitor_during_decorator([xs.channel1.mca_rois.mcaroi01.roi_name, xs.cam.array_counter])
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
     def plan():
