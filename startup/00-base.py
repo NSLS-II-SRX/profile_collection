@@ -1,5 +1,16 @@
 print(f"Loading {__file__}...")
 
+from ophyd.signal import EpicsSignalBase, EpicsSignal
+EpicsSignalBase.set_defaults(connection_timeout=2)
+
+def wait_for_connection(self, timeout=0):
+    '''Wait for the underlying signals to initialize or connect'''
+    if timeout == 0:
+        timeout = self.connection_timeout
+    self._ensure_connected(self._read_pv, self._write_pv, timeout=timeout)
+
+EpicsSignal.wait_for_connection = wait_for_connection
+
 import nslsii
 import matplotlib as mpl
 from IPython.terminal.prompts import Prompts, Token
