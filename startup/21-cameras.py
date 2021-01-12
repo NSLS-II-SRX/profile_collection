@@ -50,9 +50,9 @@ class BPMCam(SingleTrigger, AreaDetector):
 
 
 bpmAD = BPMCam('XF:05IDA-BI:1{BPM:1-Cam:1}', name='bpmAD', read_attrs=[])
-# bpmAD.wait_for_connection(10)
+bpmAD.wait_for_connection()
 
-bpmAD.read_attrs = ['stats1', 'stats2', 'stats3', 'stats4']
+bpmAD.read_attrs = ['stats1', 'stats2', 'stats3', 'stats4', 'tiff']
 bpmAD.stats1.read_attrs = ['total']
 bpmAD.stats2.read_attrs = ['total']
 bpmAD.stats3.read_attrs = ['total']
