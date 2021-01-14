@@ -125,6 +125,46 @@ except TimeoutError:
     cam05 = None
     print('\nCannot connect to camera 5. Continuing without device.\n')
 except Exception as ex:
-    hfvlmAD = None
+    cam05 = None
     print('\nUnexpected error connecting to camera 5.\n')
+    print(ex, end='\n\n')
+
+
+# nano-VLM
+class SRXnanoVLMCam(SingleTrigger, AreaDetector):
+    cam = Cpt(AreaDetectorCam, 'cam1:')
+    image_plugin = Cpt(ImagePlugin, 'image1:')
+    proc1 = Cpt(ProcessPlugin, 'Proc1:')
+    stats1 = Cpt(StatsPlugin, 'Stats1:')
+    stats2 = Cpt(StatsPlugin, 'Stats2:')
+    stats3 = Cpt(StatsPlugin, 'Stats3:')
+    stats4 = Cpt(StatsPlugin, 'Stats4:')
+    roi1 = Cpt(ROIPlugin, 'ROI1:')
+    roi2 = Cpt(ROIPlugin, 'ROI2:')
+    roi3 = Cpt(ROIPlugin, 'ROI3:')
+    roi4 = Cpt(ROIPlugin, 'ROI4:')
+    over1 = Cpt(OverlayPlugin, 'Over1:')
+    trans1 = Cpt(TransformPlugin, 'Trans1:')
+    tiff = Cpt(SRXTIFFPlugin, 'TIFF1:',
+               write_path_template='/nsls2/xf05id1/XF05ID1/nanoVLM/%Y/%m/%d/',
+               read_path_template='/nsls2/xf05id1/XF05ID1/nanoVLM/%Y/%m/%d/',
+               root='/nsls2/xf05id1/XF05ID1/nanoVLM')
+
+
+try:
+    nano_vlm = SRXnanoVLMCam('XF:05ID1-ES{PG-Cam:1}',
+                          name='nano_vlm',
+                          read_attrs=['tiff'])
+    nano_vlm.read_attrs = ['tiff', 'stats1', 'stats2', 'stats3', 'stats4']
+    nano_vlm.tiff.read_attrs = []
+    nano_vlm.stats1.read_attrs = ['total']
+    nano_vlm.stats2.read_attrs = ['total']
+    nano_vlm.stats3.read_attrs = ['total']
+    nano_vlm.stats4.read_attrs = ['total']
+except TimeoutError:
+    nano_vlm = None
+    print('\nCannot connect to nanoVLM Camera. Continuing without device.\n')
+except Exception as ex:
+    nano_vlm = None
+    print('\nUnexpected error connecting to nanoVLM Camera.\n')
     print(ex, end='\n\n')

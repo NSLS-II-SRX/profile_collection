@@ -52,6 +52,17 @@ class SRXNanoStage(Device):
 nano_stage = SRXNanoStage('XF:05IDD-ES:1{nKB:Smpl-Ax:', name='nano_stage')
 
 
+# nanoVLM motion
+class SRXNanoVLMStage(Device):
+    x = Cpt(EpicsMotor, 'X}Mtr')  # XF:05IDD-ES:1{nKB:VLM-Ax:X}Mtr.RBV
+    y = Cpt(EpicsMotor, 'Y}Mtr')
+    z = Cpt(EpicsMotor, 'Z}Mtr')
+
+
+nano_vlm_stage = SRXNanoVLMStage('XF:05IDD-ES:1{nKB:VLM-Ax:',
+                                 name='nano_vlm_stage')
+
+
 # SDD motion
 class SRXNanoDet(Device):
     x = Cpt(EpicsMotor, 'X}Mtr')  # XF:05IDD-ES:1{nKB:Det-Ax:X}Mtr.RBV
