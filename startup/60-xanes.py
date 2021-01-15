@@ -1,6 +1,9 @@
 print(f'Loading {__file__}...')
 
+import itertools
 import collections
+from collections import deque
+
 import numpy as np
 import time as ttime
 import matplotlib.pyplot as plt
@@ -507,26 +510,59 @@ def fast_shutter_per_step(detectors, motor, step):
 
 
 class FlyerIDMono:
-    def __init__(self, flying_dev, zebra, pulse_cpt=None, pulse_width=0.01):
+    def __init__(self, flying_dev, zebra, detector, pulse_cpt=None, pulse_width=0.01):
         self.name = 'FlyerIDMono'
 
         self.flying_dev = flying_dev
         self.zebra = zebra
+        self.detector = detector
+
         if pulse_cpt is None:
             raise RuntimeError(f'pulse_cpt cannot be None. Please provide a valid component name.')
         self.pulse_cpt = pulse_cpt
         self.pulse_width = pulse_width
+        self.plugin_type = 'tiff'
+
+        # Flyer infrastructure parameters.
+        self._traj_info = {}
+        self._array_size = {}
+        self._datum_ids = []
+
+    def stage(self):
+        # This sets a filepath (template for TIFFs) and generates a Resource
+        # document in the detector.tiff Device's asset cache.
+        self.detector.is_flying = True
+        self.detector.stage_sigs['cam.image_mode'] = 'Multiple'
+        self.detector.stage_sigs['cam.trigger_mode'] = 'Sync In 2'
+        self.detector.stage_sigs['cam.array_counter'] = 0
+        self.detector.stage()
+        self.detector.cam.acquire.put(1)
+
+    def unstage(self):
+        self.detector.unstage()
+        self.detector.is_flying = False
+        self.detector.cam.acquire.put(0)
 
     def kickoff(self, *args, **kwargs):
+
         getattr(self.zebra, self.pulse_cpt).width.put(self.pulse_width)
         width_s = self.pulse_width
         speed = self.flying_dev.parameters.speed.get()
 
         num_scans = self.flying_dev.parameters.num_scans.get()
-        num_triggers = self.flying_dev.parameters.num_triggers.get()
-        bpmAD.cam.num_images.put(num_scans * num_triggers)
-        bpmAD.cam.array_counter.put(0)
-        bpmAD.cam.acquire.put(1)
+        num_triggers = int(self.flying_dev.parameters.num_triggers.get())
+
+        self._traj_info.update({
+            'num_triggers': num_triggers,
+            'energy_start': self.flying_dev.parameters.first_trigger.get(),
+            'energy_stop': self.flying_dev.parameters.last_trigger.get(),
+            })
+
+        self._array_size.update({'height': getattr(self.detector, self.plugin_type).array_size.height.get(),
+                                 'width': getattr(self.detector, self.plugin_type).array_size.width.get()})
+
+        self.detector.cam.num_images.put(num_scans * num_triggers)
+        self.stage()
 
         # Convert to eV/s.
         width_ev = width_s * speed
@@ -559,15 +595,70 @@ class FlyerIDMono:
         status = SubscriptionStatus(self.status, callback)
         return status
 
-    def collect(self, *args, **kwargs):
-        # TODO: generate the events
-        raise NotImplementedError()
-
     def describe_collect(self, *args, **kwargs):
-        # TODO: describe dictionary for the events
-        raise NotImplementedError()
+        return {
+            'primary':
+                {'energy': {'source': '',
+                       'dtype': 'number',
+                       'shape': [self._traj_info['num_triggers']]},
+                 f'{self.detector.name}_image': {'source': '...',
+                           'dtype': 'array',
+                           'shape': [self._array_size['height'],
+                                     self._array_size['width']],
+                           'external': 'FILESTORE:'}
+                 }
+            }
+
+    def collect(self, *args, **kwargs):
+        self.unstage()
+
+        energy_start = self._traj_info['energy_start']
+        energy_stop = self._traj_info['energy_stop']
+        num_triggers = self._traj_info['num_triggers']
+
+        if len(self._datum_ids) != num_triggers:
+            raise RuntimeError(f"The number of collected datum ids ({self._datum_ids}) "
+                               f"does not match the number of triggers ({num_triggers})")
+
+        now = time.time()
+        for i, energy in enumerate(np.linspace(energy_start, energy_stop, num_triggers)):
+            datum_id = self._datum_ids[i]
+            yield {
+                'data': {
+                    'energy': energy,
+                    f'{self.detector.name}_image': datum_id},
+                'timestamps': {
+                    'energy': now,
+                    f'{self.detector.name}_image': now},
+                'time': now,
+                'seq_num': i,
+                'filled': {f'{self.detector.name}_image': False}}
+
+    def collect_asset_docs(self):
+        asset_docs_cache = deque()
+
+        # Get the Resource which was produced when the detector was staged.
+        (name, resource), = getattr(self.detector, self.plugin_type).collect_asset_docs()
+
+        # assert name == 'resource'
+        asset_docs_cache.append(('resource', resource))
+        self._datum_ids.clear()
+        # Generate Datum documents from scratch here, because the detector was
+        # triggered externally by the Zebra, never by ophyd.
+        resource_uid = resource['uid']
+        num_points = self._traj_info['num_triggers']
+        for i in range(num_points):
+            datum_id = '{}/{}'.format(resource_uid, i)
+            self._datum_ids.append(datum_id)
+            datum = {'resource': resource_uid,
+                     'datum_id': datum_id,
+                     'datum_kwargs': {'point_number': i}}
+            asset_docs_cache.append(('datum', datum))
+        return tuple(asset_docs_cache)
+
 
 flyer_id_mono = FlyerIDMono(flying_dev=id_fly_device,
                             zebra=microZebra,
+                            detector=bpmAD,
                             pulse_cpt='pulse3',
                             pulse_width=0.01)
