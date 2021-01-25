@@ -262,20 +262,21 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
 
 try:
     xs = SrxXspress3Detector("XF:05IDD-ES{Xsp:1}:", name="xs")
-    if "TOUCHBEAMLINE" in os.environ and os.environ["TOUCHBEAMLINE"] == 1:
-        xs.channel1.rois.read_attrs = ["roi{:02}".format(j)
-                                       for j in [1, 2, 3, 4]]
-        xs.channel2.rois.read_attrs = ["roi{:02}".format(j)
-                                       for j in [1, 2, 3, 4]]
-        xs.channel3.rois.read_attrs = ["roi{:02}".format(j)
-                                       for j in [1, 2, 3, 4]]
-        xs.channel4.rois.read_attrs = ["roi{:02}".format(j)
-                                       for j in [1, 2, 3, 4]]
-        xs.hdf5.num_extra_dims.put(0)
+    xs.channel1.rois.read_attrs = ["roi{:02}".format(j)
+                                   for j in [1, 2, 3, 4]]
+    xs.channel2.rois.read_attrs = ["roi{:02}".format(j)
+                                   for j in [1, 2, 3, 4]]
+    xs.channel3.rois.read_attrs = ["roi{:02}".format(j)
+                                   for j in [1, 2, 3, 4]]
+    xs.channel4.rois.read_attrs = ["roi{:02}".format(j)
+                                   for j in [1, 2, 3, 4]]
+    if "TOUCHBEAMLINE" in os.environ and os.environ["TOUCHBEAMLINE"] == '1':
+        xs.settings.num_channels.put(4) #4 for ME4 detector
+        xs.channel1.vis_enabled.put(1)
         xs.channel2.vis_enabled.put(1)
         xs.channel3.vis_enabled.put(1)
         xs.channel4.vis_enabled.put(1)
-        xs.settings.num_channels.put(4) #4 for ME4 detector
+        xs.hdf5.num_extra_dims.put(0)
 
         xs.settings.configuration_attrs = [
             "acquire_period",
@@ -413,9 +414,9 @@ try:
     xs2 = SrxXspress3Detector2("XF:05IDD-ES{Xsp:2}:",
                                name="xs2",
                                f_key="fluor_xs2")
-    if "TOUCHBEAMLINE" in os.environ and os.environ["TOUCHBEAMLINE"] == 1:
-        xs2.channel1.rois.read_attrs = ["roi{:02}".format(j)
-                                        for j in [1, 2, 3, 4]]
+    xs2.channel1.rois.read_attrs = ["roi{:02}".format(j)
+                                    for j in [1, 2, 3, 4]]
+    if "TOUCHBEAMLINE" in os.environ and os.environ["TOUCHBEAMLINE"] == '1':
         xs2.hdf5.num_extra_dims.put(0)
         xs2.hdf5.warmup()
 except TimeoutError:
