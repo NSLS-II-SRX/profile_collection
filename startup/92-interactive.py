@@ -10,7 +10,9 @@ import bluesky.interactive as bsi
 
 
 from bluesky.log import config_bluesky_logging
-config_bluesky_logging(file='/var/log/bluesky/bluesky_ipython.log', level='DEBUG')
+bluesky_ipython_log = os.getenv('BLUESKY_IPYTHON_LOG_FILE',
+                                os.path.expanduser('~/.cache/bluesky/log/bluesky_ipython.log'))
+config_bluesky_logging(file=bluesky_ipython_log, level='DEBUG')
 
 def plot_crab(hdr):
     fig, ax = plt.subplots()
