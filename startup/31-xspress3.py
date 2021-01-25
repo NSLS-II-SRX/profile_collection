@@ -12,7 +12,7 @@ from ophyd.areadetector.filestore_mixins import FileStorePluginBase
 from ophyd.device import Staged
 from enum import Enum
 
-from hxntools.detectors.xspress3 import (
+from nslsii.detectors.xspress3 import (
     XspressTrigger,
     Xspress3Detector,
     Xspress3Channel,
