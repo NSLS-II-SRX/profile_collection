@@ -270,7 +270,7 @@ try:
                                    for j in [1, 2, 3, 4]]
     xs.channel4.rois.read_attrs = ["roi{:02}".format(j)
                                    for j in [1, 2, 3, 4]]
-    if "TOUCHBEAMLINE" in os.environ and os.environ["TOUCHBEAMLINE"] == '1':
+    if os.getenv("TOUCHBEAMLINE", "0") == "1":
         xs.settings.num_channels.put(4) #4 for ME4 detector
         xs.channel1.vis_enabled.put(1)
         xs.channel2.vis_enabled.put(1)
@@ -416,7 +416,7 @@ try:
                                f_key="fluor_xs2")
     xs2.channel1.rois.read_attrs = ["roi{:02}".format(j)
                                     for j in [1, 2, 3, 4]]
-    if "TOUCHBEAMLINE" in os.environ and os.environ["TOUCHBEAMLINE"] == '1':
+    if os.getenv("TOUCHBEAMLINE", "0") == "1":
         xs2.hdf5.num_extra_dims.put(0)
         xs2.hdf5.warmup()
 except TimeoutError:
