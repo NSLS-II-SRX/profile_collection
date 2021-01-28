@@ -1,9 +1,10 @@
 print(f'Loading {__file__}...')
 
-def ssa_hcen_scan(start, stop, num, shutter=True):
+def ssa_hcen_scan(start, stop, num,
+                  shutter=True, plot=True, plot_guess=False, scan_only=False):
     # Setup metadata
     scan_md = {}
-    get_stock_md(scan_md)
+    #get_stock_md(scan_md)
 
     # Setup LiveCallbacks
     liveplotfig1 = plt.figure()
@@ -13,8 +14,9 @@ def ssa_hcen_scan(start, stop, num, shutter=True):
     liveploty = 'bpm4_total_current'
     #livetableitem = ['h_cen_readback', im.name, i0.name, xbpm2_sumX]
     livetableitem = ['h_cen_readback', im.name, i0.name, xbpm2]
+    plotme = LivePlot(liveploty, x=liveplotx, fig=liveplotfig1)
     livecallbacks = [LiveTable(livetableitem),
-                      LivePlot(liveploty, x=liveplotx, fig=liveplotfig1)]
+                     plotme]
 
     # Setup the scan
     @subs_decorator(livecallbacks)
@@ -41,6 +43,87 @@ def ssa_hcen_scan(start, stop, num, shutter=True):
     # Return to old position
     yield from mv(slt_ssa.h_cen, old_pos)
 
+    # Do not do fitting, only do the scan
+    if (scan_only):
+        return
+
+    # Get the scanid
+    id_str = db[-1].start['scan_id']
+
+    # Get the information from the previous scan
+    haz_data = False
+    loop_counter = 0
+    MAX_LOOP_COUNTER = 30
+    print('Waiting for data...', end='', flush=True)
+    while (loop_counter < MAX_LOOP_COUNTER):
+        try:
+            tbl = db[int(id_str)].table(fill=True)
+            haz_data = True
+            print('done')
+            break
+        except:
+            loop_counter += 1
+            yield from bps.sleep(1)
+
+    # Check if we haz data
+    if (not haz_data):
+        print('Data collection timed out!')
+        return
+    
+    # Get the data
+    x_key = 'slt_ssa_h_cen_readback'
+    y_key = 'xbpm2_sumX'
+    x = tbl[x_key].values
+    y = tbl[y_key].values
+    x = x.astype(np.float64)
+    y = y.astype(np.float64)
+    dydx = np.gradient(y, x)
+    try:
+        with h5py.File('/home/xf05id1/current_user_data/ssa_hcen_scan.h5', 'a') as hf:
+            tmp_str = f'dataset_{id_str}'
+            hf.create_dataset(tmp_str, data=[x, y]) #ssa_h_cen, bpm_cts
+    except:
+        pass
+
+    # Fit the raw data
+    # def f_gauss(x, A, sigma, x0, y0, m):
+    # def f_int_gauss(x, A, sigma, x0, y0, m)
+    # def f_offset_erf(x, A, sigma, x0, y0):
+    # def f_two_erfs(x, A1, sigma1, x1, y1,
+    #                   A2, sigma2, x2, y2):
+    p_guess = [np.amin(y),
+               0.017,
+               0.5*(x[0] + x[-1]),
+               np.mean(y[:3]),
+               0]
+    try:
+        popt, _ = curve_fit(f_gauss, x, y, p0=p_guess)
+    except:
+        print('Raw fit failed.')
+        popt = p_guess
+
+    C = 2 * np.sqrt(2 * np.log(2))
+    print(f'\nThe beam size is {C * popt[1]:.4f} mm')
+    print(f'The center is at\t{popt[2]:.4f} mm.\n')
+
+    # Plot variables
+    x_plot = np.linspace(np.amin(x), np.amax(x), num=100)
+    y_plot = f_gauss(x_plot, *popt)
+    dydx_plot = np.gradient(y_plot, x_plot)
+
+    # Display fit of raw data
+    if (plot and 'plotme' in locals()):
+        plotme.ax.cla()
+        plotme.ax.plot(x, y, '*', label='Raw Data')
+        if (plot_guess):
+            plotme.ax.plot(x_plot, f_gauss(x_plot, *p_guess), '--', label='Guess fit')
+        plotme.ax.plot(x_plot, y_plot, '-', label='Final fit')
+        plotme.ax.set_title(f'Scan {id_str}')
+        plotme.ax.set_xlabel(x_key)
+        plotme.ax.set_ylabel(y_key)
+        plotme.ax.legend()
+
+    print(ret)
     return ret
 
 def JJ_scan(motor, start, stop, num, shutter=True):
