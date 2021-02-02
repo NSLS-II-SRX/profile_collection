@@ -5,6 +5,11 @@ import threading
 from bluesky.callbacks.core import CallbackBase, get_obj_fields, make_class_safe
 from ophyd.sim import det1, det2, motor
 
+
+import logging
+logger = logging.getLogger('bluesky')
+
+
 class HackLivePlot(LivePlot):
     """
     Build a function that updates a plot from a stream of Events.

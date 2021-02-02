@@ -516,9 +516,6 @@ it requires the HDCM Bragg is calibrated and the d111 and dBragg in SRXenergy sc
 converting to be compatible with bluesky, still editing
 """
 # import SRXenergy  # Not used in this file
-from epics import caget  # caput/get should not be used
-from epics import caput
-from epics import PV  # PV should probably be changed to EpicsSignalRO
 import time  # time.sleep should be changed to bps.sleep if used in plan
 import string
 from matplotlib import pyplot
@@ -544,31 +541,43 @@ def hdcm_c1roll_c2x_calibration():
     if endstation == False:  #default BPM1
         q=38690.42-36449.42 #distance of observing point to DCM; here observing at BPM1
         camPixel=0.006 #mm
-        expotimePV = 'XF:05IDA-BI:1{BPM:1-Cam:1}AcquireTime'
+        # expotimePV = 'XF:05IDA-BI:1{BPM:1-Cam:1}AcquireTime'
+        expotimePV = bpmAD.cam.acquire_time
     else:
         q=(62487.5+280)-36449.42 #distance of observing point to DCM; here observing at 28 cm downstream of M3. M3 is at 62.4875m from source
         camPixel=0.00121 #mm
-        expotimePV = 'XF:05IDD-BI:1{Mscp:1-Cam:1}AcquireTime'
+        # expotimePV = 'XF:05IDD-BI:1{Mscp:1-Cam:1}AcquireTime'
+        expotimePV = hfvlmAD.cam.acquire_time
 
 
 
     if onlyplot == False:
 
         if endstation == True:
-            cenxPV= 'XF:05IDD-BI:1{Mscp:1-Cam:1}Stats1:CentroidX_RBV'
-            cenyPV= 'XF:05IDD-BI:1{Mscp:1-Cam:1}Stats1:CentroidY_RBV'
+            # cenxPV= 'XF:05IDD-BI:1{Mscp:1-Cam:1}Stats1:CentroidX_RBV'
+            # cenyPV= 'XF:05IDD-BI:1{Mscp:1-Cam:1}Stats1:CentroidY_RBV'
+            cenxPV = hfvlmAD.stats1.centroid.x
+            cenyPV = hfvlmAD.stats1.centroid.y
         else:
-            cenxPV= 'XF:05IDA-BI:1{BPM:1-Cam:1}Stats1:CentroidX_RBV'
-            cenyPV= 'XF:05IDA-BI:1{BPM:1-Cam:1}Stats1:CentroidY_RBV'
+            # cenxPV= 'XF:05IDA-BI:1{BPM:1-Cam:1}Stats1:CentroidX_RBV'
+            # cenyPV= 'XF:05IDA-BI:1{BPM:1-Cam:1}Stats1:CentroidY_RBV'
+            cenxPV = bpmAD.stats1.centroid.x
+            cenyPV = bpmAD.stats1.centroid.y
 
-        bragg_rbv = PV('XF:05IDA-OP:1{Mono:HDCM-Ax:P}Mtr.RBV')
-        bragg_val = PV('XF:05IDA-OP:1{Mono:HDCM-Ax:P}Mtr.VAL')
+        # bragg_rbv = PV('XF:05IDA-OP:1{Mono:HDCM-Ax:P}Mtr.RBV')
+        # bragg_val = PV('XF:05IDA-OP:1{Mono:HDCM-Ax:P}Mtr.VAL')
+        bragg_rbv = dcm.bragg.user_readback
+        bragg_val = dcm.bragg.user_setpoint
 
 
-        ctmax = PV('XF:05IDA-BI:1{BPM:1-Cam:1}Stats1:MaxValue_RBV')
-        expo_time = PV('XF:05IDA-BI:1{BPM:1-Cam:1}AcquireTime_RBV')
+        # ctmax = PV('XF:05IDA-BI:1{BPM:1-Cam:1}Stats1:MaxValue_RBV')
+        ctmax = bpmAD.stats1.max_value
+        # expo_time = PV('XF:05IDA-BI:1{BPM:1-Cam:1}AcquireTime_RBV')
+        expo_time = bpmAD.cam.acquire_time
 
-        umot_go = PV('SR:C5-ID:G1{IVU21:1-Mtr:2}Sw:Go')
+        # PV not found
+        # only usage is commented out
+        # umot_go = PV('SR:C5-ID:G1{IVU21:1-Mtr:2}Sw:Go')
 
         #know which edges to go to
         #if startTi == True:
@@ -613,8 +622,8 @@ def hdcm_c1roll_c2x_calibration():
         dy=[]
 
 
-        C2Xval=caget('XF:05IDA-OP:1{Mono:HDCM-Ax:X2}Mtr.VAL')
-        C1Rval=caget('XF:05IDA-OP:1{Mono:HDCM-Ax:R1}Mtr.VAL')
+        C2Xval = dcm.c2_x.user_setpoint.get()
+        C1Rval = dcm.c1_roll.user_setpoint.get()
 
 
         #dBragg=SRXenergy.whdBragg()
@@ -666,13 +675,13 @@ def hdcm_c1roll_c2x_calibration():
 #            time.sleep(2)
 
             if usecamera == True:
-                caput(expotimePV, expotime[element])
+                expotimePV.put(expotime[element])
                 while ctmax.get() <= 200:
-                    caput(expotimePV, expo_time.get()+0.001)
+                    expotimePV.put(expo_time.get() + 0.001)
                     print('increasing exposuring time.')
                     time.sleep(0.6)
                 while ctmax.get() >= 180:
-                    caput(expotimePV, expo_time.get()-0.001)
+                    expotimePV.put(expo_time.get() - 0.001)
                     print('decreasing exposuring time.')
                     time.sleep(0.6)
                 print('final exposure time =' + str(expo_time.get()))
@@ -682,8 +691,8 @@ def hdcm_c1roll_c2x_calibration():
                 #record the centroids on BPM1 camera
                 print('collecting positions with', numAvg, 'averaging...')
                 for i in range(numAvg):
-                    centroidXSample.append(caget(cenxPV))
-                    centroidYSample.append(caget(cenyPV))
+                    centroidXSample.append(cenxPV.get())
+                    centroidYSample.append(cenyPV.get())
                     time.sleep(2)
                 if endstation == False:
                     centroidX[element] = sum(centroidXSample)/len(centroidXSample)
@@ -697,8 +706,6 @@ def hdcm_c1roll_c2x_calibration():
                 print(centroidYSample)
                 #print centroidX, centroidY
 
-                #centroidX[element]=caget(cenxPV)
-                #centroidY[element]=caget(cenyPV)
                 dx.append(centroidX[element]*camPixel)
                 dy.append(centroidY[element]*camPixel)
 
@@ -736,8 +743,9 @@ def hdcm_c1roll_c2x_calibration():
         print('theoryBragg=', theoryBragg)
 
     else:
-        C1Rval=caget('XF:05IDA-OP:1{Mono:HDCM-Ax:R1}Mtr.VAL')
-        C2Xval=caget('XF:05IDA-OP:1{Mono:HDCM-Ax:X2}Mtr.VAL')
+        # Is this different from definition above?
+        C2Xval = dcm.c2_x.user_setpoint.get()
+        C1Rval = dcm.c1_roll.user_setpoint.get()
 
     fitfunc = lambda pa, x: pa[1]*x+pa[0]
     errfunc = lambda pa, x, y: fitfunc(pa,x) - y
