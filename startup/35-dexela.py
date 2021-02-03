@@ -7,7 +7,7 @@ import datetime
 
 import ophyd
 from hxntools.detectors.dexela import (DexelaDetector,)
-from hxntools.detectors.xspress3 import (logger, )
+#from hxntools.detectors.xspress3 import (logger, )
 from databroker.assets.handlers import HandlerBase
 from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreHDF5IterativeWrite,

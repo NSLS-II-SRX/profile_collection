@@ -42,12 +42,12 @@ class BPMCam(SingleTrigger, AreaDetector):
     # stats5 = C(StatsPlugin, 'Stats5:')
 
 
-bpmAD = BPMCam('XF:05IDA-BI:1{BPM:1-Cam:1}', name='bpmAD', read_attrs=[])
-bpmAD.read_attrs = ['stats1', 'stats2', 'stats3', 'stats4']
-bpmAD.stats1.read_attrs = ['total']
-bpmAD.stats2.read_attrs = ['total']
-bpmAD.stats3.read_attrs = ['total']
-bpmAD.stats4.read_attrs = ['total']
+#bpmAD = BPMCam('XF:05IDA-BI:1{BPM:1-Cam:1}', name='bpmAD', read_attrs=[])
+#bpmAD.read_attrs = ['stats1', 'stats2', 'stats3', 'stats4']
+#bpmAD.stats1.read_attrs = ['total']
+#bpmAD.stats2.read_attrs = ['total']
+#bpmAD.stats3.read_attrs = ['total']
+#bpmAD.stats4.read_attrs = ['total']
 
 
 # HF VLM
