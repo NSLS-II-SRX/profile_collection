@@ -148,17 +148,6 @@ class SRXXspressTrigger(XspressTrigger):
         return self._status
 
 
-class SrxXSP3Handler:
-    XRF_DATA_KEY = "entry/instrument/detector/data"
-
-    def __init__(self, filepath, **kwargs):
-        self._filepath = filepath
-
-    def __call__(self, **kwargs):
-        with h5py.File(self._filepath, "r") as f:
-            return np.asarray(f[self.XRF_DATA_KEY])
-
-
 class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
     # TODO: garth, the ioc is missing some PVs?
     #   det_settings.erase_array_counters
