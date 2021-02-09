@@ -7,7 +7,6 @@ from ophyd import Device, EpicsScaler, EpicsSignal, EpicsSignalRO
 from ophyd import Component as Cpt
 from ophyd.device import DynamicDeviceComponent as DDC
 from collections import OrderedDict
-from databroker.assets.handlers import HandlerBase
 
 
 class EpicsSignalROLazyier(EpicsSignalRO):
@@ -129,15 +128,3 @@ def export_sis_data(ion, filepath, zebra):
         dset3[...] = np.array(new_it)
         f.close()
 
-
-class SISHDF5Handler(HandlerBase):
-    HANDLER_NAME = "SIS_HDF51"
-
-    def __init__(self, resource_fn):
-        self._handle = h5py.File(resource_fn, "r")
-
-    def __call__(self, *, column):
-        return self._handle[column][:]
-
-
-db.reg.register_handler("SIS_HDF51", SISHDF5Handler, overwrite=True)
