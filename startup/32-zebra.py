@@ -748,15 +748,3 @@ def export_zebra_data(zebra, filepath, fast_axis):
         dset3 = f.create_dataset("enc3", size, dtype="f")
         dset3[...] = np.array(enc3_d)
 
-
-class ZebraHDF5Handler(HandlerBase):
-    HANDLER_NAME = "ZEBRA_HDF51"
-
-    def __init__(self, resource_fn):
-        self._handle = h5py.File(resource_fn, "r")
-
-    def __call__(self, *, column):
-        return self._handle[column][:]
-
-
-db.reg.register_handler("ZEBRA_HDF51", ZebraHDF5Handler, overwrite=True)
