@@ -303,17 +303,21 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
 
     # Find approximate values
     # 2020-02-03
-    roll_guess = 0.071  # For getting X-rays to nanoKB
+    # roll_guess = 0.071  # For getting X-rays to nanoKB
     # 2020-07-20
-    roll_guess = 0.121
+    # roll_guess = 0.121
     # 2020-10-26
-    roll_guess = 0.351
+    # roll_guess = 0.351
+    # 2021-01-31
+    roll_guess = 0.240
     # 2020-02-03
-    B = energy.energy_to_positions((E/1000), 3, 0)[0]
-    pitch_guess = 0.0009145473*B + 0.0141488665
+    # B = energy.energy_to_positions((E/1000), 3, 0)[0]
+    # pitch_guess = 0.0009145473*B + 0.0141488665
     # 2020-10-26
-    B = energy.energy_to_positions((E/1000), 3, 0)[0]
-    pitch_guess = 0.0010913788*B - 0.0139213806
+    # B = energy.energy_to_positions((E/1000), 3, 0)[0]
+    # pitch_guess = 0.0010913788*B - 0.0139213806
+    # 2021-01-31
+    pitch_guess = -0.0009845238*(E/1000) - 0.0101940476
 
 
     # Use calibration

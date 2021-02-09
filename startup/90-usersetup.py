@@ -76,9 +76,9 @@ def get_stock_md(scan_md):
     # Should this be ChainMap(scan_md, {...})?
     # This should also be put into baseline, and not start document
     scan_md['beamline_status']  = {'energy':  energy.energy.position}
-    scan_md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
-                                          'hf_stage_y': hf_stage.y.position,
-                                          'hf_stage_z': hf_stage.z.position}
+    # scan_md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
+    #                                       'hf_stage_y': hf_stage.y.position,
+    #                                       'hf_stage_z': hf_stage.z.position}
     scan_md['wb_slits'] = {'v_gap' : slt_wb.v_gap.position,
                            'h_gap' : slt_wb.h_gap.position,
                            'v_cen' : slt_wb.v_cen.position,
