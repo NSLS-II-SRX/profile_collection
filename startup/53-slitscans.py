@@ -4,17 +4,19 @@ def ssa_hcen_scan(start, stop, num,
                   shutter=True, plot=True, plot_guess=False, scan_only=False):
     # Setup metadata
     scan_md = {}
-    #get_stock_md(scan_md)
 
     # Setup LiveCallbacks
-    liveplotfig1 = plt.figure()
-    liveplotx = 'h_cen_readback'
-    # liveploty = im.name
-    #liveploty = 'xbpm2_sumX'
-    liveploty = 'bpm4_total_current'
-    #livetableitem = ['h_cen_readback', im.name, i0.name, xbpm2_sumX]
-    livetableitem = ['h_cen_readback', im.name, i0.name, xbpm2]
-    plotme = LivePlot(liveploty, x=liveplotx, fig=liveplotfig1)
+    def my_factory(name):
+        fig = plt.figure(num=name)
+        ax = fig.gca()
+        ax.cla()
+        return fig, ax
+
+    liveplotx = 'slt_ssa_h_cen_readback'
+    liveploty = 'xbpm2_sumX'
+    livetableitem = [liveplotx, 'xbpm2_sumX']
+    plotme = HackLivePlot(liveploty, x=liveplotx,
+                          fig_factory=partial(my_factory, name='SSA Slit Scan'))
     livecallbacks = [LiveTable(livetableitem),
                      plotme]
 
@@ -123,7 +125,7 @@ def ssa_hcen_scan(start, stop, num,
         plotme.ax.set_ylabel(y_key)
         plotme.ax.legend()
 
-    print(ret)
+    # print(ret)
     return ret
 
 def JJ_scan(motor, start, stop, num, shutter=True):
