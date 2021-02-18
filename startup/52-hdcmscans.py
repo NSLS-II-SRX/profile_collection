@@ -59,16 +59,19 @@ def mono_calib(Element, acqtime=1.0):
     yield from peakup_fine(use_calib=False)
     yield from xanes_plan(erange=[EnergyX-50,EnergyX+50],estep=[1.0], samplename=f'{Element}Foil',filename=f'{Element}Foilstd',acqtime=acqtime, shutter=True)
 
-def scanderive(xaxis, yaxis):
+def scanderive(xaxis, yaxis, ax, xlabel='', ylabel='', title=''):
     dyaxis = np.gradient(yaxis, xaxis)
     edge = xaxis[dyaxis.argmin()]
 
-    fig, ax = plt.subplots()
+    # fig, ax = plt.subplots()
     # p = plt.plot(xaxis, dyaxis, '-')
     ax.plot(xaxis, dyaxis, '-')
     # ax = plt.gca()
     ax.ticklabel_format(useOffset=False)
     p = ax.plot(edge, dyaxis[dyaxis.argmin()], '*r', markersize=25)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
 
     return p, xaxis, dyaxis, edge
 
@@ -109,8 +112,10 @@ def find_edge(scanid=-1, use_xrf=True, element=''):
                 mu = mu + tbl[ch_name]
                 mu = np.array(mu)
 
-    p, xaxis, yaxis, edge = scanderive(braggpoints, mu)
-    Ep, Exaxis, Eyaxis, Eedge = scanderive(energypoints, mu)
+    fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
+    fig.suptitle(element)
+    p, xaxis, yaxis, edge = scanderive(braggpoints, mu, ax1, xlabel='Bragg [deg]', ylabel='Gradient')
+    Ep, Exaxis, Eyaxis, Eedge = scanderive(energypoints, mu, ax2, xlabel='Energy [eV]')
 
     return p, xaxis, yaxis, edge, Eedge
 
@@ -179,15 +184,15 @@ def braggcalib(scanlogDic={}, use_xrf=True, man_correction={}):
     print(fitBragg)
     print(newEnergy)
 
-    plt.figure(1)
-    plt.plot(fitBragg, fitEnergy, 'b^', label='raw scan')
+    fig, ax = plt.subplots()
+    ax.plot(fitBragg, fitEnergy, 'b^', label='Raw scan')
     bragg = np.linspace(fitBragg[0], fitBragg[-1], 200)
-    plt.plot(bragg, fitfunc(fitted_dcm, bragg), 'k-', label='fitting')
-    plt.legend()
-    plt.xlabel('Bragg RBV (deg)')
-    plt.ylabel('Energy (keV)')
+    ax.plot(bragg, fitfunc(fitted_dcm, bragg), 'k-', label='Fitting')
+    ax.legend()
+    ax.set_xlabel('Bragg RBV (deg)')
+    ax.set_ylabel('Energy (keV)')
 
-    pyplot.show()
+    # pyplot.show()
     print('(111) d spacing:', fitted_dcm[0])
     print('Bragg RBV offset:', fitted_dcm[1])
 
