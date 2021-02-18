@@ -341,8 +341,9 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     def finalize_scan():
         yield from abs_set(energy.move_c2_x, True)
         yield from abs_set(energy.harmonic, 1)
-        if (shutter is True):
-            yield from mv(shut_b,'Close')
+        # if (shutter is True):
+        #     yield from mv(shut_b,'Close')
+        yield from check_shutters(shutter, 'Close')
         if (detune is not None):
             yield from abs_set(energy.detune, 0)
         scanrecord.scanning.put(False)
@@ -353,8 +354,9 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     myscan = finalize_wrapper(myscan, finalize_scan)
 
     # Open b shutter
-    if (shutter is True):
-        yield from mv(shut_b, 'Open')
+    # if (shutter is True):
+    #     yield from mv(shut_b, 'Open')
+    yield from check_shutters(shutter, 'Open')
 
     return (yield from subs_wrapper(myscan, {'all' : livecallbacks,
                                              'stop' : after_scan,

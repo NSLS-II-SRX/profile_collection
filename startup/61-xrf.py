@@ -436,15 +436,17 @@ def nano_xrf(xstart, xstop, xstep,
                           {'all': livecallbacks})
 
     # Open shutter
-    if (shutter):
-        yield from mv(shut_b,'Open')
+    # if (shutter):
+    #     yield from mv(shut_b,'Open')
+    yield from check_shutters(shutter, 'Open')
 
     # grid scan
     uid = yield from myplan
 
-    # Open shutter
-    if (shutter):
-        yield from mv(shut_b,'Close')
+    # Close shutter
+    # if (shutter):
+    #     yield from mv(shut_b,'Close')
+    yield from check_shutters(shutter, 'Close')
 
     return uid
 
