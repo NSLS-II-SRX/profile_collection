@@ -308,13 +308,13 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     # def f_two_erfs(x, A1, sigma1, x1, y1,
     #                   A2, sigma2, x2, y2):
     p_guess = [0.5*np.amax(y),
-               1.000,
+               0.100,
                0.5*(x[0] + x[-1]) - 1.0,
-               np.amin(y) + 0.5*np.amax(y),
+               0, # np.amin(y) + 0.5*np.amax(y),
                -0.5*np.amax(y),
-               1.000,
+               0.100,
                0.5*(x[0] + x[-1]) + 1.0,
-               np.amin(y) + 0.5*np.amax(y)]
+               0] # np.amin(y) + 0.5*np.amax(y)]
     try:
         # popt, _ = curve_fit(f_offset_erf, x, y, p0=p_guess)
         popt, _ = curve_fit(f_two_erfs, x, y, p0=p_guess)
