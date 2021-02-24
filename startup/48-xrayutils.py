@@ -187,16 +187,40 @@ def setroi(roinum, element, edge=None, det=None):
 
     e_ch = int(cur_element.emission_line[e] * 1000)
     if det is not None:
-        det.channel1.set_roi(roinum, e_ch-100, e_ch+100,
-                             name=element + '_' + e)
-        cpt = getattr(det.channel1.rois, f'roi{roinum:02d}')
+        #det.channel1.set_roi(roinum, e_ch-100, e_ch+100,
+        #                     name=element + '_' + e)
+        #cpt = getattr(det.channel1.rois, f'roi{roinum:02d}')
+        #cpt.kind = 'hinted'
+
+        det.channels.channel_1.set_roi(
+            roinum,
+            ev_min=e_ch - 100,
+            ev_size=200,
+            name=f'{element}_{e}'
+        )
+        cpt = getattr(det.channels.channel_1.mcarois, f'mcaroi{roinum:02d}')
         cpt.kind = 'hinted'
     else:
-        for d in [xs.channel1, xs.channel2, xs.channel3, xs.channel4]:
-            d.set_roi(roinum, e_ch-100, e_ch+100, name=element + '_' + e)
-            cpt = getattr(d.rois, f'roi{roinum:02d}')
+        #for d in [xs.channel1, xs.channel2, xs.channel3, xs.channel4]:
+        #    d.set_roi(roinum, e_ch-100, e_ch+100, name=element + '_' + e)
+        #    cpt = getattr(d.rois, f'roi{roinum:02d}')
+        #    cpt.kind = 'hinted'
+        for d in [
+            xs.channels.channel_1,
+            xs.channels.channel_2,
+            xs.channels.channel_3,
+            xs.channels.channel_4
+        ]:
+            d.set_roi(
+                roinum,
+                ev_min=e_ch - 100,
+                ev_size=200,
+                name=f'{element}_{e}'
+            )
+            cpt = getattr(d.mcarois, f'mcaroi{roinum:02d}')
             cpt.kind = 'hinted'
-    print("ROI{} set for {}-{} edge.".format(roinum, element, e))
+
+    print(f"MCAROI{roinum} set for {element}-{e} edge.")
 
 
 def clearroi(roinum=None):
@@ -208,9 +232,15 @@ def clearroi(roinum=None):
         roinum = [roinum]
 
     # xs.channel1.rois.roi01.clear
-    for d in [xs.channel1.rois, xs.channel2.rois, xs.channel3.rois, xs.channel4.rois]:
+    for d in [
+        xs.channels.channel_1.mcarois,
+        xs.channels.channel_2.mcarois,
+        xs.channels.channel_3.mcarois,
+        xs.channels.channel_4.mcarois
+    ]:
         for roi in roinum:
-            cpt = getattr(d, f'roi{roi:02d}')
+            cpt = getattr(d, f'mcaroi{roi:02d}')
+            # cpt.clear() disables the MCANROI
             cpt.clear()
             cpt.kind = 'omitted'
 
