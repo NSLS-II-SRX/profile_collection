@@ -14,9 +14,10 @@ from enum import Enum
 
 from nslsii.areadetector.xspress3 import (
     XspressTrigger,
-    Xspress3Channel,
+    #Xspress3Channel,
     Xspress3FileStore,
-    Xspress3Detector,
+    #Xspress3Detector,
+    build_detector_class
 )
 
 #from ophyd.areadetector import (
@@ -163,7 +164,12 @@ class SrxXSP3Handler:
             return np.asarray(f[self.XRF_DATA_KEY])
 
 
-class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
+SrxXspress3DetectorBase = build_detector_class(
+        channel_count=4,
+        roi_count=4
+)
+
+class SrxXspress3Detector(SRXXspressTrigger, SrxXspress3DetectorBase):
     # TODO: garth, the ioc is missing some PVs?
     #   det_cam.erase_array_counters
     #       (XF:05IDD-ES{Xsp:1}:ERASE_ArrayCounters)
@@ -179,7 +185,7 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
     array_counter = Cpt(EpicsSignal, "ArrayCounter_RBV")
 
     # Currently only using three channels. Uncomment these to enable more
-    channel1 = Cpt(Xspress3Channel, "", channel_num=1)
+    ##channel1 = Cpt(Xspress3Channel, "", channel_num=1)
     ##channel2 = Cpt(Xspress3Channel, "C2_", channel_num=2, read_attrs=["rois"])
     ##channel3 = Cpt(Xspress3Channel, "C3_", channel_num=3, read_attrs=["rois"])
     ##channel4 = Cpt(Xspress3Channel, "C4_", channel_num=4, read_attrs=["rois"])
@@ -194,13 +200,13 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
     hdf5 = Cpt(
         Xspress3FileStoreFlyable,
         "HDF1:",
-        ##read_path_template="/nsls2/xf05id1/XF05ID1/XSPRESS3/%Y/%m/%d/",
-        read_path_template="/home/oksana/nsls2/",
+        read_path_template="/nsls2/xf05id1/XF05ID1/XSPRESS3/%Y/%m/%d/",
+        ##read_path_template="/home/oksana/nsls2/",
         # write_path_template='/epics/data/%Y/%m/%d/', #SRX old xspress3
-        ##write_path_template="/home/xspress3/data/%Y/%m/%d/",#TES xspress3
-        write_path_template="/home/oksana/nsls2/",
-        ##root="/nsls2/xf05id1/XF05ID1",
-        root="/home/oksana/",
+        write_path_template="/home/xspress3/data/%Y/%m/%d/",#TES xspress3
+        ##write_path_template="/home/oksana/nsls2/",
+        root="/nsls2/xf05id1/XF05ID1",
+        ##root="/home/oksana/",
     )
 
     # this is used as a latch to put the xspress3 into 'bulk' mode
@@ -228,7 +234,7 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
             ]
             pass
         if read_attrs is None:
-            read_attrs = ["channel1", "hdf5"]
+            read_attrs = ["channels", "hdf5"]
         super().__init__(
             prefix,
             configuration_attrs=configuration_attrs,
@@ -267,7 +273,6 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
             self._mode = SRXMode.step
         return ret
 
-
 try:
     xs = SrxXspress3Detector("XF:05IDD-ES{Xsp3:1}:", name="xs")
     if "TOUCHBEAMLINE" in os.environ and os.environ["TOUCHBEAMLINE"] == 1:
@@ -280,9 +285,9 @@ try:
         #xs.channel4.rois.read_attrs = ["roi{:02}".format(j)
         #                               for j in [1, 2, 3, 4]]
         xs.hdf5.num_extra_dims.put(0)
-        xs.channel2.vis_enabled.put(1)
-        xs.channel3.vis_enabled.put(1)
-        xs.channel4.vis_enabled.put(1)
+        #xs.channel2.vis_enabled.put(1)
+        #xs.channel3.vis_enabled.put(1)
+        #xs.channel4.vis_enabled.put(1)
         xs.cam.num_channels.put(4) #4 for ME4 detector
 
         xs.cam.configuration_attrs = [
@@ -314,20 +319,22 @@ try:
         xs.hdf5.warmup()
 
         # Rename the ROIs
-        for i in range(1, 4):
-            ch = getattr(xs.channel1.rois, "roi{:02}.value".format(i))
-            ch.name = "ROI_{:02}".format(i)
-except TimeoutError:
-    xs = None
+        #for i in range(1, 4):
+        #    ch = getattr(xs.channel1.rois, "roi{:02}.value".format(i))
+        #    ch.name = "ROI_{:02}".format(i)
+except TimeoutError as te:
+    ## xs = None
     print("\nCannot connect to xs. Continuing without device.\n")
-# except Exception as ex:
-#     xs = None
-#     print("\nUnexpected error connecting to xs.\n")
-#     print(ex, end="\n\n")
-
+    raise te
+except Exception as ex:
+    ## xs = None
+    print("\nUnexpected error connecting to xs.\n")
+    print(ex, end="\n\n")
+    raise ex
 
 # Working xs2 detector
-class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
+AnotherXspress3Detector = build_detector_class(channel_count=2, roi_count=3)
+class SrxXspress3Detector2(SRXXspressTrigger, AnotherXspress3Detector):
     # TODO: garth, the ioc is missing some PVs?
     #   det_cam.erase_array_counters
     #       (XF:05IDD-ES{Xsp:1}:ERASE_ArrayCounters)
@@ -340,7 +347,7 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
 
     # XS2 only uses 1 channel. Currently only using three channels.
     # Uncomment these to enable more
-    channel1 = Cpt(Xspress3Channel, "C1_", channel_num=1, read_attrs=["rois"])
+    # channel1 = Cpt(Xspress3Channel, "C1_", channel_num=1, read_attrs=["rois"])
     # channel2 = Cpt(Xspress3Channel, 'C2_', channel_num=2, read_attrs=['rois'])
     # channel3 = Cpt(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
 
@@ -382,7 +389,7 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
                 "rewindable",
             ]
         if read_attrs is None:
-            read_attrs = ["channel1", "hdf5"]
+            read_attrs = ["channels", "hdf5"]
         super().__init__(
             prefix,
             configuration_attrs=configuration_attrs,
