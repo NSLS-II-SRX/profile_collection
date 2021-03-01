@@ -17,16 +17,15 @@ proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
 saf_num = 305921
 
-# proposal_num = 307426
-# proposal_title = 'SRX Beamline Commissioning'
-# PI_lastname = 'Hidas'
-# saf_num = 305921
+#proposal_num = 306440
+#proposal_title = 'Exploring the Mechanisms of Ultra-Low Wear Atomic Layer Deposited Nitride Thin Films'
+#PI_lastname = 'Strandwitz'
+#saf_num = 306974
 
-# proposal_num = 306378
-# proposal_title = 'Investigating the charge distribution of Ni-ricj LiNi1-x-yCosMnyO2 cathode in high-energy resources'
-# PI_lastname = 'Zuli'
-# saf_num = 306149
-
+# proposal_num = 307775
+# proposal_title = 'Characterize SRX nano-focusing K-B mirrors using Hartmann wavefront sensor'
+# PI_lastname = 'Tang'
+# saf_num = 307001
 
 cycle = '2021_cycle1'
 

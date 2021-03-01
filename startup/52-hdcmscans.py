@@ -339,7 +339,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # Open the shutter
     # if (shutter == True):
     #     yield from bps.mov(shut_b, 'Open')
-    yield from check_shutters(shutter, 'Open')
+    yield from check_shutters(shut_b, 'Open')
 
     paired_callback = PairedCallback(scaler, dcm.c2_pitch.name, pitch_guess)
 
@@ -363,7 +363,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # Close the shutter
     # if (shutter is True):
     #     yield from bps.mov(shut_b, 'Close')
-    yield from check_shutters(shutter, 'Close')
+    yield from check_shutters(shut_b, 'Close')
 
     # Add scan to scanlog
     logscan('peakup_fine_pitch')

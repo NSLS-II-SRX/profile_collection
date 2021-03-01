@@ -106,7 +106,7 @@ class MerlinFileStoreHDF5(FileStoreBase):
         # These must be set before parent is staged (specifically
         # before capture mode is turned on. They will not be reset
         # on 'unstage' anyway.
-        set_and_wait(self.file_path, write_path)
+        # set_and_wait(self.file_path, write_path)
         set_and_wait(self.file_name, filename)
         set_and_wait(self.file_number, 0)
         staged = super().stage()
@@ -154,9 +154,11 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
 
     hdf5 = Cpt(HDF5PluginWithFileStoreMerlin, 'HDF1:',
                read_attrs=[],
-               read_path_template='/nsls2/xf05id1/XF05ID1/MERLIN/%Y/%m/%d',
+               # read_path_template='/nsls2/xf05id1/XF05ID1/MERLIN/%Y/%m/%d/',
+               read_path_template='/nsls2/xf05id1/XF05ID1/MERLIN/2021/02/11/',
                configuration_attrs=[],
-               write_path_template='/epicsdata/merlin/%Y/%m/%d',
+               # write_path_template='/epicsdata/merlin/%Y/%m/%d/',
+               write_path_template='/epicsdata/merlin/2021/02/11/',
                root='/nsls2/xf05id1')
 
     stats1 = Cpt(StatsPlugin, 'Stats1:')
