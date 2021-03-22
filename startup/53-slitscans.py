@@ -76,7 +76,7 @@ def ssa_hcen_scan(start, stop, num,
     x_key = 'slt_ssa_h_cen_readback'
     y_key = 'xbpm2_sumX'
     x = tbl[x_key].values
-    y = tbl[y_key].values
+    y = -tbl[y_key].values #the sum used to be negative
     x = x.astype(np.float64)
     y = y.astype(np.float64)
     dydx = np.gradient(y, x)
@@ -206,7 +206,7 @@ def slit_nanoflyscan(scan_motor, scan_start, scan_stop, scan_stepsize, acqtime,
         return fig, ax
 
     # Open the shutter
-    yield from mov(shut_b, 'Open')
+    yield from check_shutters(True, 'Open') 
     
     # Run the scan
     if (scan_motor.name == 'nano_stage_sx'):
@@ -253,7 +253,7 @@ def slit_nanoflyscan(scan_motor, scan_start, scan_stop, scan_stepsize, acqtime,
             yield from _plan()
 
     # Open the shutter
-    yield from mov(shut_b, 'Close')
+    yield from check_shutters(True, 'Close') 
     
     yield from mov(slit_motor, slit_orig_pos)
     yield from mov(slitgap_motor, slit_orig_gap)
@@ -459,11 +459,11 @@ def slit_nanoflyscan_cal(scan_id_list=[], slit_range=[], from_RE=[], orthogonali
     print(f'P2V of line position is {p2v_line_pos} um')
     defocus = -calpoly_fit[0][0] * C_f
     delta_theta = calpoly_fit[0][0] * C_theta
-    line_move = 2 * delta_theta * C_f * 1e-3
+    line_move_h = -2 * delta_theta * C_f * 1e-3
     print('defocus is ' '{:7.3f}'.format(defocus), 'um. Vkb correct by this amount.')
     print('equivalent to ' '{:7.6f}'.format(delta_theta), 'mrad. Hkb correct by this amount.')
     #print('actuator should move by' '{:7.3f}'.format(actuator_move), 'um.')
-    print('Line feature should move' '{:7.3f}'.format(line_move), 'um.')
+    print('Line feature should move' '{:7.3f}'.format(line_move_h), 'um for h mirror pitch correction')
 
     if orthogonality == 1:
         delta_fine_pitch = calpoly_fit[0][0]/conversion_factor_orth*1e-3*pitch_motion_conversion
