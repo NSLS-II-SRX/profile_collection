@@ -17,6 +17,11 @@ proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
 saf_num = 305921
 
+proposal_num = 307651
+proposal_title = 'Characterize SRX nano-focusing K-B mirrors using ptychography'
+PI_lastname = 'Huang'
+saf_num = 307153
+
 #proposal_num = 306440
 #proposal_title = 'Exploring the Mechanisms of Ultra-Low Wear Atomic Layer Deposited Nitride Thin Films'
 #PI_lastname = 'Strandwitz'
