@@ -15,7 +15,8 @@ class SRXPrompt(Prompts):
 
 
 ip = get_ipython()
-nslsii.configure_base(ip.user_ns, "srx")
+# don't use the real SRX mongo for xspress3 development
+nslsii.configure_base(ip.user_ns, "srx-xspress3-dev")
 nslsii.configure_olog(ip.user_ns)
 ip.prompts = SRXPrompt(ip)
 
