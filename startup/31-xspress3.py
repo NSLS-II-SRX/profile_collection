@@ -13,7 +13,7 @@ from ophyd.device import Staged
 from enum import Enum
 
 from nslsii.areadetector.xspress3 import (
-    XspressTrigger,
+    Xspress3Trigger,
     #Xspress3Channel,
     Xspress3FileStore,
     #Xspress3Detector,
@@ -131,14 +131,18 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
             return super().describe()
 
 
-class SRXXspressTrigger(XspressTrigger):
+class SRXXspressTrigger(Xspress3Trigger):
     def trigger(self):
         if self._staged != Staged.yes:
             raise RuntimeError("not staged")
 
         self._status = DeviceStatus(self)
         self.cam.erase.put(1)
-        self._acquisition_signal.put(1, wait=False)
+        
+        # JOSH changed this
+        #self._acquisition_signal.put(1, wait=False)
+        self.cam.acquire.put(1, wait=False)
+
         trigger_time = ttime.time()
         if self._mode is SRXMode.step:
             for sn in self.read_attrs:
@@ -164,12 +168,12 @@ class SrxXSP3Handler:
             return np.asarray(f[self.XRF_DATA_KEY])
 
 
-SrxXspress3DetectorBase = build_detector_class(
-        channel_count=4,
-        roi_count=4
+FourChannelXspress3Detector = build_detector_class(
+    channel_numbers=(1, 2, 3, 4),
+    mcaroi_numbers=(1, 2, 3 ,4)
 )
 
-class SrxXspress3Detector(SRXXspressTrigger, SrxXspress3DetectorBase):
+class SrxXspress3Detector(SRXXspressTrigger, FourChannelXspress3Detector):
     # TODO: garth, the ioc is missing some PVs?
     #   det_cam.erase_array_counters
     #       (XF:05IDD-ES{Xsp:1}:ERASE_ArrayCounters)
@@ -200,13 +204,15 @@ class SrxXspress3Detector(SRXXspressTrigger, SrxXspress3DetectorBase):
     hdf5 = Cpt(
         Xspress3FileStoreFlyable,
         "HDF1:",
-        read_path_template="/nsls2/xf05id1/XF05ID1/XSPRESS3/%Y/%m/%d/",
-        ##read_path_template="/home/oksana/nsls2/",
+        ##read_path_template="/nsls2/xf05id1/XF05ID1/XSPRESS3/%Y/%m/%d/",
         # write_path_template='/epics/data/%Y/%m/%d/', #SRX old xspress3
-        write_path_template="/home/xspress3/data/%Y/%m/%d/",#TES xspress3
-        ##write_path_template="/home/oksana/nsls2/",
-        root="/nsls2/xf05id1/XF05ID1",
-        ##root="/home/oksana/",
+        # write_path_template="/home/xspress3/data/%Y/%m/%d/",#TES xspress3
+        ##write_path_template="/nsls2/xf05id1/XF05ID1/XSPRESS3/%Y/%m/%d/", # SRX ddetector 1
+        ##root="/nsls2/xf05id1/XF05ID1",
+        
+        root="/home/oksana/",
+        read_path_template="/home/oksana/nsls2/",
+        write_path_template="/home/oksana/nsls2/",
     )
 
     # this is used as a latch to put the xspress3 into 'bulk' mode
@@ -234,7 +240,8 @@ class SrxXspress3Detector(SRXXspressTrigger, SrxXspress3DetectorBase):
             ]
             pass
         if read_attrs is None:
-            read_attrs = ["channels", "hdf5"]
+            # JOSH removed "channels"
+            read_attrs = ["hdf5"]
         super().__init__(
             prefix,
             configuration_attrs=configuration_attrs,
@@ -333,7 +340,7 @@ except Exception as ex:
     raise ex
 
 # Working xs2 detector
-AnotherXspress3Detector = build_detector_class(channel_count=2, roi_count=3)
+AnotherXspress3Detector = build_detector_class(channel_numbers=(1, 2), mcaroi_numbers=(1, 2, 3))
 class SrxXspress3Detector2(SRXXspressTrigger, AnotherXspress3Detector):
     # TODO: garth, the ioc is missing some PVs?
     #   det_cam.erase_array_counters
