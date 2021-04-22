@@ -20,8 +20,11 @@ nslsii.configure_base(ip.user_ns, "srx-xspress3-dev")
 nslsii.configure_olog(ip.user_ns)
 ip.prompts = SRXPrompt(ip)
 
+from bluesky.utils import ts_msg_hook
+RE.msg_hook = ts_msg_hook
 
-# Optional: set any metadata that rarely changes.
+
+# Optional: set any metadata that rarely changes
 RE.md["beamline_id"] = "SRX"
 
 
