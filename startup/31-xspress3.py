@@ -133,6 +133,7 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
 
 class SRXXspressTrigger(Xspress3Trigger):
     def trigger(self):
+        print(f"SRXXspressTrigger.trigger() self._mode {self._mode}")
         if self._staged != Staged.yes:
             raise RuntimeError("not staged")
 
@@ -145,11 +146,14 @@ class SRXXspressTrigger(Xspress3Trigger):
 
         trigger_time = ttime.time()
         if self._mode is SRXMode.step:
+            print("SRXMode.step")
             for sn in self.read_attrs:
+                print(f"sn: {sn}")
                 if sn.startswith("channel") and "." not in sn:
                     ch = getattr(self, sn)
                     self.dispatch(ch.name, trigger_time)
         elif self._mode is SRXMode.fly:
+            print("SRXMode.fly")
             self.dispatch(self._f_key, trigger_time)
         else:
             raise Exception(f"unexpected mode {self._mode}")
@@ -173,7 +177,8 @@ FourChannelXspress3Detector = build_detector_class(
     mcaroi_numbers=(1, 2, 3 ,4)
 )
 
-class SrxXspress3Detector(SRXXspressTrigger, FourChannelXspress3Detector):
+# JOSH: temporarily replace SRXXspressTrigger with Xspress3Trigger
+class SrxXspress3Detector(Xspress3Trigger, FourChannelXspress3Detector):
     # TODO: garth, the ioc is missing some PVs?
     #   det_cam.erase_array_counters
     #       (XF:05IDD-ES{Xsp:1}:ERASE_ArrayCounters)
