@@ -12,27 +12,12 @@ import shutil
 # PI_lastname = None
 # saf_num = None
 
-proposal_num = 307426
+proposal_num = 308774
 proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
-saf_num = 305921
+saf_num = 307307
 
-proposal_num = 307651
-proposal_title = 'Characterize SRX nano-focusing K-B mirrors using ptychography'
-PI_lastname = 'Huang'
-saf_num = 307153
-
-#proposal_num = 306440
-#proposal_title = 'Exploring the Mechanisms of Ultra-Low Wear Atomic Layer Deposited Nitride Thin Films'
-#PI_lastname = 'Strandwitz'
-#saf_num = 306974
-
-# proposal_num = 307775
-# proposal_title = 'Characterize SRX nano-focusing K-B mirrors using Hartmann wavefront sensor'
-# PI_lastname = 'Tang'
-# saf_num = 307001
-
-cycle = '2021_cycle1'
+cycle = '2021_cycle2'
 
 # Set user data in bluesky
 RE.md['proposal']  = {'proposal_num': str(proposal_num),

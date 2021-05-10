@@ -84,7 +84,7 @@ class CurrentPreampZebra(Device):
         return ret
 
 
-current_preamp = CurrentPreampZebra("XF:05IDA{IM:1}", name="current_preamp")
+# current_preamp = CurrentPreampZebra("XF:05IDA{IM:1}", name="current_preamp")
 # current_preamp = CurrentPreamp('XF:05IDA{IM:1}', name='current_preamp')
 
 
