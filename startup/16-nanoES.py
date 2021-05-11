@@ -100,3 +100,26 @@ def center_scanner():
     yield from mv(nano_stage.sz, 0)
     yield from mvr(nano_stage.z, del_sz)
 
+def mv_along_axis(z_end):
+    ## move along the focused beam axis
+    cur_x = nano_stage.x.user_readback.get()
+    cur_y = nano_stage.y.user_readback.get()
+    cur_z = nano_stage.z.user_readback.get()
+    print(f'current locations are: {cur_x}, {cur_y}, {cur_z}')
+
+    ratio_xz = 0.004875
+    ratio_yz = 0.0067874
+
+    delta_z = z_end-cur_z
+    print(f'moving z by {delta_z}')
+
+    delta_x = ratio_xz*delta_z
+    print(f'moving x by {delta_x}')
+
+    delta_y = ratio_yz*delta_z
+    print(f'moving y by {delta_y}')
+
+    yield from mvr(nano_stage.x, delta_x)
+    yield from mvr(nano_stage.y, delta_y)
+    yield from mv(nano_stage.z, z_end)
+

@@ -7,14 +7,12 @@ from ophyd import Component as Cpt
 from ophyd import PVPositionerPC
 from nslsii.devices import TwoButtonShutter
 
-# print('imports done')
 
 # Setup photon shutters
 shut_fe = TwoButtonShutter("XF:05ID-PPS{Sh:WB}", name="shut_fe")
 shut_a = TwoButtonShutter("XF:05IDA-PPS:1{PSh:2}", name="shut_a")
 shut_b = TwoButtonShutter("XF:05IDB-PPS:1{PSh:4}", name="shut_b")
 
-# print('photon shutters done')
 
 # Check if shutters are open
 def check_shutters(check, status):
@@ -75,7 +73,7 @@ class SRXSlitsPB(Device):
 
 slt_wb = SRXSlitsWB("XF:05IDA-OP:1{Slt:1-Ax:", name="slt_wb")
 slt_pb = SRXSlitsPB("XF:05IDA-OP:1{Slt:2-Ax:", name="slt_pb")
-# print('slits done')
+
 
 # Setup HFM Mirror
 class SRXHFM(Device):
@@ -86,7 +84,7 @@ class SRXHFM(Device):
 
 
 hfm = SRXHFM("XF:05IDA-OP:1{Mir:1-Ax:", name="hfm")
-# print('mirror done')
+
 
 # Setup HDCM
 class HDCMPiezoRoll(PVPositionerPC):
@@ -153,7 +151,7 @@ class SRXDCM(Device):
 
 
 dcm = SRXDCM("XF:05IDA-OP:1{Mono:HDCM-Ax:", name="dcm")
-# print('dcm done')
+
 
 # Setup BPM motors
 class SRXBPM(Device):
@@ -164,7 +162,7 @@ class SRXBPM(Device):
 
 bpm1_pos = SRXBPM("XF:05IDA-BI:1{BPM:1-Ax:", name="bpm1_pos")
 bpm2_pos = SRXBPM("XF:05IDB-BI:1{BPM:2-Ax:", name="bpm2_pos")
-# print('bpm done')
+
 
 # Setup SSA
 class SRXSSAHG(PVPositionerPC):
@@ -195,7 +193,7 @@ class SRXSSACalc(Device):
 
 
 slt_ssa = SRXSSACalc("XF:05IDB-OP:1{Slt:SSA-Ax:", name="slt_ssa")
-# print('ssa done')
+
 
 # Setup fast shutter
 # This is not currently installed at SRX and is commented out
