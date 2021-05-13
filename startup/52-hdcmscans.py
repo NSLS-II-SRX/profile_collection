@@ -279,6 +279,9 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # Define the detector
     det = [sclr1, bpm4, dcm.c1_roll, dcm.c2_pitch]
 
+    # Set dwell for scaler
+    dwell = 1.0
+    
     # Set the roll piezo to its default value (3.0)
     # and return the roll to its original value
     rf1_default = 3.0
@@ -335,8 +338,14 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
             yield from bps.mov(dcm.c2_pitch_kill, 1.0)
 
     # Set counting time
-    sclr1.preset_time.put(1.0)
+    sclr1.preset_time.put(dwell)
 
+    # Set metadata
+    scan_md = get_stock_md({})
+    scan_md['scan']['type'] = 'PEAKUP'
+    scan_md['scan']['detectors'] = det
+    scan_md['scan']['dwell'] = dwell
+    
     # Open the shutter
     # if (shutter == True):
     #     yield from bps.mov(shut_b, 'Open')

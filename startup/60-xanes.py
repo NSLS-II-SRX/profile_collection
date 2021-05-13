@@ -104,21 +104,21 @@ def xanes_afterscan_plan(scanid, filename, roinum):
     # Construct basic header information
     userheaderitem = {}
     userheaderitem['uid'] = h.start['uid']
-    userheaderitem['sample.name'] = h.start['sample']['name']
-    userheaderitem['initial_sample_position.hf_stage.x'] = h.start['initial_sample_position']['hf_stage_x']
-    userheaderitem['initial_sample_position.hf_stage.y'] = h.start['initial_sample_position']['hf_stage_y']
-    userheaderitem['hfm.y'] = h.start['hfm']['y']
-    userheaderitem['hfm.bend'] = h.start['hfm']['bend']
+    userheaderitem['sample.name'] = h.start['scan']['sample_name']
+    # userheaderitem['initial_sample_position.hf_stage.x'] = h.start['initial_sample_position']['hf_stage_x']
+    # userheaderitem['initial_sample_position.hf_stage.y'] = h.start['initial_sample_position']['hf_stage_y']
+    # userheaderitem['hfm.y'] = h.start['hfm']['y']
+    # userheaderitem['hfm.bend'] = h.start['hfm']['bend']
 
     # Create columns for data file
     columnitem = ['energy_energy', 'energy_bragg', 'energy_c2_x']
     # Include I_M, I_0, and I_t from the SRS
-    if ('sclr1' in h.start['detectors']):
+    if ('sclr1' in h.start['scan']['detectors']):
         columnitem = columnitem + ['sclr_im', 'sclr_i0', 'sclr_it']
     else:
         raise KeyError("SRS not found in data!")
     # Include fluorescence data if present, allow multiple rois
-    if ('xs' in h.start['detectors']):
+    if ('xs' in h.start['scan']['detectors']):
         if (type(roinum) is not list):
             roinum = [roinum]
         for i in roinum:
@@ -130,7 +130,7 @@ def xanes_afterscan_plan(scanid, filename, roinum):
             roi_key.append(getattr(xs.channel4.rois, roi_name).value.name)
 
         [columnitem.append(roi) for roi in roi_key]
-    if ('xs2' in h.start['detectors']):
+    if ('xs2' in h.start['scan']['detectors']):
         if (type(roinum) is not list):
             roinum = [roinum]
         for i in roinum:
@@ -144,11 +144,11 @@ def xanes_afterscan_plan(scanid, filename, roinum):
     usercolumnitem = {}
     datatablenames = []
 
-    if ('xs' in h.start['detectors']):
+    if ('xs' in h.start['scan']['detectors']):
         datatablenames = datatablenames + [str(roi) for roi in roi_key]
-    if ('xs2' in h.start['detectors']):
+    if ('xs2' in h.start['scan']['detectors']):
         datatablenames = datatablenames + [str(roi) for roi in roi_key]
-    if ('sclr1' in  h.start['detectors']):
+    if ('sclr1' in  h.start['scan']['detectors']):
         datatablenames = datatablenames + ['sclr_im', 'sclr_i0', 'sclr_it']
         datatable = h.table(stream_name='primary', fields=datatablenames)
         im_array = np.array(datatable['sclr_im'])
@@ -157,7 +157,7 @@ def xanes_afterscan_plan(scanid, filename, roinum):
     else:
         raise KeyError
     # Calculate sums for xspress3 channels of interest
-    if ('xs' in h.start['detectors']):
+    if ('xs' in h.start['scan']['detectors']):
         for i in roinum:
             roi_name = 'roi{:02}'.format(i)
             roisum = datatable[getattr(xs.channel1.rois, roi_name).value.name]
@@ -166,7 +166,7 @@ def xanes_afterscan_plan(scanid, filename, roinum):
             roisum = roisum + datatable[getattr(xs.channel4.rois, roi_name).value.name]
             usercolumnitem['If-{:02}'.format(i)] = roisum
             usercolumnitem['If-{:02}'.format(i)].round(0)
-    if ('xs2' in h.start['detectors']):
+    if ('xs2' in h.start['scan']['detectors']):
         for i in roinum:
             roi_name = 'roi{:02}'.format(i)
             roisum = datatable[getattr(xs2.channel1.rois, roi_name).value.name]
@@ -217,16 +217,6 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     if (detune is not 0):
         yield from abs_set(energy.detune, detune)
 
-    # Record relevant meta data in the Start document, defined in 90-usersetup.py
-    # Add user meta data
-    scan_md = {}
-    get_stock_md(scan_md)
-    scan_md['sample'] = {'name' : samplename}
-    scan_md['scaninfo'] = {'type' : 'XANES', 
-                           'ROI' : roinum, 
-                           'raster' : False,
-                           'dwell' : acqtime}
-    scan_md['scan_input'] = str(np.around(erange, 2)) + ', ' + str(np.around(estep, 2))
     
     # Convert erange and estep to numpy array
     ept = np.array([])
@@ -236,6 +226,21 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     for i in range(len(estep)):
         ept = np.append(ept, np.arange(erange[i], erange[i+1], estep[i]))
     ept = np.append(ept, np.array(erange[-1]))
+    
+    # Record relevant meta data in the Start document, defined in 90-usersetup.py
+    # Add user meta data
+    scan_md = {}
+    get_stock_md(scan_md)
+    scan_md['scan']['sample_name'] = samplename
+    scan_md['scan']['type'] = 'XAS_STEP'
+    scan_md['scan']['ROI'] = roinum
+    scan_md['scan']['dwell'] = acqtime
+    # scan_md['scaninfo'] = {'type' : 'XANES', 
+    #                        'ROI' : roinum, 
+    #                        'raster' : False,
+    #                        'dwell' : acqtime}
+    scan_md['scan']['scan_input'] = str(np.around(erange, 2)) + ', ' + str(np.around(estep, 2))
+    scan_md['scan']['energy'] = ept
 
     # Debugging, is this needed? is this recorded in scanoutput?
     # Convert energy to bragg angle
@@ -326,7 +331,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
             print("You must export this scan data manually: xanes_afterscan_plan(doc[-1], <filename>, <roinum>)")
             return
         xanes_afterscan_plan(doc['run_start'], filename, roinum)
-        logscan_detailed('xanes')
+        logscan_detailed('XAS_STEP')
 
 
     def at_scan(name, doc):
@@ -334,7 +339,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
         scanrecord.current_scan_id.put(str(doc['scan_id']))
         # Not sure if RE should be here, but not sure what to make it
         # scanrecord.current_type.put(RE.md['scaninfo']['type'])
-        scanrecord.current_type.put(scan_md['scaninfo']['type'])
+        scanrecord.current_type.put(scan_md['scan']['type'])
         scanrecord.scanning.put(True)
 
 
