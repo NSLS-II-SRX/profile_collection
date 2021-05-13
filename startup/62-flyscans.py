@@ -123,6 +123,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Set metadata
     if md is None:
         md = {}
+    md = get_stock_md(md)
 
     # Change retry deadband for hf_stage.x and hf_stage.y
     if (hf_stage.x in (xmotor, ymotor)):
@@ -191,25 +192,42 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     if (align):
         yield from peakup_fine(shutter=shutter)
 
-    md = ChainMap(md, {
-        'plan_name': 'scan_and_fly',
-        'detectors': [d.name for d in detectors],
-        'dwell': dwell,
-        'shape': (xnum, ynum),
-        'scaninfo': {'type': 'XRF_fly',
-                     'raster': False,
-                     'fast_axis': flying_zebra.fast_axis.get()},
-                     # 'slow_axis': flying_zebra.slow_axis.get(),
-                     # 'theta': hf_stage.th.position}
-        'scan_params': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
-        'scan_input': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
-        'delta': delta,
-        'beamline_status' : {'energy' : energy.position.energy}
-        }
-    )
+    # md = ChainMap(md, {
+    #     'plan_name': 'scan_and_fly',
+    #     'detectors': [d.name for d in detectors],
+    #     'dwell': dwell,
+    #     'shape': (xnum, ynum),
+    #     'scaninfo': {'type': 'XRF_fly',
+    #                  'raster': False,
+    #                  'fast_axis': flying_zebra.fast_axis.get()},
+    #                  # 'slow_axis': flying_zebra.slow_axis.get(),
+    #                  # 'theta': hf_stage.th.position}
+    #     'scan_params': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
+    #     'scan_input': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
+    #     'delta': delta,
+    #     'beamline_status' : {'energy' : energy.position.energy}
+    #     }
+    # )
+
+    md['scan']['type'] = 'XRF_FLY'
+    md['scan']['scan_input'] = [xstart, xstop, xnum, ystart, ystop, ynum, dwell]
+    md['scan']['sample_name'] = ''
+    md['scan']['detectors'] = [d.name for d in detectors]
+    md['scan']['dwell'] = dwell
+    md['scan']['fast_axis'] = {'motor_name' : xmotor.name,
+                               'units' : xmotor.motor_egu.get()}
+    md['scan']['slow_axis'] = {'motor_name' : ymotor.name,
+                               'units' : ymotor.motor_egu.get()}
+    md['scan']['theta'] = {'val' : nano_stage.th.user_readback.get(),
+                           'units' : nano_stage.th.motor_egu, get()}
+    md['scan']['delta'] = {'val' : delta,
+                           'units' : xmotor.motor_egu.get()}
+    md['scan']['snake'] = False
+    md['scan']['shape'] = (xnum, ynum)
+    
 
     if ('xs2' in dets_by_name):
-        md['scaninfo']['type'] = 'XRF_E_tomo_fly'
+        md['scan']['type'] = 'XRF_E_tomo_fly'
 
     @stage_decorator(flying_zebra.detectors)
     def fly_each_step(motor, step):
@@ -343,7 +361,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     def at_scan(name, doc):
         scanrecord.current_scan.put(doc['uid'][:6])
         scanrecord.current_scan_id.put(str(doc['scan_id']))
-        scanrecord.current_type.put(md['scaninfo']['type'])
+        scanrecord.current_type.put(md['scan']['type'])
         scanrecord.scanning.put(True)
         scanrecord.time_remaining.put((dwell*xnum + 3.8)/3600)
 
