@@ -12,23 +12,12 @@ import shutil
 # PI_lastname = None
 # saf_num = None
 
-proposal_num = 307426
+proposal_num = 308774
 proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
-saf_num = 305921
+saf_num = 307307
 
-# proposal_num = 307426
-# proposal_title = 'SRX Beamline Commissioning'
-# PI_lastname = 'Hidas'
-# saf_num = 305921
-
-# proposal_num = 306378
-# proposal_title = 'Investigating the charge distribution of Ni-ricj LiNi1-x-yCosMnyO2 cathode in high-energy resources'
-# PI_lastname = 'Zuli'
-# saf_num = 306149
-
-
-cycle = '2021_cycle1'
+cycle = '2021_cycle2'
 
 # Set user data in bluesky
 RE.md['proposal']  = {'proposal_num': str(proposal_num),
@@ -101,7 +90,6 @@ def get_stock_md(scan_md):
 
     return scan_md
     
-
 
 def logscan(scantype):
     h = db[-1]

@@ -440,25 +440,21 @@ def nano_xrf(xstart, xstop, xstep,
                        ymotor, ystart, ystop, ynum,
                        xmotor, xstart, xstop, xnum, flag_snake,
                        md=scan_md)
-    
-    if (shutter):
-        # These functions might not be necessary
-        # def mystart():
-        #     yield from mv(shut_b, 'Open')
-        
-        # def mystop():
-        #     yield from mv(shut_b, 'Close')
-        
-        myplan = subs_wrapper(myplan,
-                              {'all' : livecallbacks,
-                               'start' : bps.mov(shut_b, 'Open'),
-                               'stop' : bps.mov(shut_b, 'Close')})
-    else:
-        myplan = subs_wrapper(myplan,
-                              {'all' : livecallbacks})
-    
+    myplan = subs_wrapper(myplan,
+                          {'all': livecallbacks})
+
+    # Open shutter
+    # if (shutter):
+    #     yield from mv(shut_b,'Open')
+    yield from check_shutters(shutter, 'Open')
+
     # grid scan
     uid = yield from myplan
+
+    # Close shutter
+    # if (shutter):
+    #     yield from mv(shut_b,'Close')
+    yield from check_shutters(shutter, 'Close')
 
     return uid
 

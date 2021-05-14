@@ -31,7 +31,7 @@ This program provides functionality to calibrate HDCM energy:
     currently, the xanes needs to be collected on roi1 in xrf mode
 '''
 
-def mono_calib(Element, acqtime=1.0):
+def mono_calib(Element, acqtime=1.0, peakup=False):
     """
     SRX mono_calib(Element)
 
@@ -55,20 +55,24 @@ def mono_calib(Element, acqtime=1.0):
     EnergyX = getbindingE(Element)
     energy.move(EnergyX)
     setroi(1,Element)
-    yield from bps.sleep(5)
-    yield from peakup_fine(use_calib=False)
+    if peakup:
+        yield from bps.sleep(5)
+        yield from peakup_fine(use_calib=False)
     yield from xanes_plan(erange=[EnergyX-50,EnergyX+50],estep=[1.0], samplename=f'{Element}Foil',filename=f'{Element}Foilstd',acqtime=acqtime, shutter=True)
 
-def scanderive(xaxis, yaxis):
+def scanderive(xaxis, yaxis, ax, xlabel='', ylabel='', title=''):
     dyaxis = np.gradient(yaxis, xaxis)
     edge = xaxis[dyaxis.argmin()]
 
-    fig, ax = plt.subplots()
+    # fig, ax = plt.subplots()
     # p = plt.plot(xaxis, dyaxis, '-')
     ax.plot(xaxis, dyaxis, '-')
     # ax = plt.gca()
     ax.ticklabel_format(useOffset=False)
     p = ax.plot(edge, dyaxis[dyaxis.argmin()], '*r', markersize=25)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
 
     return p, xaxis, dyaxis, edge
 
@@ -109,8 +113,10 @@ def find_edge(scanid=-1, use_xrf=True, element=''):
                 mu = mu + tbl[ch_name]
                 mu = np.array(mu)
 
-    p, xaxis, yaxis, edge = scanderive(braggpoints, mu)
-    Ep, Exaxis, Eyaxis, Eedge = scanderive(energypoints, mu)
+    fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
+    fig.suptitle(element)
+    p, xaxis, yaxis, edge = scanderive(braggpoints, mu, ax1, xlabel='Bragg [deg]', ylabel='Gradient')
+    Ep, Exaxis, Eyaxis, Eedge = scanderive(energypoints, mu, ax2, xlabel='Energy [eV]')
 
     return p, xaxis, yaxis, edge, Eedge
 
@@ -179,15 +185,15 @@ def braggcalib(scanlogDic={}, use_xrf=True, man_correction={}):
     print(fitBragg)
     print(newEnergy)
 
-    plt.figure(1)
-    plt.plot(fitBragg, fitEnergy, 'b^', label='raw scan')
+    fig, ax = plt.subplots()
+    ax.plot(fitBragg, fitEnergy, 'b^', label='Raw scan')
     bragg = np.linspace(fitBragg[0], fitBragg[-1], 200)
-    plt.plot(bragg, fitfunc(fitted_dcm, bragg), 'k-', label='fitting')
-    plt.legend()
-    plt.xlabel('Bragg RBV (deg)')
-    plt.ylabel('Energy (keV)')
+    ax.plot(bragg, fitfunc(fitted_dcm, bragg), 'k-', label='Fitting')
+    ax.legend()
+    ax.set_xlabel('Bragg RBV (deg)')
+    ax.set_ylabel('Energy (keV)')
 
-    pyplot.show()
+    # pyplot.show()
     print('(111) d spacing:', fitted_dcm[0])
     print('Bragg RBV offset:', fitted_dcm[1])
 
@@ -306,17 +312,21 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
 
     # Find approximate values
     # 2020-02-03
-    roll_guess = 0.071  # For getting X-rays to nanoKB
+    # roll_guess = 0.071  # For getting X-rays to nanoKB
     # 2020-07-20
-    roll_guess = 0.121
+    # roll_guess = 0.121
     # 2020-10-26
-    roll_guess = 0.351
+    # roll_guess = 0.351
+    # 2021-01-31
+    roll_guess = 0.240
     # 2020-02-03
-    B = energy.energy_to_positions((E/1000), 3, 0)[0]
-    pitch_guess = 0.0009145473*B + 0.0141488665
+    # B = energy.energy_to_positions((E/1000), 3, 0)[0]
+    # pitch_guess = 0.0009145473*B + 0.0141488665
     # 2020-10-26
-    B = energy.energy_to_positions((E/1000), 3, 0)[0]
-    pitch_guess = 0.0010913788*B - 0.0139213806
+    # B = energy.energy_to_positions((E/1000), 3, 0)[0]
+    # pitch_guess = 0.0010913788*B - 0.0139213806
+    # 2021-01-31
+    pitch_guess = -0.0009845238*(E/1000) - 0.0101940476
 
 
     # Use calibration
@@ -339,7 +349,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # Open the shutter
     # if (shutter == True):
     #     yield from bps.mov(shut_b, 'Open')
-    yield from check_shutters(shutter, 'Open')
+    yield from check_shutters(shut_b, 'Open')
 
     paired_callback = PairedCallback(scaler, dcm.c2_pitch.name, pitch_guess)
 
@@ -363,7 +373,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # Close the shutter
     # if (shutter is True):
     #     yield from bps.mov(shut_b, 'Close')
-    yield from check_shutters(shutter, 'Close')
+    yield from check_shutters(shut_b, 'Close')
 
     # Add scan to scanlog
     logscan('peakup_fine_pitch')

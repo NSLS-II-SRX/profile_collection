@@ -308,13 +308,13 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     # def f_two_erfs(x, A1, sigma1, x1, y1,
     #                   A2, sigma2, x2, y2):
     p_guess = [0.5*np.amax(y),
-               1.000,
+               0.100,
                0.5*(x[0] + x[-1]) - 1.0,
-               np.amin(y) + 0.5*np.amax(y),
+               0, # np.amin(y) + 0.5*np.amax(y),
                -0.5*np.amax(y),
-               1.000,
+               0.100,
                0.5*(x[0] + x[-1]) + 1.0,
-               np.amin(y) + 0.5*np.amax(y)]
+               0] # np.amin(y) + 0.5*np.amax(y)]
     try:
         # popt, _ = curve_fit(f_offset_erf, x, y, p0=p_guess)
         popt, _ = curve_fit(f_two_erfs, x, y, p0=p_guess)
@@ -325,9 +325,8 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
     C = 2 * np.sqrt(2 * np.log(2))
     print(f'\nThe beam size is {C * popt[1]:.4f} um')
     print(f'The beam size is {C * popt[5]:.4f} um')
-
-    print(f'\nThe left edge is at\t{popt[2]:.4f}.')
-    print(f'The right edge is at\t{popt[6]:.4f}.')
+    #print(f'\nThe left edge is at\t{popt[2]:.4f}.')
+    #print(f'The right edge is at\t{popt[6]:.4f}.')
     print(f'The center is at\t{(popt[2]+popt[6])/2:.4f}.\n')
 
     # Plot variables
@@ -501,12 +500,12 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=Tru
 
     C = 2 * np.sqrt(2 * np.log(2))
     cent_position = (popt[2]+popt[6])/2
-    print(f'\nThe beam size is {C * popt[1]:.4f} um')
-    print(f'\nThe beam size is {C * popt[5]:.4f} um')
+    print(f'The beam size is {C * popt[1]:.4f} um')
+    print(f'The beam size is {C * popt[5]:.4f} um')
 
-    print(f'\nThe left edge is at\t{popt[2]:.4f}.')
-    print(f'The right edge is at\t{popt[6]:.4f}.')
-    print(f'The center is at\t{(popt[2]+popt[6])/2:.4f}.\n')
+    #print(f'\nThe left edge is at\t{popt[2]:.4f}.')
+    #print(f'The right edge is at\t{popt[6]:.4f}.')
+    print(f'The center is at\t{(popt[2]+popt[6])/2:.4f}.')
 
     # Plot variables
     x_plot = np.linspace(np.amin(x), np.amax(x), num=100)

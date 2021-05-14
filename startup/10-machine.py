@@ -378,6 +378,14 @@ cal_data_2020cycle3 = {
     "T2cal": 15.0347755916,
     "xoffset": 24.531185,
 }
+# AMK Really quick calibration 2021-01-29
+cal_data_2020cycle3 = {
+    "d_111": 3.130123901447958,
+    "delta_bragg": 0.2067058867709387,
+    "C2Xcal": 3.6,
+    "T2cal": 15.0347755916,
+    "xoffset": 24.60,
+}
 energy = Energy(prefix="", name="energy", **cal_data_2020cycle3)
 energy.synch_with_epics()
 energy.value = 1.0
