@@ -3,10 +3,13 @@ resources:
     - repository: templates
       type: github
       name: NSLS-II/profile-collection-ci
-      ref: refs/heads/collection-2021-1.0
+      ref: refs/heads/main
       endpoint: github
 
 jobs:
-- template: azure-linux.yml@templates  # Template reference
-  parameters:
-    beamline_acronym: SRX
+  - template: collection-2021-1.0.yml@templates
+    parameters:
+      beamline_acronym: SRX
+  - template: collection-2021-1.2.yml@templates
+    parameters:
+      beamline_acronym: SRX
