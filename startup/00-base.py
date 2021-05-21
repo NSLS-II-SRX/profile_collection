@@ -53,10 +53,10 @@ class SRXPrompt(Prompts):
             (Token.Prompt, "]: "),
         ]
 
-
 ip = get_ipython()
 nslsii.configure_base(ip.user_ns, "srx")
 ip.log.setLevel('WARNING')
+
 nslsii.configure_olog(ip.user_ns)
 ip.prompts = SRXPrompt(ip)
 
