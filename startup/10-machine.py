@@ -447,9 +447,8 @@ class IDFlyDevice(Device):
 
 
 id_fly_device = IDFlyDevice('SR:C5-ID:G1{IVU21:1}', name='id_fly_device')
-#id_fly_device.hdcm_parameters.ang_over_ev.put(energy.)
 id_fly_device.hdcm_parameters.d111.put(energy._d_111)
 id_fly_device.hdcm_parameters.delta_bragg.put(energy._delta_bragg)
-id_fly_device.hdcm_parameters.c2x_cal.put(energy._C2Xcal)
-id_fly_device.hdcm_parameters.t2_cal.put(energy._T2cal)
+id_fly_device.hdcm_parameters.c2x_cal.put(energy._c2xcal)
+id_fly_device.hdcm_parameters.t2_cal.put(energy._t2cal)
 id_fly_device.hdcm_parameters.x_offset.put(energy._xoffset)
