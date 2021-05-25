@@ -363,30 +363,15 @@ class Energy(PseudoPositioner):
 
 # Let's try to only keep one "old" value in for ease of use
 # Recalibrated 2020-07-17
-cal_data_2020cycle2 = {
-    "d_111": 3.129361366291239,
-    "delta_bragg": 0.2118452386517794,
+cal_data_2021cycle2 = {
+    "d_111": 3.130107437129581,
+    "delta_bragg": 0.2127425977113396,
     "C2Xcal": 3.6,
     "T2cal": 15.0347755916,
     "xoffset": 24.6965235,
 }
-# Recalibrated 2020-10-23
-cal_data_2020cycle3 = {
-    "d_111": 3.129296180163788,
-    "delta_bragg": 0.21306983106216978,
-    "C2Xcal": 3.6,
-    "T2cal": 15.0347755916,
-    "xoffset": 24.531185,
-}
-# AMK Really quick calibration 2021-01-29
-cal_data_2020cycle3 = {
-    "d_111": 3.130123901447958,
-    "delta_bragg": 0.2067058867709387,
-    "C2Xcal": 3.6,
-    "T2cal": 15.0347755916,
-    "xoffset": 24.60,
-}
-energy = Energy(prefix="", name="energy", **cal_data_2020cycle3)
+
+energy = Energy(prefix="", name="energy", **cal_data_2021cycle2)
 energy.synch_with_epics()
 energy.value = 1.0
 

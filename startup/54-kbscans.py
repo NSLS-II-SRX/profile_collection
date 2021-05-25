@@ -406,7 +406,7 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=Tru
     id_str = h.start['scan_id']
 
     try:
-        if (h.start['scaninfo']['fast_axis'] == 'NANOHOR'):
+        if (h.start['scan']['fast_axis']['motor_name']=='nano_stage_sx'):
             pos = 'enc1'
         else:
             pos = 'enc2'

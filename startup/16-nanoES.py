@@ -111,7 +111,7 @@ def mv_along_axis(z_end):
     ratio_yz = 0.0067874
 
     delta_z = z_end-cur_z
-    print(f'moving z by {delta_z}')
+    print(f'Will move z to {z_end}')
 
     delta_x = ratio_xz*delta_z
     print(f'moving x by {delta_x}')

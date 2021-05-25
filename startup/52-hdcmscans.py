@@ -318,7 +318,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # 2020-10-26
     # roll_guess = 0.351
     # 2021-01-31
-    roll_guess = 0.240
+    roll_guess = 0.234
     # 2020-02-03
     # B = energy.energy_to_positions((E/1000), 3, 0)[0]
     # pitch_guess = 0.0009145473*B + 0.0141488665
@@ -326,7 +326,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # B = energy.energy_to_positions((E/1000), 3, 0)[0]
     # pitch_guess = 0.0010913788*B - 0.0139213806
     # 2021-01-31
-    pitch_guess = -0.0009845238*(E/1000) - 0.0101940476
+    pitch_guess = -0.00128157*(E/1000) - 0.0616634
 
 
     # Use calibration

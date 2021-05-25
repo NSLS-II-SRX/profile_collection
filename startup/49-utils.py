@@ -81,9 +81,9 @@ def mv_position(pos=[]):
         print('Not a position, exiting...')
         return
 
-    yield from mv(hf_stage.x, pos[0],
-                  hf_stage.y, pos[1],
-                  hf_stage.z, pos[2])
+    yield from mv(nano_stage.x, pos[0],
+                  nano_stage.y, pos[1],
+                  nano_stage.z, pos[2])
 
 
 def copyscanparam(src_num, dest_num):

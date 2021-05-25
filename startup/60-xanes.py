@@ -113,12 +113,12 @@ def xanes_afterscan_plan(scanid, filename, roinum):
     # Create columns for data file
     columnitem = ['energy_energy', 'energy_bragg', 'energy_c2_x']
     # Include I_M, I_0, and I_t from the SRS
-    if ('sclr1' in h.start['scan']['detectors']):
+    if ('sclr1' in h.start['detectors']):
         columnitem = columnitem + ['sclr_im', 'sclr_i0', 'sclr_it']
     else:
         raise KeyError("SRS not found in data!")
     # Include fluorescence data if present, allow multiple rois
-    if ('xs' in h.start['scan']['detectors']):
+    if ('xs' in h.start['detectors']):
         if (type(roinum) is not list):
             roinum = [roinum]
         for i in roinum:
@@ -130,7 +130,7 @@ def xanes_afterscan_plan(scanid, filename, roinum):
             roi_key.append(getattr(xs.channel4.rois, roi_name).value.name)
 
         [columnitem.append(roi) for roi in roi_key]
-    if ('xs2' in h.start['scan']['detectors']):
+    if ('xs2' in h.start['detectors']):
         if (type(roinum) is not list):
             roinum = [roinum]
         for i in roinum:
@@ -144,11 +144,11 @@ def xanes_afterscan_plan(scanid, filename, roinum):
     usercolumnitem = {}
     datatablenames = []
 
-    if ('xs' in h.start['scan']['detectors']):
+    if ('xs' in h.start['detectors']):
         datatablenames = datatablenames + [str(roi) for roi in roi_key]
-    if ('xs2' in h.start['scan']['detectors']):
+    if ('xs2' in h.start['detectors']):
         datatablenames = datatablenames + [str(roi) for roi in roi_key]
-    if ('sclr1' in  h.start['scan']['detectors']):
+    if ('sclr1' in  h.start['detectors']):
         datatablenames = datatablenames + ['sclr_im', 'sclr_i0', 'sclr_it']
         datatable = h.table(stream_name='primary', fields=datatablenames)
         im_array = np.array(datatable['sclr_im'])
@@ -157,7 +157,7 @@ def xanes_afterscan_plan(scanid, filename, roinum):
     else:
         raise KeyError
     # Calculate sums for xspress3 channels of interest
-    if ('xs' in h.start['scan']['detectors']):
+    if ('xs' in h.start['detectors']):
         for i in roinum:
             roi_name = 'roi{:02}'.format(i)
             roisum = datatable[getattr(xs.channel1.rois, roi_name).value.name]
@@ -166,7 +166,7 @@ def xanes_afterscan_plan(scanid, filename, roinum):
             roisum = roisum + datatable[getattr(xs.channel4.rois, roi_name).value.name]
             usercolumnitem['If-{:02}'.format(i)] = roisum
             usercolumnitem['If-{:02}'.format(i)].round(0)
-    if ('xs2' in h.start['scan']['detectors']):
+    if ('xs2' in h.start['detectors']):
         for i in roinum:
             roi_name = 'roi{:02}'.format(i)
             roisum = datatable[getattr(xs2.channel1.rois, roi_name).value.name]
