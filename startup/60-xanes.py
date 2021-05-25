@@ -560,10 +560,16 @@ class FlyerIDMono:
         # TODO: incorporate xs into the input detectors list.
         # TODO: figure out why 202 triggers produce 203 frames (and remove "* 2" factor)
         total_points = self.num_scans * self.num_triggers * 2
+
+        xs.external_trig.put(True)
         xs.total_points.put(total_points)
+        xs.spectra_per_point.put(1)
+
         xs.stage()
-        xs.settings.num_images.put(total_points)
-        xs.settings.trigger_mode.put('TTL Veto Only')
+
+        # xs.settings.num_images.put(total_points)
+        # xs.settings.trigger_mode.put('TTL Veto Only')
+
         xs.settings.acquire.put(1)
 
         # TODO: These parameters are for the bpmAD camera, move them to the relevant class in 21-cameras.
