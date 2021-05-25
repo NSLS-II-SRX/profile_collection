@@ -241,7 +241,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     for i in range(len(estep)):
         ept = np.append(ept, np.arange(erange[i], erange[i+1], estep[i]))
     ept = np.append(ept, np.array(erange[-1]))
-    
+
     # Record relevant meta data in the Start document, defined in 90-usersetup.py
     # Add user meta data
     scan_md = {}
@@ -250,8 +250,8 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     scan_md['scan']['type'] = 'XAS_STEP'
     scan_md['scan']['ROI'] = roinum
     scan_md['scan']['dwell'] = acqtime
-    # scan_md['scaninfo'] = {'type' : 'XANES', 
-    #                        'ROI' : roinum, 
+    # scan_md['scaninfo'] = {'type' : 'XANES',
+    #                        'ROI' : roinum,
     #                        'raster' : False,
     #                        'dwell' : acqtime}
     scan_md['scan']['scan_input'] = str(np.around(erange, 2)) + ', ' + str(np.around(estep, 2))
@@ -542,6 +542,9 @@ class FlyerIDMono:
         self.pulse_cpt = pulse_cpt
         self.pulse_width = pulse_width
 
+        self.num_scans = None
+        self.num_triggers = None
+
         # TODO: These parameters are for the bpmAD camera, move them to the relevant class in 21-cameras.
         # self.plugin_type = 'tiff'
 
@@ -553,6 +556,15 @@ class FlyerIDMono:
     def stage(self):
         for det in self.detectors:
             det.stage()
+
+        # TODO: incorporate xs into the input detectors list.
+        # TODO: figure out why 202 triggers produce 203 frames (and remove "* 2" factor)
+        total_points = self.num_scans * self.num_triggers * 2
+        xs.total_points.put(total_points)
+        xs.stage()
+        xs.settings.num_images.put(total_points)
+        xs.settings.trigger_mode.put('TTL Veto Only')
+        xs.settings.acquire.put(1)
 
         # TODO: These parameters are for the bpmAD camera, move them to the relevant class in 21-cameras.
         # # This sets a filepath (template for TIFFs) and generates a Resource
@@ -568,6 +580,8 @@ class FlyerIDMono:
         for det in self.detectors:
             det.unstage()
 
+        xs.unstage()
+
         # TODO: These parameters are for the bpmAD camera, move them to the relevant class in 21-cameras.
         # self.detector.unstage()
         # self.detector.is_flying = False
@@ -575,12 +589,23 @@ class FlyerIDMono:
 
     def kickoff(self, *args, **kwargs):
 
-        getattr(self.zebra, self.pulse_cpt).width.put(self.pulse_width)
+        # PULSE tab of the Zebra CSS:
+        getattr(self.zebra, self.pulse_cpt).input_addr.put(1)            # 'Input' in CSS, 1=IN1_TTL
+        getattr(self.zebra, self.pulse_cpt).input_edge.put(0)            # 'Trigger on' in CSS, 0=Rising, 1=Falling
+        getattr(self.zebra, self.pulse_cpt).delay.put(0.0)               # 'Delay before' in CSS
+        getattr(self.zebra, self.pulse_cpt).width.put(self.pulse_width)  # 'First Pulse' in CSS
+        getattr(self.zebra, self.pulse_cpt).time_units.put('s')          # 'Time Units' in CSS
+
+        # SYS tab of the Zebra CSS
+        for out in [1, 2, 3, 4]:
+            getattr(self.zebra, f'output{out}').ttl.addr.put(52)          # 'OUTx TTL' in CSS
+
+
         width_s = self.pulse_width
         speed = self.flying_dev.parameters.speed.get()
 
-        num_scans = self.flying_dev.parameters.num_scans.get()
-        num_triggers = int(self.flying_dev.parameters.num_triggers.get())
+        self.num_scans = num_scans = self.flying_dev.parameters.num_scans.get()
+        self.num_triggers = num_triggers = int(self.flying_dev.parameters.num_triggers.get())
 
         self._traj_info.update({
             'num_triggers': num_triggers,
@@ -678,10 +703,10 @@ class FlyerIDMono:
 
     def collect_asset_docs(self):
         asset_docs_cache = deque()
-    
+
         # Get the Resource which was produced when the detector was staged.
         # (name, resource), = getattr(self.detector, self.plugin_type).collect_asset_docs()
-    
+
         # # assert name == 'resource'
         # # asset_docs_cache.append(('resource', resource))
         # self._datum_ids.clear()
@@ -700,7 +725,7 @@ class FlyerIDMono:
 
 
 flyer_id_mono = FlyerIDMono(flying_dev=id_fly_device,
-                            zebra=microZebra,
+                            zebra=nanoZebra,
                             detectors=[],
-                            pulse_cpt='pulse3',
+                            pulse_cpt='pulse1',
                             pulse_width=0.01)
