@@ -103,6 +103,15 @@ def printfig():
     os.system("lp -d HXN-printer-1 /home/xf05id1/tmp/temp.png")
 
 
+def scantime(scanid=-1):
+    h = db[int(scanid)]
+    scanid = h.start['scan_id']
+    print(f'Scan ID: {scanid}')
+    print(f'  Start Time: {ttime.ctime(h.start["time"])}')
+    print(f'  Stop  Time: {ttime.ctime(h.stop["time"])}')
+    print(f'  Total Time: {h.stop["time"] - h.start["time"]}')
+
+
 def estimate_scan_duration(xnum, ynum, dwell, scantype=None, event_delay=None):
     '''
     xnum    int     number of points as entered for the scan in X
