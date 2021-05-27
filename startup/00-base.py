@@ -38,7 +38,7 @@ EpicsSignal.wait_for_connection = wait_for_connection
 
 from ophyd.signal import EpicsSignalBase
 # EpicsSignalBase.set_default_timeout(timeout=10, connection_timeout=10)  # old style
-EpicsSignalBase.set_defaults(timeout=10, connection_timeout=10)  # new style
+EpicsSignalBase.set_defaults(timeout=3, connection_timeout=3)  # new style
 
 import nslsii
 import matplotlib as mpl

@@ -5,12 +5,15 @@ import h5py
 import sys
 import numpy as np
 import time as ttime
+import itertools
+
 from ophyd.areadetector.plugins import PluginBase
 from ophyd import Signal, DeviceStatus
 from ophyd import Component as Cpt
 from ophyd.areadetector.filestore_mixins import FileStorePluginBase
 from ophyd.device import Staged
 from enum import Enum
+from collections import deque
 
 from nslsii.detectors.xspress3 import (
     XspressTrigger,
@@ -235,6 +238,10 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
         # Commented out by AMK for using the xs3-server-IOC from TES
         # self.create_dir.put(-3)
 
+        # Needed for flyer:
+        self._asset_docs_cache = deque()
+        self._datum_counter = None
+
     def stop(self, *, success=False):
         ret = super().stop()
         # todo move this into the stop method of the settings object?
@@ -245,19 +252,71 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
     def stage(self):
         # Erase what is currently in the system
         # This prevents a single hot pixel in the upper-left corner of a map
-        xs.erase.put(0)
+        self.erase.put(0)
         # do the latching
         if self.fly_next.get():
             self.fly_next.put(False)
             self._mode = SRXMode.fly
-        return super().stage()
+
+
+        ret = super().stage()
+        self._datum_counter = itertools.count()
+
+        return ret
 
     def unstage(self):
         try:
             ret = super().unstage()
         finally:
             self._mode = SRXMode.step
+
+        self._datum_counter = None
+
         return ret
+
+    def complete(self, *args, **kwargs):
+        for resource in self.hdf5._asset_docs_cache:
+            print(f'  resource in "complete": {resource}')
+            self._asset_docs_cache.append(('resource', resource[1]))
+        print(f'\ncomplete in {self.name}: {self._asset_docs_cache}')
+
+        self._datum_ids = []
+
+        num_frames = xs.hdf5.num_captured.get()
+
+        for frame_num in range(num_frames):
+            print(f'  frame_num in "complete": {frame_num + 1} / {num_frames}')
+            datum_id = '{}/{}'.format(self.hdf5._resource_uid, next(self._datum_counter))
+            datum = {'resource': self.hdf5._resource_uid,
+                     'datum_kwargs': {'frame': frame_num, 'channel': 0},
+                     'datum_id': datum_id}
+            self._asset_docs_cache.append(('datum', datum))
+            self._datum_ids.append(datum_id)
+
+        print(f'\nasset_docs_cache with datums:\n{self._asset_docs_cache}\n')
+
+        return NullStatus()
+
+    def collect(self):
+        collected_frames = self.hdf5.num_captured.get()
+        for frame_num in range(collected_frames):
+            print(f'  frame_num in "collect": {frame_num + 1} / {collected_frames}')
+
+            datum_id = self._datum_ids[frame_num]
+            ts = time.time()
+
+            data = {self.name: datum_id}
+            ts = float(ts)
+            yield {'data': data,
+                   'timestamps': {key: ts for key in data},
+                   'time': ts,  # TODO: use the proper timestamps from the ID/mono start and stop times
+                   'filled': {key: False for key in data}}
+
+    def collect_asset_docs(self):
+        items = list(self._asset_docs_cache)
+        self._asset_docs_cache.clear()
+        for item in items:
+            yield item
 
 
 try:

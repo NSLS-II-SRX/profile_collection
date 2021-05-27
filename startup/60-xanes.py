@@ -506,9 +506,6 @@ def fast_shutter_per_step(detectors, motor, step):
     yield from mv(Mo_shutter, 1)
 
 
-# TODO: add fly scans with flying ID/mono
-
-
 class FlyerIDMono:
     def __init__(self, flying_dev, zebra, detectors, pulse_cpt=None, pulse_width=0.01):
         """Instantiate a flyer based on ID-Mono coordinated motion.
@@ -561,6 +558,7 @@ class FlyerIDMono:
         # TODO: figure out why 202 triggers produce 203 frames (and remove "* 2" factor)
         total_points = self.num_scans * self.num_triggers * 2
 
+        xs.hdf5.file_write_mode.put('Stream')
         xs.external_trig.put(True)
         xs.total_points.put(total_points)
         xs.spectra_per_point.put(1)
@@ -586,6 +584,9 @@ class FlyerIDMono:
         for det in self.detectors:
             det.unstage()
 
+        xs.settings.acquire.put(0)
+        xs.hdf5.capture.put(0)  # this is to save the file is the number of collected frames is less than expected
+        xs.settings.trigger_mode.put('Internal')
         xs.unstage()
 
         # TODO: These parameters are for the bpmAD camera, move them to the relevant class in 21-cameras.
@@ -651,6 +652,7 @@ class FlyerIDMono:
         def callback(value, old_value, **kwargs):
             print(f'{ttime.time()} in complete: {old_value} ---> {value}')
             if int(round(old_value)) == 1 and int(round(value)) == 0:
+                xs.complete()
                 return True
             return False
 
@@ -658,20 +660,28 @@ class FlyerIDMono:
         return status
 
     def describe_collect(self, *args, **kwargs):
-        return {
+        return_dict = {
             'primary':
                 {'energy': {'source': '',
-                       'dtype': 'number',
-                       'shape': [self._traj_info['num_triggers']]},
+                            'dtype': 'number',
+                            'shape': [self._traj_info['num_triggers']]},
                  # f'{self.detector.name}_image': {'source': '...',
                  #           'dtype': 'array',
                  #           'shape': [self._array_size['height'],
                  #                     self._array_size['width']],
                  #           'external': 'FILESTORE:'}
-                 }
-            }
+                 f'{xs.name}': {'source': 'xspress3',
+                                'dtype': 'array',
+                                'shape': [xs.settings.num_images.get(),
+                                xs.hdf5.array_size.height.get(),
+                                xs.hdf5.array_size.width.get()],
+                                'external': 'FILESTORE:'},
+                }
+        }
+        return return_dict
 
     def collect(self, *args, **kwargs):
+
         self.unstage()
 
         energy_start = self._traj_info['energy_start']
@@ -682,52 +692,54 @@ class FlyerIDMono:
         #     raise RuntimeError(f"The number of collected datum ids ({self._datum_ids}) "
         #                        f"does not match the number of triggers ({num_triggers})")
 
-        now = time.time()
         for i, energy in enumerate(np.linspace(energy_start, energy_stop, num_triggers)):
             # datum_id = self._datum_ids[i]
+            # d = (yield from xs.collect())
+            # print(f'\nData from xs.collect(): {d}\n')
+            now = time.time()
             yield {
                 'data': {
                     'energy': energy,
+                    f'{xs.name}': xs._datum_ids[i],
                     # f'{self.detector.name}_image': datum_id,
                 },
                 'timestamps': {
                     'energy': now,
+                    f'{xs.name}': now,
                     # f'{self.detector.name}_image': now,
                 },
                 'time': now,
                 'seq_num': i,
                 'filled': {
+                    f'{xs.name}': False,
                     # f'{self.detector.name}_image': False,
                 }
             }
 
-    # def collect_asset_docs(self):
-    #     items = list(self._asset_docs_cache)
-    #     self._asset_docs_cache.clear()
-    #     for item in items:
-    #         yield item
-
     def collect_asset_docs(self):
-        asset_docs_cache = deque()
+        yield from xs.collect_asset_docs()
 
-        # Get the Resource which was produced when the detector was staged.
-        # (name, resource), = getattr(self.detector, self.plugin_type).collect_asset_docs()
+    # def collect_asset_docs(self):
+    #     asset_docs_cache = deque()
 
-        # # assert name == 'resource'
-        # # asset_docs_cache.append(('resource', resource))
-        # self._datum_ids.clear()
-        # # Generate Datum documents from scratch here, because the detector was
-        # # triggered externally by the Zebra, never by ophyd.
-        # resource_uid = resource['uid']
-        # num_points = self._traj_info['num_triggers']
-        # for i in range(num_points):
-        #     datum_id = '{}/{}'.format(resource_uid, i)
-        #     self._datum_ids.append(datum_id)
-        #     datum = {'resource': resource_uid,
-        #              'datum_id': datum_id,
-        #              'datum_kwargs': {'point_number': i}}
-        #     asset_docs_cache.append(('datum', datum))
-        return tuple(asset_docs_cache)
+    #     # Get the Resource which was produced when the detector was staged.
+    #     # (name, resource), = getattr(self.detector, self.plugin_type).collect_asset_docs()
+
+    #     # # assert name == 'resource'
+    #     # # asset_docs_cache.append(('resource', resource))
+    #     # self._datum_ids.clear()
+    #     # # Generate Datum documents from scratch here, because the detector was
+    #     # # triggered externally by the Zebra, never by ophyd.
+    #     # resource_uid = resource['uid']
+    #     # num_points = self._traj_info['num_triggers']
+    #     # for i in range(num_points):
+    #     #     datum_id = '{}/{}'.format(resource_uid, i)
+    #     #     self._datum_ids.append(datum_id)
+    #     #     datum = {'resource': resource_uid,
+    #     #              'datum_id': datum_id,
+    #     #              'datum_kwargs': {'point_number': i}}
+    #     #     asset_docs_cache.append(('datum', datum))
+    #     return tuple(asset_docs_cache)
 
 
 flyer_id_mono = FlyerIDMono(flying_dev=id_fly_device,
