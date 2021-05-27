@@ -555,8 +555,7 @@ class FlyerIDMono:
             det.stage()
 
         # TODO: incorporate xs into the input detectors list.
-        # TODO: figure out why 202 triggers produce 203 frames (and remove "* 2" factor)
-        total_points = self.num_scans * self.num_triggers * 2
+        total_points = self.num_scans * self.num_triggers
 
         xs.hdf5.file_write_mode.put('Stream')
         xs.external_trig.put(True)
