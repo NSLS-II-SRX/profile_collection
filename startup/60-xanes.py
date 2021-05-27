@@ -507,7 +507,7 @@ def fast_shutter_per_step(detectors, motor, step):
 
 
 class FlyerIDMono:
-    def __init__(self, flying_dev, zebra, detectors, pulse_cpt=None, pulse_width=0.01):
+    def __init__(self, flying_dev, zebra, xs_detectors, pulse_cpt=None, pulse_width=0.01):
         """Instantiate a flyer based on ID-Mono coordinated motion.
 
         Parameters
@@ -518,8 +518,8 @@ class FlyerIDMono:
         zebra : SRXZebra
             zebra ophyd object
 
-        detectors : list
-            a list of ophyd objects for corresponding detectors
+        xs_detectors : list
+            a list of ophyd objects for corresponding xspress3 detectors
 
         pulse_cpt : str
             an ophyd component name corresponding to the pulse signal
@@ -531,7 +531,7 @@ class FlyerIDMono:
 
         self.flying_dev = flying_dev
         self.zebra = zebra
-        self.detectors = detectors
+        self.xs_detectors = xs_detectors
 
         # The pulse width has to be set both in Zebra and the Scan Engine.
         if pulse_cpt is None:
@@ -551,23 +551,15 @@ class FlyerIDMono:
         self._datum_ids = []
 
     def stage(self):
-        for det in self.detectors:
-            det.stage()
-
-        # TODO: incorporate xs into the input detectors list.
         total_points = self.num_scans * self.num_triggers
 
-        xs.hdf5.file_write_mode.put('Stream')
-        xs.external_trig.put(True)
-        xs.total_points.put(total_points)
-        xs.spectra_per_point.put(1)
-
-        xs.stage()
-
-        # xs.settings.num_images.put(total_points)
-        # xs.settings.trigger_mode.put('TTL Veto Only')
-
-        xs.settings.acquire.put(1)
+        for xs_det in self.xs_detectors:
+            xs_det.hdf5.file_write_mode.put('Stream')
+            xs_det.external_trig.put(True)
+            xs_det.total_points.put(total_points)
+            xs_det.spectra_per_point.put(1)
+            xs_det.stage()
+            xs_det.settings.acquire.put(1)
 
         # TODO: These parameters are for the bpmAD camera, move them to the relevant class in 21-cameras.
         # # This sets a filepath (template for TIFFs) and generates a Resource
@@ -580,13 +572,11 @@ class FlyerIDMono:
         # self.detector.cam.acquire.put(1)
 
     def unstage(self):
-        for det in self.detectors:
-            det.unstage()
-
-        xs.settings.acquire.put(0)
-        xs.hdf5.capture.put(0)  # this is to save the file is the number of collected frames is less than expected
-        xs.settings.trigger_mode.put('Internal')
-        xs.unstage()
+        for xs_det in self.xs_detectors:
+            xs_det.settings.acquire.put(0)
+            xs_det.hdf5.capture.put(0)  # this is to save the file is the number of collected frames is less than expected
+            xs_det.settings.trigger_mode.put('Internal')
+            xs_det.unstage()
 
         # TODO: These parameters are for the bpmAD camera, move them to the relevant class in 21-cameras.
         # self.detector.unstage()
@@ -605,7 +595,6 @@ class FlyerIDMono:
         # SYS tab of the Zebra CSS
         for out in [1, 2, 3, 4]:
             getattr(self.zebra, f'output{out}').ttl.addr.put(52)          # 'OUTx TTL' in CSS
-
 
         width_s = self.pulse_width
         speed = self.flying_dev.parameters.speed.get()
@@ -651,7 +640,8 @@ class FlyerIDMono:
         def callback(value, old_value, **kwargs):
             print(f'{ttime.time()} in complete: {old_value} ---> {value}')
             if int(round(old_value)) == 1 and int(round(value)) == 0:
-                xs.complete()
+                for xs_det in self.xs_detectors:
+                    xs_det.complete()
                 return True
             return False
 
@@ -669,14 +659,17 @@ class FlyerIDMono:
                  #           'shape': [self._array_size['height'],
                  #                     self._array_size['width']],
                  #           'external': 'FILESTORE:'}
-                 f'{xs.name}': {'source': 'xspress3',
-                                'dtype': 'array',
-                                'shape': [xs.settings.num_images.get(),
-                                xs.hdf5.array_size.height.get(),
-                                xs.hdf5.array_size.width.get()],
-                                'external': 'FILESTORE:'},
                 }
         }
+        for xs_det in self.xs_detectors:
+            return_dict['primary'][f'{xs_det.name}'] = {'source': 'xspress3',
+                                                        'dtype': 'array',
+                                                        'shape': [xs_det.settings.num_images.get(),
+                                                                  xs_det.hdf5.array_size.height.get(),
+                                                                  xs_det.hdf5.array_size.width.get()],
+                                                        'external': 'FILESTORE:'}
+        import pprint
+        pprint.pprint(return_dict)
         return return_dict
 
     def collect(self, *args, **kwargs):
@@ -691,32 +684,28 @@ class FlyerIDMono:
         #     raise RuntimeError(f"The number of collected datum ids ({self._datum_ids}) "
         #                        f"does not match the number of triggers ({num_triggers})")
 
+        xs_det = self.xs_detectors[0]
         for i, energy in enumerate(np.linspace(energy_start, energy_stop, num_triggers)):
-            # datum_id = self._datum_ids[i]
-            # d = (yield from xs.collect())
-            # print(f'\nData from xs.collect(): {d}\n')
             now = time.time()
             yield {
                 'data': {
                     'energy': energy,
-                    f'{xs.name}': xs._datum_ids[i],
-                    # f'{self.detector.name}_image': datum_id,
+                    f'{xs_det.name}': xs_det._datum_ids[i],
                 },
                 'timestamps': {
                     'energy': now,
-                    f'{xs.name}': now,
-                    # f'{self.detector.name}_image': now,
+                    f'{xs_det.name}': now,
                 },
                 'time': now,
                 'seq_num': i,
                 'filled': {
-                    f'{xs.name}': False,
-                    # f'{self.detector.name}_image': False,
+                    f'{xs_det.name}': False,
                 }
             }
 
     def collect_asset_docs(self):
-        yield from xs.collect_asset_docs()
+        for xs_det in self.xs_detectors:
+            yield from xs_det.collect_asset_docs()
 
     # def collect_asset_docs(self):
     #     asset_docs_cache = deque()
@@ -743,6 +732,6 @@ class FlyerIDMono:
 
 flyer_id_mono = FlyerIDMono(flying_dev=id_fly_device,
                             zebra=nanoZebra,
-                            detectors=[],
+                            xs_detectors=[xs_id_mono_fly],
                             pulse_cpt='pulse1',
                             pulse_width=0.01)
