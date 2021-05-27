@@ -1,5 +1,16 @@
 print(f"Loading {__file__}...")
 
+import os
+
+def if_touch_beamline(envvar="TOUCHBEAMLINE"):
+    value = os.environ.get(envvar, "false").lower()
+    if value in ("", "n", "no", "f", "false", "off", "0"):
+        return False
+    elif value in ("y", "yes", "t", "true", "on", "1"):
+        return True
+    else:
+        raise ValueError(f"Unknown value: {value}")
+
 ###############################################################################
 # TODO: remove this block once https://github.com/bluesky/ophyd/pull/959 is
 # merged/released.
@@ -36,12 +47,16 @@ EpicsSignalBase.wait_for_connection = wait_for_connection_base
 EpicsSignal.wait_for_connection = wait_for_connection
 ###############################################################################
 
-if 'TOUCHBEAMLINE' in os.environ and os.environ['TOUCHBEAMLINE'] == 1:
+if if_touch_beamline():
     # Case of real beamline:
     timeout = 2  # seconds
+    going = "Going"
 else:
     # Case of CI:
     timeout = 10  # seconds
+    going = "NOT going"
+
+print(f'\nEpicsSignalBase timeout is {timeout} [seconds]. {going} to touch beamline hardware.\n')
 
 from ophyd.signal import EpicsSignalBase
 # EpicsSignalBase.set_default_timeout(timeout=timeout, connection_timeout=timeout)  # old style

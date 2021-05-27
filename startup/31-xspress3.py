@@ -332,7 +332,7 @@ try:
                                    for j in [1, 2, 3, 4]]
     xs.channel4.rois.read_attrs = ["roi{:02}".format(j)
                                    for j in [1, 2, 3, 4]]
-    if os.getenv("TOUCHBEAMLINE", "0") == "1":
+    if if_touch_beamline():
         xs.settings.num_channels.put(4) #4 for ME4 detector
         xs.channel1.vis_enabled.put(1)
         xs.channel2.vis_enabled.put(1)
@@ -392,7 +392,7 @@ try:
                                                for j in [1, 2, 3, 4]]
     xs_id_mono_fly.channel4.rois.read_attrs = ["roi{:02}".format(j)
                                                for j in [1, 2, 3, 4]]
-    if os.getenv("TOUCHBEAMLINE", "0") == "1":
+    if if_touch_beamline():
         xs_id_mono_fly.settings.num_channels.put(4) #4 for ME4 detector
         xs_id_mono_fly.channel1.vis_enabled.put(1)
         xs_id_mono_fly.channel2.vis_enabled.put(1)
@@ -538,7 +538,7 @@ try:
                                f_key="fluor_xs2")
     xs2.channel1.rois.read_attrs = ["roi{:02}".format(j)
                                     for j in [1, 2, 3, 4]]
-    if os.getenv("TOUCHBEAMLINE", "0") == "1":
+    if if_touch_beamline():
         xs2.hdf5.num_extra_dims.put(0)
         xs2.hdf5.warmup()
 except TimeoutError:

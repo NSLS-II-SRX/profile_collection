@@ -31,7 +31,7 @@ RE.md['proposal']  = {'proposal_num': str(proposal_num),
                       'saf_num': str(saf_num),
                       'cycle': str(cycle)}
 
-if 'TOUCHBEAMLINE' in os.environ and os.environ['TOUCHBEAMLINE'] == 1:
+if if_touch_beamline():
     # Set user data in scanbroker
     scanrecord.update_metadata()
 
