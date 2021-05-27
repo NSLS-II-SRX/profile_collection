@@ -238,10 +238,6 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
         # Commented out by AMK for using the xs3-server-IOC from TES
         # self.create_dir.put(-3)
 
-        # Needed for flyer:
-        self._asset_docs_cache = deque()
-        self._datum_counter = None
-
     def stop(self, *, success=False):
         ret = super().stop()
         # todo move this into the stop method of the settings object?
@@ -257,22 +253,29 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
         if self.fly_next.get():
             self.fly_next.put(False)
             self._mode = SRXMode.fly
-
-
-        ret = super().stage()
-        self._datum_counter = itertools.count()
-
-        return ret
+        return super().stage()
 
     def unstage(self):
         try:
             ret = super().unstage()
         finally:
             self._mode = SRXMode.step
+        return ret
 
+
+class SrxXspress3DetectorIDMonoFly(SrxXspress3Detector):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._asset_docs_cache = deque()
         self._datum_counter = None
 
-        return ret
+    def stage(self):
+        super().stage()
+        self._datum_counter = itertools.count()
+
+    def unstage(self):
+        super().unstage()
+        self._datum_counter = None
 
     def complete(self, *args, **kwargs):
         for resource in self.hdf5._asset_docs_cache:
@@ -375,6 +378,66 @@ except TimeoutError:
 except Exception as ex:
     xs = None
     print("\nUnexpected error connecting to xs.\n")
+    print(ex, end="\n\n")
+
+
+# xs_id_mono_fly detector for the ID-Mono flyer.
+try:
+    xs_id_mono_fly = SrxXspress3DetectorIDMonoFly("XF:05IDD-ES{Xsp:1}:", name="xs")
+    xs_id_mono_fly.channel1.rois.read_attrs = ["roi{:02}".format(j)
+                                               for j in [1, 2, 3, 4]]
+    xs_id_mono_fly.channel2.rois.read_attrs = ["roi{:02}".format(j)
+                                               for j in [1, 2, 3, 4]]
+    xs_id_mono_fly.channel3.rois.read_attrs = ["roi{:02}".format(j)
+                                               for j in [1, 2, 3, 4]]
+    xs_id_mono_fly.channel4.rois.read_attrs = ["roi{:02}".format(j)
+                                               for j in [1, 2, 3, 4]]
+    if os.getenv("TOUCHBEAMLINE", "0") == "1":
+        xs_id_mono_fly.settings.num_channels.put(4) #4 for ME4 detector
+        xs_id_mono_fly.channel1.vis_enabled.put(1)
+        xs_id_mono_fly.channel2.vis_enabled.put(1)
+        xs_id_mono_fly.channel3.vis_enabled.put(1)
+        xs_id_mono_fly.channel4.vis_enabled.put(1)
+        xs_id_mono_fly.hdf5.num_extra_dims.put(0)
+
+        xs_id_mono_fly.settings.configuration_attrs = [
+            "acquire_period",
+            "acquire_time",
+            "gain",
+            "image_mode",
+            "manufacturer",
+            "model",
+            "num_exposures",
+            "num_images",
+            "temperature",
+            "temperature_actual",
+            "trigger_mode",
+            "config_path",
+            "config_save_path",
+            "invert_f0",
+            "invert_veto",
+            "xsp_name",
+            "num_channels",
+            "num_frames_config",
+            "run_flags",
+            "trigger_signal",
+        ]
+
+        # This is necessary for when the IOC restarts
+        # We have to trigger one image for the hdf5 plugin to work correctly
+        # else, we get file writing errors
+        xs_id_mono_fly.hdf5.warmup()
+
+        # Rename the ROIs
+        for i in range(1, 4):
+            ch = getattr(xs_id_mono_fly.channel1.rois, "roi{:02}.value".format(i))
+            ch.name = "ROI_{:02}".format(i)
+except TimeoutError:
+    xs_id_mono_fly = None
+    print("\nCannot connect to xs_id_mono_fly. Continuing without device.\n")
+except Exception as ex:
+    xs_id_mono_fly = None
+    print("\nUnexpected error connecting to xs_id_mono_fly.\n")
     print(ex, end="\n\n")
 
 
