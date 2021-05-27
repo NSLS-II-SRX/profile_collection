@@ -36,9 +36,16 @@ EpicsSignalBase.wait_for_connection = wait_for_connection_base
 EpicsSignal.wait_for_connection = wait_for_connection
 ###############################################################################
 
+if 'TOUCHBEAMLINE' in os.environ and os.environ['TOUCHBEAMLINE'] == 1:
+    # Case of real beamline:
+    timeout = 2  # seconds
+else:
+    # Case of CI:
+    timeout = 10  # seconds
+
 from ophyd.signal import EpicsSignalBase
-# EpicsSignalBase.set_default_timeout(timeout=10, connection_timeout=10)  # old style
-EpicsSignalBase.set_defaults(timeout=3, connection_timeout=3)  # new style
+# EpicsSignalBase.set_default_timeout(timeout=timeout, connection_timeout=timeout)  # old style
+EpicsSignalBase.set_defaults(timeout=timeout, connection_timeout=timeout)  # new style
 
 import nslsii
 import matplotlib as mpl
