@@ -62,6 +62,11 @@ from ophyd.signal import EpicsSignalBase
 # EpicsSignalBase.set_default_timeout(timeout=timeout, connection_timeout=timeout)  # old style
 EpicsSignalBase.set_defaults(timeout=timeout, connection_timeout=timeout)  # new style
 
+import datetime
+
+def print_now():
+    return datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S.%f')
+
 import nslsii
 import matplotlib as mpl
 from IPython.terminal.prompts import Prompts, Token

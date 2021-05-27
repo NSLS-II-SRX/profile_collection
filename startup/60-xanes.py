@@ -628,7 +628,7 @@ class FlyerIDMono:
         self.status = self.flying_dev.control.scan_in_progress
 
         def callback(value, old_value, **kwargs):
-            print(f'{ttime.time()} in kickoff: {old_value} ---> {value}')
+            print(f'{print_now()} in kickoff: {old_value} ---> {value}')
             if int(round(old_value)) == 0 and int(round(value)) == 1:
                 return True
             return False
@@ -638,7 +638,7 @@ class FlyerIDMono:
 
     def complete(self, *args, **kwargs):
         def callback(value, old_value, **kwargs):
-            print(f'{ttime.time()} in complete: {old_value} ---> {value}')
+            print(f'{print_now()} in complete: {old_value} ---> {value}')
             if int(round(old_value)) == 1 and int(round(value)) == 0:
                 for xs_det in self.xs_detectors:
                     xs_det.complete()
@@ -648,12 +648,22 @@ class FlyerIDMono:
         status = SubscriptionStatus(self.status, callback)
         return status
 
+    # TODO: Fix the configuration (also for v2).
+    # def describe_configuration(self, *args, **kwargs):
+    #     ret = {}
+    #     for xs_det in self.xs_detectors:
+    #         ret[f'{xs_det}.name'] = xs_det.describe_configuration()
+    #     return ret
+
     def describe_collect(self, *args, **kwargs):
         return_dict = {
             'primary':
                 {'energy': {'source': '',
                             'dtype': 'number',
-                            'shape': [self._traj_info['num_triggers']]},
+                            # We need just 1 scalar value for the energy.
+                            # 'shape': [self._traj_info['num_triggers']]},
+                            # TODO: double-check the shape is right for databroker v2.
+                            'shape': []},
                  # f'{self.detector.name}_image': {'source': '...',
                  #           'dtype': 'array',
                  #           'shape': [self._array_size['height'],
@@ -662,14 +672,21 @@ class FlyerIDMono:
                 }
         }
         for xs_det in self.xs_detectors:
-            return_dict['primary'][f'{xs_det.name}'] = {'source': 'xspress3',
-                                                        'dtype': 'array',
-                                                        'shape': [xs_det.settings.num_images.get(),
-                                                                  xs_det.hdf5.array_size.height.get(),
-                                                                  xs_det.hdf5.array_size.width.get()],
-                                                        'external': 'FILESTORE:'}
-        import pprint
-        pprint.pprint(return_dict)
+            for channel in xs_det.channels.keys():
+                return_dict['primary'][f'{xs_det.name}_ch{channel}'] = {'source': 'xspress3',
+                                                                        'dtype': 'array',
+                                                                        # The shape will correspond to a 1-D array of 4096 bins from xspress3.
+                                                                        'shape': [
+                                                                                  # We don't need the total number of frames here.
+                                                                                  # xs_det.settings.num_images.get(),
+                                                                                  #
+                                                                                  # The height corresponds to a number of channels, but we only need one here.
+                                                                                  # xs_det.hdf5.array_size.height.get(),
+                                                                                  #
+                                                                                  xs_det.hdf5.array_size.width.get()],
+                                                                        'external': 'FILESTORE:'}
+        # import pprint
+        # pprint.pprint(return_dict)
         return return_dict
 
     def collect(self, *args, **kwargs):
@@ -684,23 +701,27 @@ class FlyerIDMono:
         #     raise RuntimeError(f"The number of collected datum ids ({self._datum_ids}) "
         #                        f"does not match the number of triggers ({num_triggers})")
 
-        xs_det = self.xs_detectors[0]
-        for i, energy in enumerate(np.linspace(energy_start, energy_stop, num_triggers)):
-            now = time.time()
+        for ii, energy in enumerate(np.linspace(energy_start, energy_stop, num_triggers)):
+            for xs_det in self.xs_detectors:
+                now = time.time()
+
+                data = {'energy': energy}
+                timestamps = {'energy': now}
+                filled = {}
+
+                for jj, channel in enumerate(xs_det.channels.keys()):
+                    key = f'{xs_det.name}_ch{channel}'
+                    idx = jj + ii * len(xs_det.channels.keys())
+                    data[key] = xs_det._datum_ids[idx]
+                    timestamps[key] = now
+                    filled[key] = False
+
             yield {
-                'data': {
-                    'energy': energy,
-                    f'{xs_det.name}': xs_det._datum_ids[i],
-                },
-                'timestamps': {
-                    'energy': now,
-                    f'{xs_det.name}': now,
-                },
+                'data': data,
+                'timestamps': timestamps,
                 'time': now,
                 'seq_num': i,
-                'filled': {
-                    f'{xs_det.name}': False,
-                }
+                'filled': filled,
             }
 
     def collect_asset_docs(self):

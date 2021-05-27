@@ -86,7 +86,7 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
         Also modified the stage sigs.
 
         """
-        print("Warming up the hdf5 plugin...", end="")
+        print(f"\tWarming up the hdf5 plugin of '{self.parent.name}'... ", end="")
         set_and_wait(self.enable, 1)
         sigs = OrderedDict(
             [
@@ -289,14 +289,15 @@ class SrxXspress3DetectorIDMonoFly(SrxXspress3Detector):
 
         for frame_num in range(num_frames):
             print(f'  frame_num in "complete": {frame_num + 1} / {num_frames}')
-            datum_id = '{}/{}'.format(self.hdf5._resource_uid, next(self._datum_counter))
-            datum = {'resource': self.hdf5._resource_uid,
-                     'datum_kwargs': {'frame': frame_num, 'channel': 0},
-                     'datum_id': datum_id}
-            self._asset_docs_cache.append(('datum', datum))
-            self._datum_ids.append(datum_id)
+            for channel in self.channels.keys():
+                datum_id = '{}/{}'.format(self.hdf5._resource_uid, next(self._datum_counter))
+                datum = {'resource': self.hdf5._resource_uid,
+                         'datum_kwargs': {'frame': frame_num, 'channel': channel},
+                         'datum_id': datum_id}
+                self._asset_docs_cache.append(('datum', datum))
+                self._datum_ids.append(datum_id)
 
-        print(f'\nasset_docs_cache with datums:\n{self._asset_docs_cache}\n')
+        # print(f'\nasset_docs_cache with datums:\n{self._asset_docs_cache}\n')
 
         return NullStatus()
 
@@ -383,7 +384,7 @@ except Exception as ex:
 
 # xs_id_mono_fly detector for the ID-Mono flyer.
 try:
-    xs_id_mono_fly = SrxXspress3DetectorIDMonoFly("XF:05IDD-ES{Xsp:1}:", name="xs")
+    xs_id_mono_fly = SrxXspress3DetectorIDMonoFly("XF:05IDD-ES{Xsp:1}:", name="xs_id_mono_fly")
     xs_id_mono_fly.channel1.rois.read_attrs = ["roi{:02}".format(j)
                                                for j in [1, 2, 3, 4]]
     xs_id_mono_fly.channel2.rois.read_attrs = ["roi{:02}".format(j)
