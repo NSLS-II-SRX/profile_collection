@@ -823,3 +823,16 @@ def plot_flyer_id_mono_data(uid_or_scanid, e_min, e_max, fname, num_channels=4):
     ax.set(xlabel='Energy [eV]', ylabel='Normalized Spectrum [Arb]')
     np.savetxt(fname, res.T)
     return res
+
+def flying_xas():
+    v = flyer_id_mono.flying_dev.parameters.speed.get()
+    w = flyer_id_mono.flying_dev.parameters.trigger_width.get()
+    dt = w / v
+    flyer_id_mono.pulse_width = dt
+    yield from bp.fly([flyer_id_mono])
+
+"""
+TODO: setup stage_sigs for scaler
+TODO: Monitor and LivePlot of data
+TODO: All scan directions and modes (uni/bi-directional)
+"""
