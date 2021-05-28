@@ -507,7 +507,7 @@ def fast_shutter_per_step(detectors, motor, step):
 
 
 class FlyerIDMono:
-    def __init__(self, flying_dev, zebra, xs_detectors, pulse_cpt=None, pulse_width=0.01):
+    def __init__(self, flying_dev, zebra, xs_detectors, scaler, pulse_cpt=None, pulse_width=0.01):
         """Instantiate a flyer based on ID-Mono coordinated motion.
 
         Parameters
@@ -521,6 +521,9 @@ class FlyerIDMono:
         xs_detectors : list
             a list of ophyd objects for corresponding xspress3 detectors
 
+        scaler : SRXScaler
+            an ophyd object for the scaler detector
+
         pulse_cpt : str
             an ophyd component name corresponding to the pulse signal
 
@@ -532,6 +535,7 @@ class FlyerIDMono:
         self.flying_dev = flying_dev
         self.zebra = zebra
         self.xs_detectors = xs_detectors
+        self.scaler = scaler
 
         # The pulse width has to be set both in Zebra and the Scan Engine.
         if pulse_cpt is None:
@@ -561,6 +565,12 @@ class FlyerIDMono:
             xs_det.stage()
             xs_det.settings.acquire.put(1)
 
+        # Scaler config
+        self.scaler.count_mode.put(0)  # put SIS3820 into single count (not autocount) mode
+        self.scaler.stop_all.put(1)  # stop scaler
+        self.scaler.nuse_all.put(total_points)
+        self.scaler.erase_start.put(1)
+
         # TODO: These parameters are for the bpmAD camera, move them to the relevant class in 21-cameras.
         # # This sets a filepath (template for TIFFs) and generates a Resource
         # # document in the detector.tiff Device's asset cache.
@@ -577,6 +587,8 @@ class FlyerIDMono:
             xs_det.hdf5.capture.put(0)  # this is to save the file is the number of collected frames is less than expected
             xs_det.settings.trigger_mode.put('Internal')
             xs_det.unstage()
+
+        self.scaler.stop_all.put(1)
 
         # TODO: These parameters are for the bpmAD camera, move them to the relevant class in 21-cameras.
         # self.detector.unstage()
@@ -624,7 +636,9 @@ class FlyerIDMono:
             print(f'Enabling fly scan')
             self.flying_dev.control.control.put(1)
 
+        # Main RUN command:
         self.flying_dev.control.run.put(1)
+
         self.status = self.flying_dev.control.scan_in_progress
 
         def callback(value, old_value, **kwargs):
@@ -658,12 +672,16 @@ class FlyerIDMono:
     def describe_collect(self, *args, **kwargs):
         return_dict = {
             'primary':
-                {'energy': {'source': '',
+                {'energy': {'source': self.flying_dev.name,
                             'dtype': 'number',
                             # We need just 1 scalar value for the energy.
                             # 'shape': [self._traj_info['num_triggers']]},
                             # TODO: double-check the shape is right for databroker v2.
                             'shape': []},
+                 'i0_time': {'source': 'scaler', 'dtype': 'array', 'shape': []},
+                 'i0': {'source': 'scaler', 'dtype': 'array', 'shape': []},
+                 'im': {'source': 'scaler', 'dtype': 'array', 'shape': []},
+                 'it': {'source': 'scaler', 'dtype': 'array', 'shape': []},
                  # f'{self.detector.name}_image': {'source': '...',
                  #           'dtype': 'array',
                  #           'shape': [self._array_size['height'],
@@ -701,14 +719,38 @@ class FlyerIDMono:
         #     raise RuntimeError(f"The number of collected datum ids ({self._datum_ids}) "
         #                        f"does not match the number of triggers ({num_triggers})")
 
+        i0_time = self.scaler.mca1.get()
+        i0 = self.scaler.mca2.get()
+        im = self.scaler.mca3.get()
+        it = self.scaler.mca4.get()
+
+        print(f"Length of 'i0_time': {len(i0_time)}")
+        print(f"Length of 'i0'     : {len(i0)}")
+        print(f"Length of 'im'     : {len(im)}")
+        print(f"Length of 'it'     : {len(it)}")
+
+        if len(i0_time) != len(i0) != len(im) != len(it):
+            raise RuntimeError(f"Lengths of the collected arrays are not equal")
+
         for ii, energy in enumerate(np.linspace(energy_start, energy_stop, num_triggers)):
             for xs_det in self.xs_detectors:
                 now = time.time()
 
-                data = {'energy': energy}
-                timestamps = {'energy': now}
+                data = {
+                    'energy': energy,
+                    'i0_time': i0_time[ii],
+                    'i0': i0[ii],
+                    'im': im[ii],
+                    'it': it[ii],
+                }
+                timestamps = {
+                    'energy': now,
+                    'i0_time': now,
+                    'i0': now,
+                    'im': now,
+                    'it': now,
+                }
                 filled = {}
-
                 for jj, channel in enumerate(xs_det.channels.keys()):
                     key = f'{xs_det.name}_ch{channel}'
                     idx = jj + ii * len(xs_det.channels.keys())
@@ -754,5 +796,30 @@ class FlyerIDMono:
 flyer_id_mono = FlyerIDMono(flying_dev=id_fly_device,
                             zebra=nanoZebra,
                             xs_detectors=[xs_id_mono_fly],
+                            scaler=sclr1,
                             pulse_cpt='pulse1',
-                            pulse_width=0.01)
+                            pulse_width=0.05)
+
+
+# Helper functions for quick vis:
+def plot_flyer_id_mono_data(uid_or_scanid, e_min, e_max, fname, num_channels=4):
+    hdr = db[uid_or_scanid]
+    tbl = hdr.table()
+
+    d = []
+    for i in range(num_channels):
+        d.append(np.array(list(hdr.data(f'xs_id_mono_fly_ch{i + 1}')))[:, e_min:e_max].sum(axis=1))
+    d = np.array(d)
+
+    i0 = np.array(tbl['i0'])
+    energy = np.array(tbl['energy'])
+
+    spectrum_unnormalized = d.sum(axis=0)
+    spectrum = spectrum_unnormalized / i0
+
+    res = np.vstack((energy, i0, spectrum_unnormalized, spectrum))
+    fig, ax = plt.subplots()
+    ax.plot(energy, spectrum)
+    ax.set(xlabel='Energy [eV]', ylabel='Normalized Spectrum [Arb]')
+    np.savetxt(fname, res.T)
+    return res
