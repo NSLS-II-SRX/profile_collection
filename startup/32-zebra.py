@@ -207,10 +207,10 @@ class SRXFlyer1Axis(Device):
     """
 
     LARGE_FILE_DIRECTORY_WRITE_PATH = (
-        "/nsls2/xf05id1/XF05ID1/data/2020-3/fly_scan_ancillary/"
+        "/nsls2/xf05id1/XF05ID1/data/2021-2/fly_scan_ancillary/"
     )
     LARGE_FILE_DIRECTORY_READ_PATH = (
-        "/nsls2/xf05id1/XF05ID1/data/2020-3/fly_scan_ancillary/"
+        "/nsls2/xf05id1/XF05ID1/data/2021-2/fly_scan_ancillary/"
     )
     KNOWN_DETS = {"xs", "xs2", "merlin", "dexela"}
     fast_axis = Cpt(Signal, value="HOR", kind="config")
