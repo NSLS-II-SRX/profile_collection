@@ -372,6 +372,7 @@ cal_data_2021cycle2 = {
 }
 
 energy = Energy(prefix="", name="energy", **cal_data_2021cycle2)
+energy.wait_for_connection()
 energy.synch_with_epics()
 energy.value = 1.0
 
