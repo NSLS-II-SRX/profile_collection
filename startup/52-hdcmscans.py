@@ -357,6 +357,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # @subs_decorator(livecallbacks)
     # @subs_decorator(lpf)
     @subs_decorator(paired_callback)
+    @run_decorator(md=scan_md)
     def myplan():
         return (
             # yield from scan(det,
