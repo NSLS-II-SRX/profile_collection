@@ -229,6 +229,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # if ('xs2' in dets_by_name):
     #     md['scan']['type'] = 'XRF_E_tomo_fly'
 
+    amk_debug_flag = False
+
     @stage_decorator(flying_zebra.detectors)
     def fly_each_step(motor, step):
         def move_to_start_fly():
@@ -237,9 +239,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             yield from one_1d_step([temp_nanoKB], motor, step)
             yield from bps.wait(group='row')
 
-        # t_mvstartfly = tic()
+        if amk_debug_flag:
+            t_mvstartfly = tic()
         yield from move_to_start_fly()
-        # toc(t_mvstartfly, str='Move to start fly each')
+        if amk_debug_flag:
+            toc(t_mvstartfly, str='Move to start fly each')
 
         # TODO  Why are we re-trying the move?  This should be fixed at
         # a lower level
@@ -309,9 +313,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             yield from kickoff(flying_zebra,
                                xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell,
                                wait=True)
-        # t_zebkickoff = tic()
+        if amk_debug_flag:
+            t_zebkickoff = tic()
         yield from zebra_kickoff()
-        # toc(t_zebkickoff, str='Zebra kickoff')
+        if amk_debug_flag:
+            toc(t_zebkickoff, str='Zebra kickoff')
 
         # arm SIS3820, note that there is a 1 sec delay in setting X
         # into motion so the first point *in each row* won't
@@ -336,24 +342,28 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         # @timer_wrapper
         def zebra_complete():
             yield from complete(flying_zebra)  # tell the Zebra we are done
-        # t_zebcomplete = tic()
+        if amk_debug_flag:
+            t_zebcomplete = tic()
         yield from zebra_complete()
-        # toc(t_zebcomplete, str='Zebra complete')
+        if amk_debug_flag:
+            toc(t_zebcomplete, str='Zebra complete')
 
 
         # @timer_wrapper
         def zebra_collect():
             yield from collect(flying_zebra)  # extract data from Zebra
-        # t_zebcollect = tic()
+        if amk_debug_flag:
+            t_zebcollect = tic()
         yield from zebra_collect()
-        # toc(t_zebcollect, str='Zebra collect')
+        if amk_debug_flag:
+            toc(t_zebcollect, str='Zebra collect')
 
         # TODO what?
         if ('e_tomo' in xmotor.name):
             v_return = min(4, xmotor.velocity.high_limit)
             yield from mv(xmotor.velocity, v_return)
         if ('nano_stage' in xmotor.name):
-            yield from mv(xmotor.velocity, 30)
+            yield from mv(xmotor.velocity, 100)
         else:
             # set the "stage speed"
             yield from mv(xmotor.velocity, 1.0)
@@ -445,7 +455,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     #     # t_open = tic()
     #     yield from mv(shut_b, 'Open')
     #     # toc(t_open, str='Open shutter')
+    if amk_debug_flag:
+        t_open = tic()
     yield from check_shutters(shutter, 'Open')
+    if amk_debug_flag:
+        toc(t_open, str='Open shutter')
 
     # Run the scan
     uid = yield from final_plan
