@@ -4,6 +4,7 @@ print(f'Loading {__file__}...')
 import os
 import lmfit
 import numpy as np
+import pandas as pd
 from scipy.optimize import curve_fit
 from scipy.special import erf
 from bluesky.callbacks import LiveFit, LiveFitPlot
@@ -101,6 +102,27 @@ def printfig():
                 bbox_inches='tight',
                 pad_inches=4)
     os.system("lp -d HXN-printer-1 /home/xf05id1/tmp/temp.png")
+
+
+def print_baseline(scanid=-1):
+    '''
+    Print all the baseline metadata.
+
+    Input
+    -----
+    scanid  int     the scan ID for the scan of interest.
+
+    Returns
+    -------
+    Nothing
+    '''
+
+    scanid = int(scanid)
+    h = db[scanid]
+    tbl = h.table('baseline')
+    pd.set_option('max_rows', 999)
+    print(tbl.T)
+    pd.reset_option('max_rows')
 
 
 def scantime(scanid=-1):
