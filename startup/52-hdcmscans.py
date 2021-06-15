@@ -278,6 +278,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
 
     # Define the detector
     det = [sclr1, bpm4, dcm.c1_roll, dcm.c2_pitch]
+    det_names = [d.name for d in det]
 
     # Set dwell for scaler
     dwell = 1.0
@@ -318,7 +319,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # 2020-10-26
     # roll_guess = 0.351
     # 2021-01-31
-    roll_guess = 0.240
+    roll_guess = 0.234
     # 2020-02-03
     # B = energy.energy_to_positions((E/1000), 3, 0)[0]
     # pitch_guess = 0.0009145473*B + 0.0141488665
@@ -326,7 +327,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # B = energy.energy_to_positions((E/1000), 3, 0)[0]
     # pitch_guess = 0.0010913788*B - 0.0139213806
     # 2021-01-31
-    pitch_guess = -0.0009845238*(E/1000) - 0.0101940476
+    pitch_guess = -0.00128157*(E/1000) - 0.0616634
 
 
     # Use calibration
@@ -343,13 +344,13 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # Set metadata
     scan_md = get_stock_md({})
     scan_md['scan']['type'] = 'PEAKUP'
-    scan_md['scan']['detectors'] = det
+    scan_md['scan']['detectors'] = det_names
     scan_md['scan']['dwell'] = dwell
     
     # Open the shutter
     # if (shutter == True):
     #     yield from bps.mov(shut_b, 'Open')
-    yield from check_shutters(shut_b, 'Open')
+    yield from check_shutters(shutter, 'Open')
 
     paired_callback = PairedCallback(scaler, dcm.c2_pitch.name, pitch_guess)
 
@@ -366,14 +367,14 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
             #                 pitch_num)
             yield from adaptive_scan(det, 'sclr_i0', dcm.c2_fine,
                                      pitch_lim[0], pitch_lim[1],
-                                     0.01, 0.1, 10000, True)
+                                     0.01, 0.1, 10000, True, md=scan_md)
         )
     uid = yield from myplan()
 
     # Close the shutter
     # if (shutter is True):
     #     yield from bps.mov(shut_b, 'Close')
-    yield from check_shutters(shut_b, 'Close')
+    yield from check_shutters(shutter, 'Close')
 
     # Add scan to scanlog
     logscan('peakup_fine_pitch')
@@ -384,8 +385,9 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # Collect the data
     # h = db[-1]
     h = db[uid]
-    x = h.table()['dcm_c2_pitch'].values
-    y = h.table()[scaler].values
+    tbl = h.table()
+    x = tbl['dcm_c2_pitch'].values
+    y = tbl[scaler].values
 
     # Fit the data
     # gaussian(x, A, sigma, x0):

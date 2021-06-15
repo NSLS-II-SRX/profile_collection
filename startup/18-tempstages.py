@@ -22,3 +22,13 @@ class XFMstage(Device):
 
 
 stage = XFMstage('XF:05IDD-ES:1{Mscp:1-Ax:', name='stage')
+
+
+# Stage setup for Dexela beamstop
+class DexelaBeamstop(Device):
+    x = Cpt(EpicsMotor, 'X}Mtr')
+    y = Cpt(EpicsMotor, 'Y}Mtr')
+
+
+dexela_bs = DexelaBeamstop('XF:05IDD-ES:1{Det:2-Ax:', name='dexela_bs')
+

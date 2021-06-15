@@ -31,9 +31,9 @@ def check_shutters(check, status):
     '''
 
     if check is False:
-        print("\n**************************************************")
-        print("WARNING: Shutters are not controlled in this scan.")
-        print("**************************************************\n")
+        print("\n****************************************************")
+        print(" WARNING: Shutters are not controlled in this scan.")
+        print("****************************************************\n")
     else:
         if status == 'Open':
             if shut_b.status.get() == 'Not Open':
@@ -150,7 +150,10 @@ class SRXDCM(Device):
     temp_pitch = Cpt(EpicsSignalRO, "P}T-I")
 
 
+# print('Trying to instantiate dcm from SRXDCM class...')
 dcm = SRXDCM("XF:05IDA-OP:1{Mono:HDCM-Ax:", name="dcm")
+dcm.wait_for_connection()
+# print('Instantiated dcm from SRXDCM class!')
 
 
 # Setup BPM motors

@@ -76,14 +76,14 @@ def ssa_hcen_scan(start, stop, num,
     x_key = 'slt_ssa_h_cen_readback'
     y_key = 'xbpm2_sumX'
     x = tbl[x_key].values
-    y = -tbl[y_key].values #the sum used to be negative
+    y = -tbl[y_key].values # the sum used to be negative
     x = x.astype(np.float64)
     y = y.astype(np.float64)
     dydx = np.gradient(y, x)
     try:
         with h5py.File('/home/xf05id1/current_user_data/ssa_hcen_scan.h5', 'a') as hf:
             tmp_str = f'dataset_{id_str}'
-            hf.create_dataset(tmp_str, data=[x, y]) #ssa_h_cen, bpm_cts
+            hf.create_dataset(tmp_str, data=[x, y]) # ssa_h_cen, bpm_cts
     except:
         pass
 
@@ -188,7 +188,7 @@ def slit_nanoflyscan(scan_motor, scan_start, scan_stop, scan_stepsize, acqtime,
     slit_orig_gap = slitgap_motor.user_readback.get()
     slit_orig_pos = slit_motor.user_readback.get()
 
-    #close the gap for scan
+    # close the gap for scan
     yield from mov(slitgap_motor, slit_gap)
 
     # Need to convert stepsize to number of points
@@ -291,10 +291,10 @@ def slit_nanoflyscan_cal(scan_id_list=[], slit_range=[], from_RE=[], orthogonali
     for scan_id in scan_id_list:
         # scan_id = '70190'
         h = db[int(scan_id)]
-        #tbl = h.table('stream0', fill=True)
-        #tbl = h.table(fill=True)
+        # tbl = h.table('stream0', fill=True)
+        # tbl = h.table(fill=True)
         # df = h.table(fill=True)
-        #h.table().keys()
+        # h.table().keys()
         # Get the information from the previous scan
         haz_data = False
         loop_counter = 0
@@ -315,24 +315,24 @@ def slit_nanoflyscan_cal(scan_id_list=[], slit_range=[], from_RE=[], orthogonali
             print('Data collection timed out!')
             return
         
-        #df.shape
-        #df.dtypes
+        # df.shape
+        # df.dtypes
         
         fluor_key = 'fluor'
         d = np.array(tbl[fluor_key])[0]
-        if 'NANOVER' in h.start['scaninfo']['fast_axis']:
-            flag_dir = 'VER'
-            pos = 'enc2'
-            #slit_pos = df['jjslits_v_trans']
-        elif 'NANOHOR' in h.start['scaninfo']['fast_axis']:
+        if 'nano_stage_sx' in h.start['scan']['fast_axis']['motor_name']:
             flag_dir = 'HOR'
             pos = 'enc1'
-            #slit_pos = df['jjslits_h_trans']
+            # slit_pos = df['jjslits_v_trans']
+        elif 'nano_stage_sy' in h.start['scan']['fast_axis']['motor_name']:
+            flag_dir = 'VER'
+            pos = 'enc2'
+            # slit_pos = df['jjslits_h_trans']
         else:
             print('Unknown motor')
             return
 
-        #cts = np.array(list(h.data('xs_channel1', fill=True)))
+        # cts = np.array(list(h.data('xs_channel1', fill=True)))
         if bin_low is None:
             bin_low = xs.channel1.rois.roi01.bin_low.get()
         if bin_high is None:
@@ -355,52 +355,52 @@ def slit_nanoflyscan_cal(scan_id_list=[], slit_range=[], from_RE=[], orthogonali
         x = np.array(tbl[pos])[0]
         if (x.size == 1):
             x = np.array(tbl[pos])
-        x = x.astype(np.float64) #position data
-        y = y.astype(np.float64) #fluo data
+        x = x.astype(np.float64) # position data
+        y = y.astype(np.float64) # fluo data
        
         numpts = x.shape
         
-    #ind_line = np.linspace(0, len(cts), numline, endpoint=False, dtype=np.int)
+    # ind_line = np.linspace(0, len(cts), numline, endpoint=False, dtype=np.int)
     
     # numline_array = np.arange(len(cts)/numpts)
-    #line_seq = np.zeros((int(numline), int(numpts)))
-    #pos_seq = np.zeros((int(numline), int(numpts)))
-    #I0_seq = np.zeros((int(numline), int(numpts)))
-    #slit_pos_seq = np.zeros(int(numline))
+    # line_seq = np.zeros((int(numline), int(numpts)))
+    # pos_seq = np.zeros((int(numline), int(numpts)))
+    # I0_seq = np.zeros((int(numline), int(numpts)))
+    # slit_pos_seq = np.zeros(int(numline))
     
-    #for i in range(int(numline)):
-    #    line_seq[i,:] = cts[ind_line[i]:ind_line[i] + int(numpts)]
-    #    pos_seq[i,:] = pos[ind_line[i]:ind_line[i] + int(numpts)]
-    #    I0_seq[i,:] = I0[ind_line[i]:ind_line[i] + int(numpts)]
-    #    slit_pos_seq[i] = slit_pos[ind_line[i] + 1]
+    # for i in range(int(numline)):
+    #     line_seq[i,:] = cts[ind_line[i]:ind_line[i] + int(numpts)]
+    #     pos_seq[i,:] = pos[ind_line[i]:ind_line[i] + int(numpts)]
+    #     I0_seq[i,:] = I0[ind_line[i]:ind_line[i] + int(numpts)]
+    #     slit_pos_seq[i] = slit_pos[ind_line[i] + 1]
     
-    #pos_seq_plt = pos_seq[0, :]
-    #norm_line_seq = line_seq / I0_seq
+    # pos_seq_plt = pos_seq[0, :]
+    # norm_line_seq = line_seq / I0_seq
     # At this point, i haz data and full variables so now itz timez to plot
 
-        #if from_RE == []:
-        #    _, ax = plt.subplots()
-        #else:
-        #    ax = from_RE[0].ax
-        ##for i in range(numline):
-        #ax.plot(x, y, label=f'y = {i+1}')
-        #ax.set_ylabel('Slit position')
-        #ax.set_ylabel('Normalized Signal')
-        #ax.set_title(f'Scan {scan_id}')
-        #ax.legend(loc='upper left')
+        # if from_RE == []:
+        #     _, ax = plt.subplots()
+        # else:
+        #     ax = from_RE[0].ax
+        # #for i in range(numline):
+        # ax.plot(x, y, label=f'y = {i+1}')
+        # ax.set_ylabel('Slit position')
+        # ax.set_ylabel('Normalized Signal')
+        # ax.set_title(f'Scan {scan_id}')
+        # ax.legend(loc='upper left')
 
-        #if from_RE == []:
-        #    _, ax = plt.subplots()
-        #else:
-        #    ax = from_RE[1].ax
-        ##for i in range(numline):
-        #ax.plot(x, y, label=f'y = {i+1}')
-        #ax.set_ylabel('Slit position')
-        #ax.set_ylabel('Raw Signal')
-        #ax.set_title(f'Scan {scan_id}')
-        #ax.legend(loc='upper left')
+        # if from_RE == []:
+        #     _, ax = plt.subplots()
+        # else:
+        #     ax = from_RE[1].ax
+        # #for i in range(numline):
+        # ax.plot(x, y, label=f'y = {i+1}')
+        # ax.set_ylabel('Slit position')
+        # ax.set_ylabel('Raw Signal')
+        # ax.set_title(f'Scan {scan_id}')
+        # ax.legend(loc='upper left')
 
-        #line fit
+        # line fit
         # Error function with offset
         def f_offset_erf(x, A, sigma, x0, y0):
             x_star = (x - x0) / sigma
@@ -427,14 +427,14 @@ def slit_nanoflyscan_cal(scan_id_list=[], slit_range=[], from_RE=[], orthogonali
             print('\nThe center beam position is %f um' % ((popt[2]+popt[6])/2))
             return line_pos
         
-        #line_pos_seq[i] = line_fit(pos_seq_plt, norm_line_seq[i,:])   
+        # line_pos_seq[i] = line_fit(pos_seq_plt, norm_line_seq[i,:])   
         line_pos_seq[i] = line_fit(x, y)  
         i=i+1 
 
     if interp_range is None:
-        #if flag_dir == 'VER':
-        #    interp_range = np.arange(numline)[:]
-        #else:
+        # if flag_dir == 'VER':
+        #     interp_range = np.arange(numline)[:]
+        # else:
         interp_range = np.arange(numline)
 
     calpoly_fit = np.polyfit(slit_range[interp_range], line_pos_seq[interp_range]/1000, orthogonality+1, full=True)
@@ -455,14 +455,14 @@ def slit_nanoflyscan_cal(scan_id_list=[], slit_range=[], from_RE=[], orthogonali
 
 
     print(f'p is {calpoly_fit[0]}')
-    #print(f'residual is {calpoly_fit[1]*1e+6} nm')
+    # print(f'residual is {calpoly_fit[1]*1e+6} nm')
     print(f'P2V of line position is {p2v_line_pos} um')
     defocus = -calpoly_fit[0][0] * C_f
     delta_theta = calpoly_fit[0][0] * C_theta
     line_move_h = -2 * delta_theta * C_f * 1e-3
     print('defocus is ' '{:7.3f}'.format(defocus), 'um. Vkb correct by this amount.')
     print('equivalent to ' '{:7.6f}'.format(delta_theta), 'mrad. Hkb correct by this amount.')
-    #print('actuator should move by' '{:7.3f}'.format(actuator_move), 'um.')
+    # print('actuator should move by' '{:7.3f}'.format(actuator_move), 'um.')
     print('Line feature should move' '{:7.3f}'.format(line_move_h), 'um for h mirror pitch correction')
 
     if orthogonality == 1:
@@ -474,10 +474,10 @@ def slit_nanoflyscan_cal(scan_id_list=[], slit_range=[], from_RE=[], orthogonali
         print('quadratic term corresponds to coarse Z ' '{:7.3f}'.format(delta_focal_plane_z), 'um.')
 
 
-    #if from_RE == []:
-    #    _, ax = plt.subplots()
-    #else:
-    #    ax = from_RE[2].ax
+    # if from_RE == []:
+    #     _, ax = plt.subplots()
+    # else:
+    #     ax = from_RE[2].ax
     fig, ax = plt.subplots()
     ax.plot(slit_range, line_pos_seq/1000, 'ro', slit_range[interp_range], line_plt)
     ax.set_title(f'scan {scan_id}')

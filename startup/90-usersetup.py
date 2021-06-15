@@ -17,6 +17,11 @@ proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
 saf_num = 307307
 
+proposal_num = 308774
+proposal_title = 'SRX Beamline Commissioning'
+PI_lastname = 'Hidas'
+saf_num = 307307
+
 cycle = '2021_cycle2'
 
 # Set user data in bluesky

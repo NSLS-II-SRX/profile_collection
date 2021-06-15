@@ -4,6 +4,7 @@ print(f'Loading {__file__}...')
 import os
 import lmfit
 import numpy as np
+import pandas as pd
 from scipy.optimize import curve_fit
 from scipy.special import erf
 from bluesky.callbacks import LiveFit, LiveFitPlot
@@ -81,9 +82,9 @@ def mv_position(pos=[]):
         print('Not a position, exiting...')
         return
 
-    yield from mv(hf_stage.x, pos[0],
-                  hf_stage.y, pos[1],
-                  hf_stage.z, pos[2])
+    yield from mv(nano_stage.x, pos[0],
+                  nano_stage.y, pos[1],
+                  nano_stage.z, pos[2])
 
 
 def copyscanparam(src_num, dest_num):
@@ -101,6 +102,36 @@ def printfig():
                 bbox_inches='tight',
                 pad_inches=4)
     os.system("lp -d HXN-printer-1 /home/xf05id1/tmp/temp.png")
+
+
+def print_baseline(scanid=-1):
+    '''
+    Print all the baseline metadata.
+
+    Input
+    -----
+    scanid  int     the scan ID for the scan of interest.
+
+    Returns
+    -------
+    Nothing
+    '''
+
+    scanid = int(scanid)
+    h = db[scanid]
+    tbl = h.table('baseline')
+    pd.set_option('max_rows', 999)
+    print(tbl.T)
+    pd.reset_option('max_rows')
+
+
+def scantime(scanid=-1):
+    h = db[int(scanid)]
+    scanid = h.start['scan_id']
+    print(f'Scan ID: {scanid}')
+    print(f'  Start Time: {ttime.ctime(h.start["time"])}')
+    print(f'  Stop  Time: {ttime.ctime(h.stop["time"])}')
+    print(f'  Total Time: {h.stop["time"] - h.start["time"]}')
 
 
 def estimate_scan_duration(xnum, ynum, dwell, scantype=None, event_delay=None):
