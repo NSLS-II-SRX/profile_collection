@@ -134,34 +134,39 @@ def scantime(scanid=-1):
     print(f'  Total Time: {h.stop["time"] - h.start["time"]}')
 
 
-def estimate_scan_duration(xnum, ynum, dwell, scantype=None, event_delay=None):
+def estimate_scan_duration(fastaxis_num, slowaxis_num, dwell, scantype='XRF_FLY', event_delay=None):
     '''
     xnum    int     number of points as entered for the scan in X
     ynum    int     number of points as entered for the scan in Y
     dwell   float   exposure time in seconds as entered on the command line
     scantype    string  one of [XRF, XRF_fly, XANES]
     '''
-    overhead = {'xrf': 0.7, 'xrf_fly': 3.8, 'xanes': 1.6}
+    #overhead = {'xrf': 0.7, 'xrf_fly': 3.8, 'xanes': 1.6}
+    overhead = {'xrf': 0.7, 'XRF_FLY': 5.5, 'xanes': 1.6}
     if event_delay is None:
         try:
             delay = overhead[scantype.casefold()]
         except KeyError:
-            print("Warning: scantype is not supported")
+            print("Warning: scantype is not supported, deplay = 0s")
             delay = 0.
     else:
         delay = event_delay
+        print(f"overhead per line is {delay}s")
 
-    if scantype.casefold() == 'xrf_fly':
-        if delay != 0.:
-            delay = delay / xnum
-        xnum = xnum - 1
-        ynum = ynum - 1
+##    if scantype.casefold() == 'xrf_fly':
+##        if delay != 0.:
+##            delay = delay / xnum
+##        xnum = xnum - 1
+##        ynum = ynum - 1
 
-    result = ((xnum + 1) * (ynum + 1)) * (dwell + delay)
-    div, rem = divmod(result, 3600)
-    print(f"Estimated duration is {int(div):d} hr {rem / 60:.1f} min "
-          "({result:.1f} sec).")
-
+    #result = ((xnum + 1) * (ynum + 1)) * (dwell + delay)
+    '''
+    if 
+        result = (xnum*ynum) * dwell + ynum*delay
+        div, rem = divmod(result, 3600)
+        print(f"Estimated duration is {int(div):d} hr {rem / 60:.1f} min "
+              "({result:.1f} sec).")
+    '''
     return result
 
 

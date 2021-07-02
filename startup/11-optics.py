@@ -40,7 +40,16 @@ def check_shutters(check, status):
                 print('Opening B-hutch shutter..')
                 yield from mov(shut_b, "Open")
             print('Opening D-hutch shutter...')
-            yield from mov(shut_d, 0)
+            # yield from mov(shut_d, 0)
+            yield from abs_set(shut_d, 0)
+            i = 0
+            while (shut_d.read()['attenuators_Mo_shutter']['value'] == 1):
+                yield from bps.sleep(1)
+                abs_set(shut_d, 0)
+                i = i + 1
+                if (i > 10):
+                    print('Error opening D-shutter!')
+                    raise Exception
         else:
             print('Closing D-hutch shutter...')
             yield from mov(shut_d, 1)
@@ -130,19 +139,19 @@ class HDCMPiezoPitch(PVPositionerPC):
 class SRXDCM(Device):
     bragg = energy.bragg
     c1_roll = Cpt(EpicsMotor, "R1}Mtr")
-    c1_fine = Cpt(
-        HDCMPiezoRoll,
-        "XF:05ID-BI{EM:BPM1}DAC0", name="c1_fine",
-        add_prefix=()
-    )
+    # c1_fine = Cpt(
+    #     HDCMPiezoRoll,
+    #     "XF:05ID-BI{EM:BPM1}DAC0", name="c1_fine",
+    #     add_prefix=()
+    # )
     c2_x = energy.c2_x
     c2_pitch = Cpt(EpicsMotor, "P2}Mtr")
-    c2_fine = Cpt(
-        HDCMPiezoPitch,
-        "XF:05ID-BI{EM:BPM1}DAC1",
-        name="c2_fine",
-        add_prefix=()
-    )
+    # c2_fine = Cpt(
+    #     HDCMPiezoPitch,
+    #     "XF:05ID-BI{EM:BPM1}DAC1",
+    #     name="c2_fine",
+    #     add_prefix=()
+    # )
     c2_pitch_kill = Cpt(EpicsSignal, "P2}Cmd:Kill-Cmd")
     x = Cpt(EpicsMotor, "X}Mtr")
     y = Cpt(EpicsMotor, "Y}Mtr")
