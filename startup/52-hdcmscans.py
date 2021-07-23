@@ -295,13 +295,13 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     roll_num = 51
 
     # Turn off the ePIC loop for the pitch motor
-    print('before disabling pid')
+    # print('before disabling pid')
     yield from bps.mov(dcm.c2_fine.pid_enabled, 0)
     yield from dcm.c2_fine.reset_pid()
 
     # Set the pitch piezo to its default value (3.0)
     # and return the pitch to its original value
-    print('before moving c2 fine to default')
+    # print('before moving c2 fine to default')
     pf2_default = 3.0
     total_pitch = dcm.c2_pitch.position
     yield from bps.mov(dcm.c2_fine, pf2_default)

@@ -21,7 +21,7 @@ class SRXNanoKB(Device):
                   name='nanoKB_v_pitch',
                   add_prefix=())  
     # XF:05IDD-ES:1{nKB:horz-Ax:PC}Mtr.RBV
-    v_pitch_um = Cpt(EpicsMotor, 'horz-Ax:PC}Mtr')
+    v_pitch_um = Cpt(EpicsMotor, 'vert-Ax:PC}Mtr')
     # XF:05IDD-ES:1{nKB:horz-Ax:X}Mtr.RBV
     h_x = Cpt(EpicsMotor, 'horz-Ax:X}Mtr')
     # XF:05IDD-ES:1{nKB:horz-Ax:PC}RPOS
@@ -30,7 +30,7 @@ class SRXNanoKB(Device):
                   name='nanoKB_h_pitch',
                   add_prefix=())
     # XF:05IDD-ES:1{nKB:vert-Ax:PC}Mtr.RBV
-    h_pitch_um = Cpt(EpicsMotor, 'vert-Ax:PC}Mtr')
+    h_pitch_um = Cpt(EpicsMotor, 'horz-Ax:PC}Mtr')
 
 
 nanoKB = SRXNanoKB('XF:05IDD-ES:1{nKB:', name='nanoKB')

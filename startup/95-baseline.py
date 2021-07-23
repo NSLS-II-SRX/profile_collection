@@ -1,4 +1,5 @@
 # Setup baseline measurements for scans
+print(f'Loading {__file__}...')
 
 from bluesky.preprocessors import SupplementalData
 
