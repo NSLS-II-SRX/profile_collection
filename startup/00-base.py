@@ -195,3 +195,5 @@ RE.md = PersistentDict(runengine_metadata_dir)
 RE.md["beamline_id"] = "SRX"
 RE.md["md_version"] = "1.0"
 
+from bluesky.utils import ts_msg_hook
+RE.msg_hook = ts_msg_hook

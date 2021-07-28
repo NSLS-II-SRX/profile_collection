@@ -568,7 +568,7 @@ class FlyerIDMono:
         # Scaler config
         self.scaler.count_mode.put(0)  # put SIS3820 into single count (not autocount) mode
         self.scaler.stop_all.put(1)  # stop scaler
-        self.scaler.nuse_all.put(total_points)
+        self.scaler.nuse_all.put(2*total_points)
         self.scaler.erase_start.put(1)
 
         # TODO: These parameters are for the bpmAD camera, move them to the relevant class in 21-cameras.
@@ -605,8 +605,24 @@ class FlyerIDMono:
         getattr(self.zebra, self.pulse_cpt).time_units.put('s')          # 'Time Units' in CSS
 
         # SYS tab of the Zebra CSS
-        for out in [1, 2, 3, 4]:
+        # for out in [1, 2, 3, 4]:
+        for out in [1, 2, 4]:
             getattr(self.zebra, f'output{out}').ttl.addr.put(52)          # 'OUTx TTL' in CSS
+
+        # TESTING
+        self.zebra.output3.ttl.addr.put(36)
+
+        self.zebra.pulse3.input_addr.put(52)
+        self.zebra.pulse3.input_edge.put(0)
+        self.zebra.pulse3.time_units.put('ms')
+        self.zebra.pulse3.width.put(0.0001)
+        self.zebra.pulse3.delay.put(0.0)
+
+        self.zebra.pulse4.input_addr.put(52)
+        self.zebra.pulse4.input_edge.put(1)
+        self.zebra.pulse4.time_units.put('ms')
+        self.zebra.pulse4.width.put(0.0001)
+        self.zebra.pulse4.delay.put(0.0)
 
         width_s = self.pulse_width
         speed = self.flying_dev.parameters.speed.get()
@@ -636,6 +652,10 @@ class FlyerIDMono:
             print(f'Enabling fly scan')
             self.flying_dev.control.control.put(1)
 
+        # Reset the trigger count:
+        self.flying_dev.parameters.trigger_count_reset.put(1)
+        ttime.sleep(0.5)
+
         # Main RUN command:
         self.flying_dev.control.run.put(1)
 
@@ -651,15 +671,19 @@ class FlyerIDMono:
         return status
 
     def complete(self, *args, **kwargs):
+        if self.xs_detectors[0]._staged.value == 'no':
+            self.stage()
+
         def callback(value, old_value, **kwargs):
             print(f'{print_now()} in complete: {old_value} ---> {value}')
-            if int(round(old_value)) == 1 and int(round(value)) == 0:
+            if int(round(value)) == int(round(self.flying_dev.parameters.num_triggers.get())):
                 for xs_det in self.xs_detectors:
                     xs_det.complete()
                 return True
             return False
 
-        status = SubscriptionStatus(self.status, callback)
+        # status = SubscriptionStatus(self.status, callback)
+        status = SubscriptionStatus(self.flying_dev.parameters.trigger_count, callback, run=False)
         return status
 
     # TODO: Fix the configuration (also for v2).
@@ -719,15 +743,35 @@ class FlyerIDMono:
         #     raise RuntimeError(f"The number of collected datum ids ({self._datum_ids}) "
         #                        f"does not match the number of triggers ({num_triggers})")
 
-        i0_time = self.scaler.mca1.get()
-        i0 = self.scaler.mca2.get()
-        im = self.scaler.mca3.get()
-        it = self.scaler.mca4.get()
+        ttime.sleep(self.pulse_width + 0.1)
+
+        orig_read_attrs = self.scaler.read_attrs
+        self.scaler.read_attrs = ['mca1', 'mca2', 'mca3', 'mca4']
+
+        scaler_mca_data = self.scaler.read()
+
+        i0_time = scaler_mca_data[f"{self.scaler.name}_mca1"]['value']
+        i0 = scaler_mca_data[f"{self.scaler.name}_mca2"]['value']
+        im = scaler_mca_data[f"{self.scaler.name}_mca3"]['value']
+        it = scaler_mca_data[f"{self.scaler.name}_mca4"]['value']
+
+        self.scaler.read_attrs = orig_read_attrs
+
 
         print(f"Length of 'i0_time': {len(i0_time)}")
         print(f"Length of 'i0'     : {len(i0)}")
         print(f"Length of 'im'     : {len(im)}")
         print(f"Length of 'it'     : {len(it)}")
+
+        i0_time = i0_time[1::2]
+        i0 = i0[1::2]
+        im = im[1::2]
+        it = it[1::2]
+
+        print(f"Truncated length of 'i0_time': {len(i0_time)}")
+        print(f"Truncated length of 'i0'     : {len(i0)}")
+        print(f"Truncated length of 'im'     : {len(im)}")
+        print(f"Truncated length of 'it'     : {len(it)}")
 
         if len(i0_time) != len(i0) != len(im) != len(it):
             raise RuntimeError(f"Lengths of the collected arrays are not equal")
@@ -802,9 +846,18 @@ flyer_id_mono = FlyerIDMono(flying_dev=id_fly_device,
 
 
 # Helper functions for quick vis:
-def plot_flyer_id_mono_data(uid_or_scanid, e_min, e_max, fname, num_channels=4):
+def plot_flyer_id_mono_data(uid_or_scanid, e_min=None, e_max=None, fname=None, root='/home/xf05id1/current_user_data/', num_channels=4):
     hdr = db[uid_or_scanid]
     tbl = hdr.table()
+
+    if (e_min is None):
+        e_min = xs.channel1.rois.roi01.bin_low.get()
+    if (e_max is None):
+        e_max = xs.channel1.rois.roi01.bin_high.get()
+
+    if (fname is None):
+        fname = f"scan{hdr.start['scan_id']}.txt"
+    fname = root + fname
 
     d = []
     for i in range(num_channels):
@@ -824,15 +877,46 @@ def plot_flyer_id_mono_data(uid_or_scanid, e_min, e_max, fname, num_channels=4):
     np.savetxt(fname, res.T)
     return res
 
-def flying_xas():
+def flying_xas(num_passes=1, shutter=True, md=None):
     v = flyer_id_mono.flying_dev.parameters.speed.get()
     w = flyer_id_mono.flying_dev.parameters.trigger_width.get()
     dt = w / v
     flyer_id_mono.pulse_width = dt
+    yield from check_shutters(shutter, 'Open')
     yield from bp.fly([flyer_id_mono])
+    # yield from fly_multiple_passes([flyer_id_mono], num_passes=num_passes,
+    #                                md=md, shutter=shutter)
+    yield from check_shutters(shutter, 'Close')
+
+
+def fly_multiple_passes(flyers, num_scans=1, md=None, shutter=True):
+    """This is a modified version of bp.fly to support multiple passes of the flyer."""
+
+    yield from check_shutters(shutter, 'Open')
+
+    if md is None:
+        md = {}
+    md = get_stock_md(md)
+    md['scan']['num_scans'] = num_scans
+    md['scan']['type'] = 'XAS_FLY'
+
+    uid = yield from bps.open_run(md)
+    for flyer in flyers:
+        yield from bps.mv(flyer.flying_dev.parameters.num_scans, num_scans)
+        yield from bps.kickoff(flyer, wait=True)
+    for n in range(num_scans):
+        print(f"\n\n*** Iteration #{n+1} ***\n")
+        for flyer in flyers:
+            yield from bps.complete(flyer, wait=True)
+        for flyer in flyers:
+            yield from bps.collect(flyer)
+    yield from bps.close_run()
+    yield from check_shutters(shutter, 'Close')
+    return uid
+
 
 """
+TODO: All scan directions and modes (uni/bi-directional)
 TODO: setup stage_sigs for scaler
 TODO: Monitor and LivePlot of data
-TODO: All scan directions and modes (uni/bi-directional)
 """

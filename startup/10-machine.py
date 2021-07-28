@@ -418,6 +418,7 @@ class FlyScanParameters(Device):
     id_energy_offset = Cpt(EpicsSignal, write_pv='IDOffset_eV-SP', read_pv='IDOffset_eV-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
     timing_offset = Cpt(EpicsSignal, write_pv='TriggerOffset-SP', read_pv='TriggerOffset-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
     trigger_count = Cpt(EpicsSignalRO, 'TriggerCount-RB')
+    trigger_count_reset = Cpt(EpicsSignal, 'TriggerCount-Reset.PROC')
     num_scans = Cpt(EpicsSignal, write_pv='NScans-SP', read_pv='NScans-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
     current_scan = Cpt(EpicsSignalRO, 'IScan-RB')
 
