@@ -12,4 +12,5 @@ sd.baseline = [ring_current, fe, energy, dcm, hfm,             # Front-end slits
                nano_stage]                                     # coarse/fine stages
 
 RE.preprocessors.append(sd)
+bec.disable_baseline()
 
