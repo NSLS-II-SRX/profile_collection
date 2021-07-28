@@ -201,7 +201,6 @@ def slit_nanoflyscan(scan_motor, scan_start, scan_stop, scan_stepsize, acqtime,
     lnum = np.round((slit_stop - slit_start) / slit_stepsize) + 1
     lnum_list = np.arange(lnum)
 
-
     slit_pos = slit_start + lnum_list * slit_stepsize
 
     # Define a figure factory
@@ -241,16 +240,18 @@ def slit_nanoflyscan(scan_motor, scan_start, scan_stop, scan_stepsize, acqtime,
     
     for ii in slit_pos:
         yield from mov(slit_motor, ii)
-        yield from _plan()
+        uids = yield from _plan()
 
     # Finish up
     yield from check_shutters(True, 'Close') 
     yield from mov(slit_motor, slit_orig_pos)
     yield from mov(slitgap_motor, slit_orig_gap)
 
+    return uids
+
 
 def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False,
-                         bin_low=None, bin_high=None, normalize=True, from_RE=[]):
+                         bin_low=None, bin_high=None, normalize=True):
    
     """
     This function takes a list of scan_id, process them one by one, then analyzes the optical abberations.
@@ -261,7 +262,6 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
     bin_low          integer the lower limit of ROI (usually Pt or Au), by default it's taking roi1
     bin_high         integer uppper limit of ROI
     normalize        bool    whether or not to normalize the data by the ion chamber, I0
-    from_RE          list    plot handle
     """
 
     numline = len(scan_id_list)
@@ -273,18 +273,20 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
     f_h = 125 * 1e+3
     theta_v = 3 # mrad
     theta_h = 3 # mrad
+    L_h = 100 # mm  Length of horizontal mirror
     conversion_factor_orth = np.array([-1.6581375e-4, 5.89e-4]) #unit: p/urad (V x H)
     pitch_motion_conversion = np.array([225, 100]) # unit: mm (V x H)
     delta_fine_pitch = 0.0 # unit: um
  
     for idx, scan_id in enumerate(scan_id_list):
         h = db[int(scan_id)]
+        scan_id = h.start['scan_id']
 
         # Get the information from the previous scan
         haz_data = False
         loop_counter = 0
         MAX_LOOP_COUNTER = 15
-        print('Scan ID: {scan_id}\nWaiting for data...', end='', flush=True)
+        print(f'Scan ID: {int(scan_id):d}\nWaiting for data...', end='', flush=True)
         while (loop_counter < MAX_LOOP_COUNTER):
             try:
                 tbl = h.table('stream0', fill=True)
@@ -436,31 +438,31 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
         pitch_motion_conversion = pitch_motion_conversion[1] 
 
 
-    print('Fitting results:')
-    print(f'p is {calpoly_fit[0]}')
-    # print(f'residual is {calpoly_fit[1]*1e+6} nm')
-    print(f'P2V of line position is {p2v_line_pos} um')
     defocus = -calpoly_fit[0][0] * C_f
     delta_theta = calpoly_fit[0][0] * C_theta
+    actuator_move_h = delta_theta * L_h
     line_move_h = -2 * delta_theta * C_f * 1e-3
-    print('Defocus is ' '{:7.3f}'.format(defocus), 'um. Vkb correct by this amount.')
-    print('Equivalent to ' '{:7.6f}'.format(delta_theta), 'mrad. Hkb correct by this amount.')
-    # print('actuator should move by' '{:7.3f}'.format(actuator_move), 'um.')
-    print('Line feature should move' '{:7.3f}'.format(line_move_h), 'um for h mirror pitch correction')
+    print('Fitting results:')
+    print(f'\tp is {calpoly_fit[0]}')
+    # print(f'residual is {calpoly_fit[1]*1e+6} nm')
+    print(f'\tP2V of line position is {p2v_line_pos:.4f} um')
+    if (flag_dir == 'VER'):
+        print(f'\tDefocus is {defocus:7.3f} um. Vkb correct by this amount.')
+    if (flag_dir == 'HOR'):
+        print(f'\tEquivalent to {delta_theta:7.6f} mrad. Hkb correct by this amount.')
+        print(f'\tActuator should move by {actuator_move_h:7.3f} um.')
+        print(f'\tLine feature should move {line_move_h:7.3f} um for h mirror pitch correction')
 
-    if orthogonality == 1:
+    if (np.abs(defocus) < 100 or orthogonality == 1):
         delta_fine_pitch = calpoly_fit[0][0]/conversion_factor_orth*1e-3*pitch_motion_conversion
         delta_theta_quad = calpoly_fit[0][0]/conversion_factor_orth
         delta_focal_plane_z = delta_theta_quad*1e-3/C_theta*C_f
-        print('Quadratic term corresponds to pitch angle {delta_theta_quad:7.3f} urad.')
-        print('Quadratic term corresponds to fine pitch move {delta_fine_pitch:7.3f} um.')
-        print('Quadratic term corresponds to coarse Z {delta_focal_plane_z:7.3f} um.')
+        print('\nOrthagonality correction:')
+        print(f'\tQuadratic term corresponds to pitch angle {delta_theta_quad:7.3f} urad.')
+        print(f'\tQuadratic term corresponds to fine pitch move {delta_fine_pitch:7.3f} um.')
+        print(f'\tQuadratic term corresponds to coarse Z {delta_focal_plane_z:7.3f} um.')
 
 
-    # if from_RE == []:
-    #     _, ax = plt.subplots()
-    # else:
-    #     ax = from_RE[2].ax
     fig, ax = plt.subplots()
     ax.plot(slit_range, line_pos_seq/1000, 'ro', slit_range[interp_range], line_plt)
     ax.set_title(f'Scan {scan_id}')
@@ -474,5 +476,48 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
         plt.savefig(root + fname, dpi=300)
     except:
         print('Could not save plot.')
+
+
+def focusKB(direction, **kwargs):
+    """
+    NEEDS TESTING!
+
+    direction   string  direction to scan in
+                        ['hor' or 'ver']
+    """
+
+    if 'hor' in direction.lower():
+        kwargs.setdefault('scan_motor', nano_stage.sx)
+        kwargs.setdefault('slit_motor', jjslits.h_trans)
+        slit_range = 0.500
+        kwargs.setdefault('slit_stepsize', 0.05)
+        kwargs.setdefault('slitgap_motor', jjslits.h_gap)
+        kwargs.setdefault('slit_gap', 0.05)
+    elif 'ver' in direction.lower():
+        kwargs.setdefault('scan_motor', nano_stage.sy)
+        kwargs.setdefault('slit_motor', jjslits.v_trans)
+        slit_range = 1.00
+        kwargs.setdefault('slit_stepsize', 0.1)
+        kwargs.setdefault('slitgap_motor', jjslits.v_gap)
+        kwargs.setdefault('slit_gap',  0.10)
+    else:
+        print("This is for vertical or horizontal scans. Please choose one of these directions")
+
+    kwargs.setdefault('scan_start', -8)
+    kwargs.setdefault('scan_stop', 8)
+    kwargs.setdefault('scan_stepsize', 0.050)
+    kwargs.setdefault('acqtime', 0.100)
+    
+    slit_center = kwargs['slit_motor'].user_readback.get()
+    kwargs.setdefault('slit_start', slit_center - 0.5 * slit_range)
+    kwargs.setdefault('slit_stop', slit_center + 0.5 * slit_range)
+
+    # print(*kwargs)
+    uids = yield from slit_nanoflyscan(**kwargs)
+
+    # Fit the data
+    N = len(uids)
+    scanids = np.linspace(-N, -1, num=N)
+    slit_nanoflyscan_cal(scan_id_list=scanids, interp_range=scanids[1:-2], orthogonality=False)
 
 
