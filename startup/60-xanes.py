@@ -119,7 +119,11 @@ def xanes_afterscan_plan(scanid, filename, roinum):
     columnitem = ['energy_energy', 'energy_bragg', 'energy_c2_x']
     # Include I_M, I_0, and I_t from the SRS
     if ('sclr1' in h.start['detectors']):
-        columnitem = columnitem + ['sclr_im', 'sclr_i0', 'sclr_it']
+        if 'sclr_i0' in h.table('primary').keys():
+            columnitem = columnitem + ['sclr_im', 'sclr_i0', 'sclr_it']
+        else:
+            columnitem = columnitem + ['sclr1_mca3', 'sclr1_mca2', 'sclr1_mca4']
+
     else:
         raise KeyError("SRS not found in data!")
     # Include fluorescence data if present, allow multiple rois
@@ -154,11 +158,18 @@ def xanes_afterscan_plan(scanid, filename, roinum):
     if ('xs2' in h.start['detectors']):
         datatablenames = datatablenames + [str(roi) for roi in roi_key]
     if ('sclr1' in  h.start['detectors']):
-        datatablenames = datatablenames + ['sclr_im', 'sclr_i0', 'sclr_it']
-        datatable = h.table(stream_name='primary', fields=datatablenames)
-        im_array = np.array(datatable['sclr_im'])
-        i0_array = np.array(datatable['sclr_i0'])
-        it_array = np.array(datatable['sclr_it'])
+        if 'sclr_im' in h.table(stream_name='primary').keys():
+            datatablenames = datatablenames + ['sclr_im', 'sclr_i0', 'sclr_it']
+            datatable = h.table(stream_name='primary', fields=datatablenames)
+            im_array = np.array(datatable['sclr_im'])
+            i0_array = np.array(datatable['sclr_i0'])
+            it_array = np.array(datatable['sclr_it'])
+        else:
+            datatablenames = datatablenames + ['sclr1_mca2', 'sclr1_mca3', 'sclr1_mca4']
+            datatable = h.table(stream_name='primary', fields=datatablenames)
+            im_array = np.array(datatable['sclr1_mca3'])
+            i0_array = np.array(datatable['sclr1_mca2'])
+            it_array = np.array(datatable['sclr1_mca4'])
     else:
         raise KeyError
     # Calculate sums for xspress3 channels of interest
@@ -555,7 +566,8 @@ class FlyerIDMono:
         self._datum_ids = []
 
     def stage(self):
-        total_points = self.num_scans * self.num_triggers
+        # total_points = self.num_scans * self.num_triggers
+        total_points = self.num_triggers
 
         for xs_det in self.xs_detectors:
             xs_det.hdf5.file_write_mode.put('Stream')
@@ -615,13 +627,13 @@ class FlyerIDMono:
         self.zebra.pulse3.input_addr.put(52)
         self.zebra.pulse3.input_edge.put(0)
         self.zebra.pulse3.time_units.put('ms')
-        self.zebra.pulse3.width.put(0.0001)
+        self.zebra.pulse3.width.put(0.500)
         self.zebra.pulse3.delay.put(0.0)
 
         self.zebra.pulse4.input_addr.put(52)
         self.zebra.pulse4.input_edge.put(1)
         self.zebra.pulse4.time_units.put('ms')
-        self.zebra.pulse4.width.put(0.0001)
+        self.zebra.pulse4.width.put(0.500)
         self.zebra.pulse4.delay.put(0.0)
 
         width_s = self.pulse_width
@@ -644,8 +656,8 @@ class FlyerIDMono:
         self.stage()
 
         # Convert to eV/s.
-        width_ev = width_s * speed
-        self.flying_dev.parameters.trigger_width.put(width_ev)
+        # width_ev = width_s * speed
+        # self.flying_dev.parameters.trigger_width.put(width_ev)
 
         enabled = int(round(self.flying_dev.control.control.get()))
         if enabled != 5:
@@ -748,15 +760,24 @@ class FlyerIDMono:
         orig_read_attrs = self.scaler.read_attrs
         self.scaler.read_attrs = ['mca1', 'mca2', 'mca3', 'mca4']
 
-        scaler_mca_data = self.scaler.read()
+        total_points = self.num_scans * self.num_triggers
 
-        i0_time = scaler_mca_data[f"{self.scaler.name}_mca1"]['value']
-        i0 = scaler_mca_data[f"{self.scaler.name}_mca2"]['value']
-        im = scaler_mca_data[f"{self.scaler.name}_mca3"]['value']
-        it = scaler_mca_data[f"{self.scaler.name}_mca4"]['value']
+        flag_collecting_data = 0
+        while (flag_collecting_data < 5):
+            scaler_mca_data = self.scaler.read()
+            i0_time = scaler_mca_data[f"{self.scaler.name}_mca1"]['value']
+            i0 = scaler_mca_data[f"{self.scaler.name}_mca2"]['value']
+            im = scaler_mca_data[f"{self.scaler.name}_mca3"]['value']
+            it = scaler_mca_data[f"{self.scaler.name}_mca4"]['value']
+
+            print(f'{i0_time.shape[0]}\t?=\t{2*self.num_triggers}')
+            if i0_time.shape[0] == 2*self.num_triggers:
+                break
+            flag_collecting_data += 1
+            ttime.sleep(0.2)
+            print(f'({flag_collecting_data+1}/5) Waiting to collect all scaler data...')
 
         self.scaler.read_attrs = orig_read_attrs
-
 
         print(f"Length of 'i0_time': {len(i0_time)}")
         print(f"Length of 'i0'     : {len(i0)}")
@@ -889,9 +910,26 @@ def flying_xas(num_passes=1, shutter=True, md=None):
     yield from check_shutters(shutter, 'Close')
 
 
-def fly_multiple_passes(flyers, num_scans=1, md=None, shutter=True):
+def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
+                        num_scans=1, shutter=True,
+                        flyers=[flyer_id_mono], md=None):
     """This is a modified version of bp.fly to support multiple passes of the flyer."""
 
+    flyer_id_mono.flying_dev.parameters.first_trigger.put(e_start)
+    flyer_id_mono.flying_dev.parameters.last_trigger.put(e_stop)
+    flyer_id_mono.flying_dev.parameters.num_triggers.put(num_pts)
+    flyer_id_mono._traj_info['num_triggers'] = num_pts
+    flyer_id_mono._traj_info['energy_start'] = e_start
+    flyer_id_mono._traj_info['energy_stop'] = e_stop
+
+    v = e_width / dwell
+    flyer_id_mono.flying_dev.parameters.speed.put(v)
+    e_step = (e_stop - e_start) / (num_pts- 1)
+    dt = e_width / v
+
+    if (abs(e_step) < e_width):
+        raise ValueError('Cannot have energy collection widths larger than energy step!')
+    
     yield from check_shutters(shutter, 'Open')
 
     if md is None:
@@ -902,10 +940,12 @@ def fly_multiple_passes(flyers, num_scans=1, md=None, shutter=True):
 
     uid = yield from bps.open_run(md)
     for flyer in flyers:
+        flyer.pulse_width = dwell
         yield from bps.mv(flyer.flying_dev.parameters.num_scans, num_scans)
         yield from bps.kickoff(flyer, wait=True)
     for n in range(num_scans):
         print(f"\n\n*** Iteration #{n+1} ***\n")
+        xs.erase.put(1)
         for flyer in flyers:
             yield from bps.complete(flyer, wait=True)
         for flyer in flyers:

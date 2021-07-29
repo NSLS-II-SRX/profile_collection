@@ -285,6 +285,7 @@ class SrxXspress3DetectorIDMonoFly(SrxXspress3Detector):
 
         self._datum_ids = []
 
+        ttime.sleep(1)
         num_frames = xs.hdf5.num_captured.get()
 
         for frame_num in range(num_frames):
