@@ -64,6 +64,7 @@ history.sqlite
 
 # swap files
 *.swp
+.vscode/
 
 # DAMA playground:
 zz-dama.py
