@@ -104,7 +104,7 @@ def printfig():
     os.system("lp -d HXN-printer-1 /home/xf05id1/tmp/temp.png")
 
 
-def print_baseline(scanid=-1):
+def print_baseline(scanid=-1, key_filter=None):
     '''
     Print all the baseline metadata.
 
@@ -121,6 +121,13 @@ def print_baseline(scanid=-1):
     h = db[scanid]
     tbl = h.table('baseline')
     pd.set_option('max_rows', 999)
+    if (key_filter is not None):
+        all_keys = tbl.keys()
+        filtered_list = []
+        for key in all_keys:
+            if key_filter in key:
+                filtered_list.append(key)
+        tbl = tbl[filtered_list]
     print(tbl.T)
     pd.reset_option('max_rows')
 
