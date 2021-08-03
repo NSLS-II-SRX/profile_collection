@@ -518,7 +518,7 @@ def fast_shutter_per_step(detectors, motor, step):
 
 
 class FlyerIDMono:
-    def __init__(self, flying_dev, zebra, xs_detectors, scaler, pulse_cpt=None, pulse_width=0.01):
+    def __init__(self, flying_dev, zebra, xs_detectors, scaler, pulse_cpt=None, pulse_width=0.01, paused_timeout=120):
         """Instantiate a flyer based on ID-Mono coordinated motion.
 
         Parameters
@@ -540,6 +540,9 @@ class FlyerIDMono:
 
         pulse_width : float
             the pulse width in seconds, used for zebra
+        
+        paused_timeout : float
+            the timeout to wait between the steps until the scan is interrupted if the "unpause" button is not pressed.
         """
         self.name = 'FlyerIDMono'
 
@@ -556,6 +559,9 @@ class FlyerIDMono:
 
         self.num_scans = None
         self.num_triggers = None
+
+        self.paused_timeout = paused_timeout
+        self._continue_after_pausing = True
 
         # TODO: These parameters are for the bpmAD camera, move them to the relevant class in 21-cameras.
         # self.plugin_type = 'tiff'
@@ -642,6 +648,8 @@ class FlyerIDMono:
         self.num_scans = num_scans = self.flying_dev.parameters.num_scans.get()
         self.num_triggers = num_triggers = int(self.flying_dev.parameters.num_triggers.get())
 
+        self.flying_dev.parameters.paused_timeout.put(self.paused_timeout)
+
         self._traj_info.update({
             'num_triggers': num_triggers,
             'energy_start': self.flying_dev.parameters.first_trigger.get(),
@@ -664,8 +672,10 @@ class FlyerIDMono:
             print(f'Enabling fly scan')
             self.flying_dev.control.control.put(1)
 
-        # Reset the trigger count:
+        # Reset the trigger count and current scan:
         self.flying_dev.parameters.trigger_count_reset.put(1)
+        self.flying_dev.parameters.current_scan_reset.put(1)
+
         ttime.sleep(0.5)
 
         # Main RUN command:
@@ -684,19 +694,49 @@ class FlyerIDMono:
 
     def complete(self, *args, **kwargs):
         if self.xs_detectors[0]._staged.value == 'no':
-            self.stage()
 
-        def callback(value, old_value, **kwargs):
-            print(f'{print_now()} in complete: {old_value} ---> {value}')
-            if int(round(value)) == int(round(self.flying_dev.parameters.num_triggers.get())):
-                for xs_det in self.xs_detectors:
-                    xs_det.complete()
+            # Note: this is a way to stop the scan on the flyL
+            if self.flying_dev.parameters.num_scans.get() == 0:
+                self._continue_after_pausing = False
+                self.flying_dev.control.abort.put(1)
+
+            if self._continue_after_pausing:
+                self.stage()
+                self.flying_dev.parameters.scan_paused.put(0)
+
+
+        def _complete_detectors():
+            print(f"{print_now()} run 'complete' on detectors.")
+            ttime.sleep(0.5)
+            for xs_det in self.xs_detectors:
+                xs_det.complete()
+
+        def callback_paused(value, old_value, **kwargs):
+            print(f"{print_now()} 'callback_paused' in complete:  scan_paused:{old_value} ---> {value}")
+             # 1=Paused, 0=Not Paused
+            if int(round(old_value)) == 0 and int(round(value)) == 1:
+                _complete_detectors()
                 return True
             return False
 
-        # status = SubscriptionStatus(self.status, callback)
-        status = SubscriptionStatus(self.flying_dev.parameters.trigger_count, callback, run=False)
-        return status
+        def callback_all_scans_done(value, old_value, **kwargs):
+            print(f"{print_now()} 'callback_all_scans_done' in complete:  current_scan: {old_value} ---> {value}")
+            if value == self.flying_dev.parameters.num_scans.get():  # last scan in the series, no pausing happens
+                _complete_detectors()
+                return True
+            return False
+
+        current_scan = self.flying_dev.parameters.current_scan.get()
+        num_scans = self.flying_dev.parameters.num_scans.get()
+
+        if  current_scan + 1 < num_scans:  # last scan
+            status_paused = SubscriptionStatus(self.flying_dev.parameters.scan_paused, callback_paused, run=False)
+            return status_paused
+        elif current_scan + 1 == num_scans:
+            status_all_scans_done = SubscriptionStatus(self.flying_dev.parameters.current_scan, callback_all_scans_done, run=False)
+            return status_all_scans_done
+        else:
+            return NullStatus()
 
     # TODO: Fix the configuration (also for v2).
     # def describe_configuration(self, *args, **kwargs):
@@ -745,7 +785,9 @@ class FlyerIDMono:
 
     def collect(self, *args, **kwargs):
 
-        self.unstage()
+        # TODO: test that feature.
+        if not self._continue_after_pausing:
+            return {}
 
         energy_start = self._traj_info['energy_start']
         energy_stop = self._traj_info['energy_stop']
@@ -797,9 +839,12 @@ class FlyerIDMono:
         if len(i0_time) != len(i0) != len(im) != len(it):
             raise RuntimeError(f"Lengths of the collected arrays are not equal")
 
+        # Unstage xspress3 detector(s).
+        self.unstage()
+
         for ii, energy in enumerate(np.linspace(energy_start, energy_stop, num_triggers)):
             for xs_det in self.xs_detectors:
-                now = time.time()
+                now = ttime.time()
 
                 data = {
                     'energy': energy,
@@ -959,4 +1004,5 @@ def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
 TODO: All scan directions and modes (uni/bi-directional)
 TODO: setup stage_sigs for scaler
 TODO: Monitor and LivePlot of data
+TODO: Unstage the detectors (xs, scaler) on RE.abort()
 """

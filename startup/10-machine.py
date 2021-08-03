@@ -421,6 +421,10 @@ class FlyScanParameters(Device):
     trigger_count_reset = Cpt(EpicsSignal, 'TriggerCount-Reset.PROC')
     num_scans = Cpt(EpicsSignal, write_pv='NScans-SP', read_pv='NScans-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
     current_scan = Cpt(EpicsSignalRO, 'IScan-RB')
+    current_scan_reset = Cpt(EpicsSignal, 'IScan-Reset.PROC')
+    dwell_time = Cpt(EpicsSignal, write_pv='DwellTime-SP', read_pv='DwellTime-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    paused_timeout = Cpt(EpicsSignal, write_pv='PausedTimeout-SP', read_pv='PausedTimeout-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
+    scan_paused = Cpt(EpicsSignal, write_pv='Paused-SP', read_pv='Paused-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
 
 
 class HDCMParameters(Device):

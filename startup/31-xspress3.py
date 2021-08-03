@@ -281,11 +281,11 @@ class SrxXspress3DetectorIDMonoFly(SrxXspress3Detector):
         for resource in self.hdf5._asset_docs_cache:
             print(f'  resource in "complete": {resource}')
             self._asset_docs_cache.append(('resource', resource[1]))
-        print(f'\ncomplete in {self.name}: {self._asset_docs_cache}')
+        # print(f'\ncomplete in {self.name}: {self._asset_docs_cache}')
 
         self._datum_ids = []
 
-        ttime.sleep(1)
+        ttime.sleep(1.0)
         num_frames = xs.hdf5.num_captured.get()
 
         for frame_num in range(num_frames):
