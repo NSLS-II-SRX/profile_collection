@@ -16,6 +16,7 @@ from bluesky.utils import short_uid as _short_uid
 from epics import PV
 # from databroker import DataBroker as db
 from databroker import get_events
+from numpy.lib.stride_tricks import as_strided
 from ophyd.status import SubscriptionStatus
 from ophyd.sim import NullStatus
 
@@ -540,7 +541,7 @@ class FlyerIDMono:
 
         pulse_width : float
             the pulse width in seconds, used for zebra
-        
+
         paused_timeout : float
             the timeout to wait between the steps until the scan is interrupted if the "unpause" button is not pressed.
         """
@@ -707,12 +708,17 @@ class FlyerIDMono:
 
         def _complete_detectors():
             print(f"{print_now()} run 'complete' on detectors.")
-            ttime.sleep(0.5)
+            # ttime.sleep(0.5)
             for xs_det in self.xs_detectors:
+                print(f"{print_now()} before erase in '_complete_detectors'.")
+                xs_det.erase.put(1)
+                print(f"{print_now()} after erase in '_complete_detectors'.")
                 xs_det.complete()
+            print(f"{print_now()} done with 'complete' on detectors.")
+
 
         def callback_paused(value, old_value, **kwargs):
-            print(f"{print_now()} 'callback_paused' in complete:  scan_paused:{old_value} ---> {value}")
+            print(f"{print_now()} 'callback_paused' in complete:  scan_paused: {old_value} ---> {value}")
              # 1=Paused, 0=Not Paused
             if int(round(old_value)) == 0 and int(round(value)) == 1:
                 _complete_detectors()
@@ -804,6 +810,7 @@ class FlyerIDMono:
 
         total_points = self.num_scans * self.num_triggers
 
+        print(f"{print_now()}: before while loop in collect")
         flag_collecting_data = 0
         while (flag_collecting_data < 5):
             scaler_mca_data = self.scaler.read()
@@ -818,6 +825,7 @@ class FlyerIDMono:
             flag_collecting_data += 1
             ttime.sleep(0.2)
             print(f'({flag_collecting_data+1}/5) Waiting to collect all scaler data...')
+        print(f"{print_now()}: after while loop in collect")
 
         self.scaler.read_attrs = orig_read_attrs
 
@@ -839,10 +847,34 @@ class FlyerIDMono:
         if len(i0_time) != len(i0) != len(im) != len(it):
             raise RuntimeError(f"Lengths of the collected arrays are not equal")
 
+        print(f"{print_now()}: before unstage of xs in collect")
+
         # Unstage xspress3 detector(s).
         self.unstage()
 
-        for ii, energy in enumerate(np.linspace(energy_start, energy_stop, num_triggers)):
+        print(f"{print_now()}: after unstage of xs in collect")
+
+        # Deal with the direction of energies for bi-directional scan.
+        # BlueSky@SRX [27]: id_fly_device.control.scan_type.get(as_string=True)
+        # Out[27]: 'Bidirectional'
+
+        # BlueSky@SRX [28]: id_fly_device.control.scan_type.enum_strs
+        # Out[28]: ('Unidirectional', 'Bidirectional')
+
+        even_direction = np.linspace(energy_start, energy_stop, num_triggers)
+        odd_direction =  even_direction[::-1]
+
+        scan_type = self.flying_dev.control.scan_type.get(as_string=True)
+        current_scan = self.flying_dev.parameters.current_scan.get()
+        print(f"{print_now()} the scan is {scan_type}; current scan: {current_scan}")
+
+        direction = even_direction
+        if scan_type == "Bidirectional":
+            if (current_scan + 1) % 2 == 1:  # at this point the current scan number is already incremented
+                direction = odd_direction
+                print(f"{print_now()} reversing the energy axis: {direction[0]} --> {direction[-1]}")
+
+        for ii, energy in enumerate(direction):
             for xs_det in self.xs_detectors:
                 now = ttime.time()
 
@@ -876,31 +908,14 @@ class FlyerIDMono:
                 'filled': filled,
             }
 
+        print(f"{print_now()}: after docs emitted in collect")
+
+
     def collect_asset_docs(self):
+        print(f"{print_now()}: before collecting asset docs from xs in collect_asset_docs")
         for xs_det in self.xs_detectors:
             yield from xs_det.collect_asset_docs()
-
-    # def collect_asset_docs(self):
-    #     asset_docs_cache = deque()
-
-    #     # Get the Resource which was produced when the detector was staged.
-    #     # (name, resource), = getattr(self.detector, self.plugin_type).collect_asset_docs()
-
-    #     # # assert name == 'resource'
-    #     # # asset_docs_cache.append(('resource', resource))
-    #     # self._datum_ids.clear()
-    #     # # Generate Datum documents from scratch here, because the detector was
-    #     # # triggered externally by the Zebra, never by ophyd.
-    #     # resource_uid = resource['uid']
-    #     # num_points = self._traj_info['num_triggers']
-    #     # for i in range(num_points):
-    #     #     datum_id = '{}/{}'.format(resource_uid, i)
-    #     #     self._datum_ids.append(datum_id)
-    #     #     datum = {'resource': resource_uid,
-    #     #              'datum_id': datum_id,
-    #     #              'datum_kwargs': {'point_number': i}}
-    #     #     asset_docs_cache.append(('datum', datum))
-    #     return tuple(asset_docs_cache)
+        print(f"{print_now()}: after collecting asset docs from xs in collect_asset_docs")
 
 
 flyer_id_mono = FlyerIDMono(flying_dev=id_fly_device,
@@ -974,7 +989,7 @@ def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
 
     if (abs(e_step) < e_width):
         raise ValueError('Cannot have energy collection widths larger than energy step!')
-    
+
     yield from check_shutters(shutter, 'Open')
 
     if md is None:
@@ -989,8 +1004,7 @@ def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
         yield from bps.mv(flyer.flying_dev.parameters.num_scans, num_scans)
         yield from bps.kickoff(flyer, wait=True)
     for n in range(num_scans):
-        print(f"\n\n*** Iteration #{n+1} ***\n")
-        xs.erase.put(1)
+        print(f"\n\n*** {print_now()} Iteration #{n+1} ***\n")
         for flyer in flyers:
             yield from bps.complete(flyer, wait=True)
         for flyer in flyers:

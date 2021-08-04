@@ -286,7 +286,7 @@ class SrxXspress3DetectorIDMonoFly(SrxXspress3Detector):
 
         self._datum_ids = []
 
-        ttime.sleep(1.0)
+        # ttime.sleep(1.0)
         num_frames = xs.hdf5.num_captured.get()
 
         for frame_num in range(num_frames):
@@ -309,7 +309,7 @@ class SrxXspress3DetectorIDMonoFly(SrxXspress3Detector):
             print(f'  frame_num in "collect": {frame_num + 1} / {collected_frames}')
 
             datum_id = self._datum_ids[frame_num]
-            ts = time.time()
+            ts = ttime.time()
 
             data = {self.name: datum_id}
             ts = float(ts)
