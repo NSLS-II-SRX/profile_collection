@@ -13,7 +13,7 @@ from ophyd import Component as Cpt
 from ophyd.areadetector.filestore_mixins import FileStorePluginBase
 from ophyd.device import Staged
 from enum import Enum
-from collections import deque
+from collections import deque, OrderedDict
 
 from nslsii.detectors.xspress3 import (
     XspressTrigger,
@@ -274,6 +274,7 @@ class SrxXspress3DetectorIDMonoFly(SrxXspress3Detector):
         self._datum_counter = itertools.count()
 
     def unstage(self):
+        self.hdf5.capture.put(0)
         super().unstage()
         self._datum_counter = None
 
