@@ -607,7 +607,9 @@ class FlyerIDMono:
             xs_det.settings.trigger_mode.put('Internal')
             xs_det.unstage()
 
+        print(f"{print_now()}: before unstaging scaler")
         self.scaler.stop_all.put(1)
+        print(f"{print_now()}: after unstaging scaler")
 
         # TODO: These parameters are for the bpmAD camera, move them to the relevant class in 21-cameras.
         # self.detector.unstage()
@@ -705,7 +707,6 @@ class FlyerIDMono:
                 self.stage()
                 self.flying_dev.parameters.scan_paused.put(0)
 
-
         def _complete_detectors():
             print(f"{print_now()} run 'complete' on detectors.")
             # ttime.sleep(0.5)
@@ -715,7 +716,6 @@ class FlyerIDMono:
                 print(f"{print_now()} after erase in '_complete_detectors'.")
                 xs_det.complete()
             print(f"{print_now()} done with 'complete' on detectors.")
-
 
         def callback_paused(value, old_value, **kwargs):
             print(f"{print_now()} 'callback_paused' in complete:  scan_paused: {old_value} ---> {value}")
@@ -896,7 +896,12 @@ class FlyerIDMono:
                 for jj, channel in enumerate(xs_det.channels.keys()):
                     key = f'{xs_det.name}_ch{channel}'
                     idx = jj + ii * len(xs_det.channels.keys())
-                    data[key] = xs_det._datum_ids[idx]
+                    try:
+                        data[key] = xs_det._datum_ids[idx]
+                    except IndexError:
+                        print('Waiting 10 seconds for data...')
+                        ttime.sleep(10)
+                        data[key] = xs_det._datum_ids[idx]
                     timestamps[key] = now
                     filled[key] = False
 
@@ -930,7 +935,7 @@ flyer_id_mono = FlyerIDMono(flying_dev=id_fly_device,
 def plot_flyer_id_mono_data(uid_or_scanid, e_min=None, e_max=None, fname=None, root='/home/xf05id1/current_user_data/', num_channels=4):
     hdr = db[uid_or_scanid]
     tbl = hdr.table()
-
+    # N = 
     if (e_min is None):
         e_min = xs.channel1.rois.roi01.bin_low.get()
     if (e_max is None):
@@ -952,11 +957,15 @@ def plot_flyer_id_mono_data(uid_or_scanid, e_min=None, e_max=None, fname=None, r
     spectrum = spectrum_unnormalized / i0
 
     res = np.vstack((energy, i0, spectrum_unnormalized, spectrum))
+    res = res.T
+
     fig, ax = plt.subplots()
+    # for i in range(N):
+        
     ax.plot(energy, spectrum)
     ax.set(xlabel='Energy [eV]', ylabel='Normalized Spectrum [Arb]')
-    np.savetxt(fname, res.T)
-    return res
+    np.savetxt(fname, res)
+    return res.T
 
 def flying_xas(num_passes=1, shutter=True, md=None):
     v = flyer_id_mono.flying_dev.parameters.speed.get()
@@ -977,10 +986,12 @@ def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
 
     flyer_id_mono.flying_dev.parameters.first_trigger.put(e_start)
     flyer_id_mono.flying_dev.parameters.last_trigger.put(e_stop)
+    flyer_id_mono.flying_dev.parameters.trigger_width.put(e_width)
     flyer_id_mono.flying_dev.parameters.num_triggers.put(num_pts)
     flyer_id_mono._traj_info['num_triggers'] = num_pts
     flyer_id_mono._traj_info['energy_start'] = e_start
     flyer_id_mono._traj_info['energy_stop'] = e_stop
+    flyer_id_mono._traj_info['energy_width'] = e_width
 
     v = e_width / dwell
     flyer_id_mono.flying_dev.parameters.speed.put(v)
@@ -996,6 +1007,7 @@ def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
         md = {}
     md = get_stock_md(md)
     md['scan']['num_scans'] = num_scans
+    md['scan']['num_points'] = num_pts
     md['scan']['type'] = 'XAS_FLY'
 
     uid = yield from bps.open_run(md)
