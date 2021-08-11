@@ -618,6 +618,12 @@ class FlyerIDMono:
 
     def kickoff(self, *args, **kwargs):
 
+        # Reset zebra to clear the data entries.
+        self.zebra.pc.block_state_reset.put(1)
+
+        # Arm zebra.
+        self.zebra.pc.arm.put(1)
+
         # PULSE tab of the Zebra CSS:
         getattr(self.zebra, self.pulse_cpt).input_addr.put(1)            # 'Input' in CSS, 1=IN1_TTL
         getattr(self.zebra, self.pulse_cpt).input_edge.put(0)            # 'Trigger on' in CSS, 0=Rising, 1=Falling
@@ -729,6 +735,7 @@ class FlyerIDMono:
             print(f"{print_now()} 'callback_all_scans_done' in complete:  current_scan: {old_value} ---> {value}")
             if value == self.flying_dev.parameters.num_scans.get():  # last scan in the series, no pausing happens
                 _complete_detectors()
+                self.zebra.pc.disarm.put(1)
                 return True
             return False
 
