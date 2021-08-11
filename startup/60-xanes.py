@@ -564,9 +564,6 @@ class FlyerIDMono:
         self.paused_timeout = paused_timeout
         self._continue_after_pausing = True
 
-        # TODO: These parameters are for the bpmAD camera, move them to the relevant class in 21-cameras.
-        # self.plugin_type = 'tiff'
-
         # Flyer infrastructure parameters.
         self._traj_info = {}
         self._array_size = {}
@@ -590,15 +587,6 @@ class FlyerIDMono:
         self.scaler.nuse_all.put(2*total_points)
         self.scaler.erase_start.put(1)
 
-        # TODO: These parameters are for the bpmAD camera, move them to the relevant class in 21-cameras.
-        # # This sets a filepath (template for TIFFs) and generates a Resource
-        # # document in the detector.tiff Device's asset cache.
-        # self.detector.is_flying = True
-        # self.detector.stage_sigs['cam.image_mode'] = 'Multiple'
-        # self.detector.stage_sigs['cam.trigger_mode'] = 'Sync In 2'
-        # self.detector.stage_sigs['cam.array_counter'] = 0
-        # self.detector.stage()
-        # self.detector.cam.acquire.put(1)
 
     def unstage(self):
         for xs_det in self.xs_detectors:
@@ -610,11 +598,6 @@ class FlyerIDMono:
         print(f"{print_now()}: before unstaging scaler")
         self.scaler.stop_all.put(1)
         print(f"{print_now()}: after unstaging scaler")
-
-        # TODO: These parameters are for the bpmAD camera, move them to the relevant class in 21-cameras.
-        # self.detector.unstage()
-        # self.detector.is_flying = False
-        # self.detector.cam.acquire.put(0)
 
     def kickoff(self, *args, **kwargs):
 
@@ -665,11 +648,6 @@ class FlyerIDMono:
             'energy_stop': self.flying_dev.parameters.last_trigger.get(),
             })
 
-        # TODO: These parameters are for the bpmAD camera, move them to the relevant class in 21-cameras.
-        # self._array_size.update({'height': getattr(self.detector, self.plugin_type).array_size.height.get(),
-        #                          'width': getattr(self.detector, self.plugin_type).array_size.width.get()})
-        # self.detector.cam.num_images.put(num_scans * num_triggers)
-
         self.stage()
 
         # Convert to eV/s.
@@ -704,7 +682,7 @@ class FlyerIDMono:
     def complete(self, *args, **kwargs):
         if self.xs_detectors[0]._staged.value == 'no':
 
-            # Note: this is a way to stop the scan on the flyL
+            # Note: this is a way to stop the scan on the fly.
             if self.flying_dev.parameters.num_scans.get() == 0:
                 self._continue_after_pausing = False
                 self.flying_dev.control.abort.put(1)
@@ -759,8 +737,16 @@ class FlyerIDMono:
     #     return ret
 
     def describe_collect(self, *args, **kwargs):
-        return_dict = {
-            'primary':
+        print(f"\n\n{print_now()}: describe_collect started")
+        return_dict = {}
+        if True:
+        # for scan_num in range(self.num_scans):
+            current_scan = self.flying_dev.parameters.current_scan.get()
+
+            print(f"{print_now()}: current_scan: ")
+
+            formatted_scan_num = f"scan_{current_scan:03d}"
+            return_dict[formatted_scan_num] = \
                 {'energy': {'source': self.flying_dev.name,
                             'dtype': 'number',
                             # We need just 1 scalar value for the energy.
@@ -777,10 +763,10 @@ class FlyerIDMono:
                  #                     self._array_size['width']],
                  #           'external': 'FILESTORE:'}
                 }
-        }
-        for xs_det in self.xs_detectors:
-            for channel in xs_det.channels.keys():
-                return_dict['primary'][f'{xs_det.name}_ch{channel}'] = {'source': 'xspress3',
+
+            for xs_det in self.xs_detectors:
+                for channel in xs_det.channels.keys():
+                    return_dict[formatted_scan_num][f'{xs_det.name}_ch{channel}'] = {'source': 'xspress3',
                                                                         'dtype': 'array',
                                                                         # The shape will correspond to a 1-D array of 4096 bins from xspress3.
                                                                         'shape': [
@@ -792,8 +778,11 @@ class FlyerIDMono:
                                                                                   #
                                                                                   xs_det.hdf5.array_size.width.get()],
                                                                         'external': 'FILESTORE:'}
-        # import pprint
-        # pprint.pprint(return_dict)
+        import pprint
+        pprint.pprint(return_dict)
+
+        print(f"\n\n{print_now()}: describe_collect ended")
+
         return return_dict
 
     def collect(self, *args, **kwargs):
@@ -916,8 +905,9 @@ class FlyerIDMono:
                 'data': data,
                 'timestamps': timestamps,
                 'time': now,
-                'seq_num': i,
+                'seq_num': ii,
                 'filled': filled,
+                'descriptor': 'scan_000',
             }
 
         print(f"{print_now()}: after docs emitted in collect")
@@ -941,38 +931,41 @@ flyer_id_mono = FlyerIDMono(flying_dev=id_fly_device,
 # Helper functions for quick vis:
 def plot_flyer_id_mono_data(uid_or_scanid, e_min=None, e_max=None, fname=None, root='/home/xf05id1/current_user_data/', num_channels=4):
     hdr = db[uid_or_scanid]
-    tbl = hdr.table()
-    # N = 
-    if (e_min is None):
-        e_min = xs.channel1.rois.roi01.bin_low.get()
-    if (e_max is None):
-        e_max = xs.channel1.rois.roi01.bin_high.get()
-
-    if (fname is None):
-        fname = f"scan{hdr.start['scan_id']}.txt"
-    fname = root + fname
-
-    d = []
-    for i in range(num_channels):
-        d.append(np.array(list(hdr.data(f'xs_id_mono_fly_ch{i + 1}')))[:, e_min:e_max].sum(axis=1))
-    d = np.array(d)
-
-    i0 = np.array(tbl['i0'])
-    energy = np.array(tbl['energy'])
-
-    spectrum_unnormalized = d.sum(axis=0)
-    spectrum = spectrum_unnormalized / i0
-
-    res = np.vstack((energy, i0, spectrum_unnormalized, spectrum))
-    res = res.T
+    stream_names = hdr.stream_names
 
     fig, ax = plt.subplots()
-    # for i in range(N):
-        
-    ax.plot(energy, spectrum)
-    ax.set(xlabel='Energy [eV]', ylabel='Normalized Spectrum [Arb]')
-    np.savetxt(fname, res)
-    return res.T
+
+
+    for stream in sorted(stream_names):
+        tbl = hdr.table(stream_name=stream)
+
+        if (e_min is None):
+            e_min = xs.channel1.rois.roi01.bin_low.get()
+        if (e_max is None):
+            e_max = xs.channel1.rois.roi01.bin_high.get()
+
+        fname = f"scan{hdr.start['scan_id']}_{stream}.txt"
+        fname = root + fname
+
+        d = []
+        for i in range(num_channels):
+            d.append(np.array(list(hdr.data(f'xs_id_mono_fly_ch{i + 1}', stream_name=stream)))[:, e_min:e_max].sum(axis=1))
+        d = np.array(d)
+
+        i0 = np.array(tbl['i0'])
+        energy = np.array(tbl['energy'])
+
+        spectrum_unnormalized = d.sum(axis=0)
+        spectrum = spectrum_unnormalized / i0
+
+        res = np.vstack((energy, i0, spectrum_unnormalized, spectrum))
+
+        ax.plot(energy, spectrum, label=stream)
+        ax.set(xlabel='Energy [eV]', ylabel='Normalized Spectrum [Arb]')
+        np.savetxt(fname, res.T)
+
+    ax.legend()
+    return res
 
 def flying_xas(num_passes=1, shutter=True, md=None):
     v = flyer_id_mono.flying_dev.parameters.speed.get()
@@ -1038,4 +1031,6 @@ TODO: All scan directions and modes (uni/bi-directional)
 TODO: setup stage_sigs for scaler
 TODO: Monitor and LivePlot of data
 TODO: Unstage the detectors (xs, scaler) on RE.abort()
+TODO: Compare number of triggers from Zebra's data collected table with actual number of emitted pulses.
+TODO: Use timestamps from Zebra's data collected table to generate the events.
 """
