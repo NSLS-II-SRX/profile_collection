@@ -104,6 +104,13 @@ def printfig():
     os.system("lp -d HXN-printer-1 /home/xf05id1/tmp/temp.png")
 
 
+def print_warning_message(msg):
+    msg_len = len(msg) + 2
+    print(f"\n{'*' * msg_len}")
+    print(f' {msg} ')
+    print(f"{'*' * msg_len}\n")
+
+
 def print_baseline(scanid=-1, key_filter=None):
     '''
     Print all the baseline metadata.
