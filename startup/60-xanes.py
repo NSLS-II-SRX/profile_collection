@@ -929,11 +929,12 @@ flyer_id_mono = FlyerIDMono(flying_dev=id_fly_device,
 
 
 # Helper functions for quick vis:
-def plot_flyer_id_mono_data(uid_or_scanid, e_min=None, e_max=None, fname=None, root='/home/xf05id1/current_user_data/', num_channels=4):
+def plot_flyer_id_mono_data(uid_or_scanid, e_min=None, e_max=None, fname=None, root='/home/xf05id1/current_user_data/', num_channels=4, plot=True):
     hdr = db[uid_or_scanid]
     stream_names = hdr.stream_names
 
-    fig, ax = plt.subplots()
+    if (plot):
+        fig, ax = plt.subplots()
 
 
     for stream in sorted(stream_names):
@@ -960,11 +961,13 @@ def plot_flyer_id_mono_data(uid_or_scanid, e_min=None, e_max=None, fname=None, r
 
         res = np.vstack((energy, i0, spectrum_unnormalized, spectrum))
 
-        ax.plot(energy, spectrum, label=stream)
-        ax.set(xlabel='Energy [eV]', ylabel='Normalized Spectrum [Arb]')
+        if (plot):
+            ax.plot(energy, spectrum, label=stream)
+            ax.set(xlabel='Energy [eV]', ylabel='Normalized Spectrum [Arb]')
         np.savetxt(fname, res.T)
 
-    ax.legend()
+    if (plot):
+        ax.legend()
     return res
 
 def flying_xas(num_passes=1, shutter=True, md=None):
