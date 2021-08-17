@@ -162,7 +162,7 @@ def estimate_scan_duration(fastaxis_num, slowaxis_num, dwell, scantype='XRF_FLY'
         try:
             delay = overhead[scantype.casefold()]
         except KeyError:
-            print("Warning: scantype is not supported, deplay = 0s")
+            print("Warning: scantype is not supported, delay = 0s")
             delay = 0.
     else:
         delay = event_delay
