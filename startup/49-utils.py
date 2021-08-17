@@ -146,7 +146,7 @@ def scantime(scanid=-1):
     print(f'Scan ID: {scanid}')
     print(f'  Start Time: {ttime.ctime(h.start["time"])}')
     print(f'  Stop  Time: {ttime.ctime(h.stop["time"])}')
-    print(f'  Total Time: {h.stop["time"] - h.start["time"]}')
+    print(f'  Total Time: {h.stop["time"] - h.start["time"]} seconds')
 
 
 def estimate_scan_duration(fastaxis_num, slowaxis_num, dwell, scantype='XRF_FLY', event_delay=None):
