@@ -14,6 +14,10 @@ shut_a = TwoButtonShutter("XF:05IDA-PPS:1{PSh:2}", name="shut_a")
 shut_b = TwoButtonShutter("XF:05IDB-PPS:1{PSh:4}", name="shut_b")
 
 
+class ShutterOpeningException(Excepton):
+    pass
+
+
 # Check if shutters are open
 def check_shutters(check, status):
     '''
@@ -46,8 +50,8 @@ def check_shutters(check, status):
                 abs_set(shut_d, 0)
                 i = i + 1
                 if (i > 10):
-                    print('Error opening D-shutter!')
-                    raise Exception
+                    # print('Error opening D-shutter!')
+                    raise ShutterOpeningException(f'Error opening D-shutter after {i} attempts!')
         else:
             print('Closing D-hutch shutter...')
             yield from mov(shut_d, 1)
