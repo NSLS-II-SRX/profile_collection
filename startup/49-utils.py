@@ -117,7 +117,8 @@ def print_baseline(scanid=-1, key_filter=None):
 
     Input
     -----
-    scanid  int     the scan ID for the scan of interest.
+    scanid : int
+      the scan ID for the scan of interest.
 
     Returns
     -------
