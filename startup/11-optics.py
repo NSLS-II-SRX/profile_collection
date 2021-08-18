@@ -14,7 +14,7 @@ shut_a = TwoButtonShutter("XF:05IDA-PPS:1{PSh:2}", name="shut_a")
 shut_b = TwoButtonShutter("XF:05IDB-PPS:1{PSh:4}", name="shut_b")
 
 
-class ShutterOpeningException(Excepton):
+class ShutterOpeningException(Exception):
     pass
 
 
