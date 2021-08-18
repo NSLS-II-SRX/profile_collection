@@ -17,6 +17,12 @@ proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
 saf_num = 307307
 
+#proposal_num = 307833
+#proposal_title = 'Quantifying thermodynamically induced reaction non-uniformity in thick battery electrodes'
+#PI_lastname = 'Tang'
+#saf_num = 307001
+
+
 cycle = '2021_cycle2'
 
 # Set user data in bluesky
@@ -64,21 +70,32 @@ os.symlink(userdatadir, '/nsls2/xf05id1/shared/current_user_data')
 def get_stock_md(scan_md):
     # Should this be ChainMap(scan_md, {...})?
     # This should also be put into baseline, and not start document
-    scan_md['beamline_status']  = {'energy':  energy.energy.position}
+    # scan_md['beamline_status']  = {'energy':  energy.energy.position}
     # scan_md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
     #                                       'hf_stage_y': hf_stage.y.position,
     #                                       'hf_stage_z': hf_stage.z.position}
-    scan_md['wb_slits'] = {'v_gap' : slt_wb.v_gap.position,
-                           'h_gap' : slt_wb.h_gap.position,
-                           'v_cen' : slt_wb.v_cen.position,
-                           'h_cen' : slt_wb.h_cen.position}
-    scan_md['hfm'] = {'y' : hfm.y.position,
-                      'bend' : hfm.bend.position}
-    scan_md['ssa_slits'] = {'v_gap' : slt_ssa.v_gap.position,
-                            'h_gap' : slt_ssa.h_gap.position,
-                            'v_cen' : slt_ssa.v_cen.position,
-                            'h_cen' : slt_ssa.h_cen.position}
+    # scan_md['wb_slits'] = {'v_gap' : slt_wb.v_gap.position,
+    #                        'h_gap' : slt_wb.h_gap.position,
+    #                        'v_cen' : slt_wb.v_cen.position,
+    #                        'h_cen' : slt_wb.h_cen.position}
+    # scan_md['hfm'] = {'y' : hfm.y.position,
+    #                   'bend' : hfm.bend.position}
+    # scan_md['ssa_slits'] = {'v_gap' : slt_ssa.v_gap.position,
+    #                         'h_gap' : slt_ssa.h_gap.position,
+    #                         'v_cen' : slt_ssa.v_cen.position,
+    #                         'h_cen' : slt_ssa.h_cen.position}
+    scan_md['time_str'] =  ttime.ctime(ttime.time())
+    scan_md['proposal'] = {'proposal_num': str(proposal_num),
+                           'proposal_title': str(proposal_title),
+                           'PI_lastname': str(PI_lastname),
+                           'saf_num': str(saf_num),
+                           'cycle': str(cycle)}
+    if 'scan' not in scan_md:
+        scan_md['scan'] = {}
+    scan_md['scan']['energy'] = energy.energy.readback.get()
 
+    return scan_md
+    
 
 def logscan(scantype):
     h = db[-1]
@@ -111,7 +128,7 @@ def logscan_detailed(scantype):
     uid = h.start['uid']
 
     userlogf = open(userlogfile, 'a')
-    userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype + '\t' + str(h['start']['scan_input']) + '\n')
+    userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype + '\t' + str(h['start']['scan']['scan_input']) + '\n')
     userlogf.close()
 
 

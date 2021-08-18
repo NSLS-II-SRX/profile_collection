@@ -61,9 +61,6 @@ nslsii.configure_olog(ip.user_ns)
 ip.prompts = SRXPrompt(ip)
 
 
-# Optional: set any metadata that rarely changes.
-RE.md["beamline_id"] = "SRX"
-
 
 # Custom Matplotlib configs:
 mpl.rcParams["axes.grid"] = True  # grid always on
@@ -163,6 +160,11 @@ except ImportError:
 
 
 # runengine_metadata_dir = appdirs.user_data_dir(appname="bluesky") / Path("runengine-metadata")
-runengine_metadata_dir = Path('/nsls2/xf05id1/shared/config/runengine-metadata')
+runengine_metadata_dir = Path('/nsls2/xf05id1/shared/config/runengine-metadata-new')
 
 RE.md = PersistentDict(runengine_metadata_dir)
+
+# Optional: set any metadata that rarely changes.
+RE.md["beamline_id"] = "SRX"
+RE.md["md_version"] = "1.0"
+

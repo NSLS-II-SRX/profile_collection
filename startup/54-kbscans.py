@@ -235,178 +235,19 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
         return
 
     # Do not do fitting, only do the scan
-    if (scan_only):
-        return
+    if (not scan_only):
+        plot_knife_edge(scanid=db[-1].start['scan_id'], plot_guess=False, plotme=plotme)
 
-    # Get the scanid
-    id_str = db[-1].start['scan_id']
-
-    # Get the information from the previous scan
-    haz_data = False
-    loop_counter = 0
-    MAX_LOOP_COUNTER = 30
-    print('Waiting for data...', end='', flush=True)
-    while (loop_counter < MAX_LOOP_COUNTER):
-        try:
-            if (fly):
-                tbl = db[int(id_str)].table('stream0', fill=True)
-            else:
-                tbl = db[int(id_str)].table(fill=True)
-            haz_data = True
-            print('done')
-            break
-        except:
-            loop_counter += 1
-            yield from bps.sleep(1)
-
-    # Check if we haz data
-    if (not haz_data):
-        print('Data collection timed out!')
-        return
-    
-    # Get the data
-    if (use_trans == True):
-        y = tbl['it'].values[0] / tbl['im'].values[0]
-    else:
-        bin_low = xs.channel1.rois.roi01.bin_low.get()
-        bin_high = xs.channel1.rois.roi01.bin_high.get()
-        d = np.array(tbl[fluor_key])[0]
-        if (d.ndim == 1):
-            d = np.array(tbl[fluor_key])
-        d = np.stack(d)
-        if (d.ndim == 2):
-            d = np.sum(d[:, bin_low:bin_high], axis=1)
-        elif (d.ndim == 3):
-            d = np.sum(d[:, :, bin_low:bin_high], axis=(1, 2))
-        try:
-            I0 = np.array(tbl['i0'])[0]
-        except KeyError:
-            I0 = np.array(tbl['sclr_i0'])
-        if (normalize):
-            y = d / I0
-        else:
-            y = d
-    x = np.array(tbl[pos])[0]
-    if (x.size == 1):
-        x = np.array(tbl[pos])
-    x = x.astype(np.float64)
-    y = y.astype(np.float64)
-    dydx = np.gradient(y, x)
-    try:
-        with h5py.File('/home/xf05id1/current_user_data/nano_knife_edge_scan.h5', 'a') as hf:
-            tmp_str = f'dataset_{id_str}'
-            hf.create_dataset(tmp_str, data=[d, y, x, y]) #raw_cts,norm_cts,x_pos,y_pos
-        #ftxt = open('/home/xf05id1/current_user_data/nano_knife_edge_scan.txt','a')
-        #ftxt.write(data=[d,y,x,y])
-        #ftxt.close()
-    except:
-        pass
-
-    # Fit the raw data
-    # def f_int_gauss(x, A, sigma, x0, y0, m)
-    # def f_offset_erf(x, A, sigma, x0, y0):
-    # def f_two_erfs(x, A1, sigma1, x1, y1,
-    #                   A2, sigma2, x2, y2):
-    p_guess = [0.5*np.amax(y),
-               0.100,
-               0.5*(x[0] + x[-1]) - 1.0,
-               0, # np.amin(y) + 0.5*np.amax(y),
-               -0.5*np.amax(y),
-               0.100,
-               0.5*(x[0] + x[-1]) + 1.0,
-               0] # np.amin(y) + 0.5*np.amax(y)]
-    try:
-        # popt, _ = curve_fit(f_offset_erf, x, y, p0=p_guess)
-        popt, _ = curve_fit(f_two_erfs, x, y, p0=p_guess)
-    except:
-        print('Raw fit failed.')
-        popt = p_guess
-
-    C = 2 * np.sqrt(2 * np.log(2))
-    print(f'\nThe beam size is {C * popt[1]:.4f} um')
-    print(f'The beam size is {C * popt[5]:.4f} um')
-    #print(f'\nThe left edge is at\t{popt[2]:.4f}.')
-    #print(f'The right edge is at\t{popt[6]:.4f}.')
-    print(f'The center is at\t{(popt[2]+popt[6])/2:.4f}.\n')
-
-    # Plot variables
-    x_plot = np.linspace(np.amin(x), np.amax(x), num=100)
-    y_plot = f_two_erfs(x_plot, *popt)
-    # y_plot = f_offset_erf(x_plot, *popt)
-    dydx_plot = np.gradient(y_plot, x_plot)
-
-    # Display fit of raw data
-    if (plot and 'plotme' in locals()):
-        plotme.ax.cla()
-        plotme.ax.plot(x, y, '*', label='Raw Data')
-        if (plot_guess):
-            plotme.ax.plot(x_plot, f_two_erfs(x_plot, *p_guess), '--', label='Guess fit')
-        plotme.ax.plot(x_plot, y_plot, '-', label='Final fit')
-        plotme.ax.set_title(f'Scan {id_str}')
-        plotme.ax.set_xlabel(motor.name)
-        if (normalize):
-            plotme.ax.set_ylabel('Normalized ROI Counts')
-        else:
-            plotme.ax.set_ylabel('ROI Counts')
-        plotme.ax.legend()
-
-    # Use the fitted raw data to fit a Gaussian
-    # def f_gauss(x, A, sigma, x0, y0, m):
-    # try:
-    #     if (high2low == True):
-    #         p_guess = [np.amin(dydx_plot), popt[1], popt[2], 0, 0]
-    #     else:
-    #         p_guess = [np.amax(dydx_plot), popt[1], popt[2], 0, 0]
-
-    #     popt2, _ = curve_fit(f_gauss, x_plot, dydx_plot, p0=p_guess)
-    #     # popt2, _ = curve_fit(f_gauss, x, dydx, p0=p_guess)
-    # except:
-    #     print('Fit failed.')
-    #     popt2 = p_guess
-    # C = 2 * np.sqrt(2 * np.log(2))
-    # try:
-    #     p_guess = [np.amin(dydx), 1, x[np.argmin(dydx)], 0, 0]
-    #     popt2, _ = curve_fit(f_gauss, x, dydx, p0=p_guess)
-    #     print('beamsize =f' % (C*popt2[1]))
-    # except:
-    #     print('fail')
-    #     popt2 = p_guess
-    #     pass
-    # try:
-    #     p_guess = [np.amax(dydx), 1, x[np.argmax(dydx)], 0, 0]
-    #     popt3, _ = curve_fit(f_gauss, x, dydx, p0=p_guess)
-    #     print('beamsize =f' % (C*popt3[1]))
-    # except:
-    #     print('fail')
-    #     popt3 = p_guess
-    #     pass
-
-
-    # # Plot the fit
-    # plt.figure('Derivative')
-    # plt.clf()
-    # plt.plot(x, dydx, '*', label='dydx raw')
-    # plt.plot(x_plot, dydx_plot, '-', label='dydx fit')
-    # #plt.plot(x_plot, f_gauss(x_plot, *p_guess), '-', label='Guess')
-    # plt.plot(x_plot, f_gauss(x_plot, *popt2), '-', label='Fit')
-    # plt.plot(x_plot, f_gauss(x_plot, *popt3), '-', label='Fit')
-    # plt.title('Scans' % (id_str))
-    # plt.legend()
-
-    # # Report findings
-    # C = 2 * np.sqrt(2 * np.log(2))
-    # print('\nThe beam size isf um' % (C * popt2[1]))
-    # print('The edge is at.4f mm\n' % (popt2[2]))
 
 # Written quickly
 def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=True, plot_guess=False,
-                    bin_low=None, bin_high=None):
+                    bin_low=None, bin_high=None, plotme=None):
     # Get the scanid
     h = db[int(scanid)]
     id_str = h.start['scan_id']
 
     try:
-        if (h.start['scaninfo']['fast_axis'] == 'NANOHOR'):
+        if (h.start['scan']['fast_axis']['motor_name']=='nano_stage_sx'):
             pos = 'enc1'
         else:
             pos = 'enc2'
@@ -484,13 +325,13 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=Tru
     # def f_two_erfs(x, A1, sigma1, x1, y1,
     #                   A2, sigma2, x2, y2):
     p_guess = [0.5*np.amax(y),
-               1.000,
-               0.5*(x[0] + x[-1]) - 1.0,
-               np.amin(y) + 0.5*np.amax(y),
+               0.500,
+               x[np.argmax(y)] - 1.0,
+               np.amin(y),
                -0.5*np.amax(y),
-               1.000,
-               0.5*(x[0] + x[-1]) + 1.0,
-               np.amin(y) + 0.5*np.amax(y)]
+               0.500,
+               x[np.argmax(y)] + 1.0,
+               np.amin(y)]
     try:
         # popt, _ = curve_fit(f_offset_erf, x, y, p0=p_guess)
         popt, _ = curve_fit(f_two_erfs, x, y, p0=p_guess)
@@ -514,11 +355,22 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=Tru
     dydx_plot = np.gradient(y_plot, x_plot)
 
     # Display fit of raw data
-    fig, ax = plt.subplots()
+    if (plotme is None):
+        fig, ax = plt.subplots()
+    else:
+        ax = plotme.ax
+
+    ax.cla()
     ax.plot(x, y, '*', label='Raw Data')
     if (plot_guess):
         ax.plot(x_plot, f_two_erfs(x_plot, *p_guess), '--', label='Guess fit')
     ax.plot(x_plot, y_plot, '-', label='Final fit')
     ax.set_title(f'Scan {id_str}')
+    ax.set_xlabel(motor.name)
+    if (normalize):
+        ax.set_ylabel('Normalized ROI Counts')
+    else:
+        ax.set_ylabel('ROI Counts')
     ax.legend()
+
     return cent_position 

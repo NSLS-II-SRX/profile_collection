@@ -67,3 +67,6 @@ history.sqlite
 
 # DAMA playground:
 zz-dama.py
+
+# VS Code
+.vscode

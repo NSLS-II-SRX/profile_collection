@@ -4,6 +4,7 @@ print(f'Loading {__file__}...')
 import os
 import lmfit
 import numpy as np
+import pandas as pd
 from scipy.optimize import curve_fit
 from scipy.special import erf
 from bluesky.callbacks import LiveFit, LiveFitPlot
@@ -81,9 +82,9 @@ def mv_position(pos=[]):
         print('Not a position, exiting...')
         return
 
-    yield from mv(hf_stage.x, pos[0],
-                  hf_stage.y, pos[1],
-                  hf_stage.z, pos[2])
+    yield from mv(nano_stage.x, pos[0],
+                  nano_stage.y, pos[1],
+                  nano_stage.z, pos[2])
 
 
 def copyscanparam(src_num, dest_num):
@@ -103,34 +104,84 @@ def printfig():
     os.system("lp -d HXN-printer-1 /home/xf05id1/tmp/temp.png")
 
 
-def estimate_scan_duration(xnum, ynum, dwell, scantype=None, event_delay=None):
+def print_warning_message(msg):
+    msg_len = len(msg) + 2
+    print(f"\n{'*' * msg_len}")
+    print(f' {msg} ')
+    print(f"{'*' * msg_len}\n")
+
+
+def print_baseline(scanid=-1, key_filter=None):
+    '''
+    Print all the baseline metadata.
+
+    Input
+    -----
+    scanid : int
+      the scan ID for the scan of interest.
+
+    Returns
+    -------
+    Nothing
+    '''
+
+    scanid = int(scanid)
+    h = db[scanid]
+    tbl = h.table('baseline')
+    pd.set_option('max_rows', 999)
+    if (key_filter is not None):
+        all_keys = tbl.keys()
+        filtered_list = []
+        for key in all_keys:
+            if key_filter in key:
+                filtered_list.append(key)
+        tbl = tbl[filtered_list]
+    print(tbl.T)
+    pd.reset_option('max_rows')
+
+
+def scantime(scanid=-1):
+    h = db[int(scanid)]
+    scanid = h.start['scan_id']
+    print(f'Scan ID: {scanid}')
+    print(f'  Start Time: {ttime.ctime(h.start["time"])}')
+    print(f'  Stop  Time: {ttime.ctime(h.stop["time"])}')
+    print(f'  Total Time: {h.stop["time"] - h.start["time"]} seconds')
+
+
+def estimate_scan_duration(fastaxis_num, slowaxis_num, dwell, scantype='XRF_FLY', event_delay=None):
     '''
     xnum    int     number of points as entered for the scan in X
     ynum    int     number of points as entered for the scan in Y
     dwell   float   exposure time in seconds as entered on the command line
     scantype    string  one of [XRF, XRF_fly, XANES]
     '''
-    overhead = {'xrf': 0.7, 'xrf_fly': 3.8, 'xanes': 1.6}
+    #overhead = {'xrf': 0.7, 'xrf_fly': 3.8, 'xanes': 1.6}
+    overhead = {'xrf': 0.7, 'XRF_FLY': 5.5, 'xanes': 1.6}
     if event_delay is None:
         try:
             delay = overhead[scantype.casefold()]
         except KeyError:
-            print("Warning: scantype is not supported")
+            print("Warning: scantype is not supported, delay = 0s")
             delay = 0.
     else:
         delay = event_delay
+        print(f"overhead per line is {delay}s")
 
-    if scantype.casefold() == 'xrf_fly':
-        if delay != 0.:
-            delay = delay / xnum
-        xnum = xnum - 1
-        ynum = ynum - 1
+##    if scantype.casefold() == 'xrf_fly':
+##        if delay != 0.:
+##            delay = delay / xnum
+##        xnum = xnum - 1
+##        ynum = ynum - 1
 
-    result = ((xnum + 1) * (ynum + 1)) * (dwell + delay)
-    div, rem = divmod(result, 3600)
-    print(f"Estimated duration is {int(div):d} hr {rem / 60:.1f} min "
-          "({result:.1f} sec).")
-
+    #result = ((xnum + 1) * (ynum + 1)) * (dwell + delay)
+    '''
+    if 
+        result = (xnum*ynum) * dwell + ynum*delay
+        div, rem = divmod(result, 3600)
+        print(f"Estimated duration is {int(div):d} hr {rem / 60:.1f} min "
+              "({result:.1f} sec).")
+    '''
     return result
 
 

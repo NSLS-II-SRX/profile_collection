@@ -207,10 +207,10 @@ class SRXFlyer1Axis(Device):
     """
 
     LARGE_FILE_DIRECTORY_WRITE_PATH = (
-        "/nsls2/xf05id1/XF05ID1/data/2020-3/fly_scan_ancillary/"
+        "/nsls2/xf05id1/XF05ID1/data/2021-2/fly_scan_ancillary/"
     )
     LARGE_FILE_DIRECTORY_READ_PATH = (
-        "/nsls2/xf05id1/XF05ID1/data/2020-3/fly_scan_ancillary/"
+        "/nsls2/xf05id1/XF05ID1/data/2021-2/fly_scan_ancillary/"
     )
     KNOWN_DETS = {"xs", "xs2", "merlin", "dexela"}
     fast_axis = Cpt(Signal, value="HOR", kind="config")
@@ -444,6 +444,9 @@ class SRXFlyer1Axis(Device):
         whether that is true, so it will obligingly stop immediately. It is
         up to the caller to ensure that the motion is actually complete.
         """
+
+        amk_debug_flag = False
+
         # Our acquisition complete PV is: XF:05IDD-ES:1{Dev:Zebra1}:ARRAY_ACQ
         while self._encoder.pc.data_in_progress.get() == 1:
             ttime.sleep(0.01)
@@ -525,9 +528,11 @@ class SRXFlyer1Axis(Device):
             else:
                 export_zebra_data(self._encoder, self.__write_filepath, self.fast_axis)
 
-        # t_getzebradata = tic()
+        if amk_debug_flag:
+            t_getzebradata = tic()
         get_zebra_data()
-        # toc(t_getzebradata, str='Get Zebra data')
+        if amk_debug_flag:
+            toc(t_getzebradata, str='Get Zebra data')
 
         # @timer_wrapper
         def get_sis_data():
@@ -535,9 +540,11 @@ class SRXFlyer1Axis(Device):
                 self._sis, self.__write_filepath_sis, self._encoder
             )
 
-        # t_sisdata = tic()
+        if amk_debug_flag:
+            t_sisdata = tic()
         get_sis_data()
-        # toc(t_sisdata, str='Get SIS data')
+        if amk_debug_flag:
+            toc(t_sisdata, str='Get SIS data')
 
         # Yield a (partial) Event document. The RunEngine will put this
         # into metadatastore, as it does all readings.

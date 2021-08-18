@@ -123,6 +123,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Set metadata
     if md is None:
         md = {}
+    md = get_stock_md(md)
 
     # Change retry deadband for hf_stage.x and hf_stage.y
     if (hf_stage.x in (xmotor, ymotor)):
@@ -191,25 +192,44 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     if (align):
         yield from peakup_fine(shutter=shutter)
 
-    md = ChainMap(md, {
-        'plan_name': 'scan_and_fly',
-        'detectors': [d.name for d in detectors],
-        'dwell': dwell,
-        'shape': (xnum, ynum),
-        'scaninfo': {'type': 'XRF_fly',
-                     'raster': False,
-                     'fast_axis': flying_zebra.fast_axis.get()},
-                     # 'slow_axis': flying_zebra.slow_axis.get(),
-                     # 'theta': hf_stage.th.position}
-        'scan_params': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
-        'scan_input': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
-        'delta': delta,
-        'beamline_status' : {'energy' : energy.position.energy}
-        }
-    )
+    # md = ChainMap(md, {
+    #     'plan_name': 'scan_and_fly',
+    #     'detectors': [d.name for d in detectors],
+    #     'dwell': dwell,
+    #     'shape': (xnum, ynum),
+    #     'scaninfo': {'type': 'XRF_fly',
+    #                  'raster': False,
+    #                  'fast_axis': flying_zebra.fast_axis.get()},
+    #                  # 'slow_axis': flying_zebra.slow_axis.get(),
+    #                  # 'theta': hf_stage.th.position}
+    #     'scan_params': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
+    #     'scan_input': [xstart, xstop, xnum, ystart, ystop, ynum, dwell],
+    #     'delta': delta,
+    #     'beamline_status' : {'energy' : energy.position.energy}
+    #     }
+    # )
 
-    if ('xs2' in dets_by_name):
-        md['scaninfo']['type'] = 'XRF_E_tomo_fly'
+    md['scan']['type'] = 'XRF_FLY'
+    md['scan']['scan_input'] = [xstart, xstop, xnum, ystart, ystop, ynum, dwell]
+    md['scan']['sample_name'] = ''
+    md['scan']['detectors'] = [d.name for d in detectors]
+    md['scan']['dwell'] = dwell
+    md['scan']['fast_axis'] = {'motor_name' : xmotor.name,
+                               'units' : xmotor.motor_egu.get()}
+    md['scan']['slow_axis'] = {'motor_name' : ymotor.name,
+                               'units' : ymotor.motor_egu.get()}
+    md['scan']['theta'] = {'val' : nano_stage.th.user_readback.get(),
+                           'units' : nano_stage.th.motor_egu.get()}
+    md['scan']['delta'] = {'val' : delta,
+                           'units' : xmotor.motor_egu.get()}
+    md['scan']['snake'] = False
+    md['scan']['shape'] = (xnum, ynum)
+    
+
+    # if ('xs2' in dets_by_name):
+    #     md['scan']['type'] = 'XRF_E_tomo_fly'
+
+    amk_debug_flag = False
 
     @stage_decorator(flying_zebra.detectors)
     def fly_each_step(motor, step):
@@ -219,9 +239,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             yield from one_1d_step([temp_nanoKB], motor, step)
             yield from bps.wait(group='row')
 
-        # t_mvstartfly = tic()
+        if amk_debug_flag:
+            t_mvstartfly = tic()
         yield from move_to_start_fly()
-        # toc(t_mvstartfly, str='Move to start fly each')
+        if amk_debug_flag:
+            toc(t_mvstartfly, str='Move to start fly each')
 
         # TODO  Why are we re-trying the move?  This should be fixed at
         # a lower level
@@ -291,9 +313,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             yield from kickoff(flying_zebra,
                                xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell,
                                wait=True)
-        # t_zebkickoff = tic()
+        if amk_debug_flag:
+            t_zebkickoff = tic()
         yield from zebra_kickoff()
-        # toc(t_zebkickoff, str='Zebra kickoff')
+        if amk_debug_flag:
+            toc(t_zebkickoff, str='Zebra kickoff')
 
         # arm SIS3820, note that there is a 1 sec delay in setting X
         # into motion so the first point *in each row* won't
@@ -318,24 +342,28 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         # @timer_wrapper
         def zebra_complete():
             yield from complete(flying_zebra)  # tell the Zebra we are done
-        # t_zebcomplete = tic()
+        if amk_debug_flag:
+            t_zebcomplete = tic()
         yield from zebra_complete()
-        # toc(t_zebcomplete, str='Zebra complete')
+        if amk_debug_flag:
+            toc(t_zebcomplete, str='Zebra complete')
 
 
         # @timer_wrapper
         def zebra_collect():
             yield from collect(flying_zebra)  # extract data from Zebra
-        # t_zebcollect = tic()
+        if amk_debug_flag:
+            t_zebcollect = tic()
         yield from zebra_collect()
-        # toc(t_zebcollect, str='Zebra collect')
+        if amk_debug_flag:
+            toc(t_zebcollect, str='Zebra collect')
 
         # TODO what?
         if ('e_tomo' in xmotor.name):
             v_return = min(4, xmotor.velocity.high_limit)
             yield from mv(xmotor.velocity, v_return)
         if ('nano_stage' in xmotor.name):
-            yield from mv(xmotor.velocity, 30)
+            yield from mv(xmotor.velocity, 100)
         else:
             # set the "stage speed"
             yield from mv(xmotor.velocity, 1.0)
@@ -343,12 +371,12 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     def at_scan(name, doc):
         scanrecord.current_scan.put(doc['uid'][:6])
         scanrecord.current_scan_id.put(str(doc['scan_id']))
-        scanrecord.current_type.put(md['scaninfo']['type'])
+        scanrecord.current_type.put(md['scan']['type'])
         scanrecord.scanning.put(True)
         scanrecord.time_remaining.put((dwell*xnum + 3.8)/3600)
 
     def finalize_scan(name, doc):
-        logscan_detailed('xrf_fly')
+        logscan_detailed('XRF_FLY')
         scanrecord.scanning.put(False)
         scanrecord.time_remaining.put(0)
 
@@ -427,7 +455,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     #     # t_open = tic()
     #     yield from mv(shut_b, 'Open')
     #     # toc(t_open, str='Open shutter')
+    if amk_debug_flag:
+        t_open = tic()
     yield from check_shutters(shutter, 'Open')
+    if amk_debug_flag:
+        toc(t_open, str='Open shutter')
 
     # Run the scan
     uid = yield from final_plan
@@ -448,8 +480,8 @@ def nano_scan_and_fly(*args, extra_dets=None, **kwargs):
     kwargs.setdefault('xmotor', nano_stage.sx)
     kwargs.setdefault('ymotor', nano_stage.sy)
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
-    print(kwargs['xmotor'].name)
-    print(kwargs['ymotor'].name)
+    # print(kwargs['xmotor'].name)
+    # print(kwargs['ymotor'].name)
     yield from abs_set(nano_flying_zebra.fast_axis, 'NANOHOR')
     yield from abs_set(nano_flying_zebra.slow_axis, 'NANOVER')
 
@@ -458,6 +490,8 @@ def nano_scan_and_fly(*args, extra_dets=None, **kwargs):
         extra_dets = []
     dets = [_xs] + extra_dets
     yield from scan_and_fly_base(dets, *args, **kwargs)
+    print('Scan finished. Centering the scanner...')
+    yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
 
 
 def nano_y_scan_and_fly(*args, extra_dets=None, **kwargs):
@@ -472,6 +506,9 @@ def nano_y_scan_and_fly(*args, extra_dets=None, **kwargs):
         extra_dets = []
     dets = [_xs] + extra_dets
     yield from scan_and_fly_base(dets, *args, **kwargs)
+    print('Scan finished. Centering the scanner...')
+    yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
+
 
 
 def nano_z_scan_and_fly(*args, extra_dets=None, **kwargs):
@@ -485,6 +522,9 @@ def nano_z_scan_and_fly(*args, extra_dets=None, **kwargs):
         extra_dets = []
     dets = [_xs] + extra_dets
     yield from scan_and_fly_base(dets, *args, **kwargs)
+    print('Scan finished. Centering the scanner...')
+    yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
+
 
 
 def scan_and_fly(*args, extra_dets=None, **kwargs):

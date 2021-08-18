@@ -21,7 +21,7 @@ class SRXNanoKB(Device):
                   name='nanoKB_v_pitch',
                   add_prefix=())  
     # XF:05IDD-ES:1{nKB:horz-Ax:PC}Mtr.RBV
-    v_pitch_um = Cpt(EpicsMotor, 'horz-Ax:PC}Mtr')
+    v_pitch_um = Cpt(EpicsMotor, 'vert-Ax:PC}Mtr')
     # XF:05IDD-ES:1{nKB:horz-Ax:X}Mtr.RBV
     h_x = Cpt(EpicsMotor, 'horz-Ax:X}Mtr')
     # XF:05IDD-ES:1{nKB:horz-Ax:PC}RPOS
@@ -30,7 +30,7 @@ class SRXNanoKB(Device):
                   name='nanoKB_h_pitch',
                   add_prefix=())
     # XF:05IDD-ES:1{nKB:vert-Ax:PC}Mtr.RBV
-    h_pitch_um = Cpt(EpicsMotor, 'vert-Ax:PC}Mtr')
+    h_pitch_um = Cpt(EpicsMotor, 'horz-Ax:PC}Mtr')
 
 
 nanoKB = SRXNanoKB('XF:05IDD-ES:1{nKB:', name='nanoKB')
@@ -111,7 +111,7 @@ def mv_along_axis(z_end):
     ratio_yz = 0.0067874
 
     delta_z = z_end-cur_z
-    print(f'moving z by {delta_z}')
+    print(f'Will move z to {z_end}')
 
     delta_x = ratio_xz*delta_z
     print(f'moving x by {delta_x}')
