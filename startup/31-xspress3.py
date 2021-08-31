@@ -253,6 +253,7 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
         return super().stage()
 
     def unstage(self):
+        self.hdf5.capture.put(0)
         try:
             ret = super().unstage()
         finally:

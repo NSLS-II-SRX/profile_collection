@@ -229,7 +229,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # if ('xs2' in dets_by_name):
     #     md['scan']['type'] = 'XRF_E_tomo_fly'
 
-    amk_debug_flag = False
+    amk_debug_flag = True
 
     @stage_decorator(flying_zebra.detectors)
     def fly_each_step(motor, step):
@@ -242,8 +242,6 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         if amk_debug_flag:
             t_mvstartfly = tic()
         yield from move_to_start_fly()
-        if amk_debug_flag:
-            toc(t_mvstartfly, str='Move to start fly each')
 
         # TODO  Why are we re-trying the move?  This should be fixed at
         # a lower level
@@ -267,11 +265,23 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         if (i != 0):
             print('done')
 
+        if amk_debug_flag:
+            toc(t_mvstartfly, str='Move to start fly each')
+
         # Set the scan speed
         # Is abs_set(wait=True) or mv() faster?
         v = ((xstop - xstart) / (xnum-1)) / dwell  # compute "stage speed"
         # yield from abs_set(xmotor.velocity, v, wait=True)  # set the "stage speed"
-        yield from mv(xmotor.velocity, v)
+        if (v > xmotor.velocity.high_limit):
+            # Need to raise error!
+            print(f'Desired motor velocity too high\nMax velocity: {xmotor.velocity.high_limit}')
+            raise ValueError
+        elif (v < xmotor.velocity.low_limit):
+            # Need to raise error!
+            print(f'Desired motor velocity too low\nMin velocity: {xmotor.velocity.low_limit}')
+            raise ValueError
+        else:
+            yield from mv(xmotor.velocity, v)
         # Change backlash speed for hf_stage.x and hf_stage.y
         if (hf_stage.x is xmotor):
             yield from mv(hf_stage.BACKLASH_SPEED_X, v)
@@ -319,22 +329,49 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         if amk_debug_flag:
             toc(t_zebkickoff, str='Zebra kickoff')
 
+        if amk_debug_flag:
+            t_datacollect = tic()
         # arm SIS3820, note that there is a 1 sec delay in setting X
         # into motion so the first point *in each row* won't
         # normalize...
         yield from abs_set(ion.erase_start, 1)
+        if amk_debug_flag:
+            toc(t_datacollect, str='  reset scaler')
 
         # trigger all of the detectors
+        print('Data collection:')
         for d in flying_zebra.detectors:
+            print(f'  triggering {d.name}')
             yield from bps.trigger(d, group='row')
             if (d.name == 'dexela'):
                 yield from bps.sleep(1)
+        if amk_debug_flag:
+            toc(t_datacollect, str='  trigger detectors')
 
         yield from bps.sleep(1.5)
+        if amk_debug_flag:
+            toc(t_datacollect, str='  sleep')
+
         # start the 'fly'
         yield from abs_set(xmotor, xstop + 1*delta, group='row')  # move in x
+        if amk_debug_flag:
+            toc(t_datacollect, str='  move start')
+
+        if amk_debug_flag:
+            ttime.sleep(1)
+            while (xmotor.motor_is_moving.get()):
+                ttime.sleep(0.001)
+            toc(t_datacollect, str='  move end')
+            while (xs.settings.detector_state.get()):
+                ttime.sleep(0.001)
+            toc(t_datacollect, str='  xs done')
+            while (sclr1.acquiring.get()):
+                ttime.sleep(0.001)
+            toc(t_datacollect, str='  sclr1 done')
         # wait for the motor and detectors to all agree they are done
         yield from bps.wait(group='row')
+        if amk_debug_flag:
+            toc(t_datacollect, str='Total time')
 
         # we still know about ion from above
         yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
