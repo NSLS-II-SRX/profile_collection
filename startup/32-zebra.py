@@ -380,20 +380,22 @@ class SRXFlyer1Axis(Device):
         self._encoder.pc.arm.put(0)
         self._mode = "kicked off"
         self._npts = int(xnum)
-        extent = xstop - xstart
-        pxsize = extent / (xnum - 1)
+        pxsize = (xstop - xstart) / (xnum - 1)
+        extent = (xstop - xstart) + pxsize
         # 2 ms delay between pulses
         decrement = (pxsize / dwell) * 0.002
         if decrement < 1e-5:
             # print('Changing the pulse width')
             decrement = 1e-5
-        self._encoder.pc.gate_start.put(xstart)
+        self._encoder.pc.gate_start.put(xstart - (pxsize / 2))
         if (self.encoder.pc.egu.get() == 'mm'):
             self._encoder.pc.gate_step.put(extent + 0.0005)
             self._encoder.pc.gate_width.put(extent + 0.001)
         else:
-            self._encoder.pc.gate_step.put(extent + 0.25)
-            self._encoder.pc.gate_width.put(extent + 0.2)
+            # self._encoder.pc.gate_step.put(extent + 0.25)
+            # self._encoder.pc.gate_width.put(extent + 0.2)
+            self._encoder.pc.gate_step.put(extent + 0.051)
+            self._encoder.pc.gate_width.put(extent + 0.050)
 
         self._encoder.pc.pulse_start.put(0.0)
         self._encoder.pc.pulse_max.put(xnum)
@@ -410,7 +412,10 @@ class SRXFlyer1Axis(Device):
             self._encoder.pulse1.width.put(0.5 * dwell - 0.050)
         else:
             self._encoder.output1.ttl.addr.put(31)
-            self._encoder.output3.ttl.addr.put(31)
+            # self._encoder.output3.ttl.addr.put(31)
+            self._encoder.output3.ttl.addr.put(36)
+            self._encoder.pulse3.input_addr.put(31)
+            self._encoder.pulse4.input_addr.put(31)
 
         # If both values are not synced, then the X-position was not updating
         # during the scan and will remain at the initial value
@@ -524,7 +529,7 @@ class SRXFlyer1Axis(Device):
         # @timer_wrapper
         def get_zebra_data():
             if 'nano' in self.name:
-                export_nano_zebra_data(self._encoder, self.__write_filepath)
+                export_nano_zebra_data(self._encoder, self.__write_filepath, self.fast_axis.get())
             else:
                 export_zebra_data(self._encoder, self.__write_filepath, self.fast_axis)
 
@@ -685,7 +690,7 @@ except Exception as ex:
 # flying_zebra = SRXFlyer1Axis(zebra)
 
 
-def export_nano_zebra_data(zebra, filepath):
+def export_nano_zebra_data(zebra, filepath, fastaxis):
     j = 0
     while zebra.pc.data_in_progress.get() == 1:
         print("Waiting for zebra...")
@@ -699,6 +704,17 @@ def export_nano_zebra_data(zebra, filepath):
     enc1_d = zebra.pc.data.enc1.get()
     enc2_d = zebra.pc.data.enc2.get()
     enc3_d = zebra.pc.data.enc3.get()
+
+    px = zebra.pc.pulse_step.get()
+    if fastaxis == 'NANOHOR':
+        # Add half pixelsize to correct encoder
+        enc1_d = enc1_d + (px / 2)
+    elif fastaxis == 'NANOVER':
+        # Add half pixelsize to correct encoder
+        enc2_d = enc2_d + (px / 2)
+    elif fastaxis == 'NANOZ':
+        # Add half pixelsize to correct encoder
+        enc3_d = enc3_d + (px / 2)
 
     size = (len(time_d),)
     with h5py.File(filepath, "w") as f:

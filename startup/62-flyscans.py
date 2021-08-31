@@ -179,13 +179,19 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             delta = t_acc * v  # distance the stage will travel in t_acc
             delta = np.amax((delta, MIN_DELTA))
         else:
-            delta = 0.500 #was 2.5 when npoint scanner drifted
+            MIN_DELTA = 0.100  # old default value
+            v = ((xstop - xstart) / (xnum - 1)) / dwell  # compute "stage speed"
+            t_acc = xmotor.acceleration.get()  # acceleration time
+            delta = 0.5 * t_acc * v  # distance the stage will travel in t_acc
+            delta = np.amax((delta, MIN_DELTA))
+            # delta = 0.500 #was 2.5 when npoint scanner drifted
 
     # Move to start scanning location
     #if ('nano_stage' in xmotor.name):
     #    yield from mv(xmotor.velocity, 30)
     #    yield from mv(xmotor.velocity, 30)
-    yield from mv(xmotor, xstart - delta,
+    pxsize = (xstop - xstart) / (xnum - 1)
+    yield from mv(xmotor, xstart - pxsize - delta,
                   ymotor, ystart)
 
     # Run a peakup before the map?
@@ -235,7 +241,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     def fly_each_step(motor, step):
         def move_to_start_fly():
             "See http://nsls-ii.github.io/bluesky/plans.html#the-per-step-hook"
-            yield from abs_set(xmotor, xstart-delta, group='row')
+            yield from abs_set(xmotor, xstart-pxsize-delta, group='row')
             yield from one_1d_step([temp_nanoKB], motor, step)
             yield from bps.wait(group='row')
 
@@ -246,7 +252,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         # TODO  Why are we re-trying the move?  This should be fixed at
         # a lower level
         # yield from bps.sleep(1.0)  # wait for the "x motor" to move
-        x_set = xstart - delta
+        x_set = xstart - pxsize - delta
         x_dial = xmotor.user_readback.get()
         # Get retry deadband value and check against that
         i = 0
@@ -259,7 +265,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 print('Waiting for motor to reach starting position...',
                       end='', flush=True)
             i = i + 1
-            yield from mv(xmotor, xstart - delta)
+            yield from mv(xmotor, xstart - pxsize - delta)
             yield from bps.sleep(0.1)
             x_dial = xmotor.user_readback.get()
         if (i != 0):
@@ -315,7 +321,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             yield from abs_set(dexela.cam.num_images, xnum, wait=True)
 
         ion = flying_zebra.sclr
-        yield from abs_set(ion.nuse_all,xnum)
+        yield from abs_set(ion.nuse_all, 2*xnum)
 
         # arm the Zebra (start caching x positions)
         # @timer_wrapper
