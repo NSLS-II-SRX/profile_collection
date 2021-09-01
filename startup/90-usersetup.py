@@ -92,7 +92,7 @@ def get_stock_md(scan_md):
                            'cycle': str(cycle)}
     if 'scan' not in scan_md:
         scan_md['scan'] = {}
-    scan_md['scan']['energy'] = energy.energy.readback.get()
+    scan_md['scan']['energy'] = np.round(energy.energy.readback.get(), decimals=4)
 
     return scan_md
     
