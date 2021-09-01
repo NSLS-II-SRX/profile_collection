@@ -380,22 +380,20 @@ class SRXFlyer1Axis(Device):
         self._encoder.pc.arm.put(0)
         self._mode = "kicked off"
         self._npts = int(xnum)
-        pxsize = (xstop - xstart) / (xnum - 1)
-        extent = (xstop - xstart) + pxsize
+        if xstart < xstop:
+            direction = 1
+        else:
+            direction = -1
+        pxsize = np.abs(xstop - xstart) / (xnum - 1)
+        extent = np.abs(xstop - xstart) + pxsize
         # 2 ms delay between pulses
         decrement = (pxsize / dwell) * 0.002
         if decrement < 1e-5:
             # print('Changing the pulse width')
             decrement = 1e-5
-        self._encoder.pc.gate_start.put(xstart - (pxsize / 2))
-        if (self.encoder.pc.egu.get() == 'mm'):
-            self._encoder.pc.gate_step.put(extent + 0.0005)
-            self._encoder.pc.gate_width.put(extent + 0.001)
-        else:
-            # self._encoder.pc.gate_step.put(extent + 0.25)
-            # self._encoder.pc.gate_width.put(extent + 0.2)
-            self._encoder.pc.gate_step.put(extent + 0.051)
-            self._encoder.pc.gate_width.put(extent + 0.050)
+        self._encoder.pc.gate_start.put(xstart - direction * (pxsize / 2))
+        self._encoder.pc.gate_step.put(extent + 0.051)
+        self._encoder.pc.gate_width.put(extent + 0.050)
 
         self._encoder.pc.pulse_start.put(0.0)
         self._encoder.pc.pulse_max.put(xnum)
