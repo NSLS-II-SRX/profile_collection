@@ -155,11 +155,13 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
     hdf5 = Cpt(HDF5PluginWithFileStoreMerlin, 'HDF1:',
                read_attrs=[],
                # read_path_template='/nsls2/xf05id1/XF05ID1/MERLIN/%Y/%m/%d/',
-               read_path_template='/nsls2/xf05id1/XF05ID1/MERLIN/2021/02/11/',
+               # read_path_template='/nsls2/xf05id1/XF05ID1/MERLIN/2021/02/11/',
+               read_path_template='/nsls2/data/srx/assets/merlin/%Y/%m/%d/',
                configuration_attrs=[],
                # write_path_template='/epicsdata/merlin/%Y/%m/%d/',
-               write_path_template='/epicsdata/merlin/2021/02/11/',
-               root='/nsls2/xf05id1')
+               # write_path_template='/epicsdata/merlin/2021/02/11/',
+               write_path_template='/nsls2/data/srx/assets/merlin/%Y/%m/%d/',
+               root='/nsls2/data/srx/assets/merlin')
 
     stats1 = Cpt(StatsPlugin, 'Stats1:')
     stats2 = Cpt(StatsPlugin, 'Stats2:')
