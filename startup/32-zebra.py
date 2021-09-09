@@ -383,6 +383,10 @@ class SRXFlyer1Axis(Device):
     def kickoff(self, *, xstart, xstop, xnum, dwell):
         dets_by_name = {d.name: d for d in self.detectors}
 
+        ## TODO: Need to make sure zebra is full setup for scan
+        ## pulses2/3/4
+        ## OR logic
+        ## PC on position (NOT TIME!)
         self._encoder.pc.arm.put(0)
         self._mode = "kicked off"
         self._npts = int(xnum)
@@ -393,7 +397,7 @@ class SRXFlyer1Axis(Device):
         pxsize = np.abs(xstop - xstart) / (xnum - 1)
         extent = np.abs(xstop - xstart) + pxsize
         # 2 ms delay between pulses
-        decrement = (pxsize / dwell) * 0.002
+        decrement = (pxsize / dwell) * 0.001
         if decrement < 1e-5:
             # print('Changing the pulse width')
             decrement = 1e-5

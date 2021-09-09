@@ -314,7 +314,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         if verbose:
             toc(t_datacollect, str='  trigger detectors')
 
-        yield from bps.sleep(1.5)
+        # yield from bps.sleep(1.5)
         if verbose:
             toc(t_datacollect, str='  sleep')
 
@@ -341,6 +341,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
         # we still know about ion from above
         yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
+
+        # set speed back
+        yield from reset_scanner_velocity()
 
         # @timer_wrapper
         def zebra_complete():
