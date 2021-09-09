@@ -238,16 +238,18 @@ def slit_nanoflyscan(scan_motor, scan_start, scan_stop, scan_stepsize, acqtime,
         uid = yield from _knife_plan()
         return uid
     
+    uid_list = []
     for ii in slit_pos:
         yield from mov(slit_motor, ii)
-        uids = yield from _plan()
+        uid = yield from _plan()
+        uid_list.append(uid)
 
     # Finish up
     yield from check_shutters(True, 'Close') 
     yield from mov(slit_motor, slit_orig_pos)
     yield from mov(slitgap_motor, slit_orig_gap)
 
-    return uids
+    return uid_list
 
 
 def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False,
@@ -463,6 +465,7 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
         print(f'\tQuadratic term corresponds to coarse Z {delta_focal_plane_z:7.3f} um.')
 
 
+    # Doesn't work in RunEngine. Need to make Liveplot.
     fig, ax = plt.subplots()
     ax.plot(slit_range, line_pos_seq/1000, 'ro', slit_range[interp_range], line_plt)
     ax.set_title(f'Scan {scan_id}')
@@ -493,6 +496,7 @@ def focusKB(direction, **kwargs):
         kwargs.setdefault('slit_stepsize', 0.05)
         kwargs.setdefault('slitgap_motor', jjslits.h_gap)
         kwargs.setdefault('slit_gap', 0.05)
+        N = 11
     elif 'ver' in direction.lower():
         kwargs.setdefault('scan_motor', nano_stage.sy)
         kwargs.setdefault('slit_motor', jjslits.v_trans)
@@ -500,6 +504,7 @@ def focusKB(direction, **kwargs):
         kwargs.setdefault('slit_stepsize', 0.1)
         kwargs.setdefault('slitgap_motor', jjslits.v_gap)
         kwargs.setdefault('slit_gap',  0.10)
+        N = 11
     else:
         print("This is for vertical or horizontal scans. Please choose one of these directions")
 
@@ -516,8 +521,8 @@ def focusKB(direction, **kwargs):
     uids = yield from slit_nanoflyscan(**kwargs)
 
     # Fit the data
-    N = len(uids)
+    # N = len(uids)
     scanids = np.linspace(-N, -1, num=N)
-    slit_nanoflyscan_cal(scan_id_list=scanids, interp_range=scanids[1:-2], orthogonality=False)
+    slit_nanoflyscan_cal(scan_id_list=scanids, interp_range=scanids[1:-1].astype('int'), orthogonality=False)
 
 
