@@ -361,11 +361,10 @@ class Energy(PseudoPositioner):
         self.move(self.energy.get()[0])
 
 
-# Let's try to only keep one "old" value in for ease of use
 # Recalibrated 2021-09-08
 cal_data_2021cycle3 = {
-    "d_111": 3.130107437129581,
-    "delta_bragg": 0.2127425977113396,
+    "d_111": 3.128666195523328,
+    "delta_bragg": 0.2167556062528753,
     "C2Xcal": 3.6,
     "T2cal": 15.0347755916,
     "xoffset": 24.65,

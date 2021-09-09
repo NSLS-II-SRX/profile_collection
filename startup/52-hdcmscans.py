@@ -176,9 +176,9 @@ def braggcalib(scanlogDic={}, use_xrf=True, man_correction={}):
                                               guess,
                                               args=(fitBragg, fitEnergy))
 
-    print('(111) d spacing:\t', fitted_dcm[0])
-    print('Bragg RBV offset:\t', fitted_dcm[1])
-    print('Success:\t', success)
+    # print('(111) d spacing:\t', fitted_dcm[0])
+    # print('Bragg RBV offset:\t', fitted_dcm[1])
+    # print('Success:\t', success)
 
     newEnergy = fitfunc(fitted_dcm, fitBragg)
 
@@ -316,8 +316,8 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # Find approximate values
     # 2021-09-08
     roll_guess = 0.210
-    # 2021-01-31
-    pitch_guess = -0.00128157*(E/1000) - 0.0616634
+    # 2021-09-09
+    pitch_guess = -0.078
 
 
     # Use calibration
