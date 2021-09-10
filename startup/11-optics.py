@@ -14,6 +14,10 @@ shut_a = TwoButtonShutter("XF:05IDA-PPS:1{PSh:2}", name="shut_a")
 shut_b = TwoButtonShutter("XF:05IDB-PPS:1{PSh:4}", name="shut_b")
 
 
+class ShutterOpeningException(Exception):
+    pass
+
+
 # Check if shutters are open
 def check_shutters(check, status):
     '''
@@ -31,16 +35,23 @@ def check_shutters(check, status):
     '''
 
     if check is False:
-        print("\n**************************************************")
-        print("WARNING: Shutters are not controlled in this scan.")
-        print("**************************************************\n")
+        print_warning_message("WARNING: Shutters are not controlled in this scan.")
     else:
         if status == 'Open':
             if shut_b.status.get() == 'Not Open':
                 print('Opening B-hutch shutter..')
                 yield from mov(shut_b, "Open")
             print('Opening D-hutch shutter...')
-            yield from mov(shut_d, 0)
+            # yield from mov(shut_d, 0)
+            yield from abs_set(shut_d, 0)
+            i = 0
+            while (shut_d.read()['attenuators_Mo_shutter']['value'] == 1):
+                yield from bps.sleep(1)
+                abs_set(shut_d, 0)
+                i = i + 1
+                if (i > 10):
+                    # print('Error opening D-shutter!')
+                    raise ShutterOpeningException(f'Error opening D-shutter after {i} attempts!')
         else:
             print('Closing D-hutch shutter...')
             yield from mov(shut_d, 1)
@@ -150,10 +161,10 @@ class SRXDCM(Device):
     temp_pitch = Cpt(EpicsSignalRO, "P}T-I")
 
 
-print('Trying to instantiate dcm from SRXDCM class...')
+# print('Trying to instantiate dcm from SRXDCM class...')
 dcm = SRXDCM("XF:05IDA-OP:1{Mono:HDCM-Ax:", name="dcm")
 dcm.wait_for_connection()
-print('Instantiated dcm from SRXDCM class!')
+# print('Instantiated dcm from SRXDCM class!')
 
 
 # Setup BPM motors

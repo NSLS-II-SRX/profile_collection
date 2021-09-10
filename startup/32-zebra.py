@@ -206,11 +206,17 @@ class SRXFlyer1Axis(Device):
     This is the Zebra.
     """
 
+    # LARGE_FILE_DIRECTORY_WRITE_PATH = (
+    #     "/nsls2/xf05id1/XF05ID1/data/2021-2/fly_scan_ancillary/"
+    # )
+    # LARGE_FILE_DIRECTORY_READ_PATH = (
+    #     "/nsls2/xf05id1/XF05ID1/data/2021-2/fly_scan_ancillary/"
+    # )
     LARGE_FILE_DIRECTORY_WRITE_PATH = (
-        "/nsls2/xf05id1/XF05ID1/data/2020-3/fly_scan_ancillary/"
+        "/nsls2/data/srx/assets/zebra/2021/2021-3/"
     )
     LARGE_FILE_DIRECTORY_READ_PATH = (
-        "/nsls2/xf05id1/XF05ID1/data/2020-3/fly_scan_ancillary/"
+        "/nsls2/data/srx/assets/zebra/2021/2021-3/"
     )
     KNOWN_DETS = {"xs", "xs2", "merlin", "dexela"}
     fast_axis = Cpt(Signal, value="HOR", kind="config")
@@ -377,23 +383,27 @@ class SRXFlyer1Axis(Device):
     def kickoff(self, *, xstart, xstop, xnum, dwell):
         dets_by_name = {d.name: d for d in self.detectors}
 
+        ## TODO: Need to make sure zebra is full setup for scan
+        ## pulses2/3/4
+        ## OR logic
+        ## PC on position (NOT TIME!)
         self._encoder.pc.arm.put(0)
         self._mode = "kicked off"
         self._npts = int(xnum)
-        extent = xstop - xstart
-        pxsize = extent / (xnum - 1)
+        if xstart < xstop:
+            direction = 1
+        else:
+            direction = -1
+        pxsize = np.abs(xstop - xstart) / (xnum - 1)
+        extent = np.abs(xstop - xstart) + pxsize
         # 2 ms delay between pulses
-        decrement = (pxsize / dwell) * 0.002
+        decrement = (pxsize / dwell) * 0.001
         if decrement < 1e-5:
             # print('Changing the pulse width')
             decrement = 1e-5
-        self._encoder.pc.gate_start.put(xstart)
-        if (self.encoder.pc.egu.get() == 'mm'):
-            self._encoder.pc.gate_step.put(extent + 0.0005)
-            self._encoder.pc.gate_width.put(extent + 0.001)
-        else:
-            self._encoder.pc.gate_step.put(extent + 0.25)
-            self._encoder.pc.gate_width.put(extent + 0.2)
+        self._encoder.pc.gate_start.put(xstart - direction * (pxsize / 2))
+        self._encoder.pc.gate_step.put(extent + 0.051)
+        self._encoder.pc.gate_width.put(extent + 0.050)
 
         self._encoder.pc.pulse_start.put(0.0)
         self._encoder.pc.pulse_max.put(xnum)
@@ -410,22 +420,15 @@ class SRXFlyer1Axis(Device):
             self._encoder.pulse1.width.put(0.5 * dwell - 0.050)
         else:
             self._encoder.output1.ttl.addr.put(31)
-            self._encoder.output3.ttl.addr.put(31)
+            # self._encoder.output3.ttl.addr.put(31)
+            self._encoder.output3.ttl.addr.put(36)
+            self._encoder.pulse3.input_addr.put(31)
+            self._encoder.pulse4.input_addr.put(31)
 
-        # If both values are not synced, then the X-position was not updating
-        # during the scan and will remain at the initial value
-        # - AMK
-        # ttime.sleep(1)
-        self._encoder.pc.enc_pos1_sync.put(1)  # Sample Y
-        self._encoder.pc.enc_pos2_sync.put(1)  # Sample X
-        self._encoder.pc.enc_pos3_sync.put(1)  # Det2 Stage X
-        self._encoder.pc.enc_pos4_sync.put(1)  # Det2 Stage Y
-        # ttime.sleep(1)
-
-        # yield from mov(self._encoder.pc.enc_pos1_sync, 1)
-        # yield from mov(self._encoder.pc.enc_pos2_sync, 1)
-        # yield from mov(self._encoder.pc.enc_pos3_sync, 1)
-        # yield from mov(self._encoder.pc.enc_pos4_sync, 1)
+        self._encoder.pc.enc_pos1_sync.put(1)  # Scanner X
+        self._encoder.pc.enc_pos2_sync.put(1)  # Scanner Y
+        self._encoder.pc.enc_pos3_sync.put(1)  # Scanner Z
+        # self._encoder.pc.enc_pos4_sync.put(1)  # None
 
         # Arm the zebra
         self._encoder.pc.arm.put(1)
@@ -444,6 +447,9 @@ class SRXFlyer1Axis(Device):
         whether that is true, so it will obligingly stop immediately. It is
         up to the caller to ensure that the motion is actually complete.
         """
+
+        amk_debug_flag = False
+
         # Our acquisition complete PV is: XF:05IDD-ES:1{Dev:Zebra1}:ARRAY_ACQ
         while self._encoder.pc.data_in_progress.get() == 1:
             ttime.sleep(0.01)
@@ -521,13 +527,15 @@ class SRXFlyer1Axis(Device):
         # @timer_wrapper
         def get_zebra_data():
             if 'nano' in self.name:
-                export_nano_zebra_data(self._encoder, self.__write_filepath)
+                export_nano_zebra_data(self._encoder, self.__write_filepath, self.fast_axis.get())
             else:
                 export_zebra_data(self._encoder, self.__write_filepath, self.fast_axis)
 
-        # t_getzebradata = tic()
+        if amk_debug_flag:
+            t_getzebradata = tic()
         get_zebra_data()
-        # toc(t_getzebradata, str='Get Zebra data')
+        if amk_debug_flag:
+            toc(t_getzebradata, str='Get Zebra data')
 
         # @timer_wrapper
         def get_sis_data():
@@ -535,9 +543,11 @@ class SRXFlyer1Axis(Device):
                 self._sis, self.__write_filepath_sis, self._encoder
             )
 
-        # t_sisdata = tic()
+        if amk_debug_flag:
+            t_sisdata = tic()
         get_sis_data()
-        # toc(t_sisdata, str='Get SIS data')
+        if amk_debug_flag:
+            toc(t_sisdata, str='Get SIS data')
 
         # Yield a (partial) Event document. The RunEngine will put this
         # into metadatastore, as it does all readings.
@@ -678,7 +688,7 @@ except Exception as ex:
 # flying_zebra = SRXFlyer1Axis(zebra)
 
 
-def export_nano_zebra_data(zebra, filepath):
+def export_nano_zebra_data(zebra, filepath, fastaxis):
     j = 0
     while zebra.pc.data_in_progress.get() == 1:
         print("Waiting for zebra...")
@@ -692,6 +702,17 @@ def export_nano_zebra_data(zebra, filepath):
     enc1_d = zebra.pc.data.enc1.get()
     enc2_d = zebra.pc.data.enc2.get()
     enc3_d = zebra.pc.data.enc3.get()
+
+    px = zebra.pc.pulse_step.get()
+    if fastaxis == 'NANOHOR':
+        # Add half pixelsize to correct encoder
+        enc1_d = enc1_d + (px / 2)
+    elif fastaxis == 'NANOVER':
+        # Add half pixelsize to correct encoder
+        enc2_d = enc2_d + (px / 2)
+    elif fastaxis == 'NANOZ':
+        # Add half pixelsize to correct encoder
+        enc3_d = enc3_d + (px / 2)
 
     size = (len(time_d),)
     with h5py.File(filepath, "w") as f:

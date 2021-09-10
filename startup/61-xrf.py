@@ -389,6 +389,11 @@ def nano_xrf(xstart, xstop, xstep,
     xnum = np.int(np.abs(np.round((xstop - xstart)/xstep)) + 1)
     ynum = np.int(np.abs(np.round((ystop - ystart)/ystep)) + 1)
 
+    # Setup detectors
+    if extra_dets is None:
+        extra_dets = []
+    dets = [sclr1, xs, xbpm2, xmotor, ymotor] + extra_dets
+
     # Record relevant metadata in the Start document, defined in 90-usersetup.py
     scan_md = {}
     get_stock_md(scan_md)
@@ -397,7 +402,7 @@ def nano_xrf(xstart, xstop, xstep,
     #                         'raster' : True}
     scan_md['scan']['type'] = 'XRF_STEP'
     scan_md['scan']['scan_input'] = [xstart, xstop, xstep, ystart, ystop, ystep, dwell]
-    scan_md['scan']['detectors'] = [d.name for d in detectors]
+    scan_md['scan']['detectors'] = [d.name for d in dets]
     scan_md['scan']['fast_axis'] = {'motor_name' : xmotor.name,
                                     'units' : xmotor.motor_egu.get()}
     scan_md['scan']['slow_axis'] = {'motor_name' : ymotor.name,
@@ -408,11 +413,6 @@ def nano_xrf(xstart, xstop, xstep,
                                 'units' : xmotor.motor_egu.get()}
     scan_md['scan']['snake'] = 1 if flag_snake else 0
     scan_md['scan']['shape'] = (xnum, ynum)
-
-    # Setup detectors
-    if extra_dets is None:
-        extra_dets = []
-    dets = [sclr1, xs, xbpm2, xmotor, ymotor] + extra_dets
 
     # Set counting time
     sclr1.preset_time.put(dwell)

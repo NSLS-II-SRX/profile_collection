@@ -1,349 +1,191 @@
+# Run XRF-tomography
+#
 print(f'Loading {__file__}...')
 
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Jun 14 14:43:13 2016
 
-@author: xf05id1
-"""
+import numpy as np
+import matplotlib.pyplot as plt
+import time as ttime
+from scipy.ndimage.measurements import center_of_mass
 
-#for tomography
-from bluesky.plans import scan_nd
-from bluesky.preprocessors import subs_wrapper, pchain
-from cycler import cycler
 
-def tomo_xrf_proj_realmotor(xcen, zcen, hstepsize, hnumstep,
-                  ycen, ystepsize, ynumstep,
-                  dets = []):
-    '''
-    collect an XRF 'projection' map at the current angle
-    zcen should be defined as the position when the sample is in focus at zero degree; if it is not given, the program should take the current z position
-    '''
-    theta = tomo_stage.theta.position
-    
-    #horizontal axes
-    x_motor = tomo_stage.finex_top
-    z_motor = tomo_stage.finez_top
-    
-    #vertical axis
-    y_motor = tomo_stage.finey_top
-    
-    #stepsize setup    
-    xstepsize = hstepsize * numpy.cos(numpy.deg2rad(theta))
-    zstepsize = hstepsize * numpy.sin(numpy.deg2rad(theta))
-        
-    #start and end point setup
-    
-    xstart = xcen - xstepsize * hnumstep/2
-    xstop  = xcen + xstepsize * hnumstep/2    
+# Convenience function for AMK
+def haz_angles(a, b, n):
+    th = np.linspace(a, b, num=n)
+    th2 = np.concatenate((th[::2], th[-2::-2]))
+    return th2
 
-    zstart = zcen - zstepsize * hnumstep/2
-    zstop   = zcen + zstepsize * hnumstep/2    
-    
-    ystart = ycen - ystepsize * ynumstep/2
-    ystop  = ycen + ystepsize * ynumstep/2
-    
-    xlist = numpy.linspace(xstart, xstop, hnumstep+1) #some theta dependent function    
-    zlist = numpy.linspace(zstart, zstop, hnumstep+1)
-    
-    ylist = numpy.linspace(ystart, ystop, ynumstep+1)
-    
-    xz_cycler = cycler(x_motor, xlist) + cycler(z_motor, zlist)
-    yxz_cycler = cycler(y_motor, ylist) * xz_cycler
-    
-    # The scan_nd plan expects a list of detectors and a cycler.
-    plan = scan_nd(dets, yxz_cycler)
-    # Optionally, add subscritpions.
 
-    #TO-DO: need to figure out how to add LiveRaster with the new x/z axis 
-    plan = subs_wrapper(plan, [LiveTable([x_motor, y_motor, z_motor])])
-#                                         LiveMesh(...)]                      
-    scaninfo = yield from plan
-    return scaninfo
+# Calculate the center of mass
+def calc_com(run_start_uid, roi=None):
+    print('Centering sample using center of mass...')
 
-def add_tomo_md(current_md = None):
-    if current_md is None:
-        md_with_tomo_stage_info = {}        
+    # Get the header
+    h = db[run_start_uid]
+    scan_doc = h.start['scan']
+    
+    # Get scan parameters
+    [x0, x1, nx, y0, y1, ny, dt] = scan_doc['scan_input']
+
+    # Get the data
+    flag_get_data = True
+    t0 = ttime.monotonic()
+    TMAX = 60  # wait a maximum of 60 seconds
+    while flag_get_data:
+        try:
+            d = list(h.data('fluor', stream_name='stream0', fill=True))
+            d = np.array(d)
+            d_I0 = list(h.data('i0', stream_name='stream0', fill=True))
+            d_I0 = np.array(d_I0)
+            x = list(h.data('enc1', stream_name='stream0', fill=True))
+            y = list(h.data('enc2', stream_name='stream0', fill=True))
+            flag_get_data = False
+        except:
+            yield from bps.sleep(1)
+            if (ttime.monotonic() - t0 > TMAX):
+                print('Data collection timed out!')
+                print('Skipping center-of-mass correction...')
+                return x0, x1, y0, y1
+
+    # Setup ROI
+    if (roi is None):
+        # NEED TO CONFIRM VALUES!
+        roi = [xs.channel1.rois.roi_low, xs.channel1.rois.roi_high]
+        # NEED TO CONFIRM!
+        # By default, do both low/high values reset to zero?
+        if (roi[1] == 0):
+            roi[1] = 4096
+    d = np.sum(d[:, :, :, roi[0]:roi[1]], axis=(2, 3))
+    d = d / d_I0
+    d = d.T
+
+    # Calculate center of mass
+    if (scan_doc['fast_axis']['motor_name'] == 'nano_stage_sx'):
+        (com_x, com_y)  = center_of_mass(d)  # for flying x scans
+    elif (scan_doc['fast_axis']['motor_name'] == 'nano_stage_sy'):
+        (com_y, com_x)  = center_of_mass(d)  # for y scans
     else:
-        md_with_tomo_stage_info = current_md
-    
-    md_with_tomo_stage_info['tomo_stage'] = {'x':  tomo_stage.x.position, 
-                                'y':  tomo_stage.y.position,
-                                'z':  tomo_stage.z.position,
-                                'finex_top': tomo_stage.finex_top.position,
-                                'finez_top': tomo_stage.finez_top.position,
-                                'finex_bot': tomo_stage.finex_bot.position,
-                                'finez_bot': tomo_stage.finez_bot.position,
-                                'theta': tomo_stage.theta.position}
+        print('Not sure how data is oriented. Skipping...')
+        return x0, x1, y0, y1
+    com_x = x0 + com_x * (x1 - x0) / nx
+    com_y = y0 + com_y * (y1 - y0) / ny
+    # print(f'Center of mass X: {com_x}')
+    # print(f'Center of mass Y: {com_y}')
 
-                               
-    md_with_tomo_stage_info['tomo_lab'] = {'lab_x':  tomo_lab.lab_x.position, 
-                              'lab_z':  tomo_lab.lab_z.position}
+    # Calculate new center
+    extentX = x1 - x0
+    old_center = x0 + 0.5 * extentX
+    dx = old_center - com_x
+    extentY = y1 - y0
+    old_center_y = y0 + 0.5 * extentY
+    dy = old_center_y - com_y
 
-    return md_with_tomo_stage_info
+    # Check new location
+    THRESHOLD = 0.50 * extentX
+    if np.isfinite(com_x) is False:
+        print('Center of mass is not finite!')
+        new_center = old_center
+    elif np.abs(dx) > THRESHOLD:
+        print('New scan center above threshold')
+        new_center = old_center
+    else:
+        new_center = com_x 
+    x0 = new_center - 0.5 * extentX
+    x1 = new_center + 0.5 * extentX
+    print(f'Old center: {old_center}')
+    print(f'New center: {new_center}')
+    print(f'Difference: {dx}')
+
+    THRESHOLD = 0.50 * extentY
+    if np.isfinite(com_y) is False:
+        print('Center of mass is not finite!')
+        new_center_y = old_center_y
+    elif np.abs(dy) > THRESHOLD:
+        print('New scan center above threshold')
+        new_center_y = old_center_y
+    else:
+        new_center_y = com_y 
+    y0 = new_center_y - 0.5 * extentY
+    y1 = new_center_y + 0.5 * extentY
+    print(f'Old center: {old_center_y}')
+    print(f'New center: {new_center_y}')
+    print(f'Difference: {dy}')
+
+    return x0, x1, y0, y1
 
 
-def tomo_xrf_proj(*, xstart, xnumstep, xstepsize, 
-            ystart, ynumstep, ystepsize, 
-            #lab_z_setpt = 0,  #default lab_z initilization point, user can change it
-            #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
-            acqtime, numrois=1, i0map_show=True, itmap_show=True,
-            energy=None, u_detune=None, usesnake = True):
-    '''
-    collect an XRF 'projection' map at the current angle
-    note that the x-axis is in the laboraotry frame
-    see motion definition in 06-endstation_pseudomotor_tomo.py
-    it should be checked at both 0 and 90/-90 degree. 
-   '''
-    #record relevant meta data in the Start document, defined in 90-usersetup.py
-    md = get_stock_md()
-    md = add_tomo_md(current_md = md)
+# Define a function to call from the RunEngine
+def nano_tomo(x0, x1, nx, y0, y1, ny, ct, th=None,
+              th_offset=0, centering_method='none', roi=None, extra_dets=[], shutter=True):
+    # x0 = x starting point
+    # x1 = x finish point
+    # nx = number of points in x
+    # y0 = y starting point
+    # y1 = y finish point
+    # ny = number of points in y
+    # th = angles to scan at
+    # th_offset = offset value to relate to rotation stage
+    # centering_method = method used to account for sample motion and center
+    #                    the sample
+    #                    'none' = no correction
+    #                    'com'  = center of mass
+    # roi = [bin_low, bin_high] or None
+    #       if [bin_low, bin_high], this will look at this ROI
+    #       if None, this will grab the ROI bins from channel1 ROI 1
 
-    #setup the detector
-    # TODO do this with configure
-    current_preamp.exp_time.put(acqtime)
-    xs.settings.acquire_time.put(acqtime)
-    xs.total_points.put((xnumstep+1)*(ynumstep+1))
-         
-    det = [current_preamp, xs, tomo_stage.finey_top, tomo_lab]        
+    # Set the angles for collection
+    if (th is None):
+        th = np.linspace(0, 180, 181)
+    th = th + th_offset
 
-    #setup the live callbacks
-    livecallbacks = []
-    
-    livetableitem = [tomo_stage.finex_top, tomo_stage.finey_top, tomo_lab, 'current_preamp_ch0', 'current_preamp_ch2']
+    # Define callback for center of mass correction
+    def cb_calc_com(name, doc):
+        run_start_uid = doc['run_start']
+        x0, x1, y0, y1 = calc_com(run_start_uid)
 
-    xstop = xstart + xnumstep*xstepsize
-    ystop = ystart + ynumstep*ystepsize  
-  
-    print('xstop = '+str(xstop))  
-    print('ystop = '+str(ystop)) 
-    
-    
-    for roi_idx in range(numrois):
-        roi_name = 'roi{:02}'.format(roi_idx+1)
+    # Open the shutter
+    yield from check_shutters(shutter, 'Open')
+
+    # Run the scan
+    for i in th:
+        print(f'Scanning at: {i:.3f} deg')
+        # Rotate the sample
+        if (nano_stage.th.egu == 'mdeg'):
+            yield from mv(nano_stage.th, i * 1000)
+        else:
+            yield from mv(nano_stage.th, i)
+        yield from bps.sleep(1)  # Give 1 second sleep to allow sample to settle
         
-        roi_key = getattr(xs.channel1.rois, roi_name).value.name
-        livetableitem.append(roi_key)
+        # Run the scan/projection
+        myscan = nano_scan_and_fly(x0, x1, nx, y0, y1, ny, ct, extra_dets=extra_dets, shutter=False)
+        if (centering_method == 'com'):
+            myscan = subs_wrapper(myscan, {'stop' : cb_calc_com})
+        yield from myscan
 
-        colormap = 'jet' #previous set = 'viridis'
-
-        roimap = LiveRaster((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='jet', 
-                            xlabel='x (um)', ylabel='y (um)', extent=[xstart, xstop, ystop, ystart])
-        livecallbacks.append(roimap)
-
-
-    if i0map_show is True:
-        i0map = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='jet', 
-                        xlabel='x (um)', ylabel='y (um)', extent=[xstart, xstop, ystop, ystart])
-        livecallbacks.append(i0map)
-
-    if itmap_show is True:
-        itmap = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='jet', 
-                        xlabel='x (um)', ylabel='y (um)', extent=[xstart, xstop, ystop, ystart])
-        livecallbacks.append(itmap)
-
-    livecallbacks.append(LiveTable(livetableitem)) 
-
-    
-    #setup the plan  
-    #OuterProductAbsScanPlan(detectors, *args, pre_run=None, post_run=None)
-    #OuterProductAbsScanPlan(detectors, motor1, start1, stop1, num1, motor2, start2, stop2, num2, snake2, pre_run=None, post_run=None)
-
-    if energy is not None:
-        if u_detune is not None:
-            # TODO maybe do this with set
-            energy.detune.put(u_detune)
-        # TODO fix name shadowing
-        yield from bp.abs_set(energy, energy, wait=True)
-    
-
-    #TO-DO: implement fast shutter control (open)
-    #TO-DO: implement suspender for all shutters in genral start up script
-    
-    
-    tomo_xrf_proj_plan = OuterProductAbsScanPlan(det, tomo_stage.finey_top, ystart, ystop, ynumstep+1, tomo_lab.lab_x, xstart, xstop, xnumstep+1, usesnake, md=md)
-    tomo_xrf_proj_plan = bp.subs_wrapper(tomo_xrf_proj_plan, livecallbacks)
-    tomo_xrf_proj_ren = yield from tomo_xrf_proj_plan
-
-    #TO-DO: implement fast shutter control (close)    
-
-    #write to scan log    
-    logscan('2dxrf_hr_topy_labx_at_theta_'+str(tomo_stage.theta.position))    
-    
-    return tomo_xrf_proj_ren
-   
-    
-def tomo_xrf(*, xstart, xnumstep, xstepsize, 
-            ystart, ynumstep, ystepsize, 
-            thetastart = 80, thetastop = 90, numproj = 3,
-            lab_z_setpt = 0, scans_per_angle = 1,
-            acqtime, numrois=1, i0map_show=True, itmap_show=True,
-            energy=None, u_detune=None, usesnake = True
-            ):
-                
-    theta_traj = np.linspace(thetastart, thetastop, numproj)
-    tomo_scan_output = []
-
-    for theta_setpt in theta_traj:
-        print('current angle')
-        print(tomo_stage.theta.position)
-        print('move angle to '+str(theta_setpt))        
-        tomo_theta_set_gen = yield from list_scan([tomo_stage], tomo_stage.theta, [theta_setpt])
-        print('angle in position')
-        
-        print('initilize tomo_lab.lab_z to the aligned point', lab_z_setpt)
-        tomo_lab_z_initi = yield from list_scan([], tomo_lab.lab_z, [lab_z_setpt])
-        print('tomo_lab.lab_z in set point position; its position should remain unchanged')
-
-        print('start running tomo_xrf_proj to collect xrf projection for the current angle')
-        
-        for i in range(scans_per_angle):
-            tomo_xrf_gen = yield from tomo_xrf_proj(xstart=xstart, xnumstep=xnumstep, xstepsize=xstepsize, 
-                ystart=ystart, ynumstep=ynumstep, ystepsize=ystepsize, 
-                acqtime=acqtime, numrois=numrois, i0map_show=i0map_show, itmap_show=itmap_show,
-                energy=energy, u_detune=u_detune, usesnake = usesnake)
-    #        tomo_scan_output.append(tomo_xrf_gen)
-        
-        print('done running tomo_xrf_proj')
-    
-    print('tomography data collection completed')
-    
-
-def tomo_xrf_proj_realaxes(*, xstart, xnumstep, xstepsize, 
-            ystart, ynumstep, ystepsize, 
-            #lab_z_setpt = 0,  #default lab_z initilization point, user can change it
-            #wait=None, simulate=False, checkbeam = False, checkcryo = False, #need to add these features
-            acqtime, numrois=1, i0map_show=True, itmap_show=True,
-            energy=None, u_detune=None, usesnake = True, usePiezoJenay=False):
-    '''
-    collect an XRF 'projection' map at the current angle
-    note that the x-axis is in the laboraotry frame
-    see motion definition in 06-endstation_pseudomotor_tomo.py
-    it should be checked at both 0 and 90/-90 degree. 
-   '''
-    #record relevant meta data in the Start document, defined in 90-usersetup.py
-    md = get_stock_md()
-    md = add_tomo_md(current_md = md)
-
-    #setup the detector
-    # TODO do this with configure
-    current_preamp.exp_time.put(acqtime)
-    xs.settings.acquire_time.put(acqtime)
-    xs.total_points.put((xnumstep+1)*(ynumstep+1))
-  
-    if usePiezoJenay is False:
-        det = [current_preamp, xs, tomo_stage.y, tomo_stage.x]        
-    else:    
-        det = [current_preamp, xs, tomo_stage.finey_top, tomo_stage.x]        
+    # Close the shutter
+    yield from check_shutters(shutter, 'Close')
 
 
-    #setup the live callbacks
-    livecallbacks = []
+# Define a function to call from the RunEngine
+def nano_Etomo(x0, x1, nx, y0, y1, ny, ct, th=None, energy_list=None,
+               shutter=True, close_figs=True):
+    if (th is None):
+        print('Angle positions are required!')
+        raise Exception
+    if (energy_list is None):
+        print('Energy points are required!')
+        raise Exception
 
-    if usePiezoJenay is False:
-        print('using micronix as the y stage')
-        livetableitem = [tomo_stage.x, tomo_stage.y, 'current_preamp_ch0', 'current_preamp_ch2']
-    else:    
-        print('using piezoJena as the y stage')                
-        livetableitem = [tomo_stage.x, tomo_stage.finey_top, 'current_preamp_ch0', 'current_preamp_ch2']
+    # 1st dim: energy
+    # 2nd dim: angles
+    # Maybe change the 1st & 2nd dim, scan energy first is better?
+    for ei in energy_list:
+        # Change energy
+        yield from mov(energy, ei)
 
-    xstop = xstart + xnumstep*xstepsize
-    ystop = ystart + ynumstep*ystepsize  
-  
-    print('xstop = '+str(xstop))  
-    print('ystop = '+str(ystop)) 
-    
-    
-    for roi_idx in range(numrois):
-        roi_name = 'roi{:02}'.format(roi_idx+1)
-        
-        roi_key = getattr(xs.channel1.rois, roi_name).value.name
-        livetableitem.append(roi_key)
+        # Run tomography
+        yield from nano_tomo(x0, x1, nx, y0, y1, ny, ct, th=th)
 
-        colormap = 'jet' #previous set = 'viridis'
-
-        roimap = LiveRaster((ynumstep+1, xnumstep+1), roi_key, clim=None, cmap='jet', 
-                            xlabel='x (um)', ylabel='y (um)', extent=[xstart, xstop, ystop, ystart])
-        livecallbacks.append(roimap)
-
-
-    if i0map_show is True:
-        i0map = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch2', clim=None, cmap='jet', 
-                        xlabel='x (um)', ylabel='y (um)', extent=[xstart, xstop, ystop, ystart])
-        livecallbacks.append(i0map)
-
-    if itmap_show is True:
-        itmap = LiveRaster((ynumstep+1, xnumstep+1), 'current_preamp_ch0', clim=None, cmap='jet', 
-                        xlabel='x (um)', ylabel='y (um)', extent=[xstart, xstop, ystop, ystart])
-        livecallbacks.append(itmap)
-
-    livecallbacks.append(LiveTable(livetableitem)) 
-
-    
-    #setup the plan  
-    #OuterProductAbsScanPlan(detectors, *args, pre_run=None, post_run=None)
-    #OuterProductAbsScanPlan(detectors, motor1, start1, stop1, num1, motor2, start2, stop2, num2, snake2, pre_run=None, post_run=None)
-
-    if energy is not None:
-        if u_detune is not None:
-            # TODO maybe do this with set
-            energy.detune.put(u_detune)
-        # TODO fix name shadowing
-        yield from bp.abs_set(energy, energy, wait=True)
-    
-
-    #TO-DO: implement fast shutter control (open)
-    #TO-DO: implement suspender for all shutters in genral start up script
-    
-    
-    
-    if usePiezoJenay is False:    
-        tomo_xrf_proj_plan = OuterProductAbsScanPlan(det, tomo_stage.y, ystart, ystop, ynumstep+1, tomo_stage.x, xstart, xstop, xnumstep+1, usesnake, md=md)
-    else:    
-        tomo_xrf_proj_plan = OuterProductAbsScanPlan(det, tomo_stage.finey_top, ystart, ystop, ynumstep+1, tomo_stage.x, xstart, xstop, xnumstep+1, usesnake, md=md) 
-    tomo_xrf_proj_plan = bp.subs_wrapper(tomo_xrf_proj_plan, livecallbacks)
-    tomo_xrf_proj_ren = yield from tomo_xrf_proj_plan
-
-    #TO-DO: implement fast shutter control (close)    
-
-    #write to scan log    
-    logscan('2dxrf_hr_topy_labx_at_theta_'+str(tomo_stage.theta.position))    
-    
-    return tomo_xrf_proj_ren
-
-    
-    
-def tomo_xrf_realaxes(*, xstart, xnumstep, xstepsize, 
-            ystart, ynumstep, ystepsize, 
-            thetastart = -90, thetastop = 90, numproj = 3,
-            scans_per_angle = 1,
-            acqtime, numrois=1, i0map_show=True, itmap_show=True,
-            energy=None, u_detune=None, usesnake = True, usePiezoJenay=False
-            ):
-         
-    theta_traj = np.linspace(thetastart, thetastop, numproj)
-    tomo_scan_output = []
-
-    for theta_setpt in theta_traj:
-        print('current angle')
-        print(tomo_stage.theta.position)
-        print('move angle to '+str(theta_setpt))        
-        tomo_theta_set_gen = yield from list_scan([tomo_stage], tomo_stage.theta, [theta_setpt])
-        print('angle in position')
-        
-        #print('initilize tomo_lab.lab_z to the aligned point', lab_z_setpt)
-        #tomo_lab_z_initi = yield from list_scan([], tomo_lab.lab_z, [lab_z_setpt])
-        #print('tomo_lab.lab_z in set point position; its position should remain unchanged')
-
-        print('start running tomo_xrf_proj to collect xrf projection for the current angle')
-        
-        for i in range(scans_per_angle):
-            tomo_xrf_gen = yield from tomo_xrf_proj_realaxes(xstart=xstart, xnumstep=xnumstep, xstepsize=xstepsize, 
-                ystart=ystart, ynumstep=ynumstep, ystepsize=ystepsize, 
-                acqtime=acqtime, numrois=numrois, i0map_show=i0map_show, itmap_show=itmap_show,
-                energy=energy, u_detune=u_detune, usesnake = usesnake, usePiezoJenay=usePiezoJenay)
-    #        tomo_scan_output.append(tomo_xrf_gen)
-        
-        print('done running tomo_xrf_proj')
-    
-    print('tomography data collection completed')
+        # Close figures
+        if close_figs:
+            plt.close('all')

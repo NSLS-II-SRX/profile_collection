@@ -140,6 +140,8 @@ class HACK_SRX_NSLS_EM(Device):
     posX = Cpt(EpicsSignalRO, 'PosX:MeanValue_RBV')
     posY = Cpt(EpicsSignalRO, 'PosY:MeanValue_RBV')
 
+    bias = Cpt(EpicsSignal, 'DAC3')
+
     xmotor = Cpt(EpicsMotor, 'XF:05IDD-ES:1{Stg:Xbpm-Ax:X}Mtr', add_prefix=(), name='xmotor')
     ymotor = Cpt(EpicsMotor, 'XF:05IDD-ES:1{Stg:Xbpm-Ax:Y}Mtr', add_prefix=(), name='ymotor')
 

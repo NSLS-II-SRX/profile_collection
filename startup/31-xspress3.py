@@ -193,10 +193,9 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
     hdf5 = Cpt(
         Xspress3FileStoreFlyable,
         "HDF5:",
-        read_path_template="/nsls2/xf05id1/XF05ID1/XSPRESS3/%Y/%m/%d/",
-        # write_path_template='/epics/data/%Y/%m/%d/', #SRX old xspress3
-        write_path_template="/home/xspress3/data/%Y/%m/%d/",#TES xspress3
-        root="/nsls2/xf05id1/XF05ID1",
+        read_path_template="/nsls2/data/srx/assets/xspress3/%Y/%m/%d",
+        write_path_template="/nsls2/data/srx/assets/xspress3/%Y/%m/%d",
+        root="/nsls2/data/srx/assets/xspress3",
     )
 
     # this is used as a latch to put the xspress3 into 'bulk' mode
@@ -256,6 +255,7 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
         return super().stage()
 
     def unstage(self):
+        self.hdf5.capture.put(0)
         try:
             ret = super().unstage()
         finally:

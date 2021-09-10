@@ -101,6 +101,11 @@ def export_sis_data(ion, filepath, zebra):
         it = ion.mca4.get(timeout=5.0)
 
     correct_length = zebra.pc.data.num_down.get()
+    # Only consider even points
+    t = t[1::2]
+    i = i[1::2]
+    im = im[1::2]
+    it = it[1::2]
     # size = (len(t),)
     # size2 = (len(i),)
     # size3 = (len(im),)
