@@ -425,20 +425,10 @@ class SRXFlyer1Axis(Device):
             self._encoder.pulse3.input_addr.put(31)
             self._encoder.pulse4.input_addr.put(31)
 
-        # If both values are not synced, then the X-position was not updating
-        # during the scan and will remain at the initial value
-        # - AMK
-        # ttime.sleep(1)
-        self._encoder.pc.enc_pos1_sync.put(1)  # Sample Y
-        self._encoder.pc.enc_pos2_sync.put(1)  # Sample X
-        self._encoder.pc.enc_pos3_sync.put(1)  # Det2 Stage X
-        self._encoder.pc.enc_pos4_sync.put(1)  # Det2 Stage Y
-        # ttime.sleep(1)
-
-        # yield from mov(self._encoder.pc.enc_pos1_sync, 1)
-        # yield from mov(self._encoder.pc.enc_pos2_sync, 1)
-        # yield from mov(self._encoder.pc.enc_pos3_sync, 1)
-        # yield from mov(self._encoder.pc.enc_pos4_sync, 1)
+        self._encoder.pc.enc_pos1_sync.put(1)  # Scanner X
+        self._encoder.pc.enc_pos2_sync.put(1)  # Scanner Y
+        self._encoder.pc.enc_pos3_sync.put(1)  # Scanner Z
+        # self._encoder.pc.enc_pos4_sync.put(1)  # None
 
         # Arm the zebra
         self._encoder.pc.arm.put(1)

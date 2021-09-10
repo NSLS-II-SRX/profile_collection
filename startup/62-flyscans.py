@@ -343,7 +343,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
 
         # set speed back
-        yield from reset_scanner_velocity()
+        reset_scanner_velocity()
 
         # @timer_wrapper
         def zebra_complete():
