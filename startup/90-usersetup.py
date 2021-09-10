@@ -23,7 +23,7 @@ saf_num = 307307
 #saf_num = 307001
 
 
-cycle = '2021_cycle2'
+cycle = '2021_cycle3'
 
 # Set user data in bluesky
 RE.md['proposal']  = {'proposal_num': str(proposal_num),
@@ -92,7 +92,7 @@ def get_stock_md(scan_md):
                            'cycle': str(cycle)}
     if 'scan' not in scan_md:
         scan_md['scan'] = {}
-    scan_md['scan']['energy'] = energy.energy.readback.get()
+    scan_md['scan']['energy'] = np.round(energy.energy.readback.get(), decimals=4)
 
     return scan_md
     
@@ -137,17 +137,19 @@ def scantime(scanid, printresults=True):
     input: scanid
     return: start and stop time stamps as strings
     '''
-    start_str = 'scan start: ' + ttime.ctime(db[scanid].start['time'])
-    stop_str  = 'scan stop : ' + ttime.ctime(db[scanid].stop['time'])
-    totaltime = db[scanid].stop['time'] - db[scanid].start['time']
-    scannumpt = len(list(db.get_events(db[scanid])))
+    start_doc = db[scanid].start
+    stop_doc = db[scanid].stop
+    start_str = f"Scan start: {ttime.ctime(start_doc['time'])}"
+    stop_str  = f"Scan stop : {ttime.ctime(stop_doc['time'])}"
+    totaltime = stop_doc['time'] - start_doc['time']
+    scannumpt = stop_doc['num_events']['primary']
 
     if (printresults):
         print(start_str)
         print(stop_str)
-        print('Total time: ', totaltime, ' s')
-        print('Number of points: ', scannumpt)
-        print('Scan time per point: ', totaltime/scannumpt, ' s')
+        print(f"Total time: {totaltime:.2f} s")
+        print(f"Number of points: {scannumpt}")
+        print(f"Scan time per point: {totaltime/scannumpt:.3f} s\n\n")
     return db[scanid].start['time'], db[scanid].stop['time'], start_str, stop_str
 
 

@@ -123,3 +123,8 @@ def mv_along_axis(z_end):
     yield from mvr(nano_stage.y, delta_y)
     yield from mv(nano_stage.z, z_end)
 
+
+def reset_scanner_velocity():
+    for d in [nano_stage.sx, nano_stage.sy, nano_stage.sz]:
+        d.velocity.set(30)
+
