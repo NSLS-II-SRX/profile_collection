@@ -932,6 +932,7 @@ flyer_id_mono = FlyerIDMono(flying_dev=id_fly_device,
 def plot_flyer_id_mono_data(uid_or_scanid, e_min=None, e_max=None, fname=None, root='/home/xf05id1/current_user_data/', num_channels=4, plot=True):
     hdr = db[uid_or_scanid]
     stream_names = hdr.stream_names
+    stream_names.remove('baseline')
 
     if (plot):
         fig, ax = plt.subplots()
@@ -1001,7 +1002,7 @@ def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
     e_step = (e_stop - e_start) / (num_pts- 1)
     dt = e_width / v
 
-    if (abs(e_step) < e_width):
+    if (abs(e_step) <= e_width):
         raise ValueError('Cannot have energy collection widths larger than energy step!')
 
     yield from check_shutters(shutter, 'Open')
