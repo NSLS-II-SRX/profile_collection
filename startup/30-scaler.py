@@ -90,6 +90,7 @@ im = sclr1.channels.chan3
 
 
 def export_sis_data(ion, filepath, zebra):
+    N = ion.nuse_all.get()
     t = ion.mca1.get(timeout=5.0)
     i = ion.mca2.get(timeout=5.0)
     im = ion.mca3.get(timeout=5.0)
@@ -99,6 +100,16 @@ def export_sis_data(ion, filepath, zebra):
         i = ion.mca2.get(timeout=5.0)
         im = ion.mca3.get(timeout=5.0)
         it = ion.mca4.get(timeout=5.0)
+
+    if len(i) != N:
+        print(f'Scaler did not receive collect enough points.')
+        ## Try one more time
+        t = ion.mca1.get(timeout=5.0)
+        i = ion.mca2.get(timeout=5.0)
+        im = ion.mca3.get(timeout=5.0)
+        it = ion.mca4.get(timeout=5.0)
+        if len(i) != N:
+            print(f'Nope. Only received {len(i)}/{N} points.')
 
     correct_length = zebra.pc.data.num_down.get()
     # Only consider even points
