@@ -221,6 +221,7 @@ class SRXFlyer1Axis(Device):
     KNOWN_DETS = {"xs", "xs2", "merlin", "dexela"}
     fast_axis = Cpt(Signal, value="HOR", kind="config")
     slow_axis = Cpt(Signal, value="VER", kind="config")
+    scan_md = {}
 
     # _encoder = Cpt(
     #     SRXZebra,
@@ -380,7 +381,68 @@ class SRXFlyer1Axis(Device):
 
         return {"stream0": desc}
 
-    def kickoff(self, *, xstart, xstop, xnum, dwell):
+    # def kickoff(self, *, xstart, xstop, xnum, dwell):
+    #     dets_by_name = {d.name: d for d in self.detectors}
+
+    #     ## TODO: Need to make sure zebra is full setup for scan
+    #     ## pulses2/3/4
+    #     ## OR logic
+    #     ## PC on position (NOT TIME!)
+    #     self._encoder.pc.arm.put(0)
+    #     self._mode = "kicked off"
+    #     self._npts = int(xnum)
+    #     if xstart < xstop:
+    #         direction = 1
+    #     else:
+    #         direction = -1
+    #     pxsize = np.abs(xstop - xstart) / (xnum - 1)
+    #     extent = np.abs(xstop - xstart) + pxsize
+    #     # 2 ms delay between pulses
+    #     decrement = (pxsize / dwell) * 0.001
+    #     if decrement < 1e-5:
+    #         # print('Changing the pulse width')
+    #         decrement = 1e-5
+    #     self._encoder.pc.gate_start.put(xstart - direction * (pxsize / 2))
+    #     self._encoder.pc.gate_step.put(extent + 0.051)
+    #     self._encoder.pc.gate_width.put(extent + 0.050)
+
+    #     self._encoder.pc.pulse_start.put(0.0)
+    #     self._encoder.pc.pulse_max.put(xnum)
+    #     self._encoder.pc.pulse_step.put(pxsize)
+    #     self._encoder.pc.pulse_width.put(pxsize - decrement)
+    #     # If decrement is too small, then zebra will not send individual pulses
+    #     # but integrate over the entire line
+    #     # Hopefully taken care of with decrement check above
+
+    #     # For dexela, we will use time triggering in a pixel, not position
+    #     if "dexela" in dets_by_name:
+    #         self._encoder.output1.ttl.addr.put(52)
+    #         self._encoder.output3.ttl.addr.put(52)
+    #         self._encoder.pulse1.width.put(0.5 * dwell - 0.050)
+    #     else:
+    #         self._encoder.output1.ttl.addr.put(31)
+    #         # self._encoder.output3.ttl.addr.put(31)
+    #         self._encoder.output3.ttl.addr.put(36)
+    #         self._encoder.pulse3.input_addr.put(31)
+    #         self._encoder.pulse4.input_addr.put(31)
+
+    #     self._encoder.pc.enc_pos1_sync.put(1)  # Scanner X
+    #     self._encoder.pc.enc_pos2_sync.put(1)  # Scanner Y
+    #     self._encoder.pc.enc_pos3_sync.put(1)  # Scanner Z
+    #     # self._encoder.pc.enc_pos4_sync.put(1)  # None
+
+    #     # Arm the zebra
+    #     self._encoder.pc.arm.put(1)
+    #     # ttime.sleep(1)
+
+    #     st = (
+    #         NullStatus()
+    #     )
+    #     # TODO Return a status object *first*
+    #     # and do the above asynchronously.
+    #     return st
+
+    def kickoff(self, *, xstart, xstop, xnum, dwell, t_acc):
         dets_by_name = {d.name: d for d in self.detectors}
 
         ## TODO: Need to make sure zebra is full setup for scan
@@ -396,19 +458,20 @@ class SRXFlyer1Axis(Device):
             direction = -1
         pxsize = np.abs(xstop - xstart) / (xnum - 1)
         extent = np.abs(xstop - xstart) + pxsize
-        # 2 ms delay between pulses
-        decrement = (pxsize / dwell) * 0.001
+        v = pxsize / dwell
+        # 1 ms delay between pulses
+        decrement = 0.001
         if decrement < 1e-5:
             # print('Changing the pulse width')
             decrement = 1e-5
-        self._encoder.pc.gate_start.put(xstart - direction * (pxsize / 2))
-        self._encoder.pc.gate_step.put(extent + 0.051)
-        self._encoder.pc.gate_width.put(extent + 0.050)
+        self._encoder.pc.gate_start.put(t_acc)
+        self._encoder.pc.gate_step.put(extent / v)
+        self._encoder.pc.gate_width.put(extent / v + 0.050)
 
         self._encoder.pc.pulse_start.put(0.0)
         self._encoder.pc.pulse_max.put(xnum)
-        self._encoder.pc.pulse_step.put(pxsize)
-        self._encoder.pc.pulse_width.put(pxsize - decrement)
+        self._encoder.pc.pulse_step.put(dwell)
+        self._encoder.pc.pulse_width.put(dwell - decrement)
         # If decrement is too small, then zebra will not send individual pulses
         # but integrate over the entire line
         # Hopefully taken care of with decrement check above
@@ -441,6 +504,151 @@ class SRXFlyer1Axis(Device):
         # and do the above asynchronously.
         return st
 
+    # def complete(self):
+    #     """
+    #     Call this when all needed data has been collected. This has no idea
+    #     whether that is true, so it will obligingly stop immediately. It is
+    #     up to the caller to ensure that the motion is actually complete.
+    #     """
+
+    #     amk_debug_flag = False
+
+    #     # Our acquisition complete PV is: XF:05IDD-ES:1{Dev:Zebra1}:ARRAY_ACQ
+    #     while self._encoder.pc.data_in_progress.get() == 1:
+    #         ttime.sleep(0.01)
+    #     # ttime.sleep(.1)
+    #     self._mode = "complete"
+    #     self._encoder.pc.block_state_reset.put(1)
+    #     # see triggering errors of the xspress3 on suspension.  This is
+    #     # to test the reset of the xspress3 after a line.
+
+    #     for d in self._dets:
+    #         d.stop(success=True)
+
+    #     self.__filename = "{}.h5".format(uuid.uuid4())
+    #     self.__filename_sis = "{}.h5".format(uuid.uuid4())
+    #     self.__read_filepath = os.path.join(
+    #         self.LARGE_FILE_DIRECTORY_READ_PATH, self.__filename
+    #     )
+    #     self.__read_filepath_sis = os.path.join(
+    #         self.LARGE_FILE_DIRECTORY_READ_PATH, self.__filename_sis
+    #     )
+    #     self.__write_filepath = os.path.join(
+    #         self.LARGE_FILE_DIRECTORY_WRITE_PATH, self.__filename
+    #     )
+    #     self.__write_filepath_sis = os.path.join(
+    #         self.LARGE_FILE_DIRECTORY_WRITE_PATH, self.__filename_sis
+    #     )
+
+    #     self.__filestore_resource, datum_factory_z = resource_factory(
+    #         "ZEBRA_HDF51",
+    #         root="/",
+    #         resource_path=self.__read_filepath,
+    #         resource_kwargs={},
+    #         path_semantics="posix",
+    #     )
+    #     self.__filestore_resource_sis, datum_factory_sis = resource_factory(
+    #         "SIS_HDF51",
+    #         root="/",
+    #         resource_path=self.__read_filepath_sis,
+    #         resource_kwargs={},
+    #         path_semantics="posix",
+    #     )
+
+    #     time_datum = datum_factory_z({"column": "time"})
+    #     enc1_datum = datum_factory_z({"column": "enc1"})
+    #     enc2_datum = datum_factory_z({"column": "enc2"})
+    #     enc3_datum = datum_factory_z({"column": "enc3"})
+    #     sis_datum = datum_factory_sis({"column": "i0"})
+    #     sis_datum_im = datum_factory_sis({"column": "im"})
+    #     sis_datum_it = datum_factory_sis({"column": "it"})
+    #     sis_time = datum_factory_sis({"column": "time"})
+
+    #     self._document_cache.extend(
+    #         ("resource", d)
+    #         for d in (self.__filestore_resource, self.__filestore_resource_sis)
+    #     )
+    #     self._document_cache.extend(
+    #         ("datum", d)
+    #         for d in (
+    #             time_datum,
+    #             enc1_datum,
+    #             enc2_datum,
+    #             enc3_datum,
+    #             sis_datum,
+    #             sis_time,
+    #             sis_datum_im,
+    #             sis_datum_it,
+    #         )
+    #     )
+
+    #     # grab the asset documents from all of the child detectors
+    #     for d in self._dets:
+    #         self._document_cache.extend(d.collect_asset_docs())
+
+    #     # Write the file.
+    #     # @timer_wrapper
+    #     def get_zebra_data():
+    #         if 'nano' in self.name:
+    #             export_nano_zebra_data(self._encoder, self.__write_filepath, self.fast_axis.get())
+    #         else:
+    #             export_zebra_data(self._encoder, self.__write_filepath, self.fast_axis)
+
+    #     if amk_debug_flag:
+    #         t_getzebradata = tic()
+    #     get_zebra_data()
+    #     if amk_debug_flag:
+    #         toc(t_getzebradata, str='Get Zebra data')
+
+    #     # @timer_wrapper
+    #     def get_sis_data():
+    #         export_sis_data(
+    #             self._sis, self.__write_filepath_sis, self._encoder
+    #         )
+
+    #     if amk_debug_flag:
+    #         t_sisdata = tic()
+    #     get_sis_data()
+    #     if amk_debug_flag:
+    #         toc(t_sisdata, str='Get SIS data')
+
+    #     # Yield a (partial) Event document. The RunEngine will put this
+    #     # into metadatastore, as it does all readings.
+    #     self._last_bulk = {
+    #         "time": ttime.time(),
+    #         "seq_num": 1,
+    #         "data": {
+    #             "time": time_datum["datum_id"],
+    #             "enc1": enc1_datum["datum_id"],
+    #             "enc2": enc2_datum["datum_id"],
+    #             "enc3": enc3_datum["datum_id"],
+    #             "i0": sis_datum["datum_id"],
+    #             "i0_time": sis_time["datum_id"],
+    #             "im": sis_datum_im["datum_id"],
+    #             "it": sis_datum_it["datum_id"],
+    #         },
+    #         "timestamps": {
+    #             "time": time_datum["datum_id"],  # not a typo#
+    #             "enc1": time_datum["datum_id"],
+    #             "enc2": time_datum["datum_id"],
+    #             "enc3": time_datum["datum_id"],
+    #             "i0": sis_time["datum_id"],
+    #             "i0_time": sis_time["datum_id"],
+    #             "im": sis_datum_im["datum_id"],
+    #             "it": sis_datum_it["datum_id"],
+    #         },
+    #     }
+    #     for d in self._dets:
+    #         reading = d.read()
+    #         self._last_bulk["data"].update(
+    #             {k: v["value"] for k, v in reading.items()}
+    #             )
+    #         self._last_bulk["timestamps"].update(
+    #             {k: v["timestamp"] for k, v in reading.items()}
+    #         )
+
+    #     return NullStatus()
+
     def complete(self):
         """
         Call this when all needed data has been collected. This has no idea
@@ -450,6 +658,8 @@ class SRXFlyer1Axis(Device):
 
         amk_debug_flag = False
 
+        scan_settings = flying_zebra.scan_md['scan']['scan_input']
+        # print(scan_settings)
         # Our acquisition complete PV is: XF:05IDD-ES:1{Dev:Zebra1}:ARRAY_ACQ
         while self._encoder.pc.data_in_progress.get() == 1:
             ttime.sleep(0.01)
@@ -526,10 +736,8 @@ class SRXFlyer1Axis(Device):
         # Write the file.
         # @timer_wrapper
         def get_zebra_data():
-            if 'nano' in self.name:
-                export_nano_zebra_data(self._encoder, self.__write_filepath, self.fast_axis.get())
-            else:
-                export_zebra_data(self._encoder, self.__write_filepath, self.fast_axis)
+            # print(scan_settings)
+            export_nano_zebra_time_data(self._encoder, self.__write_filepath, scan_settings)
 
         if amk_debug_flag:
             t_getzebradata = tic()
@@ -715,6 +923,27 @@ def export_nano_zebra_data(zebra, filepath, fastaxis):
         enc3_d = enc3_d + (px / 2)
 
     size = (len(time_d),)
+    with h5py.File(filepath, "w") as f:
+        dset0 = f.create_dataset("time", size, dtype="f")
+        dset0[...] = np.array(time_d)
+        dset1 = f.create_dataset("enc1", size, dtype="f")
+        dset1[...] = np.array(enc1_d)
+        dset2 = f.create_dataset("enc2", size, dtype="f")
+        dset2[...] = np.array(enc2_d)
+        dset3 = f.create_dataset("enc3", size, dtype="f")
+        dset3[...] = np.array(enc3_d)
+
+
+def export_nano_zebra_time_data(zebra, filepath, scan_settings):
+    xstart, xstop, xnum, _, _, _, dwell  = scan_settings
+    y0 = nano_stage.y.position
+    z0 = nano_stage.z.position
+    enc1_d = np.linspace(xstart, xstop, xnum)
+    enc2_d = np.linspace(y0, y0, xnum)
+    enc3_d = np.linspace(z0, z0, xnum)
+    time_d = dwell * np.arange(xnum)
+
+    size = (xnum,)
     with h5py.File(filepath, "w") as f:
         dset0 = f.create_dataset("time", size, dtype="f")
         dset0[...] = np.array(time_d)
