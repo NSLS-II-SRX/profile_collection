@@ -658,7 +658,7 @@ class SRXFlyer1Axis(Device):
 
         amk_debug_flag = False
 
-        scan_settings = flying_zebra.scan_md['scan']['scan_input']
+        scan_settings = self.scan_md['scan']['scan_input']
         # print(scan_settings)
         # Our acquisition complete PV is: XF:05IDD-ES:1{Dev:Zebra1}:ARRAY_ACQ
         while self._encoder.pc.data_in_progress.get() == 1:
