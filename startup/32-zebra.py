@@ -658,7 +658,7 @@ class SRXFlyer1Axis(Device):
 
         amk_debug_flag = False
 
-        scan_settings = self.scan_md['scan']['scan_input']
+        scan_md = self.scan_md
         # print(scan_settings)
         # Our acquisition complete PV is: XF:05IDD-ES:1{Dev:Zebra1}:ARRAY_ACQ
         while self._encoder.pc.data_in_progress.get() == 1:
@@ -737,7 +737,7 @@ class SRXFlyer1Axis(Device):
         # @timer_wrapper
         def get_zebra_data():
             # print(scan_settings)
-            export_nano_zebra_time_data(self._encoder, self.__write_filepath, scan_settings)
+            export_nano_zebra_time_data(self._encoder, self.__write_filepath, scan_md)
 
         if amk_debug_flag:
             t_getzebradata = tic()
@@ -934,14 +934,24 @@ def export_nano_zebra_data(zebra, filepath, fastaxis):
         dset3[...] = np.array(enc3_d)
 
 
-def export_nano_zebra_time_data(zebra, filepath, scan_settings):
-    xstart, xstop, xnum, _, _, _, dwell  = scan_settings
+def export_nano_zebra_time_data(zebra, filepath, scan_md):
+    xstart, xstop, xnum, _, _, _, dwell  = scan_md['scan']['scan_input']
+
+    x0 = nano_stage.x.position
     y0 = nano_stage.y.position
     z0 = nano_stage.z.position
-    enc1_d = np.linspace(xstart, xstop, xnum)
+    enc1_d = np.linspace(x0, x0, xnum)
     enc2_d = np.linspace(y0, y0, xnum)
     enc3_d = np.linspace(z0, z0, xnum)
     time_d = dwell * np.arange(xnum)
+
+    fast_axis_name = scan_md['scan']['fast_axis']['motor_name']
+    if fast_axis_name  == 'nano_stage_x':
+        enc1_d = np.linspace(xstart, xstop, xnum)
+    elif fast_axis_name == 'nano_stage_y':
+        enc2_d = np.linspace(xstart, xstop, xnum)
+    else:
+        pass 
 
     size = (xnum,)
     with h5py.File(filepath, "w") as f:

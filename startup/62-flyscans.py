@@ -740,7 +740,7 @@ def scan_and_fly_xs2_xz(*args, extra_dets=None, **kwargs):
 
 
 def scan_and_fly_time_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
-                           flying_zebra, xmotor, ymotor,
+                           flying_zebra, xmotor=nano_stage.x, ymotor=nano_stage.y,
                            delta=None, shutter=True, align=False, plot=True,
                            md=None, snake=False, verbose=False):
     """Read IO from SIS3820.
@@ -1083,6 +1083,9 @@ def scan_and_fly_time_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, 
                 print(f'Stop  = {stop}')
             flying_zebra._encoder.pc.dir.set(direction)
             yield from fly_each_step(ymotor, step, start, stop)
+            yield from mov(nano_stage.x.velocity, 1000,
+                           nano_stage.y.velocity, 1000,
+                           nano_stage.z.velocity, 1000)
             # print('return from step\t',time.time())
             ystep = ystep + 1
 
@@ -1113,14 +1116,27 @@ def scan_and_fly_time_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, 
 
 
 
-def time_scan_and_fly(*args, extra_dets=None, **kwargs):
-    kwargs.setdefault('xmotor', nano_stage.x)
-    kwargs.setdefault('ymotor', nano_stage.y)
+def time_scan_and_fly(*args, extra_dets=None, xmotor=nano_stage.x, ymotor=nano_stage.y, **kwargs):
+    kwargs.setdefault('xmotor', xmotor)
+    kwargs.setdefault('ymotor', ymotor)
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
     # print(kwargs['xmotor'].name)
     # print(kwargs['ymotor'].name)
-    yield from abs_set(nano_flying_zebra.fast_axis, 'NANOHOR')
-    yield from abs_set(nano_flying_zebra.slow_axis, 'NANOVER')
+    # yield from abs_set(nano_flying_zebra.fast_axis, 'NANOHOR')
+    # yield from abs_set(nano_flying_zebra.slow_axis, 'NANOVER')
+    if xmotor.name == nano_stage.x.name:
+        yield from abs_set(nano_flying_zebra.fast_axis, 'NANOHOR')
+    elif xmotor.name == nano_stage.y.name:
+        yield from abs_set(nano_flying_zebra.fast_axis, 'NANOVER')
+    else:
+        raise Exception('Motor error!')
+
+    if ymotor.name == nano_stage.x.name:
+        yield from abs_set(nano_flying_zebra.slow_axis, 'NANOHOR')
+    elif ymotor.name == nano_stage.y.name:
+        yield from abs_set(nano_flying_zebra.slow_axis, 'NANOVER')
+    else:
+        raise Exception('Motor error!')
 
     _xs = kwargs.pop('xs', xs)
     if extra_dets is None:
