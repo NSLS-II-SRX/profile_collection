@@ -654,10 +654,10 @@ class FlyerIDMono:
         # width_ev = width_s * speed
         # self.flying_dev.parameters.trigger_width.put(width_ev)
 
-        enabled = int(round(self.flying_dev.control.control.get()))
-        if enabled != 5:
-            print(f'Enabling fly scan')
-            self.flying_dev.control.control.put(1)
+        print(f'Enabling fly scan')
+        st = self.flying_dev.control.set("enable")
+        while not st.done:
+            ttime.sleep(0.1)
 
         # Reset the trigger count and current scan:
         self.flying_dev.parameters.trigger_count_reset.put(1)
@@ -1027,6 +1027,7 @@ def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
             yield from bps.collect(flyer)
     yield from bps.close_run()
     yield from check_shutters(shutter, 'Close')
+    yield from bps.mv(flyer.flying_dev.control, "disable")
     return uid
 
 

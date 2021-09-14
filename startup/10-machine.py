@@ -14,6 +14,7 @@ from ophyd.utils.epics_pvs import set_and_wait
 from ophyd.pseudopos import pseudo_position_argument, real_position_argument
 from ophyd.positioner import PositionerBase
 from ophyd import Component as Cpt
+from ophyd.status import SubscriptionStatus
 
 from scipy.interpolate import InterpolatedUnivariateSpline
 import functools
@@ -392,6 +393,41 @@ class FlyScanControl(Device):
                   add_prefix=('read_pv', 'write_pv'), put_complete=True)
     status = Cpt(EpicsSignalRO, 'MACRO-Sts')
     reset = Cpt(EpicsSignal, 'MACRO-CLRF.PROC')
+
+    def set(self, command):
+        allowed_commands = {"enable", "disable"}
+        ENABLED_VALUE = 5
+        DISABLED_VALUE = 10
+
+        def _int_round(value):
+            return int(round(value))
+
+        if command == "enable":
+            def enable_callback(value, old_value, **kwargs):
+                print(f'{print_now()} in {self.name}/{command}: {old_value} ---> {value}')
+                value = _int_round(value)
+                old_value = _int_round(old_value)
+                if value == ENABLED_VALUE:
+                    return True
+                return False
+            status = SubscriptionStatus(self.control, enable_callback, run=False)
+            self.control.put(1)
+            return status
+
+        elif command == "disable":
+            def disable_callback(value, old_value, **kwargs):
+                print(f'{print_now()} in {self.name}/{command}: {old_value} ---> {value}')
+                value = _int_round(value)
+                old_value = _int_round(old_value)
+                if value == DISABLED_VALUE:
+                    return True
+                return False
+            status = SubscriptionStatus(self.control, disable_callback, run=False)
+            self.control.put(0)
+            return status
+        else:
+            raise ValueError(f"Unknown command: {command}. "
+                             f"Allowed commands: {allowed_commands}")
 
     scan_type = Cpt(EpicsSignal, write_pv='FlyScan-Type-SP', read_pv='FlyScan-Type-RB', add_prefix=('read_pv', 'write_pv'), put_complete=True)
     run = Cpt(EpicsSignal, 'FlyScan-MvReq-Cmd.PROC')
