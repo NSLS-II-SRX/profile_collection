@@ -240,8 +240,8 @@ class Energy(PseudoPositioner):
 
         # calib_path = '/nfs/xf05id1/UndulatorCalibration/'
         calib_path = Path(__file__).parent
-        calib_file = "../data/SRXUgapCalibration20170612.txt"
-        # calib_file = "/home/xf05id1/current_user_data/20210912_SRXUgapCalibration.txt"
+        # calib_file = "../data/SRXUgapCalibration20170612.txt"
+        calib_file = "../data/20210912_SRXUgapCalibration.txt"
 
         # with open(os.path.join(calib_path, calib_file), 'r') as f:
         with open(calib_path / calib_file, "r") as f:
