@@ -161,14 +161,20 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         del xrd
 
     # If delta is None, set delta based on time for acceleration
+    v = ((xstop - xstart) / (xnum - 1)) / dwell  # compute "stage speed"
+    if (v > xmotor.velocity.high_limit):
+        raise ValueError(f'Desired motor velocity too high\nMax velocity: {xmotor.velocity.high_limit}')
+    elif (v < xmotor.velocity.low_limit):
+        raise ValueError(f'Desired motor velocity too low\nMin velocity: {xmotor.velocity.low_limit}')
+    else:
+        pass
+        # Not yet, we still need to move to the start quickly
+        # yield from mv(xmotor.velocity, v)
+
     if (delta is None):
-        MIN_DELTA = 0.100  # old default value
-        v = ((xstop - xstart) / (xnum - 1)) / dwell  # compute "stage speed"
         t_acc = xmotor.acceleration.get()  # acceleration time
         delta = 0.5 * t_acc * v  # distance the stage will travel in t_acc
-        delta = np.amax((delta, MIN_DELTA))
-        # delta = 0.500 #was 2.5 when npoint scanner drifted
-
+    
     # Move to start scanning location
     # Calculate move to scan start
     pxsize = (xstop - xstart) / (xnum - 1)
@@ -198,7 +204,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     md['scan']['snake'] = snake
     md['scan']['shape'] = (xnum, ynum)
     
-
+    ## TODO: move xmotor velocity into stage_sigs and add to stage decorator
     @stage_decorator(flying_zebra.detectors)
     def fly_each_step(motor, step, row_start, row_stop):
         def move_to_start_fly():
@@ -234,25 +240,19 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             toc(t_mvstartfly, str='Move to start fly each')
 
         # Set the scan speed
-        # Is abs_set(wait=True) or mv() faster?
-        v = ((xstop - xstart) / (xnum - 1)) / dwell  # compute "stage speed"
-        # yield from abs_set(xmotor.velocity, v, wait=True)  # set the "stage speed"
-        if (v > xmotor.velocity.high_limit):
-            raise ValueError(f'Desired motor velocity too high\nMax velocity: {xmotor.velocity.high_limit}')
-        elif (v < xmotor.velocity.low_limit):
-            raise ValueError(f'Desired motor velocity too low\nMin velocity: {xmotor.velocity.low_limit}')
-        else:
-            yield from mv(xmotor.velocity, v)
+        # Does this need to be computed for each line?
+        # v = ((xstop - xstart) / (xnum - 1)) / dwell  # compute "stage speed"
+        yield from mv(xmotor.velocity, v)
 
         # set up all of the detectors
         # TODO we should be able to move this out of the per-line call?!
         if ('xs' in dets_by_name):
             xs = dets_by_name['xs']
-            yield from abs_set(xs.hdf5.num_capture, xnum, group='set')
-            yield from abs_set(xs.settings.num_images, xnum, group='set')
-            yield from bps.wait(group='set')
-            # yield from mv(xs.hdf5.num_capture, xnum,
-            #               xs.settings.num_images, xnum)
+            # yield from abs_set(xs.hdf5.num_capture, xnum, group='set')
+            # yield from abs_set(xs.settings.num_images, xnum, group='set')
+            # yield from bps.wait(group='set')
+            yield from mov(xs.hdf5.num_capture, xnum,
+                          xs.settings.num_images, xnum)
             # xs.hdf5.num_capture.put(xnum)
             # xs.settings.num_images.put(xnum)
 
@@ -260,7 +260,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             xs2 = dets_by_name['xs2']
             # yield from abs_set(xs2.hdf5.num_capture, xnum, wait=True)
             # yield from abs_set(xs2.settings.num_images, xnum, wait=True)
-            yield from mv(xs2.hdf5.num_capture, xnum,
+            yield from mov(xs2.hdf5.num_capture, xnum,
                           xs2.settings.num_images, xnum)
 
         if ('merlin' in dets_by_name):
@@ -274,18 +274,18 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             yield from abs_set(dexela.cam.num_images, xnum, wait=True)
 
         ion = flying_zebra.sclr
-        yield from abs_set(ion.nuse_all, 2*xnum)
+        yield from mov(ion.nuse_all, 2*xnum)
 
         # arm the Zebra (start caching x positions)
         # @timer_wrapper
         def zebra_kickoff():
             if row_start < row_stop:
                 yield from kickoff(flying_zebra,
-                                   xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell,
+                                   xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell, t_acc=t_acc,
                                    wait=True)
             else:
                 yield from kickoff(flying_zebra,
-                                   xstart=xstop, xstop=xstart, xnum=xnum, dwell=dwell,
+                                   xstart=xstop, xstop=xstart, xnum=xnum, dwell=dwell, t_acc=t_acc,
                                    wait=True)
         if verbose:
             t_zebkickoff = tic()
@@ -324,15 +324,15 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             toc(t_datacollect, str='  move start')
 
         if verbose:
-            ttime.sleep(1)
+            bps.sleep(1)
             while (xmotor.motor_is_moving.get()):
-                ttime.sleep(0.001)
+                bps.sleep(0.001)
             toc(t_datacollect, str='  move end')
             while (xs.settings.detector_state.get()):
-                ttime.sleep(0.001)
+                bps.sleep(0.001)
             toc(t_datacollect, str='  xs done')
             while (sclr1.acquiring.get()):
-                ttime.sleep(0.001)
+                bps.sleep(0.001)
             toc(t_datacollect, str='  sclr1 done')
         # wait for the motor and detectors to all agree they are done
         yield from bps.wait(group='row')
@@ -1120,28 +1120,31 @@ def time_scan_and_fly(*args, extra_dets=None, xmotor=nano_stage.x, ymotor=nano_s
     kwargs.setdefault('xmotor', xmotor)
     kwargs.setdefault('ymotor', ymotor)
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
-    # print(kwargs['xmotor'].name)
-    # print(kwargs['ymotor'].name)
-    # yield from abs_set(nano_flying_zebra.fast_axis, 'NANOHOR')
-    # yield from abs_set(nano_flying_zebra.slow_axis, 'NANOVER')
+    yield from mv(kwargs['flying_zebra']._triggering, "time")
+    kwargs['delta'] = None  # Need to overwrite this value to ensure proper timing
+
     if xmotor.name == nano_stage.x.name:
         yield from abs_set(nano_flying_zebra.fast_axis, 'NANOHOR')
     elif xmotor.name == nano_stage.y.name:
         yield from abs_set(nano_flying_zebra.fast_axis, 'NANOVER')
     else:
-        raise Exception('Motor error!')
+        raise Exception(f'Unrecognized motor {xmotor.name}! Please use a supported motor.')
 
     if ymotor.name == nano_stage.x.name:
         yield from abs_set(nano_flying_zebra.slow_axis, 'NANOHOR')
     elif ymotor.name == nano_stage.y.name:
         yield from abs_set(nano_flying_zebra.slow_axis, 'NANOVER')
     else:
-        raise Exception('Motor error!')
+        raise Exception(f'Unrecognized motor {ymotor.name}! Please use a supported motor.')
 
     _xs = kwargs.pop('xs', xs)
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
-    yield from scan_and_fly_time_base(dets, *args, **kwargs)
+
+    uid = yield from scan_and_fly_time_base(dets, *args, **kwargs)
+
     nano_stage.x.velocity.set(100)
+
+    return uid
 
