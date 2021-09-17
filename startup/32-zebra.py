@@ -173,12 +173,22 @@ class ZebraPositionCapture(Device):
         super().unstage()
 
 
+class SRXZebraOR(Device):
+    use = Cpt(EpicsSignal, '_ENA:B0')
+    input_source = Cpt(EpicsSignal, '_INP1')
+    invert = Cpt(EpicsSignal, '_INV:B0')
+
+
 class SRXZebra(Zebra):
     """
     SRX Zebra device.
     """
 
     pc = Cpt(ZebraPositionCapture, "")
+    or1 = Cpt(SRXZebraOR, "OR1")  # XF:05IDD-ES:1{Dev:Zebra2}:OR1_INV:B0
+    or2 = Cpt(SRXZebraOR, "OR2")  # XF:05IDD-ES:1{Dev:Zebra2}:OR1_INV:B0
+    or3 = Cpt(SRXZebraOR, "OR3")  # XF:05IDD-ES:1{Dev:Zebra2}:OR1_INV:B0
+    or4 = Cpt(SRXZebraOR, "OR4")  # XF:05IDD-ES:1{Dev:Zebra2}:OR1_INV:B0
 
     def __init__(
         self, prefix, *,
