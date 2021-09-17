@@ -174,9 +174,20 @@ class ZebraPositionCapture(Device):
 
 
 class SRXZebraOR(Device):
-    use = Cpt(EpicsSignal, '_ENA:B0')
-    input_source = Cpt(EpicsSignal, '_INP1')
-    invert = Cpt(EpicsSignal, '_INV:B0')
+    # I really appreciate the different indexing for input source
+    # Thank you for that
+    use1 = Cpt(EpicsSignal, '_ENA:B0')
+    use2 = Cpt(EpicsSignal, '_ENA:B1')
+    use3 = Cpt(EpicsSignal, '_ENA:B2')
+    use4 = Cpt(EpicsSignal, '_ENA:B3')
+    input_source1 = Cpt(EpicsSignal, '_INP1')
+    input_source2 = Cpt(EpicsSignal, '_INP2')
+    input_source3 = Cpt(EpicsSignal, '_INP3')
+    input_source4 = Cpt(EpicsSignal, '_INP4')
+    invert1 = Cpt(EpicsSignal, '_INV:B0')
+    invert2 = Cpt(EpicsSignal, '_INV:B1')
+    invert3 = Cpt(EpicsSignal, '_INV:B2')
+    invert4 = Cpt(EpicsSignal, '_INV:B3')
 
 
 class SRXZebra(Zebra):
