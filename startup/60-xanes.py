@@ -597,6 +597,7 @@ class FlyerIDMono:
 
         print(f"{print_now()}: before unstaging scaler")
         self.scaler.stop_all.put(1)
+        self.scaler.count_mode.put(1)  # return SIS3820 into autocount (not single count) mode
         print(f"{print_now()}: after unstaging scaler")
 
     def kickoff(self, *args, **kwargs):
@@ -625,13 +626,13 @@ class FlyerIDMono:
         self.zebra.pulse3.input_addr.put(52)
         self.zebra.pulse3.input_edge.put(0)
         self.zebra.pulse3.time_units.put('ms')
-        self.zebra.pulse3.width.put(0.500)
+        self.zebra.pulse3.width.put(0.100)
         self.zebra.pulse3.delay.put(0.0)
 
         self.zebra.pulse4.input_addr.put(52)
         self.zebra.pulse4.input_edge.put(1)
         self.zebra.pulse4.time_units.put('ms')
-        self.zebra.pulse4.width.put(0.500)
+        self.zebra.pulse4.width.put(0.100)
         self.zebra.pulse4.delay.put(0.0)
 
         width_s = self.pulse_width
