@@ -282,6 +282,9 @@ class SRXFlyer1Axis(Device):
         self.stage_sigs[self._encoder.pc.gate_num] = 1
         self.stage_sigs[self._encoder.pc.pulse_start] = 0
 
+        self.stage_sigs[self._encoder.pulse3.width] = 0.1
+        self.stage_sigs[self._encoder.pulse4.width] = 0.1
+
         # PC gate output is 31 for zebra. Use it to trigger xspress3 and I0
         self.stage_sigs[self._encoder.output1.ttl.addr] = 31
         self.stage_sigs[self._encoder.output3.ttl.addr] = 31
