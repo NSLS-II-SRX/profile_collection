@@ -12,15 +12,15 @@ import shutil
 # PI_lastname = None
 # saf_num = None
 
+proposal_num = 308774
+proposal_title = 'SRX Beamline Commissioning'
+PI_lastname = 'Kiss'
+saf_num = 307307
+
 # proposal_num = 308774
 # proposal_title = 'SRX Beamline Commissioning'
-# PI_lastname = 'Kiss'
+# PI_lastname = 'Thieme2'
 # saf_num = 307307
-
-proposal_num = 308489
-proposal_title = 'Determining rate-limiting factors and transport behaviors in 3D-architecture battery electrodes with highly concentrated aqueous electrolyte'
-PI_lastname = 'Chen-Wiegart'
-saf_num = 307968
 
 
 cycle = '2021_cycle3'
