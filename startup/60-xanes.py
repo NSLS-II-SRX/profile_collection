@@ -582,7 +582,7 @@ class FlyerIDMono:
             xs_det.settings.acquire.put(1)
 
         # Scaler config
-        self.scaler.count_mode.put(0)  # put SIS3820 into single count (not autocount) mode
+        # self.scaler.count_mode.put(0)  # put SIS3820 into single count (not autocount) mode
         self.scaler.stop_all.put(1)  # stop scaler
         self.scaler.nuse_all.put(2*total_points)
         self.scaler.erase_start.put(1)
@@ -597,7 +597,7 @@ class FlyerIDMono:
 
         print(f"{print_now()}: before unstaging scaler")
         self.scaler.stop_all.put(1)
-        self.scaler.count_mode.put(1)  # return SIS3820 into autocount (not single count) mode
+        # self.scaler.count_mode.put(1)  # return SIS3820 into autocount (not single count) mode
         print(f"{print_now()}: after unstaging scaler")
 
     def kickoff(self, *args, **kwargs):
@@ -1006,16 +1006,26 @@ def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
     if (abs(e_step) <= e_width):
         raise ValueError('Cannot have energy collection widths larger than energy step!')
 
-    yield from check_shutters(shutter, 'Open')
-
     if md is None:
         md = {}
     md = get_stock_md(md)
-    md['scan']['num_scans'] = num_scans
-    md['scan']['num_points'] = num_pts
     md['scan']['type'] = 'XAS_FLY'
+    md['scan']['energy'] = list(np.linspace(e_start, e_stop, num=num_pts))
+    md['scan']['num_points'] = num_pts
+    md['scan']['scan_input'] = [e_start, e_stop, e_width, dwell, num_pts]
+    md['scan']['sample_name'] = ''
+    md['scan']['dwell'] = dwell
+    md['scan']['num_scans'] = num_scans
 
+    d = []
+    for fly in flyers:
+        for flying_xs in fly.xs_detectors:
+            d.append(flying_xs.name)
+    md['scan']['detectors'] = d
+
+    yield from check_shutters(shutter, 'Open')
     uid = yield from bps.open_run(md)
+    yield from mv(sclr1.count_mode, 0)
     for flyer in flyers:
         flyer.pulse_width = dwell
         yield from bps.mv(flyer.flying_dev.parameters.num_scans, num_scans)
@@ -1026,6 +1036,7 @@ def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
             yield from bps.complete(flyer, wait=True)
         for flyer in flyers:
             yield from bps.collect(flyer)
+    yield from mv(sclr1.count_mode, 1)
     yield from bps.close_run()
     yield from check_shutters(shutter, 'Close')
     yield from bps.mv(flyer.flying_dev.control, "disable")
