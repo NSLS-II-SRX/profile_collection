@@ -804,6 +804,7 @@ class FlyerIDMono:
 
         orig_read_attrs = self.scaler.read_attrs
         self.scaler.read_attrs = ['mca1', 'mca2', 'mca3', 'mca4']
+        print(orig_read_attrs)
 
         total_points = self.num_scans * self.num_triggers
 
@@ -825,6 +826,7 @@ class FlyerIDMono:
         print(f"{print_now()}: after while loop in collect")
 
         self.scaler.read_attrs = orig_read_attrs
+        print(self.scaler.read_attrs)
 
         print(f"Length of 'i0_time': {len(i0_time)}")
         print(f"Length of 'i0'     : {len(i0)}")
@@ -920,6 +922,34 @@ class FlyerIDMono:
             yield from xs_det.collect_asset_docs()
         print(f"{print_now()}: after collecting asset docs from xs in collect_asset_docs")
 
+    def stop(self):
+        # I don't think this is running on stop :-(
+        print('I am running the stop function...')
+        self._continue_after_pausing = False
+
+        # Abort any active scan
+        if self.control.scan_in_progress.get() == 1:
+            if self.control.abort.write_access is True:
+                print('Aborting any active scans...')
+                yield from abs_set(self.control.abort, 1)
+
+        # Disable flying mode
+        if self.flying_dev.control.control.write_access is True:
+           print('Disabling fly mode...')
+           yield from abs_set(self.flying_dev.control.control, 0)
+
+        # unstage flyer
+        print('Unstaging the flyer...')
+        yield from self.unstage()
+
+        #reset scaler count mode
+        print('Resetting the scaler...')
+        yield from mv(sclr1.count_mode, 1)
+        sclr1.read_attrs = ["channels.chan2", "channels.chan3", "channels.chan4"]
+        pass
+
+
+
 
 flyer_id_mono = FlyerIDMono(flying_dev=id_fly_device,
                             zebra=nanoZebra,
@@ -940,6 +970,8 @@ def plot_flyer_id_mono_data(uid_or_scanid, e_min=None, e_max=None, fname=None, r
 
 
     for stream in sorted(stream_names):
+        if 'monitor' in stream:
+            continue
         tbl = hdr.table(stream_name=stream)
 
         if (e_min is None):
@@ -985,7 +1017,7 @@ def flying_xas(num_passes=1, shutter=True, md=None):
 
 
 def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
-                        num_scans=1, shutter=True,
+                        num_scans=1, scan_type='uni',shutter=True, plot=True,
                         flyers=[flyer_id_mono], md=None):
     """This is a modified version of bp.fly to support multiple passes of the flyer."""
 
@@ -997,6 +1029,15 @@ def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
     flyer_id_mono._traj_info['energy_start'] = e_start
     flyer_id_mono._traj_info['energy_stop'] = e_stop
     flyer_id_mono._traj_info['energy_width'] = e_width
+
+    if 'uni' in scan_type.lower():
+        scan_type = 'unidirectional'
+        flyer_id_mono.flying_dev.control.scan_type.put(0)
+    elif 'bi' in scan_type.lower():
+        scan_type = 'bidirectional'
+        flyer_id_mono.flying_dev.control.scan_type.put(1)
+    else:
+        raise ValueError(f'Unknown scan type! {scan_type}')
 
     v = e_width / dwell
     flyer_id_mono.flying_dev.parameters.speed.put(v)
@@ -1023,31 +1064,87 @@ def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
             d.append(flying_xs.name)
     md['scan']['detectors'] = d
 
-    yield from check_shutters(shutter, 'Open')
-    uid = yield from bps.open_run(md)
-    yield from mv(sclr1.count_mode, 0)
-    for flyer in flyers:
-        flyer.pulse_width = dwell
-        yield from bps.mv(flyer.flying_dev.parameters.num_scans, num_scans)
-        yield from bps.kickoff(flyer, wait=True)
-    for n in range(num_scans):
-        print(f"\n\n*** {print_now()} Iteration #{n+1} ***\n")
-        for flyer in flyers:
-            yield from bps.complete(flyer, wait=True)
-        for flyer in flyers:
-            yield from bps.collect(flyer)
-    yield from mv(sclr1.count_mode, 1)
-    yield from bps.close_run()
-    yield from check_shutters(shutter, 'Close')
-    yield from bps.mv(flyer.flying_dev.control, "disable")
-    return uid
+    livepopup = []
+    if (plot is True):
+         unit_epts = np.concatenate((-1*np.ones((1,)), np.linspace(e_start, e_stop, num_pts)))
+         if scan_type == 'unidirectional':
+             plot_epts = np.tile(unit_epts, num_scans)
+         else:
+             for i in range(num_scans):
+                 if i == 0:
+                     plot_epts = np.copy(unit_epts)
+                     continue
 
+                 if i % 2 == 1:
+                     plot_epts = np.concatenate((plot_epts, np.flipud(unit_epts)))
+                 else:
+                     plot_epts = np.concatenate((plot_epts, unit_epts))
+         plot_epts = np.concatenate((plot_epts, -1*np.ones((1,))))
+
+         livepopup = [LivePlotFlyingXAS(xs.channel1.rois.roi01.value.name,
+                                        y_norm=xs.channel1.rois.roi02.value.name,
+                                        e_pts=plot_epts,
+                                        xlabel='Energy [eV]')]
+
+
+    @subs_decorator(livepopup)
+    @monitor_during_decorator([xs.channel1.rois.roi01.value, xs.channel1.rois.roi02.value])
+    def plan():
+        yield from check_shutters(shutter, 'Open')
+        uid = yield from bps.open_run(md)
+        yield from mv(sclr1.count_mode, 0)
+        for flyer in flyers:
+            flyer.pulse_width = dwell
+            yield from bps.mv(flyer.flying_dev.parameters.num_scans, num_scans)
+            yield from bps.kickoff(flyer, wait=True)
+        for n in range(num_scans):
+            print(f"\n\n*** {print_now()} Iteration #{n+1} ***\n")
+            yield from bps.checkpoint()
+            for flyer in flyers:
+                yield from bps.complete(flyer, wait=True)
+            for flyer in flyers:
+                yield from bps.collect(flyer)
+        yield from check_shutters(shutter, 'Close')
+        yield from mv(sclr1.count_mode, 1)
+        yield from bps.close_run()
+        for flyer in flyers:
+            yield from bps.mv(flyer.flying_dev.control, "disable")
+        return uid
+
+
+    return (yield from plan())
+
+def flying_xas_reset():
+    # Abort any active scan
+    if id_fly_device.control.scan_in_progress.get() == 1:
+        if id_fly_device.control.abort.write_access is True:
+            print('Aborting any active scans...')
+            yield from abs_set(id_fly_device.control.abort, 1)
+
+    # Disable flying mode
+    if flyer_id_mono.flying_dev.control.control.write_access is True:
+       print('Disabling fly mode...')
+       yield from abs_set(flyer_id_mono.flying_dev.control.control, 0)
+
+    # unstage flyer
+    print('Unstaging the flyer...')
+    yield from unstage(flyer_id_mono)
+
+    #reset scaler count mode
+    print('Resetting the scaler...')
+    yield from mv(sclr1.count_mode, 1)
+    sclr1.read_attrs = ["channels.chan2", "channels.chan3", "channels.chan4"]
 
 """
-TODO: All scan directions and modes (uni/bi-directional)
+TODO: All scan directions and modes (uni/bi-directional), DONE
 TODO: setup stage_sigs for scaler
 TODO: Monitor and LivePlot of data
+        need to cleanup LivePlot code
+        need to label each pass with different line (and color)
+        normalization with argon is not ideal, doing a get instead of using monitor
 TODO: Unstage the detectors (xs, scaler) on RE.abort()
 TODO: Compare number of triggers from Zebra's data collected table with actual number of emitted pulses.
 TODO: Use timestamps from Zebra's data collected table to generate the events.
+TODO: Autodetect element of interest from roi name?
+TODO: Need export function, suitcase?
 """
