@@ -1131,9 +1131,10 @@ def flying_xas_reset():
     yield from unstage(flyer_id_mono)
 
     #reset scaler count mode
-    print('Resetting the scaler...')
-    yield from mv(sclr1.count_mode, 1)
+    print('Reinitializing the scaler...')
+    sclr1 = SRXScaler("XF:05IDD-ES:1{Sclr:1}", name="sclr1")
     sclr1.read_attrs = ["channels.chan2", "channels.chan3", "channels.chan4"]
+    yield from mv(sclr1.count_mode, 1)
 
 """
 TODO: All scan directions and modes (uni/bi-directional), DONE
@@ -1141,7 +1142,7 @@ TODO: setup stage_sigs for scaler
 TODO: Monitor and LivePlot of data
         need to cleanup LivePlot code
         need to label each pass with different line (and color)
-        normalization with argon is not ideal, doing a get instead of using monitor
+        normalization with argon is not ideal(doesn't always work well), doing a get instead of using monitor
 TODO: Unstage the detectors (xs, scaler) on RE.abort()
 TODO: Compare number of triggers from Zebra's data collected table with actual number of emitted pulses.
 TODO: Use timestamps from Zebra's data collected table to generate the events.
