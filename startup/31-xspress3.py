@@ -133,6 +133,7 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
 
 class SRXXspressTrigger(Xspress3Trigger):
     def trigger(self):
+        print("SRXXspressTrigger.trigger()")
         if self._staged != Staged.yes:
             raise RuntimeError("not staged")
 
@@ -145,11 +146,13 @@ class SRXXspressTrigger(Xspress3Trigger):
 
         trigger_time = ttime.time()
         if self._mode is SRXMode.step:
+            print("in SRXMode.step")
             for sn in self.read_attrs:
                 if sn.startswith("channel") and "." not in sn:
                     ch = getattr(self, sn)
                     self.dispatch(ch.name, trigger_time)
         elif self._mode is SRXMode.fly:
+            print("in SRXMode.fly")
             self.dispatch(self._f_key, trigger_time)
         else:
             raise Exception(f"unexpected mode {self._mode}")
