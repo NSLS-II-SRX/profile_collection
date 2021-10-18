@@ -12,15 +12,15 @@ import shutil
 # PI_lastname = None
 # saf_num = None
 
-proposal_num = 308774
-proposal_title = 'SRX Beamline Commissioning'
-PI_lastname = 'Kiss'
-saf_num = 307307
+#proposal_num = 308774
+#proposal_title = 'SRX Beamline Commissioning'
+#PI_lastname = 'Kiss'
+#saf_num = 307307
 
-# proposal_num = 308774
-# proposal_title = 'SRX Beamline Commissioning'
-# PI_lastname = 'Thieme2'
-# saf_num = 307307
+proposal_num = 309220
+proposal_title = 'Distribution, abundance, and speciation of toxic metals in human tissue exposed to burn pits, vaping, and hip replacements'
+PI_lastname = 'Thieme'
+saf_num = 308122
 
 
 cycle = '2021_cycle3'
