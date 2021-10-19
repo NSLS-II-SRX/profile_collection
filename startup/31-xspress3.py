@@ -201,8 +201,8 @@ class SrxXspress3Detector(SRXXspress3Trigger, FourChannelXspress3Detector):
         ##root="/nsls2/xf05id1/XF05ID1",
         ##read_path_template="/nsls2/xf05id1/XF05ID1/XSPRESS3/%Y/%m/%d/",
         ##write_path_template="/nsls2/xf05id1/XF05ID1/XSPRESS3/%Y/%m/%d/", # SRX ddetector 1
-        ##root="/nsls2/xf05id1/XF05ID1",
-        
+
+        # store data here during development for APS IOC
         root="/home/oksana/",
         read_path_template="/home/oksana/nsls2/",
         write_path_template="/home/oksana/nsls2/",
