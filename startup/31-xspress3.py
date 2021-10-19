@@ -133,8 +133,6 @@ class SRXXspressTrigger(Xspress3Trigger):
         self._status = DeviceStatus(self)
         self.cam.erase.put(1)
         
-        # JOSH changed this
-        #self._acquisition_signal.put(1, wait=False)
         self.cam.acquire.put(1, wait=False)
 
         trigger_time = ttime.time()
