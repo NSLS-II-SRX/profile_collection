@@ -209,7 +209,7 @@ class SrxXspress3Detector(SRXXspress3Trigger, FourChannelXspress3Detector):
     )
 
     # this is used as a latch to put the xspress3 into 'bulk' mode
-    # for fly scanning.  Do this is a signal (rather than as a local variable
+    # for fly scanning.  Do this is as signal (rather than as a local variable)
     # or as a method so we can modify this as part of a plan
     fly_next = Cpt(Signal, value=False)
 
