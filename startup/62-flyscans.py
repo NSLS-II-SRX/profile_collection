@@ -1,4 +1,6 @@
 print(f'Loading {__file__}...')
+import datetime
+import json
 
 #####
 # Pseudocode for fly scanning
@@ -319,7 +321,16 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             toc(t_datacollect, str='  sleep')
 
         # start the 'fly'
-        yield from abs_set(xmotor, row_stop, group='row')  # move in x
+        # yield from abs_set(xmotor, row_stop, group='row')  # move in x
+        def print_watch(*args, **kwargs):
+            with open('/home/xf05id1/bluesky_output.txt', 'a') as f:
+                f.write(datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S.%f\n'))
+                # print(args)
+                f.write(json.dumps(kwargs))
+                f.write('\n')
+        st = xmotor.set(row_stop)
+        st.watch(print_watch)
+
         if verbose:
             toc(t_datacollect, str='  move start')
 
@@ -336,6 +347,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             toc(t_datacollect, str='  sclr1 done')
         # wait for the motor and detectors to all agree they are done
         yield from bps.wait(group='row')
+        st.wait()
+
         if verbose:
             toc(t_datacollect, str='Total time')
 
