@@ -163,7 +163,7 @@ class SrxXSP3Handler:
 
 FourChannelXspress3Detector = build_detector_class(
     channel_numbers=(1, 2, 3, 4),
-    mcaroi_numbers=(1, 2, 3 ,4)
+    mcaroi_numbers=(1, 2, 3, 4)
 )
 
 class SrxXspress3Detector(SRXXspress3Trigger, FourChannelXspress3Detector):
