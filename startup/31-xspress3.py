@@ -14,15 +14,9 @@ from enum import Enum
 
 from nslsii.areadetector.xspress3 import (
     Xspress3Trigger,
-    #Xspress3Channel,
     Xspress3FileStore,
-    #Xspress3Detector,
     build_detector_class
 )
-
-#from ophyd.areadetector import (
-#    Xspress3Detector,
-#        )
 
 try:
     from area_detector_handlers import HandlerBase
