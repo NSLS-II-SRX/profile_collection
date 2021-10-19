@@ -241,8 +241,8 @@ class SrxXspress3Detector(SRXXspress3Trigger, FourChannelXspress3Detector):
             read_attrs=read_attrs,
             **kwargs,
         )
-        # this is possiblely one too many places to store this
-        # in the parent class it looks at if the extrenal_trig signal is high
+        # this is possibly one too many places to store this
+        # in the parent class it looks at if the external_trig signal is high
         self._mode = SRXMode.step
 
         # 2020-01-24
