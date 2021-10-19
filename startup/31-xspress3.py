@@ -166,8 +166,7 @@ FourChannelXspress3Detector = build_detector_class(
     mcaroi_numbers=(1, 2, 3 ,4)
 )
 
-# JOSH: temporarily replace SRXXspressTrigger with Xspress3Trigger
-class SrxXspress3Detector(Xspress3Trigger, FourChannelXspress3Detector):
+class SrxXspress3Detector(SRXXspress3Trigger, FourChannelXspress3Detector):
     # TODO: garth, the ioc is missing some PVs?
     #   det_cam.erase_array_counters
     #       (XF:05IDD-ES{Xsp:1}:ERASE_ArrayCounters)
