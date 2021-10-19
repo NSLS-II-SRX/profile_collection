@@ -197,6 +197,8 @@ class SrxXspress3Detector(SRXXspress3Trigger, FourChannelXspress3Detector):
     hdf5 = Cpt(
         Xspress3FileStoreFlyable,
         "HDF1:",
+
+        ##root="/nsls2/xf05id1/XF05ID1",
         ##read_path_template="/nsls2/xf05id1/XF05ID1/XSPRESS3/%Y/%m/%d/",
         ##write_path_template="/nsls2/xf05id1/XF05ID1/XSPRESS3/%Y/%m/%d/", # SRX ddetector 1
         ##root="/nsls2/xf05id1/XF05ID1",
