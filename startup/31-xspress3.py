@@ -78,7 +78,6 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
 
         NOTE : this comes from:
             https://github.com/NSLS-II/ophyd/blob/master/ophyd/areadetector/plugins.py
-        We had to replace "cam" with "cam" here.
         Also modified the stage sigs.
 
         """
