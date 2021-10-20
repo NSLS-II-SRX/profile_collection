@@ -8,7 +8,7 @@ import numpy as np
 import time as ttime
 
 from numpy.lib.function_base import msort
-from ophyd import Device, EpicsSignal, EpicsSignalRO
+from ophyd import Device, Signal, EpicsSignal, EpicsSignalRO
 from ophyd import Component as Cpt
 from hxntools.detectors.zebra import Zebra, EpicsSignalWithRBV
 
@@ -492,7 +492,7 @@ class SRXFlyer1Axis(Device):
         # and do the above asynchronously.
         return st
 
-    def _kickoff_time(self, *, xstart, xstop, xnum, dwell, t_acc):
+    def _kickoff_time(self, xstart, xstop, xnum, dwell, t_acc):
         dets_by_name = {d.name: d for d in self.detectors}
 
         self._encoder.pc.arm.put(0)
@@ -516,13 +516,13 @@ class SRXFlyer1Axis(Device):
         self._encoder.pulse2.delay.put(0.0)
         self._encoder.pulse2.width.put(0.1)
 
-        self._encoder.pulse3.input_addr.put(52)  # PC Pulse
+        self._encoder.pulse3.input_addr.put(31)  # PC Pulse
         self._encoder.pulse3.input_edge.put(0)  # 0 = rising, 1 = falling
         self._encoder.pulse3.time_units.put("ms")
         self._encoder.pulse3.delay.put(0.0)
         self._encoder.pulse3.width.put(0.1)
 
-        self._encoder.pulse4.input_addr.put(52)  # PC Pulse
+        self._encoder.pulse4.input_addr.put(31)  # PC Pulse
         self._encoder.pulse4.input_edge.put(1)  # 0 = rising, 1 = falling
         self._encoder.pulse4.time_units.put("ms")
         self._encoder.pulse4.delay.put(0.0)
@@ -579,11 +579,13 @@ class SRXFlyer1Axis(Device):
         # and do the above asynchronously.
         return st
 
-    def kickoff(self, *, xstart, xstop, xnum, dwell, t_acc):
+    def kickoff(self, xstart, xstop, xnum, dwell, t_acc):
+        # print(*args)
+        # print(**kwargs)
         if self._triggering == "position":
             return self._kickoff_pos(self, xstart, xstop, xnum, dwell)
         elif self._triggering == "time":
-            return self._kickoff_time(self, xstart, xstop, xnum, dwell, t_acc)
+            return self._kickoff_time(xstart, xstop, xnum, dwell, t_acc)
         else:
             raise ValueError(f"Unknown triggering method {self._triggering}")
         

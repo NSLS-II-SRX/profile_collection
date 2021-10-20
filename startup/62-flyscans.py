@@ -1120,7 +1120,7 @@ def time_scan_and_fly(*args, extra_dets=None, xmotor=nano_stage.x, ymotor=nano_s
     kwargs.setdefault('xmotor', xmotor)
     kwargs.setdefault('ymotor', ymotor)
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
-    yield from mv(kwargs['flying_zebra']._triggering, "time")
+    kwargs['flying_zebra']._triggering = "time"
     kwargs['delta'] = None  # Need to overwrite this value to ensure proper timing
 
     if xmotor.name == nano_stage.x.name:
