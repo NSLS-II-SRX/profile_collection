@@ -17,10 +17,10 @@ import shutil
 #PI_lastname = 'Kiss'
 #saf_num = 307307
 
-proposal_num = 309220
-proposal_title = 'Distribution, abundance, and speciation of toxic metals in human tissue exposed to burn pits, vaping, and hip replacements'
-PI_lastname = 'Thieme'
-saf_num = 308122
+proposal_num = 307833
+proposal_title = 'Quantifying thermodynamically induced reaction non-uniformity in thick battery electrodes'
+PI_lastname = 'Tang'
+saf_num = 308052
 
 
 cycle = '2021_cycle3'

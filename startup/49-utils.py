@@ -46,10 +46,10 @@ def f_two_erfs(x, A1, sigma1, x1, y1,
 
 def mv_position(pos=[]):
     """
-    Move to predefined positions of phosphor paper(pos1,default),
+    Move to predefined positions of diving board(pos1,default),
     the schitillator(pos2), or the Cu wire(pos3).
 
-    pos     <list> 1 = [22.7, 25.66, 52.596] # phosphor paper
+    pos     <list> 1 = [4682, 3365.5, -7201.7] # diving board
                    2 = [32.11,17.646,61.374] # scintillator
                    3 = [[30.114,22.464,53.874] # ANT Siemens star
                    [x, y, z] # any positions defined
@@ -60,16 +60,16 @@ def mv_position(pos=[]):
     # Check current positions
     if (pos == []):
         print(f"You are now in this position: "
-              "{hf_stage.x.position}, "
-              "{hf_stage.y.position}, "
-              "{hf_stage.z.position}")
+              "{nano_stage.x.position}, "
+              "{nano_stage.y.position}, "
+              "{nano_stage.z.position}")
         print('No new positions given. Exiting...')
         return
 
     # Check positions and go there
     if (pos == 1):
-        print('Will go to phosphor paper position.')
-        pos = [22.7, 25.66, 52.596]
+        print('Will go to diving board position.')
+        pos = [4682, 3365.5, -7201.7]
     elif (pos == 2):
         print('Will go to scintillator position.')
         pos = [32.11, 17.064, 61.454]
