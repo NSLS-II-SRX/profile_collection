@@ -1,6 +1,7 @@
 print(f'Loading {__file__}...')
 import datetime
 import json
+from bluesky.utils import short_uid
 
 #####
 # Pseudocode for fly scanning
@@ -205,9 +206,10 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     def fly_each_step(motor, step, row_start, row_stop):
         def move_to_start_fly():
             "See http://nsls-ii.github.io/bluesky/plans.html#the-per-step-hook"
-            yield from abs_set(xmotor, row_start, group='row')
+            row_str = short_uid('row')
+            yield from abs_set(xmotor, row_start, group=row_str)
             yield from one_1d_step([temp_nanoKB], motor, step)
-            yield from bps.wait(group='row')
+            yield from bps.wait(group=row_str)
 
         if verbose:
             t_mvstartfly = tic()
@@ -305,12 +307,14 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             toc(t_datacollect, str='  reset scaler')
 
         # trigger all of the detectors
+        row_str = short_uid('row')
         if verbose:
             print('Data collection:')
         for d in flying_zebra.detectors:
             if verbose:
                 print(f'  triggering {d.name}')
-            yield from bps.trigger(d, group='row')
+            st = yield from bps.trigger(d, group=row_str)
+            st.add_callback(lambda x: toc(t_datacollect, str=f"  status object  {datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S.%f')}"))
             if (d.name == 'dexela'):
                 yield from bps.sleep(1)
         if verbose:
@@ -321,15 +325,14 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             toc(t_datacollect, str='  sleep')
 
         # start the 'fly'
-        # yield from abs_set(xmotor, row_stop, group='row')  # move in x
         def print_watch(*args, **kwargs):
             with open('/home/xf05id1/bluesky_output.txt', 'a') as f:
                 f.write(datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S.%f\n'))
                 # print(args)
                 f.write(json.dumps(kwargs))
                 f.write('\n')
-        st = xmotor.set(row_stop)
-        st.watch(print_watch)
+        st = yield from abs_set(xmotor, row_stop, group=row_str)
+        # st.watch(print_watch)
 
         if verbose:
             toc(t_datacollect, str='  move start')
@@ -346,7 +349,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 ttime.sleep(0.001)
             toc(t_datacollect, str='  sclr1 done')
         # wait for the motor and detectors to all agree they are done
-        yield from bps.wait(group='row')
+        yield from bps.wait(group=row_str)
         st.wait()
 
         if verbose:
@@ -415,8 +418,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     @subs_decorator({'start': at_scan})
     @subs_decorator({'stop': finalize_scan})
     # monitor values from xs
-    # @monitor_during_decorator([xs.channel1.rois.roi01.value])
-    @monitor_during_decorator([xs.channel1.rois.roi01.value, xs.array_counter])
+    @monitor_during_decorator([xs.channel1.rois.roi01.value])
+    # @monitor_during_decorator([xs.channel1.rois.roi01.value, xs.array_counter])
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
     def plan():
