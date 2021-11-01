@@ -337,7 +337,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         if verbose:
             toc(t_datacollect, str='  move start')
 
-        if verbose:
+        if verbose and False:
             ttime.sleep(1)
             while (xmotor.motor_is_moving.get()):
                 ttime.sleep(0.001)

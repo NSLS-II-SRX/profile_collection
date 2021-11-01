@@ -455,7 +455,8 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
         print(f'\tActuator should move by {actuator_move_h:7.3f} um.')
         print(f'\tLine feature should move {line_move_h:7.3f} um for h mirror pitch correction')
 
-    if (np.abs(defocus) < 100 or orthogonality == 1):
+    #if (np.abs(defocus) < 100 or orthogonality == 1):
+    if orthogonality == 1:
         delta_fine_pitch = calpoly_fit[0][0]/conversion_factor_orth*1e-3*pitch_motion_conversion
         delta_theta_quad = calpoly_fit[0][0]/conversion_factor_orth
         delta_focal_plane_z = delta_theta_quad*1e-3/C_theta*C_f
