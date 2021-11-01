@@ -12,10 +12,16 @@ import shutil
 # PI_lastname = None
 # saf_num = None
 
-proposal_num = 308774
-proposal_title = 'SRX Beamline Commissioning'
-PI_lastname = 'Kiss'
-saf_num = 307307
+# proposal_num = 308774
+# proposal_title = 'SRX Beamline Commissioning'
+# PI_lastname = 'Kiss'
+# saf_num = 307307
+
+proposal_num = 307937
+proposal_title = 'Improved X-Ray Fluorescence Spectromicroscopy of Frozen, Hydrated Cells and Tissues within a Cryogenic Sample Environment '
+PI_lastname = 'Lowery'
+saf_num = 307780
+
 
 # proposal_num = 308489
 # proposal_title = 'Determining rate-limiting factors and transport behaviors in 3D-architecture battery electrodes with highly concentrated aqueous electrolyte'
