@@ -177,8 +177,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     pxsize = (xstop - xstart) / (xnum - 1)
     row_start = xstart - delta - (pxsize / 2)
     row_stop = xstop + delta + (pxsize / 2)
-    yield from mv(xmotor, row_start,
-                  ymotor, ystart)
+    # yield from mv(xmotor, row_start,
+    #               ymotor, ystart)
 
     # Run a peakup before the map?
     if (align):
@@ -391,6 +391,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         logscan_detailed('XRF_FLY')
         scanrecord.scanning.put(False)
         scanrecord.time_remaining.put(0)
+        
 
     # TODO remove this eventually?
     # xs = dets_by_name['xs']
@@ -465,6 +466,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         ion = flying_zebra.sclr
         yield from bps.mov(xs.external_trig, False,
                            ion.count_mode, 1)
+        yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
+        yield from bps.sleep(2)
+
     # toc(t_setup, str='Setup time')
 
     # Setup the final scan plan
@@ -499,9 +503,13 @@ def nano_scan_and_fly(*args, extra_dets=None, **kwargs):
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
+    print('Scan starting. Centering the scanner...')
+    yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
+    yield from bps.sleep(2)
     yield from scan_and_fly_base(dets, *args, **kwargs)
     print('Scan finished. Centering the scanner...')
-    yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
+    # yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
+    # yield from bps.sleep(2)
 
 
 def nano_y_scan_and_fly(*args, extra_dets=None, **kwargs):
