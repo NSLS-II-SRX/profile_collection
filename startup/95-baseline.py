@@ -9,7 +9,7 @@ sd.baseline = [ring_current, fe, energy, dcm, hfm,             # Front-end slits
                slt_wb, slt_pb, slt_ssa,                        # White-, Pink-Beam slits, SSA
                jjslits, attenuators,                           # JJ slits, Attenuator Box
                nanoKB, nano_vlm_stage, nano_det, temp_nanoKB,  # nanoKBs, VLM, Detector, Temperatures
-               nano_stage]                                     # coarse/fine stages
+               nano_stage, nanoKB_interferometer]              # coarse/fine stages, sample interferometer
 
 RE.preprocessors.append(sd)
 bec.disable_baseline()
