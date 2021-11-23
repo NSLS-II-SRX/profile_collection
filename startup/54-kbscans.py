@@ -296,8 +296,10 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=Tru
             d = np.sum(d[:, :, bin_low:bin_high], axis=(1, 2))
         try:
             I0 = np.array(tbl['i0'])[0]
+            I0 = np.array(tbl['im'])[0]
         except KeyError:
             I0 = np.array(tbl['sclr_i0'])
+            I0 = np.array(tbl['sclr_im'])
         if (normalize):
             y = d / I0
         else:
