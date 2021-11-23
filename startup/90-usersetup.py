@@ -12,23 +12,21 @@ import shutil
 # PI_lastname = None
 # saf_num = None
 
-# proposal_num = 308774
-# proposal_title = 'SRX Beamline Commissioning'
-# PI_lastname = 'Kiss'
-# saf_num = 307307
+proposal_num = 308774
+proposal_title = 'SRX Beamline Commissioning'
+PI_lastname = 'Kiss'
+saf_num = 307307
+ 
+#proposal_num = 309029
+#proposal_title = 'Developing phase contrast full-field nano-imaging at SRX'
+#PI_lastname = 'Yang'
+#saf_num = 308253
 
-proposal_num = 307937
-proposal_title = 'Improved X-Ray Fluorescence Spectromicroscopy of Frozen, Hydrated Cells and Tissues within a Cryogenic Sample Environment'
-PI_lastname = 'Lowery'
-saf_num = 307780
-
-
-#proposal_num = 307833
-#proposal_title = 'Quantifying thermodynamically induced reaction non-uniformity in thick battery electrodes'
-#PI_lastname = 'Tang'
-#saf_num = 308052
-
-
+## proposal_num = 308016
+## proposal_title = 'High Resolution Investigation of Shock Effects in Geologic Materials'
+## PI_lastname = 'Whitaker_2'
+## saf_num = 307462
+## 
 cycle = '2021_cycle3'
 
 # Set user data in bluesky
@@ -38,9 +36,8 @@ RE.md['proposal']  = {'proposal_num': str(proposal_num),
                       'saf_num': str(saf_num),
                       'cycle': str(cycle)}
 
-if 'TOUCHBEAMLINE' in os.environ and os.environ['TOUCHBEAMLINE'] == 1:
-    # Set user data in scanbroker
-    scanrecord.update_metadata()
+# Set user data in scanbroker
+scanrecord.update_metadata()
 
 # User data directory and simple scripts
 userdatadir = '/nsls2/xf05id1/experiments/' + str(cycle) + '/' + str(saf_num) + '_' + str(PI_lastname) + '/'
