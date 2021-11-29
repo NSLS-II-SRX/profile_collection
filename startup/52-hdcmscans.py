@@ -355,7 +355,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
             #                 pitch_lim[0],
             #                 pitch_lim[1],
             #                 pitch_num)
-            yield from adaptive_scan(det, 'sclr_i0', dcm.c2_fine,
+            yield from adaptive_scan(det, scaler, dcm.c2_fine,
                                      pitch_lim[0], pitch_lim[1],
                                      0.01, 0.1, 10000, True, md=scan_md)
         )
