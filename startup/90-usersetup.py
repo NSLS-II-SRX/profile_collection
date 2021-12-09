@@ -27,6 +27,16 @@ saf_num = 307307
 ## PI_lastname = 'Whitaker_2'
 ## saf_num = 307462
 ## 
+#proposal_num = 308999
+#proposal_title = 'Characterization of the main dosimetric trap in K-feldspar mineral grains by μ-XRF imaging and μ-XANES spectroscopy for application in infrared radiofluorescence (IR-RF) dating'
+#PI_lastname = 'Frouin'
+
+#saf_num = 308246
+#proposal_num = 306568
+#proposal_title = 'SPARK: Hands-on Student Research using Microspectroscopy at TES, XFM and SRX'
+#PI_lastname = 'Kroll'
+
+
 cycle = '2021_cycle3'
 
 # Set user data in bluesky
