@@ -206,10 +206,17 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     def fly_each_step(motor, step, row_start, row_stop):
         def move_to_start_fly():
             "See http://nsls-ii.github.io/bluesky/plans.html#the-per-step-hook"
+            # row_str = short_uid('row')
+            # yield from abs_set(xmotor, row_start, group=row_str)
+            # yield from one_1d_step([temp_nanoKB], motor, step)
+            # yield from bps.wait(group=row_str)
+
             row_str = short_uid('row')
-            yield from abs_set(xmotor, row_start, group=row_str)
-            yield from one_1d_step([temp_nanoKB], motor, step)
+            yield from bps.checkpoint()
+            yield from bps.abs_set(xmotor, row_start, group=row_str)
+            yield from bps.abs_set(motor, step, group=row_str)
             yield from bps.wait(group=row_str)
+            yield from bps.trigger_and_read([temp_nanoKB, motor])
 
         if verbose:
             t_mvstartfly = tic()
