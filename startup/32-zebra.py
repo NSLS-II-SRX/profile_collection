@@ -634,6 +634,7 @@ try:
     # flying_zebra = SRXFlyer1Axis(
     #     list(xs for xs in [xs] if xs is not None), sclr1, name="flying_zebra"
     # )
+    raise Exception
     microZebra = SRXZebra("XF:05IDD-ES:1{Dev:Zebra1}:", name="microZebra",
         read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
     )
