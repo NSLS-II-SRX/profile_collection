@@ -40,6 +40,6 @@ susp_dcm_bragg_temp = SuspendCeil(dcm.temp_pitch, 120, resume_thresh=118, sleep=
 
 # Install suspenders
 RE.install_suspender(susp_rc)
-RE.install_suspender(susp_shut_fe)
+#RE.install_suspender(susp_shut_fe)
 RE.install_suspender(susp_dcm_bragg_temp)
 # RE.install_suspender(susp_shut_testing)
