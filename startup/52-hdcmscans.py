@@ -256,7 +256,7 @@ class PairedCallback(QtAwareCallback):
         super().stop(doc)
 
 
-def peakup_fine(scaler='sclr_im', plot=True, shutter=True, use_calib=True,
+def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
                 fix_roll=True, fix_pitch=True):
     """
 
@@ -315,10 +315,14 @@ def peakup_fine(scaler='sclr_im', plot=True, shutter=True, use_calib=True,
 
     # Find approximate values
     # 2021-09-08
-    roll_guess = 0.210
+    # roll_guess = 0.210
+    # 2021-12-9, temp value after 30s power outage
+    roll_guess = 0.15
     # 2021-09-09
-    pitch_guess = -0.078
-
+    # pitch_guess = -0.078
+    # 2021-12-9, temp value after 30s power outage
+    pitch_guess = 0
+ 
 
     # Use calibration
     if (use_calib):
