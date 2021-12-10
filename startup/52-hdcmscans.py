@@ -315,9 +315,11 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
 
     # Find approximate values
     # 2021-09-08
-    roll_guess = 0.210
+    # roll_guess = 0.210
+    roll_guess = 0.150
     # 2021-09-09
-    pitch_guess = -0.078
+    # pitch_guess = -0.078
+    pitch_guess = 0.0
 
 
     # Use calibration
