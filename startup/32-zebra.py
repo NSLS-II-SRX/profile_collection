@@ -643,7 +643,7 @@ try:
     )
     # print('huge success!')
 except Exception as ex:
-    print("Cannot connect to Zebra. Continuing without device.\n", ex)
+    print("Cannot connect to microZebra. Continuing without device.\n", ex)
     flying_zebra = None
 
 
