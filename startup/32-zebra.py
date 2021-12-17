@@ -292,9 +292,9 @@ class SRXFlyer1Axis(Device):
         self.stage_sigs[self._encoder.output2.ttl.addr] = 31
         # self.stage_sigs[self._encoder.output2.ttl.addr] = 53
         # This is for the dexela
-        # self.stage_sigs[self._encoder.output4.ttl.addr] = 55
-        # This is for the xs2
         self.stage_sigs[self._encoder.output4.ttl.addr] = 31
+        # This is for the xs2
+        # self.stage_sigs[self._encoder.output4.ttl.addr] = 31
 
         self.stage_sigs[self._encoder.pc.enc_pos1_sync] = 1
         self.stage_sigs[self._encoder.pc.enc_pos2_sync] = 1
@@ -417,16 +417,21 @@ class SRXFlyer1Axis(Device):
         # Hopefully taken care of with decrement check above
 
         # For dexela, we will use time triggering in a pixel, not position
-        if "dexela" in dets_by_name:
-            self._encoder.output1.ttl.addr.put(52)
-            self._encoder.output3.ttl.addr.put(52)
-            self._encoder.pulse1.width.put(0.5 * dwell - 0.050)
-        else:
-            self._encoder.output1.ttl.addr.put(31)
-            # self._encoder.output3.ttl.addr.put(31)
-            self._encoder.output3.ttl.addr.put(36)
-            self._encoder.pulse3.input_addr.put(31)
-            self._encoder.pulse4.input_addr.put(31)
+        # if "dexela" in dets_by_name:
+        #     self._encoder.output1.ttl.addr.put(52)
+        #     self._encoder.output3.ttl.addr.put(52)
+        #     self._encoder.pulse1.width.put(0.5 * dwell - 0.050)
+        # else:
+        #     self._encoder.output1.ttl.addr.put(31)
+        #     # self._encoder.output3.ttl.addr.put(31)
+        #     self._encoder.output3.ttl.addr.put(36)
+        #     self._encoder.pulse3.input_addr.put(31)
+        #     self._encoder.pulse4.input_addr.put(31)
+
+        self._encoder.output1.ttl.addr.put(31)
+        self._encoder.output3.ttl.addr.put(36)
+        self._encoder.pulse3.input_addr.put(31)
+        self._encoder.pulse4.input_addr.put(31)
 
         self._encoder.pc.enc_pos1_sync.put(1)  # Scanner X
         self._encoder.pc.enc_pos2_sync.put(1)  # Scanner Y
