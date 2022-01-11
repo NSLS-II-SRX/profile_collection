@@ -24,6 +24,18 @@ from nslsii.areadetector.xspress3 import (
     build_detector_class
 )
 
+# JL
+# set up some logging to help with development
+import logging
+console_log_handler = logging.StreamHandler(stream=sys.stdout)
+console_log_handler.setLevel("DEBUG")
+console_log_handler.setLevel(logging.DEBUG)
+console_log_handler.setFormatter(
+    logging.Formatter("[%(levelname)s %(asctime)s.%(msecs)03d %(module)15s:%(lineno)5d] %(message)s")
+)
+logging.getLogger("bluesky").addHandler(console_log_handler)
+logging.getLogger("bluesky").setLevel(logging.DEBUG)
+
 
 try:
     from area_detector_handlers import HandlerBase
@@ -50,7 +62,7 @@ class BulkXspress(HandlerBase):
 db.reg.register_handler(BulkXspress.HANDLER_NAME, BulkXspress, overwrite=True)
 
 
-# JL copied from Xspress3FileStoreFlyable in 31-xspress3.py
+# JL copied Xspress3FileStoreFlyable in 31-xspress3.py
 # JL replaced Xspress3FileStore with CommunityXspress3FileStore
 class CommunityXspress3FileStoreFlyable(CommunityXspress3FileStore):
     def __init__(self, *args, **kwargs):
@@ -202,9 +214,9 @@ class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3
     hdf5 = Cpt(
         CommunityXspress3FileStoreFlyable,
         "HDF1:",
-        read_path_template="/nsls2/data/srx/assets/xspress3/%Y/%m/%d",
-        write_path_template="/nsls2/data/srx/assets/xspress3/%Y/%m/%d",
-        root="/nsls2/data/srx/assets/xspress3",
+        read_path_template="/nsls2/data/srx/legacy/%Y/%m/%d",
+        write_path_template="/nsls2/data/srx/legacy/%Y/%m/%d",
+        root="/nsls2/data/srx/legacy",
     )
 
     # this is used as a latch to put the xspress3 into 'bulk' mode
