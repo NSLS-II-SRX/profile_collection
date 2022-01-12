@@ -152,7 +152,8 @@ class CommunitySRXXspressTrigger(CommunityXspressTrigger):
             raise RuntimeError("not staged")
 
         self._status = DeviceStatus(self)
-        self.cam.erase.put(1)
+        # the next line causes a ~3s delay in the community IOC
+        #self.cam.erase.put(1)
         self._acquisition_signal.put(1, wait=False)
         trigger_time = ttime.time()
         if self._mode is SRXMode.step:
