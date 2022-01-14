@@ -26,15 +26,15 @@ from nslsii.areadetector.xspress3 import (
 
 # JL
 # set up some logging to help with development
-import logging
-console_log_handler = logging.StreamHandler(stream=sys.stdout)
-console_log_handler.setLevel("DEBUG")
-console_log_handler.setLevel(logging.DEBUG)
-console_log_handler.setFormatter(
-    logging.Formatter("[%(levelname)s %(asctime)s.%(msecs)03d %(module)15s:%(lineno)5d] %(message)s")
-)
-logging.getLogger("bluesky").addHandler(console_log_handler)
-logging.getLogger("bluesky").setLevel(logging.DEBUG)
+#import logging
+#console_log_handler = logging.StreamHandler(stream=sys.stdout)
+#console_log_handler.setLevel("DEBUG")
+#console_log_handler.setLevel(logging.DEBUG)
+#console_log_handler.setFormatter(
+#    logging.Formatter("[%(levelname)s %(asctime)s.%(msecs)03d %(module)15s:%(lineno)5d] %(message)s")
+#)
+#logging.getLogger("bluesky").addHandler(console_log_handler)
+#logging.getLogger("bluesky").setLevel(logging.DEBUG)
 
 
 try:
@@ -152,7 +152,7 @@ class CommunitySRXXspressTrigger(CommunityXspressTrigger):
             raise RuntimeError("not staged")
 
         self._status = DeviceStatus(self)
-        self.cam.erase.put(1)
+        #self.cam.erase.put(1)
         self._acquisition_signal.put(1, wait=False)
         trigger_time = ttime.time()
         if self._mode is SRXMode.step:
@@ -273,7 +273,8 @@ class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3
         # JL replaced xs.erase.put(0) with self.cam.erase.put(0)
         #    why was xs.erase.put(0) not self.erase.put(0) ?
         #xs.erase.put(0)
-        self.cam.erase.put(0)
+        # JL commented out the next line because it caused a significant delay in starting acqusitions
+        #self.cam.erase.put(0)
         # do the latching
         if self.fly_next.get():
             self.fly_next.put(False)

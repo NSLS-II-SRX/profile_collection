@@ -148,8 +148,9 @@ class CommunityXspress3FileStore(FileStorePluginBase, HDF5Plugin):
         logger.debug('Setting up hdf5 plugin: ioc path: %s filename: %s',
                      write_path, filename)
 
+        # JL commented the next two lines while troubleshooting a delay in nano_scan_and_fly
         logger.debug('Erasing old spectra')
-        self.parent.cam.erase.put(1, wait=True)
+        #self.parent.cam.erase.put(1, wait=True)
 
         # this must be set after self.settings.num_images because at the Epics
         # layer  there is a helpful link that sets this equal to that (but
