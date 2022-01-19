@@ -31,27 +31,6 @@ from hxntools.detectors.merlin import MerlinDetector
 from hxntools.handlers import register
 
 
-class BulkMerlin(BulkXspress):
-    HANDLER_NAME = 'MERLIN_FLY_STREAM_V1'
-    def __call__(self):
-        return self._handle['entry/instrument/detector/data'][:]
-
-
-class BulkMerlinDebug(BulkXspress):
-    # This is for data take in 'capture' mode, only used for debugging
-    # once.
-    HANDLER_NAME = 'MERLIN_FLY'
-    def __call__(self):
-        return self._handle['entry/instrument/detector/data'][1:]
-
-
-# needed to get at some debugging data
-db.reg.register_handler('MERLIN_FLY', BulkMerlinDebug,
-                        overwrite=True)
-db.reg.register_handler(BulkMerlin.HANDLER_NAME, BulkMerlin,
-                        overwrite=True)
-
-
 class MerlinFileStoreHDF5(FileStoreBase):
 
     _spec = 'TPX_HDF5'
@@ -85,7 +64,7 @@ class MerlinFileStoreHDF5(FileStoreBase):
     @property
     def filestore_spec(self):
         if self.parent._mode is SRXMode.fly:
-            return BulkMerlin.HANDLER_NAME
+            return 'MERLIN_FLY_STREAM_V1'
         return 'TPX_HDF5'
 
     def generate_datum(self, key, timestamp, datum_kwargs):

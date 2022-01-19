@@ -8,7 +8,6 @@ import datetime
 import ophyd
 from hxntools.detectors.dexela import (DexelaDetector,)
 from nslsii.detectors.xspress3 import (logger, )
-from databroker.assets.handlers import HandlerBase
 from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreHDF5IterativeWrite,
                                                  FileStoreTIFFSquashing,
@@ -25,25 +24,11 @@ from ophyd.areadetector import (AreaDetector, PixiradDetectorCam, ImagePlugin,
 from ophyd import Component as Cpt
 
 
-class BulkDexela(HandlerBase):
-    HANDLER_NAME = 'DEXELA_FLY_V1'
-
-    def __init__(self, resource_fn):
-        self._handle = h5py.File(resource_fn, 'r')
-
-    def __call__(self):
-        return self._handle['entry/instrument/detector/data'][:]
-
-
-db.reg.register_handler(BulkDexela.HANDLER_NAME, BulkDexela,
-                        overwrite=True)
-
-
 class DexelaFileStoreHDF5(FileStoreBase):
     @property
     def filestore_spec(self):
         if self.parent._mode is SRXMode.fly:
-            return BulkDexela.HANDLER_NAME
+            return 'DEXELA_FLY_V1'
         return 'TPX_HDF5'
 
     def __init__(self, *args, **kwargs):

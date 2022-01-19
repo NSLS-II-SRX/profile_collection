@@ -19,29 +19,10 @@ from nslsii.detectors.xspress3 import (
     Xspress3FileStore,
 )
 
-try:
-    from area_detector_handlers import HandlerBase
-    from area_detector_handlers.handlers import Xspress3HDF5Handler
-except ImportError:
-    from databroker.assets.handlers import Xspress3HDF5Handler, HandlerBase
-
 
 class SRXMode(Enum):
     step = 1
     fly = 2
-
-
-class BulkXspress(HandlerBase):
-    HANDLER_NAME = "XPS3_FLY"
-
-    def __init__(self, resource_fn):
-        self._handle = h5py.File(resource_fn, "r")
-
-    def __call__(self):
-        return self._handle["entry/instrument/detector/data"][:]
-
-
-db.reg.register_handler(BulkXspress.HANDLER_NAME, BulkXspress, overwrite=True)
 
 
 class Xspress3FileStoreFlyable(Xspress3FileStore):
@@ -56,8 +37,8 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
     @property
     def filestore_spec(self):
         if self.parent._mode is SRXMode.fly:
-            return BulkXspress.HANDLER_NAME
-        return Xspress3HDF5Handler.HANDLER_NAME
+            return 'XPS3_FLY'
+        return 'XSP3'
 
     def generate_datum(self, key, timestamp, datum_kwargs):
         if self.parent._mode is SRXMode.step:
@@ -146,17 +127,6 @@ class SRXXspressTrigger(XspressTrigger):
             raise Exception(f"unexpected mode {self._mode}")
         self._abs_trigger_count += 1
         return self._status
-
-
-class SrxXSP3Handler:
-    XRF_DATA_KEY = "entry/instrument/detector/data"
-
-    def __init__(self, filepath, **kwargs):
-        self._filepath = filepath
-
-    def __call__(self, **kwargs):
-        with h5py.File(self._filepath, "r") as f:
-            return np.asarray(f[self.XRF_DATA_KEY])
 
 
 class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
