@@ -269,6 +269,7 @@ class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3
         return ret
 
     def stage(self):
+        print("stage!")
         # Erase what is currently in the system
         # This prevents a single hot pixel in the upper-left corner of a map
         # JL replaced xs.erase.put(0) with self.cam.erase.put(0)
@@ -276,6 +277,12 @@ class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3
         #xs.erase.put(0)
         # JL commented out the next line because it caused a significant delay in starting acqusitions
         #self.cam.erase.put(0)
+        # JL added the next line, it is not pretty
+        self.previous_file_write_mode_value = self.hdf5.file_write_mode.get()
+        # JL added the next 2 lines
+        #   should use stage_sigs for file_write_mode?
+        self.hdf5.file_write_mode.put(1)
+        #self.hdf5.auto_save.put(1)  # using stage_sigs for this
         # do the latching
         if self.fly_next.get():
             self.fly_next.put(False)
@@ -283,7 +290,12 @@ class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3
         return super().stage()
 
     def unstage(self):
-        self.hdf5.capture.put(0)
+        print("unstage!")
+        # JL added the next two lines
+        #self.hdf5.auto_save.put(0)
+        self.hdf5.file_write_mode.put(self.previous_file_write_mode_value)
+        # JL removed the next line
+        #self.hdf5.capture.put(0)  # this PV un-sets itself
         try:
             ret = super().unstage()
         finally:

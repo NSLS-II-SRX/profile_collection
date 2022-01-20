@@ -139,7 +139,10 @@ class CommunityXspress3FileStore(FileStorePluginBase, HDF5Plugin):
             self.stage_sigs[self.parent.cam.trigger_mode] = 'Internal'
             self.stage_sigs[self.parent.cam.num_images] = spec_per_point
 
-        self.stage_sigs[self.auto_save] = 'No'
+        # JL experimenting with "Yes" for flyscanning
+        # originally 
+        #self.stage_sigs[self.auto_save] = 'No'
+        self.stage_sigs[self.auto_save] = 'Yes'
         logger.debug('Configuring other filestore stuff')
 
         logger.debug('Making the filename')
