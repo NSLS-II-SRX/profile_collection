@@ -16,8 +16,26 @@ from nslsii.detectors.xspress3 import (
     XspressTrigger,
     Xspress3Detector,
     Xspress3Channel,
-    Xspress3FileStore,
+    Xspress3FileStore,  #  JL use CommunityXspress3FileStore
 )
+
+# this is the community IOC package
+from nslsii.areadetector.xspress3 import (
+    build_detector_class
+)
+
+# JL
+# set up some logging to help with development
+#import logging
+#console_log_handler = logging.StreamHandler(stream=sys.stdout)
+#console_log_handler.setLevel("DEBUG")
+#console_log_handler.setLevel(logging.DEBUG)
+#console_log_handler.setFormatter(
+#    logging.Formatter("[%(levelname)s %(asctime)s.%(msecs)03d %(module)15s:%(lineno)5d] %(message)s")
+#)
+#logging.getLogger("bluesky").addHandler(console_log_handler)
+#logging.getLogger("bluesky").setLevel(logging.DEBUG)
+
 
 try:
     from area_detector_handlers import HandlerBase
@@ -44,7 +62,9 @@ class BulkXspress(HandlerBase):
 db.reg.register_handler(BulkXspress.HANDLER_NAME, BulkXspress, overwrite=True)
 
 
-class Xspress3FileStoreFlyable(Xspress3FileStore):
+# JL copied Xspress3FileStoreFlyable in 31-xspress3.py
+# JL replaced Xspress3FileStore with CommunityXspress3FileStore
+class CommunityXspress3FileStoreFlyable(CommunityXspress3FileStore):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -87,13 +107,13 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
         set_and_wait(self.enable, 1)
         sigs = OrderedDict(
             [
-                (self.parent.settings.array_callbacks, 1),
-                (self.parent.settings.image_mode, "Single"),
-                (self.parent.settings.trigger_mode, "Internal"),
+                (self.parent.cam.array_callbacks, 1),
+                (self.parent.cam.image_mode, "Single"),
+                (self.parent.cam.trigger_mode, "Internal"),
                 # In case the acquisition time is set very long
-                (self.parent.settings.acquire_time, 1),
-                # (self.parent.settings.acquire_period, 1),
-                (self.parent.settings.acquire, 1),
+                (self.parent.cam.acquire_time, 1),
+                # (self.parent.cam.acquire_period, 1),
+                (self.parent.cam.acquire, 1),
             ]
         )
 
@@ -118,7 +138,7 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
                 "external": "FileStore:",
                 "dtype": "array",
                 # TODO do not hard code
-                "shape": (self.parent.settings.num_images.get(), 3, 4096),
+                "shape": (self.parent.cam.num_images.get(), 3, 4096),
                 "source": self.prefix,
             }
             return {self.parent._f_key: spec}
@@ -126,20 +146,25 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
             return super().describe()
 
 
-class SRXXspressTrigger(XspressTrigger):
+class CommunitySRXXspressTrigger(CommunityXspressTrigger):
     def trigger(self):
         if self._staged != Staged.yes:
             raise RuntimeError("not staged")
 
         self._status = DeviceStatus(self)
-        self.settings.erase.put(1)
+        # the next line causes a ~3s delay in the community IOC
+        #self.cam.erase.put(1)
         self._acquisition_signal.put(1, wait=False)
         trigger_time = ttime.time()
         if self._mode is SRXMode.step:
-            for sn in self.read_attrs:
-                if sn.startswith("channel") and "." not in sn:
-                    ch = getattr(self, sn)
-                    self.dispatch(ch.name, trigger_time)
+            # community IOC ophyd xspress3
+            for channel in self.iterate_channels():
+                self.dispatch(channel.name, trigger_time)
+            # quantum IOC ophyd xspress3
+            #for sn in self.read_attrs:
+            #    if sn.startswith("channel") and "." not in sn:
+            #        ch = getattr(self, sn)
+            #        self.dispatch(ch.name, trigger_time)
         elif self._mode is SRXMode.fly:
             self.dispatch(self._f_key, trigger_time)
         else:
@@ -158,41 +183,41 @@ class SrxXSP3Handler:
         with h5py.File(self._filepath, "r") as f:
             return np.asarray(f[self.XRF_DATA_KEY])
 
+# build a community IOC xspress3 class with 4 channels
+CommunityXspress3_4Channel = build_detector_class(
+    channel_numbers=(1, 2, 3, 4),
+    mcaroi_numbers=(1, 2, 3, 4)
+)
 
-class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
-    # TODO: garth, the ioc is missing some PVs?
-    #   det_settings.erase_array_counters
-    #       (XF:05IDD-ES{Xsp:1}:ERASE_ArrayCounters)
-    #   det_settings.erase_attr_reset (XF:05IDD-ES{Xsp:1}:ERASE_AttrReset)
-    #   det_settings.erase_proc_reset_filter
-    #       (XF:05IDD-ES{Xsp:1}:ERASE_PROC_ResetFilter)
-    #   det_settings.update_attr (XF:05IDD-ES{Xsp:1}:UPDATE_AttrUpdate)
-    #   det_settings.update (XF:05IDD-ES{Xsp:1}:UPDATE)
-    roi_data = Cpt(PluginBase, "ROIDATA:")
+# replace Xspress3Detector with CommunityXspress3_4Channel
+#class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
+class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3_4Channel):
+    # provided by CommunityXspress3_4Channel
+    #roi_data = Cpt(PluginBase, "ROIDATA:")
+    #erase = Cpt(EpicsSignal, "ERASE")
+    #array_counter = Cpt(EpicsSignal, "ArrayCounter_RBV")
 
-    erase = Cpt(EpicsSignal, "ERASE")
-
-    array_counter = Cpt(EpicsSignal, "ArrayCounter_RBV")
-
+    # channel attributes are provided by CommunityXspress3_4Channel
     # Currently only using three channels. Uncomment these to enable more
-    channel1 = Cpt(Xspress3Channel, "C1_", channel_num=1, read_attrs=["rois"])
-    channel2 = Cpt(Xspress3Channel, "C2_", channel_num=2, read_attrs=["rois"])
-    channel3 = Cpt(Xspress3Channel, "C3_", channel_num=3, read_attrs=["rois"])
-    channel4 = Cpt(Xspress3Channel, "C4_", channel_num=4, read_attrs=["rois"])
+    #channel1 = Cpt(Xspress3Channel, "C1_", channel_num=1, read_attrs=["rois"])
+    #channel2 = Cpt(Xspress3Channel, "C2_", channel_num=2, read_attrs=["rois"])
+    #channel3 = Cpt(Xspress3Channel, "C3_", channel_num=3, read_attrs=["rois"])
+    #channel4 = Cpt(Xspress3Channel, "C4_", channel_num=4, read_attrs=["rois"])
     # channels:
     # channel5 = Cpt(Xspress3Channel, 'C5_', channel_num=5)
     # channel6 = Cpt(Xspress3Channel, 'C6_', channel_num=6)
     # channel7 = Cpt(Xspress3Channel, 'C7_', channel_num=7)
     # channel8 = Cpt(Xspress3Channel, 'C8_', channel_num=8)
 
-    create_dir = Cpt(EpicsSignal, "HDF5:FileCreateDir")
+    # replace HDF5:FileCreateDir with HDF1:FileCreateDir
+    create_dir = Cpt(EpicsSignal, "HDF1:FileCreateDir")
 
     hdf5 = Cpt(
-        Xspress3FileStoreFlyable,
-        "HDF5:",
-        read_path_template="/nsls2/data/srx/assets/xspress3/%Y/%m/%d",
-        write_path_template="/nsls2/data/srx/assets/xspress3/%Y/%m/%d",
-        root="/nsls2/data/srx/assets/xspress3",
+        CommunityXspress3FileStoreFlyable,
+        "HDF1:",
+        read_path_template="/nsls2/data/srx/legacy/%Y/%m/%d",
+        write_path_template="/nsls2/data/srx/legacy/%Y/%m/%d",
+        root="/nsls2/data/srx/legacy",
     )
 
     # this is used as a latch to put the xspress3 into 'bulk' mode
@@ -215,11 +240,13 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
                 "external_trig",
                 "total_points",
                 "spectra_per_point",
-                "settings",
+                "cam",  # replaced settings with cam
                 "rewindable",
             ]
         if read_attrs is None:
-            read_attrs = ["channel1", "channel2", "channel3", "channel4", "hdf5"]
+            # JL removed channels from read_attrs
+            #read_attrs = ["channel1", "channel2", "channel3", "channel4", "hdf5"]
+            read_attrs = ["hdf5"]
         super().__init__(
             prefix,
             configuration_attrs=configuration_attrs,
@@ -237,14 +264,25 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
     def stop(self, *, success=False):
         ret = super().stop()
         # todo move this into the stop method of the settings object?
-        self.settings.acquire.put(0)
+        self.cam.acquire.put(0)
         self.hdf5.stop(success=success)
         return ret
 
     def stage(self):
+        print("stage!")
         # Erase what is currently in the system
         # This prevents a single hot pixel in the upper-left corner of a map
-        xs.erase.put(0)
+        # JL replaced xs.erase.put(0) with self.cam.erase.put(0)
+        #    why was xs.erase.put(0) not self.erase.put(0) ?
+        #xs.erase.put(0)
+        # JL commented out the next line because it caused a significant delay in starting acqusitions
+        #self.cam.erase.put(0)
+        # JL added the next line, it is not pretty
+        self.previous_file_write_mode_value = self.hdf5.file_write_mode.get()
+        # JL added the next 2 lines
+        #   should use stage_sigs for file_write_mode?
+        self.hdf5.file_write_mode.put(1)
+        #self.hdf5.auto_save.put(1)  # using stage_sigs for this
         # do the latching
         if self.fly_next.get():
             self.fly_next.put(False)
@@ -252,7 +290,12 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
         return super().stage()
 
     def unstage(self):
-        self.hdf5.capture.put(0)
+        print("unstage!")
+        # JL added the next two lines
+        #self.hdf5.auto_save.put(0)
+        self.hdf5.file_write_mode.put(self.previous_file_write_mode_value)
+        # JL removed the next line
+        #self.hdf5.capture.put(0)  # this PV un-sets itself
         try:
             ret = super().unstage()
         finally:
@@ -261,24 +304,32 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
 
 
 try:
-    xs = SrxXspress3Detector("XF:05IDD-ES{Xsp:1}:", name="xs")
-    xs.channel1.rois.read_attrs = ["roi{:02}".format(j)
-                                   for j in [1, 2, 3, 4]]
-    xs.channel2.rois.read_attrs = ["roi{:02}".format(j)
-                                   for j in [1, 2, 3, 4]]
-    xs.channel3.rois.read_attrs = ["roi{:02}".format(j)
-                                   for j in [1, 2, 3, 4]]
-    xs.channel4.rois.read_attrs = ["roi{:02}".format(j)
-                                   for j in [1, 2, 3, 4]]
+    # JL replaced {Xsp:1}: with {Xsp:3}:det1:
+    #xs = SrxXspress3Detector("XF:05IDD-ES{Xsp:1}:", name="xs")
+    xs = CommunitySrxXspress3Detector("XF:05IDD-ES{Xsp:3}:", name="xs")
+    # JL commented the next 4 statements
+    #xs.channel1.rois.read_attrs = ["roi{:02}".format(j)
+    #                               for j in [1, 2, 3, 4]]
+    #xs.channel2.rois.read_attrs = ["roi{:02}".format(j)
+    #                               for j in [1, 2, 3, 4]]
+    #xs.channel3.rois.read_attrs = ["roi{:02}".format(j)
+    #                               for j in [1, 2, 3, 4]]
+    #xs.channel4.rois.read_attrs = ["roi{:02}".format(j)
+    #                               for j in [1, 2, 3, 4]]
     if os.getenv("TOUCHBEAMLINE", "0") == "1":
-        xs.settings.num_channels.put(4) #4 for ME4 detector
-        xs.channel1.vis_enabled.put(1)
-        xs.channel2.vis_enabled.put(1)
-        xs.channel3.vis_enabled.put(1)
-        xs.channel4.vis_enabled.put(1)
+        # JL replaced settings with cam
+        #xs.settings.num_channels.put(4) #4 for ME4 detector
+        xs.cam.num_channels.put(4) #4 for ME4 detector
+        # JL commented out the next 4 lines
+        #xs.channel1.vis_enabled.put(1)
+        #xs.channel2.vis_enabled.put(1)
+        #xs.channel3.vis_enabled.put(1)
+        #xs.channel4.vis_enabled.put(1)
         xs.hdf5.num_extra_dims.put(0)
 
-        xs.settings.configuration_attrs = [
+        # JL replaced settings with cam
+        #xs.settings.configuration_attrs = [
+        xs.cam.configuration_attrs = [
             "acquire_period",
             "acquire_time",
             "gain",
@@ -307,20 +358,28 @@ try:
         xs.hdf5.warmup()
 
         # Rename the ROIs
-        for i in range(1, 4):
-            ch = getattr(xs.channel1.rois, "roi{:02}.value".format(i))
-            ch.name = "ROI_{:02}".format(i)
-except TimeoutError:
-    xs = None
+        # JL commented this loop out
+        #   revisit this
+        #for i in range(1, 4):
+        #    ch = getattr(xs.channel1.rois, "roi{:02}.value".format(i))
+        #    ch.name = "ROI_{:02}".format(i)
+except TimeoutError as te:
+    # JL don't set xs = None during development, it is often unavailable but I want to look at it anyway
+    #xs = None
     print("\nCannot connect to xs. Continuing without device.\n")
+    # JL added this raise to help diagnose connection failures
+    raise te
 except Exception as ex:
-    xs = None
+    #xs = None
     print("\nUnexpected error connecting to xs.\n")
     print(ex, end="\n\n")
+    # JL added this raise to help diagnose errors while developing community ioc code
+    raise ex
 
 
 # Working xs2 detector
-class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
+# JL replaced SRXXspressTrigger with CommunitySRXXspressTrigger
+class SrxXspress3Detector2(CommunitySRXXspressTrigger, Xspress3Detector):
     # TODO: garth, the ioc is missing some PVs?
     #   det_settings.erase_array_counters
     #       (XF:05IDD-ES{Xsp:1}:ERASE_ArrayCounters)
@@ -344,7 +403,7 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
     create_dir = Cpt(EpicsSignal, "HDF5:FileCreateDir")
 
     hdf5 = Cpt(
-        Xspress3FileStoreFlyable,
+        CommunityXspress3FileStoreFlyable,  # JL replaced Xspress3FileStoreFlyable with CommunityXspress3FileStoreFlyable
         "HDF5:",
         read_path_template="/nsls2/xf05id1/data/2020-2/XS3MINI",
         write_path_template="/home/xspress3/data/SRX/2020-2",
