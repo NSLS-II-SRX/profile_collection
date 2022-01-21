@@ -123,11 +123,17 @@ def xanes_afterscan_plan(scanid, filename, roinum):
             roinum = [roinum]
         for i in roinum:
             roi_name = 'roi{:02}'.format(i)
+            # JL is this correct?
             roi_key = []
-            roi_key.append(getattr(xs.channel1.rois, roi_name).value.name)
-            roi_key.append(getattr(xs.channel2.rois, roi_name).value.name)
-            roi_key.append(getattr(xs.channel3.rois, roi_name).value.name)
-            roi_key.append(getattr(xs.channel4.rois, roi_name).value.name)
+            # JL what is .value.name with the community xspress3 IOC?
+            #roi_key.append(getattr(xs.channel1.rois, roi_name).value.name)
+            #roi_key.append(getattr(xs.channel2.rois, roi_name).value.name)
+            #roi_key.append(getattr(xs.channel3.rois, roi_name).value.name)
+            #roi_key.append(getattr(xs.channel4.rois, roi_name).value.name)
+            for xs_channel in xs.iterate_channels():
+                roi_key.append(
+                    xs_channel.get_mcaroi(mcaroi_number=roi_name).total_rbv.name
+                )
 
         [columnitem.append(roi) for roi in roi_key]
     if ('xs2' in h.start['detectors']):
@@ -160,10 +166,20 @@ def xanes_afterscan_plan(scanid, filename, roinum):
     if ('xs' in h.start['detectors']):
         for i in roinum:
             roi_name = 'roi{:02}'.format(i)
-            roisum = datatable[getattr(xs.channel1.rois, roi_name).value.name]
-            roisum = roisum + datatable[getattr(xs.channel2.rois, roi_name).value.name]
-            roisum = roisum + datatable[getattr(xs.channel3.rois, roi_name).value.name]
-            roisum = roisum + datatable[getattr(xs.channel4.rois, roi_name).value.name]
+            # JL (again) what is .value.name for the community xspress3 IOC?
+            # roisum = datatable[getattr(xs.channel1.rois, roi_name).value.name]
+            # roisum = roisum + datatable[getattr(xs.channel2.rois, roi_name).value.name]
+            # roisum = roisum + datatable[getattr(xs.channel3.rois, roi_name).value.name]
+            # roisum = roisum + datatable[getattr(xs.channel4.rois, roi_name).value.name]
+            roisum = sum(
+                [
+                    datatable[
+                        xs_channel.get_mcaroi(mcaroi_number=roinum).total_rbv.name
+                    ]
+                    for xs_channel
+                    in xs.iterate_channels()
+                ]
+            )
             usercolumnitem['If-{:02}'.format(i)] = roisum
             usercolumnitem['If-{:02}'.format(i)].round(0)
     if ('xs2' in h.start['detectors']):
@@ -288,14 +304,22 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     # Setup Raw data
     livetableitem = ['energy_energy', 'sclr_i0', 'sclr_it']
     roi_name = 'roi{:02}'.format(roinum[0])
-    roi_key = []
-    roi_key.append(getattr(det_xs.channel1.rois, roi_name).value.name)
-    try:
-        roi_key.append(getattr(det_xs.channel2.rois, roi_name).value.name)
-        roi_key.append(getattr(det_xs.channel3.rois, roi_name).value.name)
-        roi_key.append(getattr(det_xs.channel4.rois, roi_name).value.name)
-    except NameError:
-        pass
+
+    # roi_key = []
+    # roi_key.append(getattr(det_xs.channel1.rois, roi_name).value.name)
+    # try:
+    #     roi_key.append(getattr(det_xs.channel2.rois, roi_name).value.name)
+    #     roi_key.append(getattr(det_xs.channel3.rois, roi_name).value.name)
+    #     roi_key.append(getattr(det_xs.channel4.rois, roi_name).value.name)
+    # except NameError:
+    #     pass
+    # the following code will fail if det_xs is not a new xspress3 IOC ophyd object
+    roi_key = [
+        det_xs_channel.get_mcaroi(mcaroi_number=roinum[0]).total_rbv.name
+        for det_xs_channel
+        in det_xs.iterate_channels()
+    ]
+
     livetableitem.append(roi_key[0])
     livecallbacks.append(LiveTable(livetableitem))
     liveploty = roi_key[0]

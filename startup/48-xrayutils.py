@@ -215,6 +215,75 @@ def clearroi(roinum=None):
             cpt.kind = 'omitted'
 
 
+def community_xspress3_set_mcaroi(roinum, element, edge=None, det=None):
+    '''
+    Set energy ROIs for Vortex SDD.
+    Selects elemental edge given current energy if not provided.
+    roinum      [1,2,3]     ROI number
+    element     <symbol>    element symbol for target energy
+    edge                    optional:  ['ka1', 'ka2', 'kb1', 'la1', 'la2',
+                                        'lb1', 'lb2', 'lg1', 'ma1']
+    '''
+    cur_element = xrfC.XrfElement(element)
+    if edge is None:
+        for e in ['ka1', 'ka2', 'kb1', 'la1', 'la2',
+                  'lb1', 'lb2', 'lg1', 'ma1']:
+            if cur_element.emission_line[e] < energy.energy.get()[1]:
+                edge = 'e'
+                break
+    else:
+        e = edge
+
+    e_ch = int(cur_element.emission_line[e] * 1000)
+    if det is not None:
+        # we have been given an xspress3 that is not xs
+        # look only at channel01
+        # why???
+        channels = [det.channels.channel01, ]
+        #mcaroi = det.channels.channel01.get_mcaroi(
+        #    mcaroi_number=roinum
+        #)
+        #mcaroi.configure_mcaroi(
+        #    min_x=e_ch-100,
+        #    size_x=200,
+        #    roi_name=f"{element}_{e}"
+        #)
+        #mcaroi.kind = "hinted"
+    else:
+        channels = list(xs.iterate_channels())
+
+    for channel in channels:
+        mcaroi = channel.get_mcaroi(
+            mcaroi_number=roinum
+        )
+        mcaroi.configure_mcaroi(
+            min_x=e_ch-100,
+            size_x=200,
+            roi_name=f"{element}_{e}"
+        )
+        mcaroi.kind = "hinted"
+    print("ROI{} set for {}-{} edge.".format(roinum, element, e))
+
+
+def community_xspress3_clear_mcaroi(roinum=None):
+    if roinum is None:
+        roinum = [1, 2, 3]
+    try:
+        roinum = list(roinum)
+    except TypeError:
+        roinum = [roinum]
+
+    # xs.channel1.rois.roi01.clear
+    for channel in xs.iterate_channels():
+    #for d in [xs.channel1.rois, xs.channel2.rois, xs.channel3.rois, xs.channel4.rois]:
+        for mcaroi in channel.iterate_mcarois():
+        #for roi in roinum:
+            #cpt = getattr(d, f'roi{roi:02d}')
+            #cpt.clear()
+            mcaroi.clear()
+            mcaroi.kind = "omitted"
+
+
 def getemissionE(element, edge=None):
     cur_element = xrfC.XrfElement(element)
     if edge is None:

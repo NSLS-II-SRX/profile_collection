@@ -52,6 +52,13 @@ def calc_com(run_start_uid, roi=None):
         # NEED TO CONFIRM VALUES!
         roi = [xs.channel1.rois.roi_low, xs.channel1.rois.roi_high]
         # NEED TO CONFIRM!
+        # JL this is close but not quite right
+        roi = [
+            mcaroi.min_x.get()
+            for mcaroi
+            in xs.channels.channel01.iterate_mcarois()
+        ]
+        
         # By default, do both low/high values reset to zero?
         if (roi[1] == 0):
             roi[1] = 4096
