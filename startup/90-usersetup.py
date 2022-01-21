@@ -16,9 +16,14 @@ proposal_num = 308774
 proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
 saf_num = 307307
- 
 
-cycle = '2021_cycle3'
+#proposal_num = 307833
+#proposal_title = 'Quantifying thermodynamically induced reaction non-uniformity in thick battery electrodes'
+#PI_lastname = 'Tang'
+#saf_num = 307001
+
+
+cycle = '2022_cycle1'
 
 # Set user data in bluesky
 RE.md['proposal']  = {'proposal_num': str(proposal_num),
@@ -27,12 +32,15 @@ RE.md['proposal']  = {'proposal_num': str(proposal_num),
                       'saf_num': str(saf_num),
                       'cycle': str(cycle)}
 
-# Set user data in scanbroker
-scanrecord.update_metadata()
+if 'TOUCHBEAMLINE' in os.environ and os.environ['TOUCHBEAMLINE'] == 1:
+    # Set user data in scanbroker
+    scanrecord.update_metadata()
 
 # User data directory and simple scripts
-userdatadir = '/nsls2/xf05id1/experiments/' + str(cycle) + '/' + str(saf_num) + '_' + str(PI_lastname) + '/'
-scriptdir = '/nsls2/xf05id1/shared/src/bluesky_scripts/'
+# userdatadir = '/nsls2/xf05id1/experiments/' + str(cycle) + '/' + str(saf_num) + '_' + str(PI_lastname) + '/'
+userdatadir = '/nsls2/data/srx/legacy/xf05id1/experiments/' + str(cycle) + '/' + str(saf_num) + '_' + str(PI_lastname) + '/'
+# scriptdir = '/nsls2/xf05id1/shared/src/bluesky_scripts/'
+scriptdir = '/nsls2/data/srx/legacy/xf05id1/shared/src/bluesky_scripts/'
 
 # Create the user directory
 try:
@@ -54,11 +62,11 @@ for f in ['simple_batch.py','fly_batch.py']:
 
 # Update the symbolic link to the data
 try:
-    os.unlink('/nsls2/xf05id1/shared/current_user_data')
+    os.unlink('/nsls2/data/srx/legacy/xf05id1/shared/current_user_data')
 except FileNotFoundError:
     print("[W] Previous user data directory link did not exist!")
 
-os.symlink(userdatadir, '/nsls2/xf05id1/shared/current_user_data')
+os.symlink(userdatadir, '/nsls2/data/srx/legacy/xf05id1/shared/current_user_data')
 
 
 def get_stock_md(scan_md):
