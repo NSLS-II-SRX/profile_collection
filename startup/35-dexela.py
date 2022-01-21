@@ -141,10 +141,11 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
                configuration_attrs=[],
                # write_path_template='Z:\\%Y\\%m\\%d\\',
                # write_path_template='C:\\temp\\dexela\\%Y\\%m\\%d\\',
-               write_path_template='C:\\data\\305921_Kiss\\%Y\\%m\\%d\\',
+               write_path_template='W:\\legacy\\dexela\\%Y\\%m\\%d\\',
                # write_path_template='C:\\temp\\write_here\\',
-               read_path_template='/nsls2/xf05id1/XF05ID1/dexela/%Y/%m/%d/',
-               root='/nsls2/xf05id1/XF05ID1/dexela/')
+               # read_path_template='/nsls2/xf05id1/XF05ID1/dexela/%Y/%m/%d/',
+               read_path_template='/nsls2/data/srx/legacy/dexela/%Y/%m/%d/',
+               root='/nsls2/data/srx/legacy/dexela/')
     # this is used as a latch to put the xspress3 into 'bulk' mode
     # for fly scanning.  Do this is a signal (rather than as a local variable
     # or as a method so we can modify this as part of a plan
