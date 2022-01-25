@@ -31,7 +31,8 @@ This program provides functionality to calibrate HDCM energy:
     currently, the xanes needs to be collected on roi1 in xrf mode
 '''
 
-def mono_calib(Element, acqtime=1.0, peakup=False):
+def mono_calib(Element, acqtime=1.0, peakup=False,
+               peakup_calib=True):
     """
     SRX mono_calib(Element)
 
@@ -53,12 +54,18 @@ def mono_calib(Element, acqtime=1.0, peakup=False):
 
     getemissionE(Element)
     EnergyX = getbindingE(Element)
-    energy.move(EnergyX)
-    setroi(1,Element)
+    # energy.move(EnergyX)
+    yield from mov(energy, EnergyX)
+    setroi(1, Element)
     if peakup:
         yield from bps.sleep(5)
-        yield from peakup_fine(use_calib=False)
-    yield from xanes_plan(erange=[EnergyX-50,EnergyX+50],estep=[1.0], samplename=f'{Element}Foil',filename=f'{Element}Foilstd',acqtime=acqtime, shutter=True)
+        yield from peakup_fine(use_calib=peakup_calib)
+    yield from xanes_plan(erange=[EnergyX-50,EnergyX+50],
+                          estep=[1.0],
+                          samplename=f'{Element}Foil',
+                          filename=f'{Element}Foilstd',
+                          acqtime=acqtime,
+                          shutter=True)
 
 def scanderive(xaxis, yaxis, ax, xlabel='', ylabel='', title=''):
     dyaxis = np.gradient(yaxis, xaxis)
@@ -316,11 +323,15 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # Find approximate values
     # 2021-09-08
     # roll_guess = 0.210
-    roll_guess = 0.150
+    # 2021-12-9, temp value after 30s power outage
+    roll_guess = 0.15
     # 2021-09-09
     # pitch_guess = -0.078
-    pitch_guess = 0.0
-
+    # 2021-12-9, temp value after 30s power outage
+    # pitch_guess = 0
+    # 2022-1-21
+    pitch_guess = 0.072
+ 
 
     # Use calibration
     if (use_calib):
@@ -357,6 +368,9 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
             #                 pitch_lim[0],
             #                 pitch_lim[1],
             #                 pitch_num)
+            # yield from adaptive_scan(det, 'sclr_i0', dcm.c2_fine,
+            #                          pitch_lim[0], pitch_lim[1],
+            #                          0.01, 0.1, 10000, True, md=scan_md)
             yield from adaptive_scan(det, scaler, dcm.c2_fine,
                                      pitch_lim[0], pitch_lim[1],
                                      0.01, 0.1, 10000, True, md=scan_md)

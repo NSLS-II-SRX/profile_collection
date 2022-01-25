@@ -109,7 +109,7 @@ def export_sis_data(ion, filepath, zebra):
         im = ion.mca3.get(timeout=5.0)
         it = ion.mca4.get(timeout=5.0)
         if len(i) != N:
-            print(f'Nope :-( Only received {len(i)}/{N} points.')
+            print(f'Nope. Only received {len(i)}/{N} points.')
 
     correct_length = zebra.pc.data.num_down.get()
     # Only consider even points

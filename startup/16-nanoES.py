@@ -84,6 +84,16 @@ class SRXNanoTemp(Device):
 temp_nanoKB = SRXNanoTemp('XF:05IDD-ES{LS:1-Chan:', name='temp_nanoKB')
 
 
+# Lakeshore temperature monitors
+class SRXNanoInterferometer(Device):
+    posX = Cpt(EpicsSignalRO, 'POS_0')
+    posY = Cpt(EpicsSignalRO, 'POS_1')
+    posZ = Cpt(EpicsSignalRO, 'POS_2')
+
+
+nanoKB_interferometer = SRXNanoInterferometer('XF:05IDD-ES:1{PICOSCALE:1}', name='nanoKB_interferometer')
+
+
 # Center scanner
 # Move the coarse stages and center the nPoint scanner
 def center_scanner():

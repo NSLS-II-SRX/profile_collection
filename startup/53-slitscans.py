@@ -399,15 +399,24 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
             return f_combo
         
         def line_fit(x, y):
+            # p_guess = [0.5 * np.amax(y),
+            #            1.000,
+            #            0.5 * (x[0] + x[-1]) - 2.5,
+            #            np.amin(y) + 0.5 * np.amax(y),
+            #            -0.5 * np.amax(y),
+            #            1.000,
+            #            0.5 * (x[0] + x[-1]) + 2.5,
+            #            np.amin(y) + 0.5 * np.amax(y)]       
             p_guess = [0.5 * np.amax(y),
-                       1.000,
-                       0.5 * (x[0] + x[-1]) - 2.5,
-                       np.amin(y) + 0.5 * np.amax(y),
+                       .25,
+                       0.5 * (x[0] + x[-1]) - 1.0,
+                       0,
                        -0.5 * np.amax(y),
-                       1.000,
-                       0.5 * (x[0] + x[-1]) + 2.5,
-                       np.amin(y) + 0.5 * np.amax(y)]       
+                       .25,
+                       0.5 * (x[0] + x[-1]) + 1.0,
+                       0]       
             try:
+                print(p_guess)
                 popt, _ = curve_fit(f_two_erfs, x, y, p0=p_guess)
             except:
                 print('Raw fit failed.')
@@ -455,7 +464,8 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
         print(f'\tActuator should move by {actuator_move_h:7.3f} um.')
         print(f'\tLine feature should move {line_move_h:7.3f} um for h mirror pitch correction')
 
-    if (np.abs(defocus) < 100 or orthogonality == 1):
+    #if (np.abs(defocus) < 100 or orthogonality == 1):
+    if orthogonality == 1:
         delta_fine_pitch = calpoly_fit[0][0]/conversion_factor_orth*1e-3*pitch_motion_conversion
         delta_theta_quad = calpoly_fit[0][0]/conversion_factor_orth
         delta_focal_plane_z = delta_theta_quad*1e-3/C_theta*C_f
@@ -492,11 +502,11 @@ def focusKB(direction, **kwargs):
     if 'hor' in direction.lower():
         kwargs.setdefault('scan_motor', nano_stage.sx)
         kwargs.setdefault('slit_motor', jjslits.h_trans)
-        slit_range = 0.500
+        slit_range = 0.400
         kwargs.setdefault('slit_stepsize', 0.05)
         kwargs.setdefault('slitgap_motor', jjslits.h_gap)
         kwargs.setdefault('slit_gap', 0.05)
-        N = 11
+        N = 9
     elif 'ver' in direction.lower():
         kwargs.setdefault('scan_motor', nano_stage.sy)
         kwargs.setdefault('slit_motor', jjslits.v_trans)
@@ -506,16 +516,17 @@ def focusKB(direction, **kwargs):
         kwargs.setdefault('slit_gap',  0.10)
         N = 11
     else:
-        print("This is for vertical or horizontal scans. Please choose one of these directions")
+        print("This is for vertical or horizontal scans. Please choose one of these directions\n")
 
-    kwargs.setdefault('scan_start', -8)
-    kwargs.setdefault('scan_stop', 8)
-    kwargs.setdefault('scan_stepsize', 0.050)
+    kwargs.setdefault('scan_start', -10)
+    kwargs.setdefault('scan_stop', 10)
+    kwargs.setdefault('scan_stepsize', 0.10)
     kwargs.setdefault('acqtime', 0.100)
     
     slit_center = kwargs['slit_motor'].user_readback.get()
     kwargs.setdefault('slit_start', slit_center - 0.5 * slit_range)
     kwargs.setdefault('slit_stop', slit_center + 0.5 * slit_range)
+    print(f'start from slit center: {slit_center}\n')
 
     # print(*kwargs)
     uids = yield from slit_nanoflyscan(**kwargs)

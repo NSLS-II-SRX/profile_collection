@@ -22,6 +22,11 @@ susp_cryo = SuspendCeil(cryo_v19, 0.8, resume_thresh=0.2, sleep=15*60,
                         pre_plan=list(shuttergenerator(shut_b, 'Close')),
                         post_plan=list(shuttergenerator(shut_b, 'Open')))
 
+# Testing suspenders using Filter box
+susp_shut_testing = SuspendBoolHigh(EpicsSignalRO(attenuators.Fe_shutter.pvname), sleep=5,
+                              pre_plan=list(shuttergenerator(shut_d, 1)),
+                              post_plan=list(shuttergenerator(shut_d, 0)))
+
 
 # Shutter status suspender
 susp_shut_fe = SuspendBoolHigh(EpicsSignalRO(shut_fe.status.pvname), sleep=10)
@@ -35,5 +40,6 @@ susp_dcm_bragg_temp = SuspendCeil(dcm.temp_pitch, 120, resume_thresh=118, sleep=
 
 # Install suspenders
 RE.install_suspender(susp_rc)
-RE.install_suspender(susp_shut_fe)
+#RE.install_suspender(susp_shut_fe)
 RE.install_suspender(susp_dcm_bragg_temp)
+# RE.install_suspender(susp_shut_testing)
