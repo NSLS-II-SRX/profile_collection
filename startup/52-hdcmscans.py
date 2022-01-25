@@ -31,7 +31,8 @@ This program provides functionality to calibrate HDCM energy:
     currently, the xanes needs to be collected on roi1 in xrf mode
 '''
 
-def mono_calib(Element, acqtime=1.0, peakup=False):
+def mono_calib(Element, acqtime=1.0, peakup=False,
+               peakup_calib=True):
     """
     SRX mono_calib(Element)
 
@@ -53,12 +54,18 @@ def mono_calib(Element, acqtime=1.0, peakup=False):
 
     getemissionE(Element)
     EnergyX = getbindingE(Element)
-    energy.move(EnergyX)
-    setroi(1,Element)
+    # energy.move(EnergyX)
+    yield from mov(energy, EnergyX)
+    setroi(1, Element)
     if peakup:
         yield from bps.sleep(5)
-        yield from peakup_fine(use_calib=False)
-    yield from xanes_plan(erange=[EnergyX-50,EnergyX+50],estep=[1.0], samplename=f'{Element}Foil',filename=f'{Element}Foilstd',acqtime=acqtime, shutter=True)
+        yield from peakup_fine(use_calib=peakup_calib)
+    yield from xanes_plan(erange=[EnergyX-50,EnergyX+50],
+                          estep=[1.0],
+                          samplename=f'{Element}Foil',
+                          filename=f'{Element}Foilstd',
+                          acqtime=acqtime,
+                          shutter=True)
 
 def scanderive(xaxis, yaxis, ax, xlabel='', ylabel='', title=''):
     dyaxis = np.gradient(yaxis, xaxis)
@@ -321,7 +328,9 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # 2021-09-09
     # pitch_guess = -0.078
     # 2021-12-9, temp value after 30s power outage
-    pitch_guess = 0
+    # pitch_guess = 0
+    # 2022-1-21
+    pitch_guess = 0.072
  
 
     # Use calibration
