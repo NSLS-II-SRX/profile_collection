@@ -166,7 +166,7 @@ for i in interestinglist:
     elements[i] = xrfC.XrfElement(i)
 
 
-def setroi(roinum, element, edge=None, det=None):
+def setroi_quantum(roinum, element, edge=None, det=None):
     '''
     Set energy ROIs for Vortex SDD.
     Selects elemental edge given current energy if not provided.
@@ -199,7 +199,7 @@ def setroi(roinum, element, edge=None, det=None):
     print("ROI{} set for {}-{} edge.".format(roinum, element, e))
 
 
-def clearroi(roinum=None):
+def clearroi_quantum(roinum=None):
     if roinum is None:
         roinum = [1, 2, 3]
     try:
@@ -215,7 +215,7 @@ def clearroi(roinum=None):
             cpt.kind = 'omitted'
 
 
-def community_xspress3_set_mcaroi(roinum, element, edge=None, det=None):
+def setroi(roinum, element, edge=None, det=None):
     '''
     Set energy ROIs for Vortex SDD.
     Selects elemental edge given current energy if not provided.
@@ -238,7 +238,7 @@ def community_xspress3_set_mcaroi(roinum, element, edge=None, det=None):
     if det is not None:
         # we have been given an xspress3 that is not xs
         # look only at channel01
-        # why???
+        # why?
         channels = [det.channels.channel01, ]
         #mcaroi = det.channels.channel01.get_mcaroi(
         #    mcaroi_number=roinum
@@ -250,38 +250,53 @@ def community_xspress3_set_mcaroi(roinum, element, edge=None, det=None):
         #)
         #mcaroi.kind = "hinted"
     else:
+        # all channels on xs
         channels = list(xs.iterate_channels())
 
     for channel in channels:
         mcaroi = channel.get_mcaroi(
             mcaroi_number=roinum
         )
+        # TODO: add eV-to-bin conversion to xspress3 class
         mcaroi.configure_mcaroi(
-            min_x=e_ch-100,
-            size_x=200,
+            min_x=(e_ch-100)/10,
+            size_x=200/10,
             roi_name=f"{element}_{e}"
         )
         mcaroi.kind = "hinted"
     print("ROI{} set for {}-{} edge.".format(roinum, element, e))
 
 
-def community_xspress3_clear_mcaroi(roinum=None):
+def clearroi(roinum=None, verbose=False):
     if roinum is None:
-        roinum = [1, 2, 3]
-    try:
-        roinum = list(roinum)
-    except TypeError:
-        roinum = [roinum]
+        # leave roinum as None
+        # it will be handled below so that all
+        #   mcarois on each channel will be cleared
+        pass
+    else:
+        try:
+            roinum = list(roinum)
+        except TypeError:
+            roinum = [roinum]
 
-    # xs.channel1.rois.roi01.clear
     for channel in xs.iterate_channels():
-    #for d in [xs.channel1.rois, xs.channel2.rois, xs.channel3.rois, xs.channel4.rois]:
-        for mcaroi in channel.iterate_mcarois():
-        #for roi in roinum:
-            #cpt = getattr(d, f'roi{roi:02d}')
-            #cpt.clear()
+        if roinum is None:
+            # clear all mcarois for this channel
+            roinums_to_clear = list(channel.mcaroi_numbers)
+        else:
+            # the user gave a single mcaroi number or a list
+            #   of mcaroi numbers, we can just use roinum
+            roinums_to_clear = roinum
+        for mcaroi_number in roinums_to_clear:
+            mcaroi = channel.get_mcaroi(mcaroi_number=mcaroi_number)
             mcaroi.clear()
+            # TODO: add the following lines to mcaroi.clear()
+            mcaroi.min_x.put(0)
+            mcaroi.size_x.put(0)
+            mcaroi.roi_name.put("")
             mcaroi.kind = "omitted"
+            if verbose:
+                print(f"cleared {mcaroi}")
 
 
 def getemissionE(element, edge=None):

@@ -428,13 +428,14 @@ def nano_xrf(xstart, xstop, xstep,
         scan_md['scan']['merlin'] = {'merlin_exp_time' : dwell,
                                      'merlin_exp_period' : dwell + 0.005}
 
-    # LiveGrid
+    # LiveTable
     livecallbacks = []
-    livecallbacks.append(LiveTable([xmotor.name, ymotor.name]))
-    roi_name = 'roi{:02}'.format(1)
-    
+
     # roi_key = getattr(xs.channel1.rois, roi_name).value.name
     roi_key = xs.channels.channel01.get_mcaroi(mcaroi_number=1).total_rbv.name
+    livecallbacks.append(LiveTable([xmotor.name, ymotor.name, roi_key]))
+    # livetableitem.append(roi_key)
+    # roi_name = 'roi{:02}'.format(1)
 
     livecallbacks.append(LiveGrid((ynum, xnum), roi_key,
                                   clim=None, cmap='viridis',

@@ -184,14 +184,14 @@ class SrxXSP3Handler:
             return np.asarray(f[self.XRF_DATA_KEY])
 
 # build a community IOC xspress3 class with 4 channels
-CommunityXspress3_4Channel = build_detector_class(
-    channel_numbers=(1, 2, 3, 4),
+CommunityXspress3_8Channel = build_detector_class(
+    channel_numbers=(1, 2, 3, 4, 5, 6, 7, 8),
     mcaroi_numbers=(1, 2, 3, 4)
 )
 
 # replace Xspress3Detector with CommunityXspress3_4Channel
 #class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
-class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3_4Channel):
+class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3_8Channel):
     # provided by CommunityXspress3_4Channel
     #roi_data = Cpt(PluginBase, "ROIDATA:")
     #erase = Cpt(EpicsSignal, "ERASE")
@@ -243,16 +243,26 @@ class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3
                 "cam",  # replaced settings with cam
                 "rewindable",
             ]
-        if read_attrs is None:
-            # JL removed channels from read_attrs
-            #read_attrs = ["channel1", "channel2", "channel3", "channel4", "hdf5"]
-            read_attrs = ["hdf5"]
         super().__init__(
             prefix,
             configuration_attrs=configuration_attrs,
             read_attrs=read_attrs,
             **kwargs,
         )
+        if read_attrs is None:
+            pass
+            # JL removed channels from read_attrs
+            #read_attrs = ["channel1", "channel2", "channel3", "channel4", "hdf5"]
+            # JL read all rois on all channels
+            #read_attrs = [
+            #    xs_mcaroi.total_rbv.name
+            #    for xs_channel
+            #    in self.iterate_channels()
+            #    for xs_mcaroi
+            #    in xs_channel.iterate_mcarois()
+            #]
+            #read_attrs.append("hdf5")
+            #print(f"read_attrs: {read_attrs}")
         # this is possiblely one too many places to store this
         # in the parent class it looks at if the extrenal_trig signal is high
         self._mode = SRXMode.step
@@ -316,10 +326,29 @@ try:
     #                               for j in [1, 2, 3, 4]]
     #xs.channel4.rois.read_attrs = ["roi{:02}".format(j)
     #                               for j in [1, 2, 3, 4]]
+
+    # the next line worked!
+    # xs.read_attrs = ["channels.channel01.mcarois.mcaroi01.total_rbv"]    
+    # but putting all channels, all mcarois in one list did not work
+
+    # add all channel.channelNN to xs.read_attrs 
+    read_channel_attrs = [f"channels.channel{ch:02}" for ch in xs.channel_numbers]
+    read_channel_attrs.append("hdf5")
+    print(f"read_channel_attrs: {read_channel_attrs}")
+    xs.read_attrs = read_channel_attrs
+    print(f"xs.read_attrs: {xs.read_attrs}")
+
+    # add all mcarois.mcaroiNN.total_rbv to each channelMM.read_attrs
+    for xs_channel in xs.iterate_channels():
+        mcaroi_read_attrs = []
+        for xs_mcaroi in xs_channel.iterate_mcarois():
+            mcaroi_read_attrs = [f"mcarois.mcaroi{m:02}.total_rbv" for m in range(1, 5)]
+        xs_channel.read_attrs = mcaroi_read_attrs
+
     if os.getenv("TOUCHBEAMLINE", "0") == "1":
         # JL replaced settings with cam
         #xs.settings.num_channels.put(4) #4 for ME4 detector
-        xs.cam.num_channels.put(4) #4 for ME4 detector
+        xs.cam.num_channels.put(xs.get_channel_count()) #4 for ME4 detector
         # JL commented out the next 4 lines
         #xs.channel1.vis_enabled.put(1)
         #xs.channel2.vis_enabled.put(1)

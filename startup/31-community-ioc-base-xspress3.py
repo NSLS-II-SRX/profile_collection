@@ -1,5 +1,7 @@
 print(f"Loading {__file__}...")
   
+import re
+
 from databroker.assets.handlers import Xspress3HDF5Handler
 
 from ophyd import EpicsSignal
@@ -34,18 +36,43 @@ class CommunityXspress3FileStore(FileStorePluginBase, HDF5Plugin):
 
         self._filestore_res = None
         
-        # JL use the new channel methods
-        self.channels = list(range(1, len([_ for _ in det.component_names
-                                           if _.startswith('chan')]) + 1))
+        # JL replace self.channels with self.parent.iterate_channels()
+        # self.channels is a list of channel indices (not strictly numbers
+        #   because the list is a range from 1 to the number of channels)
+        self.channels = list(
+            range(
+                1, 
+                len(
+                    [
+                        _ 
+                        for _ 
+                        in det.component_names
+                        if _.startswith('chan')
+                    ]
+                ) + 1
+            )
+        )
 
         # this was in original code, but I kinda-sorta nuked because
         # it was not needed for SRX and I could not guess what it did
         self._master = None
 
         self._config_time = config_time
+
+        # JL add this for parsing channel numbers from full ophyd component name
+        self._channel_number_pattern = re.compile(r"_channel(?P<channel_number>\d+)")
+
         # JL probably need to handle these differently
-        self.mds_keys = {chan: mds_key_format.format(self=self, chan=chan)
-                         for chan in self.channels}
+        # self.mds_keys = {
+        #     chan: mds_key_format.format(self=self, chan=chan)
+        #     for chan
+        #     in self.channels
+        # }
+        self.mds_keys = {
+            channel.channel_number: mds_key_format.format(self=self, chan=channel.channel_number)
+            for channel
+            in self.parent.iterate_channels()
+        }
 
     def stop(self, success=False):
         ret = super().stop(success=success)
@@ -94,15 +121,46 @@ class CommunityXspress3FileStore(FileStorePluginBase, HDF5Plugin):
 
         return super().unstage()
 
-    # JL this method is overridden in CommunityXspress3FileStoreFlyable
-    #   so I'm leaving this alone for now
+    # JL this method is used by step scans
+    # using the xspress3 community IOC 'key' looks like
+    #   xs_channels_channel01
     def generate_datum(self, key, timestamp, datum_kwargs):
-        sn, n = next((f'channel{j}', j)
-                     for j in self.channels
-                     if getattr(self.parent, f'channel{j}').name == key)
-        datum_kwargs.update({'frame': self.parent._abs_trigger_count,
-                             'channel': int(sn[7:])})
-        self.mds_keys[n] = key
+        print("!!! CommunityXspress3FileStore.generate_datum !!!")
+        print(f"  key: {key}")
+        
+        # JL the intention here seems to be to create the string
+        #     f'channel{j}'
+        #   using channel numbers from self.channels
+        #   and filtering out every channel except the one with
+        #   name matching the string in the 'key' argument
+        # it is assumed that channel attributes are named 'channelN'
+        # sn, n = next(
+        #     (f'channel{j}', j)
+        #     for j 
+        #     in self.channels
+        #     if getattr(self.parent, f'channel{j}').name == key
+        # )
+        # now assume the 'key' argument will look like
+        #     xs_channels_channel01
+        #   and use a regular exspression to find the channel number
+        channel_number_match = self._channel_number_pattern.search(key)
+        channel_number = int(channel_number_match.group("channel_number"))
+        print(f"  found channel_number {channel_number}")
+
+        datum_kwargs.update(
+            {
+                'frame': self.parent._abs_trigger_count,
+                # JL replace this line
+                # 'channel': int(sn[7:])
+                'channel': channel_number
+            }
+        )
+        # JL replace this line
+        # self.mds_keys[n] = key
+        # JL self.mds_keys seems to be keeping track of the channels
+        #   that have been read for use the describe() method
+        self.mds_keys[channel_number] = key
+
         super().generate_datum(key, timestamp, datum_kwargs)
 
     def stage(self):
@@ -189,21 +247,29 @@ class CommunityXspress3FileStore(FileStorePluginBase, HDF5Plugin):
         raise NotImplementedError()
 
     # JL CommunityXspress3FileStoreFlyable overrides this method
-    #   so I'm leaving it for now
+    #   but it is used by step scans
     def describe(self):
+        print("!!! CommunityXspress3FileStore.describe !!!")
         # should this use a better value?
         size = (self.width.get(), )
 
-        spec_desc = {'external': 'FILESTORE:',
-                     'dtype': 'array',
-                     'shape': size,
-                     'source': 'FileStore:'
-                     }
+        spec_desc = {
+            'external': 'FILESTORE:',
+            'dtype': 'array',
+            'shape': size,
+            'source': 'FileStore:'
+        }
 
         desc = OrderedDict()
         for chan in self.channels:
-            key = self.mds_keys[chan]
-            desc[key] = spec_desc
+           key = self.mds_keys[chan]
+           print(f"\tchan: {chan}\n\tkey: {key}")
+           #desc[key] = spec_desc
+
+        # JL can this take the place of the loop above?
+        for channel in self.parent.iterate_channels():
+            print(f"channel name: {channel.name}")
+            desc[channel.name] = spec_desc
 
         return desc
 
