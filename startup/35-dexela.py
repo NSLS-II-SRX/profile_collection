@@ -132,12 +132,6 @@ class DexelaHDFWithFileStore(HDF5Plugin, DexelaFileStoreHDF5):
         return super().stage()
 
 
-class DexelaTIFFPlugin(TIFFPlugin,
-                       FileStoreTIFF,
-                       FileStoreIterativeWrite):
-    ...
-
-
 class SRXDexelaDetector(SingleTrigger, DexelaDetector):
     total_points = Cpt(Signal,
                        value=1,
@@ -147,14 +141,11 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
                configuration_attrs=[],
                # write_path_template='Z:\\%Y\\%m\\%d\\',
                # write_path_template='C:\\temp\\dexela\\%Y\\%m\\%d\\',
-               write_path_template='C:\\data\\20211214_uXRD\\%Y\\%m\\%d\\',
+               write_path_template='W:\\legacy\\dexela\\%Y\\%m\\%d\\',
                # write_path_template='C:\\temp\\write_here\\',
-               read_path_template='/nsls2/xf05id1/XF05ID1/dexela_nkb/%Y/%m/%d/',
-               root='/nsls2/xf05id1/XF05ID1/dexela_nkb/')
-    # tiff = Cpt(DexelaTIFFPlugin, 'TIFF1:',
-    #            write_path_template='%Y/%m/%d/',
-    #            read_path_template='%Y/%m/%d/',
-    #            root='')
+               # read_path_template='/nsls2/xf05id1/XF05ID1/dexela/%Y/%m/%d/',
+               read_path_template='/nsls2/data/srx/legacy/dexela/%Y/%m/%d/',
+               root='/nsls2/data/srx/legacy/dexela/')
     # this is used as a latch to put the xspress3 into 'bulk' mode
     # for fly scanning.  Do this is a signal (rather than as a local variable
     # or as a method so we can modify this as part of a plan
@@ -174,7 +165,7 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
 
         self.cam.stage_sigs['image_mode'] = 'Multiple'
         if self._mode is SRXMode.fly:
-            self.cam.stage_sigs['trigger_mode'] = 'Ext. Bulb'
+            self.cam.stage_sigs['trigger_mode'] = 'Ext. Edge Single'
         else:
             self.cam.stage_sigs['trigger_mode'] = 'Int. Fixed Rate'
 
@@ -199,65 +190,3 @@ except Exception:
     print('\nUnexpected error connecting to Dexela.\n',
           sys.exc_info()[0],
           end='\n\n')
-
-
-def export_dexela2tiff(scanid=-1, wd=None):
-    if wd is None:
-        wd = '/home/xf05id1/current_user_data/'
-
-    print('Loading data...')
-    h = db[int(scanid)]
-    d = h.data('dexela_image', fill=True)
-    d = np.array(list(d))
-    d = np.squeeze(d)
-    d = np.array(d, dtype='float32')
-    x = np.array(list(h.data('nano_stage_sx', fill=True)))
-    y = np.array(list(h.data('nano_stage_sy', fill=True)))
-    I0= np.array(list(h.data('sclr_i0', fill=True)))
-
-    # Get scanid
-    if (scanid < 0):
-        scanid = h.start['scan_id']
-
-    print('Writing data...')
-    fn = 'scan%d.tif' % scanid
-    fn_txt = 'scan%d.txt' % scanid
-    io.imsave(wd + fn, d)
-    try:
-        np.savetxt(wd + fn_txt, np.array((x, y, I0)))
-    except TypeError:
-        np.savetxt(wd + fn_txt, np.array((I0)))
-
-
-def export_flying_dexela2tiff(scanid=-1, wd=None):
-    if wd is None:
-        wd = '/home/xf05id1/current_user_data/'
-
-    print('Loading data...')
-    h = db[int(scanid)]
-    d = h.data('dexela_image', stream_name='stream0', fill=True)
-    d = np.array(list(d))
-    d = np.squeeze(d)
-    d = np.array(d, dtype='float32')
-    x = np.array(list(h.data('enc1', stream_name='stream0', fill=True)))
-    y = np.array(list(h.data('enc2', stream_name='stream0', fill=True)))
-    I0= np.array(list(h.data('i0', stream_name='stream0', fill=True)))
-
-    # Flatten arrays
-    (N, M) = x.shape
-    d = np.reshape(d, (d.shape[0]*d.shape[1], d.shape[2], d.shape[3]))
-    x_flat = np.reshape(x, (N*M, ))
-    y_flat = np.reshape(y, (N*M, ))
-    I0_flat = np.reshape(I0, (N*M, ))
-
-    # Get scanid
-    if (scanid < 0):
-        scanid = h.start['scan_id']
-
-    print('Writing data...')
-    fn = 'scan%d.tif' % scanid
-    fn_txt = 'scan%d.txt' % scanid
-    io.imsave(wd + fn, d)
-    np.savetxt(wd + fn_txt, np.array((x_flat, y_flat, I0_flat)))
-
-
