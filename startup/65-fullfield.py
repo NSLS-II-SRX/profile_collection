@@ -315,9 +315,13 @@ def pco_xanes(erange = [], estep = [],
     roi_name = 'roi{:02}'.format(roinum)
     
     roi_key = []
-    roi_key.append(getattr(xs.channel1.rois, roi_name).value.name)
-    roi_key.append(getattr(xs.channel2.rois, roi_name).value.name)
-    roi_key.append(getattr(xs.channel3.rois, roi_name).value.name)
+    # roi_key.append(getattr(xs.channel1.rois, roi_name).value.name)
+    # roi_key.append(getattr(xs.channel2.rois, roi_name).value.name)
+    # roi_key.append(getattr(xs.channel3.rois, roi_name).value.name)
+    roi_key.append(xs.channels.channel01.get_mcaroi(mcaroi_number=roinum).total_rbv.name)
+    roi_key.append(xs.channels.channel02.get_mcaroi(mcaroi_number=roinum).total_rbv.name)
+    roi_key.append(xs.channels.channel03.get_mcaroi(mcaroi_number=roinum).total_rbv.name)
+
     livetableitem.append(roi_key[0])    
 
     livecallbacks.append(LiveTable(livetableitem))
