@@ -361,7 +361,7 @@ try:
         xs.cam.configuration_attrs = [
             "acquire_period",
             "acquire_time",
-            "gain",
+            # "gain",
             "image_mode",
             "manufacturer",
             "model",

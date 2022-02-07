@@ -161,8 +161,8 @@ except ImportError:
 
 # using appdirs line for xspress3 development on xf05id2-ws1
 # do not commit this
-runengine_metadata_dir = appdirs.user_data_dir(appname="bluesky") / Path("runengine-metadata")
-#runengine_metadata_dir = Path('/nsls2/xf05id1/shared/config/runengine-metadata-new')
+# runengine_metadata_dir = appdirs.user_data_dir(appname="bluesky") / Path("runengine-metadata")
+runengine_metadata_dir = Path('/nsls2/xf05id1/shared/config/runengine-metadata-new')
 
 RE.md = PersistentDict(runengine_metadata_dir)
 
