@@ -1,4 +1,9 @@
 print(f'Loading {__file__}...')
+import warnings
+import pandas as pd
+
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+
 
 def ssa_hcen_scan(start, stop, num,
                   shutter=True, plot=True, plot_guess=False, scan_only=False):
@@ -252,7 +257,7 @@ def slit_nanoflyscan(scan_motor, scan_start, scan_stop, scan_stepsize, acqtime,
     return uid_list
 
 
-def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False,
+def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False, plotme=None,
                          bin_low=None, bin_high=None, normalize=True):
    
     """
@@ -267,8 +272,8 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
     """
 
     numline = len(scan_id_list)
-    slit_range = np.zeros((numline,), dtype=np.float)
-    line_pos_seq = np.zeros((numline,), dtype=np.float)
+    slit_range = np.zeros((numline,), dtype=np.float64)
+    line_pos_seq = np.zeros((numline,), dtype=np.float64)
 
     # Mirror parameters
     f_v = 295 * 1e+3  # um
@@ -475,8 +480,10 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
         print(f'\tQuadratic term corresponds to coarse Z {delta_focal_plane_z:7.3f} um.')
 
 
-    # Doesn't work in RunEngine. Need to make Liveplot.
-    fig, ax = plt.subplots()
+    if (plotme is None):
+        fig, ax = plt.subplots()
+    else:
+        ax = plotme.ax
     ax.plot(slit_range, line_pos_seq/1000, 'ro', slit_range[interp_range], line_plt)
     ax.set_title(f'Scan {scan_id}')
     ax.set_xlabel(f'Slit Pos (mm)')
@@ -528,12 +535,15 @@ def focusKB(direction, **kwargs):
     kwargs.setdefault('slit_stop', slit_center + 0.5 * slit_range)
     print(f'start from slit center: {slit_center}\n')
 
+    # Definite a LivePlot for plotting later
+    plotme = LivePlot('')
+
     # print(*kwargs)
-    uids = yield from slit_nanoflyscan(**kwargs)
+    uids = yield from subs_wrapper(slit_nanoflyscan(**kwargs), plotme)
 
     # Fit the data
     # N = len(uids)
     scanids = np.linspace(-N, -1, num=N)
-    slit_nanoflyscan_cal(scan_id_list=scanids, interp_range=scanids[1:-1].astype('int'), orthogonality=False)
+    slit_nanoflyscan_cal(scan_id_list=scanids, interp_range=scanids[1:-1].astype('int'), orthogonality=False, plotme=plotme)
 
 
