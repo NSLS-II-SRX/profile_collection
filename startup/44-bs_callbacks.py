@@ -1,8 +1,44 @@
 print(f'Loading {__file__}...')
 
 
+import time as ttime
 from bluesky.callbacks import CallbackBase,LivePlot
 from xray_vision.backend.mpl.cross_section_2d import CrossSection
+
+# Try-except only hear for testing. Can be removed after validation.
+def cb_print_scaninfo(name, doc):
+    if name == "start":
+        try:
+            str1 = f" Scan Type:  {doc['scan']['type']} "
+            str2 = f" Scan ID:    {doc['scan_id']} "
+            str3 = f" Start Time: {doc['time_str']} "
+            str_banner = "-" * max(len(str1), len(str2), len(str3))
+            print(f"\n{str_banner}")
+            print(str1)
+            print(str2)
+            print(str3)
+            print(f"{str_banner}\n")
+        except:
+            pass
+    elif name == "stop":
+        try:
+            start_doc = db[doc['run_start']].start
+            str1 = f" Scan Type:    {start_doc['scan']['type']} "
+            str2 = f" Scan ID:      {start_doc['scan_id']} "
+            str3 = f" Stop Time:    {ttime.ctime(doc['time'])} "
+            str4 = f"   Total Time: {doc['time'] - start_doc['time']:.2f} "
+            str_banner = "-" * max(len(str1), len(str2), len(str3), len(str4))
+            print(f"\n{str_banner}")
+            print(str1)
+            print(str2)
+            print(str3)
+            print(str4)
+            print(f"{str_banner}\n")
+        except:
+            pass
+
+
+RE.subscribe(cb_print_scaninfo)
 
 
 i0_baseline = 7.24e-10
