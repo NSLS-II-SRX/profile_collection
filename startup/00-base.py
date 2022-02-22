@@ -54,7 +54,9 @@ class SRXPrompt(Prompts):
         ]
 
 ip = get_ipython()
-nslsii.configure_base(ip.user_ns, "srx")
+nslsii.configure_base(ip.user_ns,
+                      "srx",
+                      publish_documents_with_kafka=True)
 ip.log.setLevel('WARNING')
 
 nslsii.configure_olog(ip.user_ns)
