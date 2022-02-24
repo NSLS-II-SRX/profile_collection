@@ -111,6 +111,20 @@ def print_warning_message(msg):
     print(f"{'*' * msg_len}\n")
 
 
+def banner(str_list, border="-"):
+    if not isinstance(str_list, list):
+        str_list = [str_list]
+
+    N = 2
+    for str in str_list:
+        N = max(len(str), 2)
+
+    print(border * (N + 2))
+    for str in str_list:
+        print(f" {str}")
+    print(border * (N + 2), end='\n\n')
+
+
 def print_baseline(scanid=-1, key_filter=None):
     '''
     Print all the baseline metadata.
