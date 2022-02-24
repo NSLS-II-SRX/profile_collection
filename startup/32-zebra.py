@@ -399,8 +399,8 @@ class SRXFlyer1Axis(Device):
             direction = -1
         pxsize = np.abs(xstop - xstart) / (xnum - 1)
         extent = np.abs(xstop - xstart) + pxsize
-        # 2 ms delay between pulses
-        decrement = (pxsize / dwell) * 0.0005
+        # 1 ms delay between pulses
+        decrement = (pxsize / dwell) * 0.0010
         if decrement < 1e-5:
             # print('Changing the pulse width')
             decrement = 1e-5
