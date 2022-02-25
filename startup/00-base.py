@@ -1,5 +1,16 @@
 print(f"Loading {__file__}...")
 
+## Debugging
+# import os
+# if 'TOUCHBEAMLINE' in os.environ and os.environ['TOUCHBEAMLINE'] == 1:
+#     print('int')
+# 
+# if os.getenv("TOUCHBEAMLINE", "0") == "1":
+#     print('str')
+# 
+# raise Exception
+
+
 ###############################################################################
 # TODO: remove this block once https://github.com/bluesky/ophyd/pull/959 is
 # merged/released.

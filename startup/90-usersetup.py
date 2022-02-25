@@ -12,15 +12,15 @@ import shutil
 # PI_lastname = None
 # saf_num = None
 
-proposal_num = 308774
-proposal_title = 'SRX Beamline Commissioning'
-PI_lastname = 'Kiss'
-saf_num = 307307
+# proposal_num = 308774
+# proposal_title = 'SRX Beamline Commissioning'
+# PI_lastname = 'Kiss'
+# saf_num = 307307
 
-#proposal_num = 307833
-#proposal_title = 'Quantifying thermodynamically induced reaction non-uniformity in thick battery electrodes'
-#PI_lastname = 'Tang'
-#saf_num = 307001
+proposal_num = 309915
+proposal_title = 'Quantifying thermodynamically induced reaction non-uniformity in thick battery electrodes'
+PI_lastname = 'Tang'
+saf_num = 308662
 
 
 cycle = '2022_cycle1'
