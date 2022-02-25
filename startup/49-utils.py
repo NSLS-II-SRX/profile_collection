@@ -117,7 +117,7 @@ def banner(str_list, border="-"):
 
     N = 2
     for str in str_list:
-        N = max(len(str), 2)
+        N = max(len(str), N)
 
     print(border * (N + 2))
     for str in str_list:
