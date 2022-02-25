@@ -187,8 +187,8 @@ def collect_xrd_map(xstart, xstop, xnum,
 
 
 def xrd_fly(*args, extra_dets=[dexela], **kwargs):
-    kwargs.setdefault('xmotor', hf_stage.x)
-    kwargs.setdefault('ymotor', hf_stage.y)
+    kwargs.setdefault('xmotor', nano_stage.sx)
+    kwargs.setdefault('ymotor', nano_stage.sy)
     _xs = kwargs.pop('xs', xs)
     kwargs.setdefault('flying_zebra', flying_zebra)
     if extra_dets is None:
@@ -200,10 +200,15 @@ def xrd_fly(*args, extra_dets=[dexela], **kwargs):
     yield from scan_and_fly_base(dets, *args, **kwargs)
 
 
-def make_tiff(scanid, scantype, fn):
+def make_tiff(scanid, *, scantype='', fn=''):
     h = db[int(scanid)]
+    if scanid == -1:
+        scanid = int(h.start['scan_id'])
 
-    if (scantype == 'fly'):
+    if scantype == '':
+        scantype = h.start['scan']['type']
+
+    if ('FLY' in scantype):
         d = list(h.data('dexela_image', stream_name='stream0', fill=True))
         d = np.array(d)
 
@@ -212,19 +217,21 @@ def make_tiff(scanid, scantype, fn):
             print('Error collecting dexela data...')
             return
         d = np.reshape(d, (row*col, imgY, imgX))
-    elif (scantype == 'count'):
-        d = list(h.data('dexela_image', fill=True))
-        d = np.array(d)
-    elif (scantype == 'grid_scan'):
+    elif ('STEP' in scantype):
         d = list(h.data('dexela_image', fill=True))
         d = np.array(d)
         d = np.squeeze(d)
+    # elif (scantype == 'count'):
+    #     d = list(h.data('dexela_image', fill=True))
+    #     d = np.array(d)
     else:
         print('I don\'t know what to do.')
         return
 
+    if fn == '':
+        fn = f"scan{scanid}_xrd.tiff"
     try:
         io.imsave(fn, d.astype('uint16'))
     except:
-        print(f'Error writing file.')
+        print(f'Error writing file!')
 

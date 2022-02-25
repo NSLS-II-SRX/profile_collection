@@ -135,6 +135,7 @@ class HACK_SRX_NSLS_EM(Device):
 
     sumX = Cpt(EpicsSignalRO, 'SumX:MeanValue_RBV')
     sumY = Cpt(EpicsSignalRO, 'SumY:MeanValue_RBV')
+    sumT = Cpt(EpicsSignalRO, 'SumAll:MeanValue_RBV')
     diffX = Cpt(EpicsSignalRO, 'DiffX:MeanValue_RBV')
     diffY = Cpt(EpicsSignalRO, 'DiffY:MeanValue_RBV')
     posX = Cpt(EpicsSignalRO, 'PosX:MeanValue_RBV')

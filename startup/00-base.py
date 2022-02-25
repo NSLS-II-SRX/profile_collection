@@ -81,7 +81,9 @@ class SRXPrompt(Prompts):
         ]
 
 ip = get_ipython()
-nslsii.configure_base(ip.user_ns, "srx")
+nslsii.configure_base(ip.user_ns,
+                      "srx",
+                      publish_documents_with_kafka=True)
 ip.log.setLevel('WARNING')
 
 nslsii.configure_olog(ip.user_ns)
@@ -187,7 +189,8 @@ except ImportError:
 
 
 # runengine_metadata_dir = appdirs.user_data_dir(appname="bluesky") / Path("runengine-metadata")
-runengine_metadata_dir = Path('/nsls2/xf05id1/shared/config/runengine-metadata-new')
+# runengine_metadata_dir = Path('/nsls2/xf05id1/shared/config/runengine-metadata-new')
+runengine_metadata_dir = Path('/nsls2/data/srx/legacy/xf05id1/shared/config/runengine-metadata-new')
 
 RE.md = PersistentDict(runengine_metadata_dir)
 

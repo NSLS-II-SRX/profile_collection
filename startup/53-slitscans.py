@@ -1,4 +1,9 @@
 print(f'Loading {__file__}...')
+import warnings
+import pandas as pd
+
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+
 
 def ssa_hcen_scan(start, stop, num,
                   shutter=True, plot=True, plot_guess=False, scan_only=False):
@@ -252,7 +257,7 @@ def slit_nanoflyscan(scan_motor, scan_start, scan_stop, scan_stepsize, acqtime,
     return uid_list
 
 
-def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False,
+def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False, plotme=None,
                          bin_low=None, bin_high=None, normalize=True):
    
     """
@@ -267,8 +272,8 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
     """
 
     numline = len(scan_id_list)
-    slit_range = np.zeros((numline,), dtype=np.float)
-    line_pos_seq = np.zeros((numline,), dtype=np.float)
+    slit_range = np.zeros((numline,), dtype=np.float64)
+    line_pos_seq = np.zeros((numline,), dtype=np.float64)
 
     # Mirror parameters
     f_v = 295 * 1e+3  # um
@@ -399,15 +404,24 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
             return f_combo
         
         def line_fit(x, y):
+            # p_guess = [0.5 * np.amax(y),
+            #            1.000,
+            #            0.5 * (x[0] + x[-1]) - 2.5,
+            #            np.amin(y) + 0.5 * np.amax(y),
+            #            -0.5 * np.amax(y),
+            #            1.000,
+            #            0.5 * (x[0] + x[-1]) + 2.5,
+            #            np.amin(y) + 0.5 * np.amax(y)]       
             p_guess = [0.5 * np.amax(y),
-                       1.000,
-                       0.5 * (x[0] + x[-1]) - 2.5,
-                       np.amin(y) + 0.5 * np.amax(y),
+                       .25,
+                       0.5 * (x[0] + x[-1]) - 1.0,
+                       0,
                        -0.5 * np.amax(y),
-                       1.000,
-                       0.5 * (x[0] + x[-1]) + 2.5,
-                       np.amin(y) + 0.5 * np.amax(y)]       
+                       .25,
+                       0.5 * (x[0] + x[-1]) + 1.0,
+                       0]       
             try:
+                print(p_guess)
                 popt, _ = curve_fit(f_two_erfs, x, y, p0=p_guess)
             except:
                 print('Raw fit failed.')
@@ -455,7 +469,8 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
         print(f'\tActuator should move by {actuator_move_h:7.3f} um.')
         print(f'\tLine feature should move {line_move_h:7.3f} um for h mirror pitch correction')
 
-    if (np.abs(defocus) < 100 or orthogonality == 1):
+    #if (np.abs(defocus) < 100 or orthogonality == 1):
+    if orthogonality == 1:
         delta_fine_pitch = calpoly_fit[0][0]/conversion_factor_orth*1e-3*pitch_motion_conversion
         delta_theta_quad = calpoly_fit[0][0]/conversion_factor_orth
         delta_focal_plane_z = delta_theta_quad*1e-3/C_theta*C_f
@@ -465,8 +480,10 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
         print(f'\tQuadratic term corresponds to coarse Z {delta_focal_plane_z:7.3f} um.')
 
 
-    # Doesn't work in RunEngine. Need to make Liveplot.
-    fig, ax = plt.subplots()
+    if (plotme is None):
+        fig, ax = plt.subplots()
+    else:
+        ax = plotme.ax
     ax.plot(slit_range, line_pos_seq/1000, 'ro', slit_range[interp_range], line_plt)
     ax.set_title(f'Scan {scan_id}')
     ax.set_xlabel(f'Slit Pos (mm)')
@@ -492,11 +509,11 @@ def focusKB(direction, **kwargs):
     if 'hor' in direction.lower():
         kwargs.setdefault('scan_motor', nano_stage.sx)
         kwargs.setdefault('slit_motor', jjslits.h_trans)
-        slit_range = 0.500
+        slit_range = 0.400
         kwargs.setdefault('slit_stepsize', 0.05)
         kwargs.setdefault('slitgap_motor', jjslits.h_gap)
         kwargs.setdefault('slit_gap', 0.05)
-        N = 11
+        N = 9
     elif 'ver' in direction.lower():
         kwargs.setdefault('scan_motor', nano_stage.sy)
         kwargs.setdefault('slit_motor', jjslits.v_trans)
@@ -506,23 +523,27 @@ def focusKB(direction, **kwargs):
         kwargs.setdefault('slit_gap',  0.10)
         N = 11
     else:
-        print("This is for vertical or horizontal scans. Please choose one of these directions")
+        print("This is for vertical or horizontal scans. Please choose one of these directions\n")
 
-    kwargs.setdefault('scan_start', -8)
-    kwargs.setdefault('scan_stop', 8)
-    kwargs.setdefault('scan_stepsize', 0.050)
+    kwargs.setdefault('scan_start', -10)
+    kwargs.setdefault('scan_stop', 10)
+    kwargs.setdefault('scan_stepsize', 0.10)
     kwargs.setdefault('acqtime', 0.100)
     
     slit_center = kwargs['slit_motor'].user_readback.get()
     kwargs.setdefault('slit_start', slit_center - 0.5 * slit_range)
     kwargs.setdefault('slit_stop', slit_center + 0.5 * slit_range)
+    print(f'start from slit center: {slit_center}\n')
+
+    # Definite a LivePlot for plotting later
+    plotme = LivePlot('')
 
     # print(*kwargs)
-    uids = yield from slit_nanoflyscan(**kwargs)
+    uids = yield from subs_wrapper(slit_nanoflyscan(**kwargs), plotme)
 
     # Fit the data
     # N = len(uids)
     scanids = np.linspace(-N, -1, num=N)
-    slit_nanoflyscan_cal(scan_id_list=scanids, interp_range=scanids[1:-1].astype('int'), orthogonality=False)
+    slit_nanoflyscan_cal(scan_id_list=scanids, interp_range=scanids[1:-1].astype('int'), orthogonality=False, plotme=plotme)
 
 

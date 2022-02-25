@@ -282,6 +282,9 @@ class SRXFlyer1Axis(Device):
         self.stage_sigs[self._encoder.pc.gate_num] = 1
         self.stage_sigs[self._encoder.pc.pulse_start] = 0
 
+        self.stage_sigs[self._encoder.pulse3.width] = 0.1
+        self.stage_sigs[self._encoder.pulse4.width] = 0.1
+
         # PC gate output is 31 for zebra. Use it to trigger xspress3 and I0
         self.stage_sigs[self._encoder.output1.ttl.addr] = 31
         self.stage_sigs[self._encoder.output3.ttl.addr] = 31
@@ -289,9 +292,9 @@ class SRXFlyer1Axis(Device):
         self.stage_sigs[self._encoder.output2.ttl.addr] = 31
         # self.stage_sigs[self._encoder.output2.ttl.addr] = 53
         # This is for the dexela
-        # self.stage_sigs[self._encoder.output4.ttl.addr] = 55
-        # This is for the xs2
         self.stage_sigs[self._encoder.output4.ttl.addr] = 31
+        # This is for the xs2
+        # self.stage_sigs[self._encoder.output4.ttl.addr] = 31
 
         self.stage_sigs[self._encoder.pc.enc_pos1_sync] = 1
         self.stage_sigs[self._encoder.pc.enc_pos2_sync] = 1
@@ -396,8 +399,8 @@ class SRXFlyer1Axis(Device):
             direction = -1
         pxsize = np.abs(xstop - xstart) / (xnum - 1)
         extent = np.abs(xstop - xstart) + pxsize
-        # 2 ms delay between pulses
-        decrement = (pxsize / dwell) * 0.001
+        # 1 ms delay between pulses
+        decrement = (pxsize / dwell) * 0.0010
         if decrement < 1e-5:
             # print('Changing the pulse width')
             decrement = 1e-5
@@ -414,16 +417,21 @@ class SRXFlyer1Axis(Device):
         # Hopefully taken care of with decrement check above
 
         # For dexela, we will use time triggering in a pixel, not position
-        if "dexela" in dets_by_name:
-            self._encoder.output1.ttl.addr.put(52)
-            self._encoder.output3.ttl.addr.put(52)
-            self._encoder.pulse1.width.put(0.5 * dwell - 0.050)
-        else:
-            self._encoder.output1.ttl.addr.put(31)
-            # self._encoder.output3.ttl.addr.put(31)
-            self._encoder.output3.ttl.addr.put(36)
-            self._encoder.pulse3.input_addr.put(31)
-            self._encoder.pulse4.input_addr.put(31)
+        # if "dexela" in dets_by_name:
+        #     self._encoder.output1.ttl.addr.put(52)
+        #     self._encoder.output3.ttl.addr.put(52)
+        #     self._encoder.pulse1.width.put(0.5 * dwell - 0.050)
+        # else:
+        #     self._encoder.output1.ttl.addr.put(31)
+        #     # self._encoder.output3.ttl.addr.put(31)
+        #     self._encoder.output3.ttl.addr.put(36)
+        #     self._encoder.pulse3.input_addr.put(31)
+        #     self._encoder.pulse4.input_addr.put(31)
+
+        self._encoder.output1.ttl.addr.put(31)
+        self._encoder.output3.ttl.addr.put(36)
+        self._encoder.pulse3.input_addr.put(31)
+        self._encoder.pulse4.input_addr.put(31)
 
         self._encoder.pc.enc_pos1_sync.put(1)  # Scanner X
         self._encoder.pc.enc_pos2_sync.put(1)  # Scanner Y
@@ -631,6 +639,7 @@ try:
     # flying_zebra = SRXFlyer1Axis(
     #     list(xs for xs in [xs] if xs is not None), sclr1, name="flying_zebra"
     # )
+    # raise Exception
     microZebra = SRXZebra("XF:05IDD-ES:1{Dev:Zebra1}:", name="microZebra",
         read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
     )
@@ -639,7 +648,7 @@ try:
     )
     # print('huge success!')
 except Exception as ex:
-    print("Cannot connect to Zebra. Continuing without device.\n", ex)
+    print("Cannot connect to microZebra. Continuing without device.\n", ex)
     flying_zebra = None
 
 

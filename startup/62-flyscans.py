@@ -1,4 +1,7 @@
 print(f'Loading {__file__}...')
+import datetime
+import json
+from bluesky.utils import short_uid
 
 #####
 # Pseudocode for fly scanning
@@ -156,8 +159,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Setup dexela
     if ('dexela' in dets_by_name):
         xrd = dets_by_name['dexela']
-        xrd.cam.stage_sigs['acquire_time'] = 0.50 * dwell - 0.050
-        xrd.cam.stage_sigs['acquire_period'] = 0.50 * dwell - 0.020
+        xrd.cam.stage_sigs['acquire_time'] = dwell
+        xrd.cam.stage_sigs['acquire_period'] = dwell
         del xrd
 
     # If delta is None, set delta based on time for acceleration
@@ -174,8 +177,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     pxsize = (xstop - xstart) / (xnum - 1)
     row_start = xstart - delta - (pxsize / 2)
     row_stop = xstop + delta + (pxsize / 2)
-    yield from mv(xmotor, row_start,
-                  ymotor, ystart)
+    # yield from mv(xmotor, row_start,
+    #               ymotor, ystart)
 
     # Run a peakup before the map?
     if (align):
@@ -203,9 +206,17 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     def fly_each_step(motor, step, row_start, row_stop):
         def move_to_start_fly():
             "See http://nsls-ii.github.io/bluesky/plans.html#the-per-step-hook"
-            yield from abs_set(xmotor, row_start, group='row')
-            yield from one_1d_step([temp_nanoKB], motor, step)
-            yield from bps.wait(group='row')
+            # row_str = short_uid('row')
+            # yield from abs_set(xmotor, row_start, group=row_str)
+            # yield from one_1d_step([temp_nanoKB], motor, step)
+            # yield from bps.wait(group=row_str)
+
+            row_str = short_uid('row')
+            yield from bps.checkpoint()
+            yield from bps.abs_set(xmotor, row_start, group=row_str)
+            yield from bps.abs_set(motor, step, group=row_str)
+            yield from bps.wait(group=row_str)
+            yield from bps.trigger_and_read([temp_nanoKB, motor])
 
         if verbose:
             t_mvstartfly = tic()
@@ -271,6 +282,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         if ('dexela' in dets_by_name):
             dexela = dets_by_name['dexela']
             yield from abs_set(dexela.hdf5.num_capture, xnum, wait=True)
+            # yield from abs_set(dexela.hdf5.num_frames_chunks, xnum, wait=True)
             yield from abs_set(dexela.cam.num_images, xnum, wait=True)
 
         ion = flying_zebra.sclr
@@ -303,12 +315,14 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             toc(t_datacollect, str='  reset scaler')
 
         # trigger all of the detectors
+        row_str = short_uid('row')
         if verbose:
             print('Data collection:')
         for d in flying_zebra.detectors:
             if verbose:
                 print(f'  triggering {d.name}')
-            yield from bps.trigger(d, group='row')
+            st = yield from bps.trigger(d, group=row_str)
+            st.add_callback(lambda x: toc(t_datacollect, str=f"  status object  {datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S.%f')}"))
             if (d.name == 'dexela'):
                 yield from bps.sleep(1)
         if verbose:
@@ -319,11 +333,19 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             toc(t_datacollect, str='  sleep')
 
         # start the 'fly'
-        yield from abs_set(xmotor, row_stop, group='row')  # move in x
+        def print_watch(*args, **kwargs):
+            with open('/home/xf05id1/bluesky_output.txt', 'a') as f:
+                f.write(datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S.%f\n'))
+                # print(args)
+                f.write(json.dumps(kwargs))
+                f.write('\n')
+        st = yield from abs_set(xmotor, row_stop, group=row_str)
+        # st.watch(print_watch)
+
         if verbose:
             toc(t_datacollect, str='  move start')
 
-        if verbose:
+        if verbose and False:
             ttime.sleep(1)
             while (xmotor.motor_is_moving.get()):
                 ttime.sleep(0.001)
@@ -335,7 +357,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 ttime.sleep(0.001)
             toc(t_datacollect, str='  sclr1 done')
         # wait for the motor and detectors to all agree they are done
-        yield from bps.wait(group='row')
+        yield from bps.wait(group=row_str)
+        st.wait()
+
         if verbose:
             toc(t_datacollect, str='Total time')
 
@@ -375,6 +399,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         logscan_detailed('XRF_FLY')
         scanrecord.scanning.put(False)
         scanrecord.time_remaining.put(0)
+        
 
     # TODO remove this eventually?
     # xs = dets_by_name['xs']
@@ -402,8 +427,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     @subs_decorator({'start': at_scan})
     @subs_decorator({'stop': finalize_scan})
     # monitor values from xs
-    # @monitor_during_decorator([xs.channel1.rois.roi01.value])
-    @monitor_during_decorator([xs.channel1.rois.roi01.value, xs.array_counter])
+    @monitor_during_decorator([xs.channel1.rois.roi01.value])
+    # @monitor_during_decorator([xs.channel1.rois.roi01.value, xs.array_counter])
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
     def plan():
@@ -449,6 +474,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         ion = flying_zebra.sclr
         yield from bps.mov(xs.external_trig, False,
                            ion.count_mode, 1)
+        yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
+        yield from bps.sleep(2)
+
     # toc(t_setup, str='Setup time')
 
     # Setup the final scan plan
@@ -483,9 +511,13 @@ def nano_scan_and_fly(*args, extra_dets=None, **kwargs):
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
+    print('Scan starting. Centering the scanner...')
+    yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
+    yield from bps.sleep(2)
     yield from scan_and_fly_base(dets, *args, **kwargs)
     print('Scan finished. Centering the scanner...')
-    yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
+    # yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
+    # yield from bps.sleep(2)
 
 
 def nano_y_scan_and_fly(*args, extra_dets=None, **kwargs):
