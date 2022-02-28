@@ -32,7 +32,13 @@ def cb_print_scaninfo(name, doc):
                 str1 = ''
             str2 = f"Scan ID:      {start_doc['scan_id']}"
             str3 = f"Stop Time:    {ttime.ctime(doc['time'])}"
-            str4 = f"  Total Time: {doc['time'] - start_doc['time']:.2f} s"
+            dt = doc['time'] - start_doc['time']
+            if dt < 60:
+                str4 = f"  Total Time: {dt:.2f} s"
+            elif dt < 3600:
+                str4 = f"  Total Time: {dt/60:.2f} min"
+            else:
+                str4 = f"  Total Time: {dt/3600:.2f} h"
             banner([str1, str2, str3, str4])
         else: 
             str3 = f"Stop Time:    {ttime.ctime(doc['time'])}"
