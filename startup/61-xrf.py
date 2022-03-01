@@ -260,7 +260,7 @@ def hf2dxrf_ioc(samplename=None, align=False, numrois=1, shutter=True, waittime=
                                              acqtime=acqtime, samplename=None, align=False, numrois=1,
                                              shutter=True)
 
-            if (len(scanlist) is not 0):
+            if (len(scanlist) != 0):
                 yield from bps.sleep(waittime)
     scanrecord.current_scan.put('')
 

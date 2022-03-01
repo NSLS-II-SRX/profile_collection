@@ -278,7 +278,7 @@ def pco_xanes(erange = [], estep = [],
         raise Exception('erange = [], must specify energy ranges')
     if estep is []:
         raise Exception('estep = [], must specify energy step sizes')
-    if len(erange)-len(estep) is not 1:
+    if len(erange)-len(estep) != 1:
         raise Exception('must specify erange and estep correctly.'\
                          +'e.g. erange = [7000, 7100, 7150, 7500], estep = [2, 0.5, 5] ')
 

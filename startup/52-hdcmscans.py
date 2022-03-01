@@ -214,7 +214,9 @@ class PairedCallback(QtAwareCallback):
         def setup():
             fig, ax = plt.subplots()
             self.ax = ax
-            fig.canvas.set_window_title('Peakup')
+            # fig.canvas.set_window_title('Peakup')
+            # To remove deprecation warning use below. Needs testing
+            fig.canvas.manager.set_window_title('Peakup')
             self.ax.clear()
             # Setup LiveCallbacks
             self.live_plot = LivePlot(scaler, dcm_c2_pitch_name,
