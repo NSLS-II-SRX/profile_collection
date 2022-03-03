@@ -206,6 +206,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                            'units' : xmotor.motor_egu.get()}
     md['scan']['snake'] = snake
     md['scan']['shape'] = (xnum, ynum)
+    flying_zebra.scan_md = md
     
     ## TODO: move xmotor velocity into stage_sigs and add to stage decorator
     @stage_decorator(flying_zebra.detectors)
@@ -254,6 +255,17 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         # Does this need to be computed for each line?
         # v = ((xstop - xstart) / (xnum - 1)) / dwell  # compute "stage speed"
         yield from mv(xmotor.velocity, v)
+
+        print(flying_zebra._triggering)
+        if flying_zebra._triggering == 'position':
+            print('Im in position')
+        elif flying_zebra._triggering == 'time':
+            # Set PC settings
+            print('Im in time')
+            flying_zebra._encoder.pc.gate_source.put(1)  # 0 = Position, 1 = Time
+            flying_zebra._encoder.pc.pulse_source.put(1)  # 0 = Position, 1 = Time
+        else:
+            print('im nothing')
 
         # set up all of the detectors
         # TODO we should be able to move this out of the per-line call?!
@@ -436,6 +448,82 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         for d in flying_zebra.detectors:
             yield from bps.mov(d.total_points, xnum)
 
+        # Does this make sense here?
+        if flying_zebra._triggering == "position":
+            print('position')
+            # Set PC settings
+            flying_zebra._encoder.pc.gate_source.put(0)  # 0 = Position, 1 = Time
+            flying_zebra._encoder.pc.pulse_source.put(0)  # 0 = Position, 1 = Time
+
+            # Set OR logic
+            flying_zebra._encoder.or1.use1.put(1)
+            flying_zebra._encoder.or1.input_source1.put(54)  # Pulse 3
+            flying_zebra._encoder.or1.invert1.put(0)
+            flying_zebra._encoder.or1.use2.put(1)
+            flying_zebra._encoder.or1.input_source2.put(55)  # Pulse 4
+            flying_zebra._encoder.or1.invert1.put(0)
+            flying_zebra._encoder.or1.use3.put(1)
+            flying_zebra._encoder.or1.input_source1.put(53)  # Pulse 2
+            flying_zebra._encoder.or1.invert1.put(0)
+            flying_zebra._encoder.or1.use4.put(0)
+            flying_zebra._encoder.or1.input_source1.put(0)  # Disconnect
+            flying_zebra._encoder.or1.invert1.put(0)
+
+            # Set Pulse settings
+            flying_zebra._encoder.pulse2.input_addr.put(30)  # PC Gate
+            flying_zebra._encoder.pulse2.input_edge.put(0)  # 0 = rising, 1 = falling
+            flying_zebra._encoder.pulse2.time_units.put("ms")
+            flying_zebra._encoder.pulse2.delay.put(0.0)
+            flying_zebra._encoder.pulse2.width.put(0.1)
+
+            flying_zebra._encoder.pulse3.input_addr.put(52)  # PC Pulse
+            flying_zebra._encoder.pulse3.input_edge.put(1)  # 0 = rising, 1 = falling
+            flying_zebra._encoder.pulse3.time_units.put("ms")
+            flying_zebra._encoder.pulse3.delay.put(0.2)
+            flying_zebra._encoder.pulse3.width.put(0.1)
+
+            flying_zebra._encoder.pulse4.input_addr.put(52)  # PC Pulse
+            flying_zebra._encoder.pulse4.input_edge.put(1)  # 0 = rising, 1 = falling
+            flying_zebra._encoder.pulse4.time_units.put("ms")
+            flying_zebra._encoder.pulse4.delay.put(0.0)
+            flying_zebra._encoder.pulse4.width.put(0.1)
+        elif flying_zebra._triggering == 'time':
+            print('time')
+            # Set PC settings
+            flying_zebra._encoder.pc.gate_source.put(1)  # 0 = Position, 1 = Time
+            flying_zebra._encoder.pc.pulse_source.put(1)  # 0 = Position, 1 = Time
+
+            flying_zebra._encoder.or1.use1.put(1)
+            flying_zebra._encoder.or1.input_source1.put(54)  # Pulse 3
+            flying_zebra._encoder.or1.invert1.put(0)
+            flying_zebra._encoder.or1.use2.put(1)
+            flying_zebra._encoder.or1.input_source2.put(55)  # Pulse 4
+            flying_zebra._encoder.or1.invert1.put(0)
+            flying_zebra._encoder.or1.use3.put(0)
+            flying_zebra._encoder.or1.input_source1.put(53)  # Pulse 2
+            flying_zebra._encoder.or1.invert1.put(0)
+
+            flying_zebra._encoder.pulse2.input_addr.put(30)  # PC Gate
+            flying_zebra._encoder.pulse2.input_edge.put(0)  # 0 = rising, 1 = falling
+            flying_zebra._encoder.pulse2.time_units.put("ms")
+            flying_zebra._encoder.pulse2.delay.put(0.0)
+            flying_zebra._encoder.pulse2.width.put(0.1)
+
+            flying_zebra._encoder.pulse3.input_addr.put(31)  # PC Pulse
+            flying_zebra._encoder.pulse3.input_edge.set(0)  # 0 = rising, 1 = falling
+            flying_zebra._encoder.pulse3.time_units.put("ms")
+            flying_zebra._encoder.pulse3.delay.put(0.0)
+            flying_zebra._encoder.pulse3.width.put(0.1)
+
+            flying_zebra._encoder.pulse4.input_addr.put(31)  # PC Pulse
+            flying_zebra._encoder.pulse4.input_edge.put(1)  # 0 = rising, 1 = falling
+            flying_zebra._encoder.pulse4.time_units.put("ms")
+            flying_zebra._encoder.pulse4.delay.put(0.0)
+            flying_zebra._encoder.pulse4.width.put(0.1)
+        else:
+            print("I don't know what to do!")
+            raise Exception
+
         # TODO move this to stage sigs
         yield from bps.mov(xs.external_trig, True)
 
@@ -502,6 +590,7 @@ def nano_scan_and_fly(*args, extra_dets=None, **kwargs):
     kwargs.setdefault('xmotor', nano_stage.sx)
     kwargs.setdefault('ymotor', nano_stage.sy)
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
+    kwargs['flying_zebra']._triggering = "position"
     # print(kwargs['xmotor'].name)
     # print(kwargs['ymotor'].name)
     yield from abs_set(nano_flying_zebra.fast_axis, 'NANOHOR')
@@ -1183,7 +1272,8 @@ def time_scan_and_fly(*args, extra_dets=None, xmotor=nano_stage.x, ymotor=nano_s
         extra_dets = []
     dets = [_xs] + extra_dets
 
-    uid = yield from scan_and_fly_time_base(dets, *args, **kwargs)
+    # uid = yield from scan_and_fly_time_base(dets, *args, **kwargs)
+    uid = yield from scan_and_fly_base(dets, *args, **kwargs)
 
     nano_stage.x.velocity.set(100)
 

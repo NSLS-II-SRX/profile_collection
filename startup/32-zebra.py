@@ -10,7 +10,8 @@ import time as ttime
 from numpy.lib.function_base import msort
 from ophyd import Device, Signal, EpicsSignal, EpicsSignalRO
 from ophyd import Component as Cpt
-from hxntools.detectors.zebra import Zebra, EpicsSignalWithRBV
+# from hxntools.detectors.zebra import Zebra, EpicsSignalWithRBV
+from nslsii.detectors.zebra import Zebra, EpicsSignalWithRBV
 
 
 class CurrentPreampZebra(Device):
@@ -408,7 +409,7 @@ class SRXFlyer1Axis(Device):
 
         return {"stream0": desc}
 
-    def _kickoff_pos(self, *, xstart, xstop, xnum, dwell):
+    def _kickoff_pos(self, xstart, xstop, xnum, dwell):
         dets_by_name = {d.name: d for d in self.detectors}
 
         self._encoder.pc.arm.put(0)
@@ -416,33 +417,52 @@ class SRXFlyer1Axis(Device):
         self._npts = int(xnum)
         
         ## TODO: This should probably be done at the beginning of the scan instead of for each line
-        self._encoder.or1.use1.put(1)
-        self._encoder.or1.input_source1.put(54)  # Pulse 3
-        self._encoder.or1.invert1.put(0)
-        self._encoder.or1.use2.put(1)
-        self._encoder.or1.input_source2.put(55)  # Pulse 4
-        self._encoder.or1.invert1.put(0)
-        self._encoder.or1.use3.put(1)
-        self._encoder.or1.input_source1.put(53)  # Pulse 2
-        self._encoder.or1.invert1.put(0)
+        # self._encoder.or1.use1.put(1)
+        # self._encoder.or1.input_source1.put(54)  # Pulse 3
+        # self._encoder.or1.invert1.put(0)
+        # self._encoder.or1.use2.put(1)
+        # self._encoder.or1.input_source2.put(55)  # Pulse 4
+        # self._encoder.or1.invert1.put(0)
+        # self._encoder.or1.use3.put(1)
+        # self._encoder.or1.input_source1.put(53)  # Pulse 2
+        # self._encoder.or1.invert1.put(0)
+        # self._encoder.or1.use4.put(0)
+        # self._encoder.or1.input_source1.put(0)  # Disconnect
+        # self._encoder.or1.invert1.put(0)
 
-        self._encoder.pulse2.input_addr.put(30)  # PC Gate
-        self._encoder.pulse2.input_edge.put(0)  # 0 = rising, 1 = falling
-        self._encoder.pulse2.time_units.put("ms")
-        self._encoder.pulse2.delay.put(0.0)
-        self._encoder.pulse2.width.put(0.1)
+        # self._encoder.pulse2.input_addr.put(30)  # PC Gate
+        # self._encoder.pulse2.input_edge.put(0)  # 0 = rising, 1 = falling
+        # self._encoder.pulse2.time_units.put("ms")
+        # self._encoder.pulse2.delay.put(0.0)
+        # self._encoder.pulse2.width.put(0.1)
 
-        self._encoder.pulse3.input_addr.put(52)  # PC Pulse
-        self._encoder.pulse3.input_edge.put(0)  # 0 = rising, 1 = falling
-        self._encoder.pulse3.time_units.put("ms")
-        self._encoder.pulse3.delay.put(0.0)
-        self._encoder.pulse3.width.put(0.1)
+        # self._encoder.pulse3.input_addr.put(52)  # PC Pulse
+        # self._encoder.pulse3.input_edge.set(1)  # 0 = rising, 1 = falling
+        # print(self._encoder.pulse3.input_edge.get())
+        # self._encoder.pulse3.time_units.put("ms")
+        # print(self._encoder.pulse3.input_edge.get())
+        # self._encoder.pulse3.delay.put(0.2)
+        # print(self._encoder.pulse3.input_edge.get())
+        # self._encoder.pulse3.width.put(0.1)
+        # print(self._encoder.pulse3.input_edge.get())
 
-        self._encoder.pulse4.input_addr.put(52)  # PC Pulse
-        self._encoder.pulse4.input_edge.put(1)  # 0 = rising, 1 = falling
-        self._encoder.pulse4.time_units.put("ms")
-        self._encoder.pulse4.delay.put(0.0)
-        self._encoder.pulse4.width.put(0.1)
+        # self._encoder.pulse4.input_addr.put(52)  # PC Pulse
+        # self._encoder.pulse4.input_edge.put(1)  # 0 = rising, 1 = falling
+        # self._encoder.pulse4.time_units.put("ms")
+        # self._encoder.pulse4.delay.put(0.0)
+        # self._encoder.pulse4.width.put(0.1)
+        # print(self._encoder.pulse3.input_edge.get())
+
+        print(self._triggering)
+        if self._triggering == 'position':
+            print('Im in position')
+        elif self._triggering == 'time':
+            # Set PC settings
+            print('Im in time')
+            self._encoder.pc.gate_source.put(1)  # 0 = Position, 1 = Time
+            self._encoder.pc.pulse_source.put(1)  # 0 = Position, 1 = Time
+        else:
+            print('im nothing')
 
         if xstart < xstop:
             direction = 1
@@ -457,8 +477,8 @@ class SRXFlyer1Axis(Device):
             decrement = 1e-5
 
         self._encoder.pc.gate_start.put(xstart - direction * (pxsize / 2))
-        self._encoder.pc.gate_step.put(extent + 0.051)
-        self._encoder.pc.gate_width.put(extent + 0.050)
+        self._encoder.pc.gate_step.put(extent + 0.011)
+        self._encoder.pc.gate_width.put(extent + 0.010)
 
         self._encoder.pc.pulse_start.put(0.0)
         self._encoder.pc.pulse_max.put(xnum)
@@ -508,33 +528,33 @@ class SRXFlyer1Axis(Device):
         self._npts = int(xnum)
         
         ## TODO: This should probably be done at the beginning of the scan instead of for each line
-        self._encoder.or1.use1.put(1)
-        self._encoder.or1.input_source1.put(54)  # Pulse 3
-        self._encoder.or1.invert1.put(0)
-        self._encoder.or1.use2.put(1)
-        self._encoder.or1.input_source2.put(55)  # Pulse 4
-        self._encoder.or1.invert1.put(0)
-        self._encoder.or1.use3.put(0)
-        self._encoder.or1.input_source1.put(53)  # Pulse 2
-        self._encoder.or1.invert1.put(0)
+        # self._encoder.or1.use1.put(1)
+        # self._encoder.or1.input_source1.put(54)  # Pulse 3
+        # self._encoder.or1.invert1.put(0)
+        # self._encoder.or1.use2.put(1)
+        # self._encoder.or1.input_source2.put(55)  # Pulse 4
+        # self._encoder.or1.invert1.put(0)
+        # self._encoder.or1.use3.put(0)
+        # self._encoder.or1.input_source1.put(53)  # Pulse 2
+        # self._encoder.or1.invert1.put(0)
 
-        self._encoder.pulse2.input_addr.put(30)  # PC Gate
-        self._encoder.pulse2.input_edge.put(0)  # 0 = rising, 1 = falling
-        self._encoder.pulse2.time_units.put("ms")
-        self._encoder.pulse2.delay.put(0.0)
-        self._encoder.pulse2.width.put(0.1)
+        # self._encoder.pulse2.input_addr.put(30)  # PC Gate
+        # self._encoder.pulse2.input_edge.put(0)  # 0 = rising, 1 = falling
+        # self._encoder.pulse2.time_units.put("ms")
+        # self._encoder.pulse2.delay.put(0.0)
+        # self._encoder.pulse2.width.put(0.1)
 
-        self._encoder.pulse3.input_addr.put(31)  # PC Pulse
-        self._encoder.pulse3.input_edge.put(0)  # 0 = rising, 1 = falling
-        self._encoder.pulse3.time_units.put("ms")
-        self._encoder.pulse3.delay.put(0.0)
-        self._encoder.pulse3.width.put(0.1)
+        # self._encoder.pulse3.input_addr.put(31)  # PC Pulse
+        # self._encoder.pulse3.input_edge.put(0)  # 0 = rising, 1 = falling
+        # self._encoder.pulse3.time_units.put("ms")
+        # self._encoder.pulse3.delay.put(0.0)
+        # self._encoder.pulse3.width.put(0.1)
 
-        self._encoder.pulse4.input_addr.put(31)  # PC Pulse
-        self._encoder.pulse4.input_edge.put(1)  # 0 = rising, 1 = falling
-        self._encoder.pulse4.time_units.put("ms")
-        self._encoder.pulse4.delay.put(0.0)
-        self._encoder.pulse4.width.put(0.1)
+        # self._encoder.pulse4.input_addr.put(31)  # PC Pulse
+        # self._encoder.pulse4.input_edge.put(1)  # 0 = rising, 1 = falling
+        # self._encoder.pulse4.time_units.put("ms")
+        # self._encoder.pulse4.delay.put(0.0)
+        # self._encoder.pulse4.width.put(0.1)
 
         if xstart < xstop:
             direction = 1
@@ -587,11 +607,11 @@ class SRXFlyer1Axis(Device):
         # and do the above asynchronously.
         return st
 
-    def kickoff(self, xstart, xstop, xnum, dwell, t_acc):
+    def kickoff(self, *, xstart, xstop, xnum, dwell, t_acc):
         # print(*args)
         # print(**kwargs)
         if self._triggering == "position":
-            return self._kickoff_pos(self, xstart, xstop, xnum, dwell)
+            return self._kickoff_pos(xstart, xstop, xnum, dwell)
         elif self._triggering == "time":
             return self._kickoff_time(xstart, xstop, xnum, dwell, t_acc)
         else:
@@ -688,7 +708,7 @@ class SRXFlyer1Axis(Device):
         # @timer_wrapper
         def get_zebra_data():
             if self._triggering == "position":
-                export_nano_zebra_data(self._encoder, self.__write_filepath)
+                export_nano_zebra_data(self._encoder, self.__write_filepath, self.fast_axis)
             else:
                 export_nano_zebra_time_data(self._encoder, self.__write_filepath, scan_md)
 
