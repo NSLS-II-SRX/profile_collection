@@ -333,6 +333,8 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # pitch_guess = 0
     # 2022-1-21
     pitch_guess = 0.072
+    # 2022-03-03
+    pitch_guess = 0.030
  
 
     # Use calibration
