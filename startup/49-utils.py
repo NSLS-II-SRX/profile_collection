@@ -142,7 +142,7 @@ def print_baseline(scanid=-1, key_filter=None):
     scanid = int(scanid)
     h = db[scanid]
     tbl = h.table('baseline')
-    pd.set_option('max_rows', 999)
+    pd.set_option('display.max_rows', 999)
     if (key_filter is not None):
         all_keys = tbl.keys()
         filtered_list = []
@@ -151,7 +151,7 @@ def print_baseline(scanid=-1, key_filter=None):
                 filtered_list.append(key)
         tbl = tbl[filtered_list]
     print(tbl.T)
-    pd.reset_option('max_rows')
+    pd.reset_option('display.max_rows')
 
 
 def estimate_scan_duration(fastaxis_num, slowaxis_num, dwell, scantype='XRF_FLY', event_delay=None):
