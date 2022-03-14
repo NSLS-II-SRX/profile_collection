@@ -220,7 +220,7 @@ class CommunityXspress3FileStoreFlyable(CommunityXspress3FileStore):
                 "external": "FileStore:",
                 "dtype": "array",
                 # TODO do not hard code
-                "shape": (self.parent.settings.num_images.get(), 4, 4096),
+                "shape": (self.parent.cam.num_images.get(), 4, 4096),
                 "source": self.prefix,
             }
             return {self.parent._f_key: spec}
@@ -398,7 +398,7 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
         print("unstage!")
         # JL added the next two lines
         #self.hdf5.auto_save.put(0)
-        self.hdf5.file_write_mode.put(self.previous_file_write_mode_value)
+        # self.hdf5.file_write_mode.put(self.previous_file_write_mode_value)
         # JL removed the next line
         self.hdf5.capture.put(0)  # this PV un-sets itself
         try:
@@ -735,7 +735,7 @@ class SrxXspress3Detector2(CommunitySRXXspressTrigger, Xspress3Detector):
 try:
     # JL replaced {Xsp:1}: with {Xsp:3}:det1:
     #xs = SrxXspress3Detector("XF:05IDD-ES{Xsp:1}:", name="xs")
-    xs2 = CommunitySrxXspress3Detector("XF:05IDD-ES{Xsp:3}:", name="xs2")
+    xs2 = CommunitySrxXspress3Detector("XF:05IDD-ES{Xsp:3}:", name="xs2", f_key="fluor_xs2")
     # JL commented the next 4 statements
     #xs.channel1.rois.read_attrs = ["roi{:02}".format(j)
     #                               for j in [1, 2, 3, 4]]
