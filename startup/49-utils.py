@@ -111,6 +111,20 @@ def print_warning_message(msg):
     print(f"{'*' * msg_len}\n")
 
 
+def banner(str_list, border="-"):
+    if not isinstance(str_list, list):
+        str_list = [str_list]
+
+    N = 2
+    for str in str_list:
+        N = max(len(str), N)
+
+    print(border * (N + 2))
+    for str in str_list:
+        print(f" {str}")
+    print(border * (N + 2), end='\n\n')
+
+
 def print_baseline(scanid=-1, key_filter=None):
     '''
     Print all the baseline metadata.
@@ -128,7 +142,7 @@ def print_baseline(scanid=-1, key_filter=None):
     scanid = int(scanid)
     h = db[scanid]
     tbl = h.table('baseline')
-    pd.set_option('max_rows', 999)
+    pd.set_option('display.max_rows', 999)
     if (key_filter is not None):
         all_keys = tbl.keys()
         filtered_list = []
@@ -137,7 +151,7 @@ def print_baseline(scanid=-1, key_filter=None):
                 filtered_list.append(key)
         tbl = tbl[filtered_list]
     print(tbl.T)
-    pd.reset_option('max_rows')
+    pd.reset_option('display.max_rows')
 
 
 def estimate_scan_duration(fastaxis_num, slowaxis_num, dwell, scantype='XRF_FLY', event_delay=None):

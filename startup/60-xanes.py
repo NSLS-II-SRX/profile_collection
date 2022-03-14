@@ -32,7 +32,7 @@ def xanes_textout(scan=-1, header=[], userheader={}, column=[], usercolumn={},
     # get events using fill=False so it does not look for the metadata in filestorage with reference (hdf5 here)
     events = list(get_events(h, fill=False, stream_name='primary'))
 
-    if (filename_add is not ''):
+    if (filename_add != ''):
         filename = 'scan_' + str(h.start['scan_id']) + '_' + filename_add
     else:
         filename = 'scan_' + str(h.start['scan_id'])
@@ -235,12 +235,12 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
         raise AttributeError("A list of energy steps must be provided by means of the 'esteps' keyword.")
     if (not isinstance(erange,list)) or (not isinstance(estep,list)):
         raise TypeError("The keywords 'estep' and 'erange' must be lists.")
-    if (len(erange)-len(estep) is not 1):
+    if (len(erange)-len(estep) != 1):
         raise ValueError("The 'erange' and 'estep' lists are inconsistent; " \
                          + 'c.f., erange = [7000, 7100, 7150, 7500], estep = [2, 0.5, 5] ')
     if (type(roinum) is not list):
         roinum = [roinum]
-    if (detune is not 0):
+    if (detune != 0):
         yield from abs_set(energy.detune, detune)
 
     
@@ -503,7 +503,7 @@ def hfxanes_ioc(erange=[], estep=[], acqtime=1.0, samplename='', filename='',
             hfxanes_gen = yield from xanes_plan(erange=erange, estep=estep, acqtime=thisscan.acq.get(),
                                                 samplename=thisscan.sampname.get(), filename=thisscan.filename.get(),
                                                 roinum=int(thisscan.roi.get()), detune=thisscan.detune.get(), shutter=shutter)
-            if (len(scanlist) is not 0):
+            if (len(scanlist) != 0):
                 yield from bps.sleep(waittime)
     scanrecord.current_scan.put('')
 

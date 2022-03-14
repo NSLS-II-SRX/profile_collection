@@ -35,7 +35,8 @@ def check_shutters(check, status):
     '''
 
     if check is False:
-        print_warning_message("WARNING: Shutters are not controlled in this scan.")
+        banner("WARNING: Shutters are not controlled in this scan.")
+        # print_warning_message("WARNING: Shutters are not controlled in this scan.")
     else:
         if status == 'Open':
             if shut_b.status.get() == 'Not Open':

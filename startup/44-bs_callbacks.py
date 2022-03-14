@@ -1,8 +1,51 @@
 print(f'Loading {__file__}...')
 
 
+import time as ttime
 from bluesky.callbacks import CallbackBase,LivePlot
 from xray_vision.backend.mpl.cross_section_2d import CrossSection
+
+# Try-except only hear for testing. Can be removed after validation.
+def cb_print_scaninfo(name, doc):
+    if name == "start":
+        try:
+            str1 = f"Scan Type:  {doc['scan']['type']}"
+        except KeyError:
+            str1 = f"Scan Type:  {doc['plan_name'].upper()}"
+        except:
+            str1 = ''
+        str2 = f"Scan ID:    {doc['scan_id']}"
+        str3 = f"Start Time: {doc['time_str']}"
+        banner([str1, str2, str3])
+    elif name == "stop":
+        try:
+            start_doc = db[doc['run_start']].start
+        except:
+            start_doc = None
+
+        if start_doc is not None:
+            try:
+                str1 = f"Scan Type:    {start_doc['scan']['type']}"
+            except KeyError:
+                str1 = f"Scan Type:  {doc['plan_name'].upper()}"
+            except:
+                str1 = ''
+            str2 = f"Scan ID:      {start_doc['scan_id']}"
+            str3 = f"Stop Time:    {ttime.ctime(doc['time'])}"
+            dt = doc['time'] - start_doc['time']
+            if dt < 60:
+                str4 = f"  Total Time: {dt:.2f} s"
+            elif dt < 3600:
+                str4 = f"  Total Time: {dt/60:.2f} min"
+            else:
+                str4 = f"  Total Time: {dt/3600:.2f} h"
+            banner([str1, str2, str3, str4])
+        else: 
+            str3 = f"Stop Time:    {ttime.ctime(doc['time'])}"
+            banner([str3])
+
+
+RE.subscribe(cb_print_scaninfo)
 
 
 i0_baseline = 7.24e-10

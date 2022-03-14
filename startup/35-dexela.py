@@ -165,7 +165,8 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
 
         self.cam.stage_sigs['image_mode'] = 'Multiple'
         if self._mode is SRXMode.fly:
-            self.cam.stage_sigs['trigger_mode'] = 'Ext. Edge Single'
+            # self.cam.stage_sigs['trigger_mode'] = 'Ext. Edge Single'
+            self.cam.stage_sigs['trigger_mode'] = 'Ext. Bulb'
         else:
             self.cam.stage_sigs['trigger_mode'] = 'Int. Fixed Rate'
 

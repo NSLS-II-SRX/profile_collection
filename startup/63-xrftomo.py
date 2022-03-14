@@ -123,15 +123,22 @@ def calc_com(run_start_uid, roi=None):
 
 # Define a function to call from the RunEngine
 def nano_tomo(x0, x1, nx, y0, y1, ny, ct, th=None,
-              th_offset=0, centering_method='none', roi=None, extra_dets=[], shutter=True):
+              th_offset=0,
+              th_ind_start=0,
+              centering_method='none',
+              roi=None,
+              fly_in_Y=False,
+              extra_dets=[],
+              shutter=True):
     # x0 = x starting point
     # x1 = x finish point
     # nx = number of points in x
     # y0 = y starting point
     # y1 = y finish point
     # ny = number of points in y
-    # th = angles to scan at
+    # th = angles to scan at in degrees
     # th_offset = offset value to relate to rotation stage
+    # th_ind_start = index of the angle to start at (zero-based)
     # centering_method = method used to account for sample motion and center
     #                    the sample
     #                    'none' = no correction
@@ -154,8 +161,10 @@ def nano_tomo(x0, x1, nx, y0, y1, ny, ct, th=None,
     yield from check_shutters(shutter, 'Open')
 
     # Run the scan
-    for i in th:
-        print(f'Scanning at: {i:.3f} deg')
+    for i in th[th_ind_start:]:
+        # print(f'Scanning at: {i:.3f} deg')
+        banner(f'Scanning at: {i:.3f} deg')
+
         # Rotate the sample
         if (nano_stage.th.egu == 'mdeg'):
             yield from mv(nano_stage.th, i * 1000)
@@ -164,13 +173,20 @@ def nano_tomo(x0, x1, nx, y0, y1, ny, ct, th=None,
         yield from bps.sleep(1)  # Give 1 second sleep to allow sample to settle
         
         # Run the scan/projection
-        myscan = nano_scan_and_fly(x0, x1, nx, y0, y1, ny, ct, extra_dets=extra_dets, shutter=False)
+        if fly_in_Y is False:
+            myscan = nano_scan_and_fly(x0, x1, nx, y0, y1, ny, ct, extra_dets=extra_dets, shutter=False)
+        else:
+            myscan = nano_y_scan_and_fly(x0, x1, nx, y0, y1, ny, ct, extra_dets=extra_dets, shutter=False)
+
         if (centering_method == 'com'):
             myscan = subs_wrapper(myscan, {'stop' : cb_calc_com})
         yield from myscan
 
     # Close the shutter
     yield from check_shutters(shutter, 'Close')
+
+    # Return to zero angle
+    yield from mov(nano_stage.th, 0)
 
 
 # Define a function to call from the RunEngine

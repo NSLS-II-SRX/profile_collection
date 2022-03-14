@@ -399,8 +399,8 @@ class SRXFlyer1Axis(Device):
             direction = -1
         pxsize = np.abs(xstop - xstart) / (xnum - 1)
         extent = np.abs(xstop - xstart) + pxsize
-        # 2 ms delay between pulses
-        decrement = (pxsize / dwell) * 0.0005
+        # 1 ms delay between pulses
+        decrement = (pxsize / dwell) * 0.0010
         if decrement < 1e-5:
             # print('Changing the pulse width')
             decrement = 1e-5
@@ -639,7 +639,7 @@ try:
     # flying_zebra = SRXFlyer1Axis(
     #     list(xs for xs in [xs] if xs is not None), sclr1, name="flying_zebra"
     # )
-    raise Exception
+    # raise Exception
     microZebra = SRXZebra("XF:05IDD-ES:1{Dev:Zebra1}:", name="microZebra",
         read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
     )

@@ -17,11 +17,6 @@ proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
 saf_num = 307307
 
-#proposal_num = 307833
-#proposal_title = 'Quantifying thermodynamically induced reaction non-uniformity in thick battery electrodes'
-#PI_lastname = 'Tang'
-#saf_num = 307001
-
 
 cycle = '2022_cycle1'
 
