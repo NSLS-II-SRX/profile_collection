@@ -1,5 +1,5 @@
 
-def xs2_1d_scan(stage, x0, x1, nx, dwell, dets=[xs2, sclr1]):
+def xs2_1d_scan(stage, x0, x1, nx, dwell, dets=[xs2, sclr1], shutter=True):
     yield from check_shutters(shutter, 'Open')
     yield from mov(xs2.external_trig, False)
     yield from mov(xs2.cam.acquire_time, dwell)
@@ -19,7 +19,7 @@ def xs2_1d_scan(stage, x0, x1, nx, dwell, dets=[xs2, sclr1]):
     )
     yield from check_shutters(shutter, 'Close')
 
-def xs2_1d_relscan(stage, neg_dx, pos_dx, nx, dwell, dets=[xs2, sclr1]):
+def xs2_1d_relscan(stage, neg_dx, pos_dx, nx, dwell, dets=[xs2, sclr1], shutter=True):
     yield from check_shutters(shutter, 'Open')
     yield from mov(xs2.external_trig, False)
     yield from mov(xs2.cam.acquire_time, dwell)
@@ -38,4 +38,15 @@ def xs2_1d_relscan(stage, neg_dx, pos_dx, nx, dwell, dets=[xs2, sclr1]):
         },
     )
     yield from check_shutters(shutter, 'Close')
+
+def overnight():
+    x0 = 4.2
+    x1 = 4.2
+    nx = 1
+
+    x = np.linspace(x0, x1, num=nx)
+    for xi in x:
+        yield from mov(confocal_stage.x, xi)
+        yield from xs2_1d_relscan(confocal_stage.y, -0.5, 0.5, 101, 1)
+        yield from xs2_1d_relscan(confocal_stage.z, -0.5, 0.5, 101, 1)
 
