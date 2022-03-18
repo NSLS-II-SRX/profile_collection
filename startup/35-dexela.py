@@ -34,6 +34,11 @@ class BulkDexela(HandlerBase):
     def __call__(self):
         return self._handle['entry/instrument/detector/data'][:]
 
+    def close(self):
+        self._handle.close()
+        self._handle = None
+        super().close()
+
 
 db.reg.register_handler(BulkDexela.HANDLER_NAME, BulkDexela,
                         overwrite=True)
