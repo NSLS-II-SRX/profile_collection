@@ -30,7 +30,7 @@ def calc_com(run_start_uid, roi=None):
     # Get the data
     flag_get_data = True
     t0 = ttime.monotonic()
-    TMAX = 60  # wait a maximum of 60 seconds
+    TMAX = 120  # wait a maximum of 60 seconds
     while flag_get_data:
         try:
             d = list(h.data('fluor', stream_name='stream0', fill=True))
@@ -41,7 +41,7 @@ def calc_com(run_start_uid, roi=None):
             y = list(h.data('enc2', stream_name='stream0', fill=True))
             flag_get_data = False
         except:
-            yield from bps.sleep(1)
+            # yield from bps.sleep(1)
             if (ttime.monotonic() - t0 > TMAX):
                 print('Data collection timed out!')
                 print('Skipping center-of-mass correction...')
@@ -50,7 +50,7 @@ def calc_com(run_start_uid, roi=None):
     # Setup ROI
     if (roi is None):
         # NEED TO CONFIRM VALUES!
-        roi = [xs.channel1.rois.roi_low, xs.channel1.rois.roi_high]
+        roi = [xs.channel1.rois.roi01.bin_low.get(), xs.channel1.rois.roi01.bin_high.get()]
         # NEED TO CONFIRM!
         # By default, do both low/high values reset to zero?
         if (roi[1] == 0):
@@ -147,15 +147,15 @@ def nano_tomo(x0, x1, nx, y0, y1, ny, ct, th=None,
 
     # Define callback for center of mass correction
     def cb_calc_com(name, doc):
+        nonlocal x0, x1, y0, y1
         run_start_uid = doc['run_start']
-        x0, x1, y0, y1 = calc_com(run_start_uid)
+        x0, x1, y0, y1 = calc_com(run_start_uid, roi=roi)
 
     # Open the shutter
     yield from check_shutters(shutter, 'Open')
 
     # Run the scan
     for i in th[th_ind_start:]:
-        # print(f'Scanning at: {i:.3f} deg')
         banner(f'Scanning at: {i:.3f} deg')
 
         # Rotate the sample

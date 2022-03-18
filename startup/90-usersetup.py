@@ -17,10 +17,10 @@ proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
 saf_num = 307307
 
-proposal_num = 308810
-proposal_title = 'Determining the Effects of a Copper Specific Chelator on the Copper Levels and Speciation in Amyloid Beta Aggregates in Cerebral Amyloid Angiopathy'
-PI_lastname = 'Ambi'
-saf_num = 308880
+proposal_num = 308831
+proposal_title = 'Intelligent Acquisition and Reconstruction for Hyperspectral Tomography Systems'
+PI_lastname = 'Bilheux'
+saf_num = 308261
 
 
 cycle = '2022_cycle1'
@@ -125,13 +125,16 @@ def logscan_event0info(scantype, event0info = []):
 
 
 def logscan_detailed(scantype):
-    h = db[-1]
-    scan_id = h.start['scan_id']
-    uid = h.start['uid']
+    try:
+        h = db[-1]
+        scan_id = h.start['scan_id']
+        uid = h.start['uid']
 
-    userlogf = open(userlogfile, 'a')
-    userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype + '\t' + str(h['start']['scan']['scan_input']) + '\n')
-    userlogf.close()
+        userlogf = open(userlogfile, 'a')
+        userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype + '\t' + str(h['start']['scan']['scan_input']) + '\n')
+        userlogf.close()
+    except:
+        banner('Error writing to log file!')
 
 
 def scantime(scanid, printresults=True):
