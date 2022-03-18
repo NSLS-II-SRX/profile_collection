@@ -37,62 +37,62 @@ def xanes_textout(scan=-1, header=[], userheader={}, column=[], usercolumn={},
     else:
         filename = 'scan_' + str(h.start['scan_id'])
 
-    f = open(filedir+filename, 'w')
+    with open(filedir+filename, 'w') as f:
 
-    staticheader = '# XDI/1.0 MX/2.0\n' \
-              + '# Beamline.name: ' + h.start['beamline_id'] + '\n' \
-              + '# Facility.name: NSLS-II\n' \
-              + '# Facility.ring_current:' + str(events[0]['data']['ring_current']) + '\n' \
-              + '# Scan.start.uid: ' + h.start['uid'] + '\n' \
-              + '# Scan.start.time: '+ str(h.start['time']) + '\n' \
-              + '# Scan.start.ctime: ' + ttime.ctime(h.start['time']) + '\n' \
-              + '# Mono.name: Si 111\n'
+        staticheader = '# XDI/1.0 MX/2.0\n' \
+                  + '# Beamline.name: ' + h.start['beamline_id'] + '\n' \
+                  + '# Facility.name: NSLS-II\n' \
+                  + '# Facility.ring_current:' + str(events[0]['data']['ring_current']) + '\n' \
+                  + '# Scan.start.uid: ' + h.start['uid'] + '\n' \
+                  + '# Scan.start.time: '+ str(h.start['time']) + '\n' \
+                  + '# Scan.start.ctime: ' + ttime.ctime(h.start['time']) + '\n' \
+                  + '# Mono.name: Si 111\n'
 
-    f.write(staticheader)
+        f.write(staticheader)
 
-    for item in header:
-        if (item in events[0].data.keys()):
-            f.write('# ' + item + ': ' + str(events[0]['data'][item]) + '\n')
+        for item in header:
+            if (item in events[0].data.keys()):
+                f.write('# ' + item + ': ' + str(events[0]['data'][item]) + '\n')
+                if (output is True):
+                    print(item + ' is written')
+            else:
+                print(item + ' is not in the scan')
+
+        for key in userheader:
+            f.write('# ' + key + ': ' + str(userheader[key]) + '\n')
             if (output is True):
-                print(item + ' is written')
-        else:
-            print(item + ' is not in the scan')
+                print(key + ' is written')
 
-    for key in userheader:
-        f.write('# ' + key + ': ' + str(userheader[key]) + '\n')
-        if (output is True):
-            print(key + ' is written')
+        for idx, item in enumerate(column):
+            if (item in events[0].data.keys()):
+                f.write('# Column.' + str(idx+1) + ': ' + item + '\n')
 
-    for idx, item in enumerate(column):
-        if (item in events[0].data.keys()):
-            f.write('# Column.' + str(idx+1) + ': ' + item + '\n')
-
-    f.write('# ')
-    for item in column:
-        if (item in events[0].data.keys()):
-            f.write(str(item) + '\t')
-
-    for item in usercolumnname:
-        f.write(item + '\t')
-
-    f.write('\n')
-    f.flush()
-
-    idx = 0
-    for event in events:
+        f.write('# ')
         for item in column:
             if (item in events[0].data.keys()):
-                f.write('{0:8.6g}  '.format(event['data'][item]))
-        for item in usercolumnname:
-            try:
-                f.write('{0:8.6g}  '.format(usercolumn[item][idx]))
-            except KeyError:
-                idx += 1
-                f.write('{0:8.6g}  '.format(usercolumn[item][idx]))
-        idx = idx + 1
-        f.write('\n')
+                f.write(str(item) + '\t')
 
-    f.close()
+        for item in usercolumnname:
+            f.write(item + '\t')
+
+        f.write('\n')
+        f.flush()
+
+        idx = 0
+        for event in events:
+            for item in column:
+                if (item in events[0].data.keys()):
+                    f.write('{0:8.6g}  '.format(event['data'][item]))
+            for item in usercolumnname:
+                try:
+                    f.write('{0:8.6g}  '.format(usercolumn[item][idx]))
+                except KeyError:
+                    idx += 1
+                    f.write('{0:8.6g}  '.format(usercolumn[item][idx]))
+            idx = idx + 1
+            f.write('\n')
+
+
 
 
 def xanes_afterscan_plan(scanid, filename, roinum):
@@ -217,7 +217,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     if (detune != 0):
         yield from abs_set(energy.detune, detune)
 
-    
+
     # Convert erange and estep to numpy array
     ept = np.array([])
     erange = np.array(erange)
@@ -226,7 +226,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     for i in range(len(estep)):
         ept = np.append(ept, np.arange(erange[i], erange[i+1], estep[i]))
     ept = np.append(ept, np.array(erange[-1]))
-    
+
     # Record relevant meta data in the Start document, defined in 90-usersetup.py
     # Add user meta data
     scan_md = {}
@@ -235,8 +235,8 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     scan_md['scan']['type'] = 'XAS_STEP'
     scan_md['scan']['ROI'] = roinum
     scan_md['scan']['dwell'] = acqtime
-    # scan_md['scaninfo'] = {'type' : 'XANES', 
-    #                        'ROI' : roinum, 
+    # scan_md['scaninfo'] = {'type' : 'XANES',
+    #                        'ROI' : roinum,
     #                        'raster' : False,
     #                        'dwell' : acqtime}
     scan_md['scan']['scan_input'] = str(np.around(erange, 2)) + ', ' + str(np.around(estep, 2))
@@ -278,7 +278,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
         else:
             print("Aligning at ", align_at)
             yield from abs_set(energy, float(align_at), wait=True)
-    
+
     # Peak up DCM at first scan point
     if (align is True):
         yield from peakup_fine(shutter=shutter)
@@ -300,7 +300,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     livecallbacks.append(LiveTable(livetableitem))
     liveploty = roi_key[0]
     liveplotx = energy.energy.name
-    
+
     def my_factory(name):
         fig = plt.figure(num=name)
         ax = fig.gca()
@@ -319,7 +319,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     livecallbacks.append(HackLivePlot(liveploty, x=liveplotx,
                                       fig_factory=partial(my_factory, name='I0')))
 
-    # Setup normalized XANES    
+    # Setup normalized XANES
     # livenormfig = plt.figure('Normalized XANES')
     # livecallbacks.append(NormalizeLivePlot(roi_key[0], x=liveplotx, norm_key = i0, fig=livenormfig))
     livecallbacks.append(NormalizeLivePlot(roi_key[0], x=liveplotx, norm_key = i0,
