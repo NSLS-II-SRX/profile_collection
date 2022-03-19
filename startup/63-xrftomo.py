@@ -37,8 +37,6 @@ def calc_com(run_start_uid, roi=None):
             d = np.array(d)
             d_I0 = list(h.data('i0', stream_name='stream0', fill=True))
             d_I0 = np.array(d_I0)
-            x = list(h.data('enc1', stream_name='stream0', fill=True))
-            y = list(h.data('enc2', stream_name='stream0', fill=True))
             flag_get_data = False
         except:
             # yield from bps.sleep(1)
