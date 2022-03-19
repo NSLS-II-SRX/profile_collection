@@ -515,7 +515,7 @@ def nano_scan_and_fly(*args, extra_dets=None, **kwargs):
     yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
     yield from bps.sleep(2)
     yield from scan_and_fly_base(dets, *args, **kwargs)
-    print('Scan finished. Centering the scanner...')
+    # print('Scan finished. Centering the scanner...')
     # yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
     # yield from bps.sleep(2)
 
@@ -532,7 +532,7 @@ def nano_y_scan_and_fly(*args, extra_dets=None, **kwargs):
         extra_dets = []
     dets = [_xs] + extra_dets
     yield from scan_and_fly_base(dets, *args, **kwargs)
-    print('Scan finished. Centering the scanner...')
+    # print('Scan finished. Centering the scanner...')
     yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
 
 
@@ -548,7 +548,7 @@ def nano_z_scan_and_fly(*args, extra_dets=None, **kwargs):
         extra_dets = []
     dets = [_xs] + extra_dets
     yield from scan_and_fly_base(dets, *args, **kwargs)
-    print('Scan finished. Centering the scanner...')
+    # print('Scan finished. Centering the scanner...')
     yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
 
 

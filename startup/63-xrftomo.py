@@ -96,9 +96,9 @@ def calc_com(run_start_uid, roi=None):
         new_center = com_x 
     x0 = new_center - 0.5 * extentX
     x1 = new_center + 0.5 * extentX
-    print(f'Old center: {old_center}')
-    print(f'New center: {new_center}')
-    print(f'Difference: {dx}')
+    print(f'Old center: {old_center:.4f}')
+    print(f'New center: {new_center:.4f}')
+    print(f'  Difference: {dx:.4f}')
 
     THRESHOLD = 0.50 * extentY
     if np.isfinite(com_y) is False:
@@ -111,9 +111,9 @@ def calc_com(run_start_uid, roi=None):
         new_center_y = com_y 
     y0 = new_center_y - 0.5 * extentY
     y1 = new_center_y + 0.5 * extentY
-    print(f'Old center: {old_center_y}')
-    print(f'New center: {new_center_y}')
-    print(f'Difference: {dy}')
+    print(f'Old center: {old_center_y:.4f}')
+    print(f'New center: {new_center_y:.4f}')
+    print(f'  Difference: {dy:.4f}')
 
     return x0, x1, y0, y1
 
