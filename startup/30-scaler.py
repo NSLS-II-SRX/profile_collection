@@ -155,5 +155,10 @@ class SISHDF5Handler(HandlerBase):
     def __call__(self, *, column):
         return self._handle[column][:]
 
+    def close(self):
+        self._handle.close()
+        self._handle = None
+        super().close()
+
 
 db.reg.register_handler("SIS_HDF51", SISHDF5Handler, overwrite=True)

@@ -164,11 +164,11 @@ def braggcalib(scanlogDic={}, use_xrf=True, man_correction={}):
         # plt.show(p)
         fitBragg.append(BraggRBVDic[element])
         fitEnergy.append(energyDic[element])
-        
+
         if element in man_correction:
             fitBragg[-1] = man_correction[element]
             man_correction.pop(element)
-        
+
         # print('Edge position is at Bragg RBV: \t ', BraggRBVDic[element])
         print('Edge position is at Bragg RBV: \t ', fitBragg[-1])
         # print('Edge position is at Energy RBV (not calibrated): \t ', EnergyRBVDic[element])
@@ -291,7 +291,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
 
     # Set dwell for scaler
     dwell = 1.0
-    
+
     # Set the roll piezo to its default value (3.0)
     # and return the roll to its original value
     rf1_default = 3.0
@@ -333,7 +333,9 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # pitch_guess = 0
     # 2022-1-21
     pitch_guess = 0.072
- 
+    # 2022-03-03
+    pitch_guess = 0.030
+
 
     # Use calibration
     if (use_calib):
@@ -351,7 +353,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     scan_md['scan']['type'] = 'PEAKUP'
     scan_md['scan']['detectors'] = det_names
     scan_md['scan']['dwell'] = dwell
-    
+
     # Open the shutter
     # if (shutter == True):
     #     yield from bps.mov(shut_b, 'Open')
@@ -457,30 +459,30 @@ def ic_energy_batch(estart, estop, npts,
         outdir = '/home/xf05id1/current_user_data/'
         ion_chamber_fp = open(outdir + outfile, 'w')
         ion_chamber_fp.write('# Energy, ICM, IC0, ICT\n')
+    try:
+        # Setup scaler and open shutter
+        yield from abs_set(sclr1.preset_time, acqtime)
+        yield from bps.mov(shut_b, 'Open')
 
-    # Setup scaler and open shutter
-    yield from abs_set(sclr1.preset_time, acqtime)
-    yield from bps.mov(shut_b, 'Open')
+        for i in np.linspace(estart, estop, num=npts):
+            yield from mv(energy, i)
+            yield from bps.sleep(10)
+            yield from peakup_fine(shutter=False)
+            yield from bps.sleep(10)
+            yield from count([sclr1], num=count_pts)
 
-    for i in np.linspace(estart, estop, num=npts):
-        yield from mv(energy, i)
-        yield from bps.sleep(10)
-        yield from peakup_fine(shutter=False)
-        yield from bps.sleep(10)
-        yield from count([sclr1], num=count_pts)
+            if (outfile is not None):
+                tbl = db[-1].table()
+                icm_mean = tbl['sclr_im'].mean
+                ic0_mean = tbl['sclr_i0'].mean
+                ict_mean = tbl['sclr_it'].mean
+                ion_chamber_fp.write('%8.0f, %d, %d, %d\n' % (i, icm_mean, ic0_mean, ict_mean))
 
+        # Close the shutter
+        yield from bps.mov(shut_b, 'Close')
+    finally:
         if (outfile is not None):
-            tbl = db[-1].table()
-            icm_mean = tbl['sclr_im'].mean
-            ic0_mean = tbl['sclr_i0'].mean
-            ict_mean = tbl['sclr_it'].mean
-            ion_chamber_fp.write('%8.0f, %d, %d, %d\n' % (i, icm_mean, ic0_mean, ict_mean))
-
-    # Close the shutter
-    yield from bps.mov(shut_b, 'Close')
-
-    if (outfile is not None):
-        ion_chamber_fp.close()
+            ion_chamber_fp.close()
 
 
 def hdcm_bragg_temperature(erange, estep, dwell, N, dt=0):

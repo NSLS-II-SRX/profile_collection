@@ -410,18 +410,18 @@ class SrxXspress3Detector2(SRXXspressTrigger, Xspress3Detector):
         return ret
 
 
-try:
-    xs2 = SrxXspress3Detector2("XF:05IDD-ES{Xsp:2}:",
-                               name="xs2",
-                               f_key="fluor_xs2")
-    xs2.channel1.rois.read_attrs = ["roi{:02}".format(j)
-                                    for j in [1, 2, 3, 4]]
-    if os.getenv("TOUCHBEAMLINE", "0") == "1":
-        xs2.hdf5.num_extra_dims.put(0)
-        xs2.hdf5.warmup()
-except TimeoutError:
-    xs2 = None
-    print("\nCannot connect to xs2. Continuing without device.\n")
-except Exception as ex:
-    xs2 = None
-    print("\nUnexpected error connecting to xs2.\n", ex, end="\n\n")
+# try:
+#     xs2 = SrxXspress3Detector2("XF:05IDD-ES{Xsp:2}:",
+#                                name="xs2",
+#                                f_key="fluor_xs2")
+#     xs2.channel1.rois.read_attrs = ["roi{:02}".format(j)
+#                                     for j in [1, 2, 3, 4]]
+#     if os.getenv("TOUCHBEAMLINE", "0") == "1":
+#         xs2.hdf5.num_extra_dims.put(0)
+#         xs2.hdf5.warmup()
+# except TimeoutError:
+#     xs2 = None
+#     print("\nCannot connect to xs2. Continuing without device.\n")
+# except Exception as ex:
+#     xs2 = None
+#     print("\nUnexpected error connecting to xs2.\n", ex, end="\n\n")

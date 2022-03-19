@@ -17,6 +17,11 @@ proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
 saf_num = 307307
 
+proposal_num = 308831
+proposal_title = 'Intelligent Acquisition and Reconstruction for Hyperspectral Tomography Systems'
+PI_lastname = 'Bilheux'
+saf_num = 308261
+
 
 cycle = '2022_cycle1'
 
@@ -47,8 +52,8 @@ except Exception as e:
 # Create the log file
 userlogfile = userdatadir + 'logfile' + str(saf_num) + '.txt'
 if not os.path.exists(userlogfile):
-    userlogf = open(userlogfile, 'w')
-    userlogf.close()
+    with open(userlogfile, 'w'):
+        ...
 
 # Copy over the example scripts
 for f in ['simple_batch.py','fly_batch.py']:
@@ -92,16 +97,15 @@ def get_stock_md(scan_md):
     scan_md['scan']['energy'] = np.round(energy.energy.readback.get(), decimals=4)
 
     return scan_md
-    
+
 
 def logscan(scantype):
     h = db[-1]
     scan_id = h.start['scan_id']
     uid = h.start['uid']
 
-    userlogf = open(userlogfile, 'a')
-    userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype + '\n')
-    userlogf.close()
+    with open(userlogfile, 'a') as userlogf:
+        userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype + '\n')
 
 
 def logscan_event0info(scantype, event0info = []):
@@ -109,24 +113,27 @@ def logscan_event0info(scantype, event0info = []):
     scan_id = h.start['scan_id']
     uid = h.start['uid']
 
-    userlogf = open(userlogfile, 'a')
-    userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype)
-    events = list(db.get_events(h, stream_name='primary'))
+    with open(userlogfile, 'a') as userlogf:
+        userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype)
+        events = list(db.get_events(h, stream_name='primary'))
 
-    for item in event0info:
-        userlogf.write('\t' + item + '=' + str(events[0]['data'][item]) + '\t')
-    userlogf.write('\n')
-    userlogf.close()
+        for item in event0info:
+            userlogf.write('\t' + item + '=' + str(events[0]['data'][item]) + '\t')
+        userlogf.write('\n')
+
 
 
 def logscan_detailed(scantype):
-    h = db[-1]
-    scan_id = h.start['scan_id']
-    uid = h.start['uid']
+    try:
+        h = db[-1]
+        scan_id = h.start['scan_id']
+        uid = h.start['uid']
 
-    userlogf = open(userlogfile, 'a')
-    userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype + '\t' + str(h['start']['scan']['scan_input']) + '\n')
-    userlogf.close()
+        with open(userlogfile, 'a') as userlogf:
+            userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype + '\t' + str(h['start']['scan']['scan_input']) + '\n')
+
+    except Exception:
+        banner('Error writing to log file!')
 
 
 def scantime(scanid, printresults=True):

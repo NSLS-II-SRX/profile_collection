@@ -55,12 +55,12 @@ class SRXPCOEdge(SingleTrigger, AreaDetector):
               )
 
 
-try:
-    pcoedge = SRXPCOEdge('XF05IDD-ES{PCO:1}:', name='pcoedge')
-    pcoedge.cam.ensure_nonblocking()
-except TimeoutError:
-    print('\nCannot connect to PCO Edge. Continuing without device.\n')
-except Exception:
-    print('\nUnexpected error connecting to PCO Edge.\n',
-          sys.exc_info()[0],
-          end='\n\n')
+# try:
+#     pcoedge = SRXPCOEdge('XF05IDD-ES{PCO:1}:', name='pcoedge')
+#     pcoedge.cam.ensure_nonblocking()
+# except TimeoutError:
+#     print('\nCannot connect to PCO Edge. Continuing without device.\n')
+# except Exception:
+#     print('\nUnexpected error connecting to PCO Edge.\n',
+#           sys.exc_info()[0],
+#           end='\n\n')
