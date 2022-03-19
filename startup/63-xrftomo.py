@@ -2,7 +2,7 @@
 #
 print(f'Loading {__file__}...')
 
-
+import gc
 import numpy as np
 import matplotlib.pyplot as plt
 import time as ttime
@@ -44,6 +44,12 @@ def calc_com(run_start_uid, roi=None):
                 print('Data collection timed out!')
                 print('Skipping center-of-mass correction...')
                 return x0, x1, y0, y1
+    # HACK to make sure we clear the cache.  The cache size is 1024 so
+    # this would eventually clear, however on this system the maximum
+    # number of open files is 1024 so we fail from resource exaustion before
+    # we evict anything.
+    db._catalog._entries.cache_clear()
+    gc.collect()
 
     # Setup ROI
     if (roi is None):
