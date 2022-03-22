@@ -171,7 +171,8 @@ def nano_tomo(x0, x1, nx, y0, y1, ny, ct, th=None,
         
         # Run the scan/projection
         if fly_in_Y is False:
-            myscan = nano_scan_and_fly(x0, x1, nx, y0, y1, ny, ct, extra_dets=extra_dets, shutter=False)
+            # myscan = nano_scan_and_fly(x0, x1, nx, y0, y1, ny, ct, extra_dets=extra_dets, shutter=False)
+            myscan = time_scan_and_fly(x0, x1, nx, y0, y1, ny, ct, extra_dets=extra_dets, shutter=False, snake=True)
         else:
             myscan = nano_y_scan_and_fly(x0, x1, nx, y0, y1, ny, ct, extra_dets=extra_dets, shutter=False)
 

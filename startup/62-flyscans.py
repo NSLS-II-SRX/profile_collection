@@ -964,7 +964,7 @@ def scan_and_fly_time_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, 
     @stage_decorator(flying_zebra.detectors)
     def fly_each_step(motor, step, row_start, row_stop):
         def move_to_start_fly():
-            # nano_stage.x.velocity.set(100)
+            # nano_stage.x.velocity.set(500)
             "See http://nsls-ii.github.io/bluesky/plans.html#the-per-step-hook"
             # row_str = short_uid('row')
             # yield from abs_set(xmotor, row_start, group=row_str)
@@ -981,6 +981,7 @@ def scan_and_fly_time_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, 
 
         if verbose:
             t_mvstartfly = tic()
+        yield from mov(nano_stage.x.velocity, 1000)
         yield from move_to_start_fly()
 
         # TODO  Why are we re-trying the move?  This should be fixed at
@@ -1174,7 +1175,7 @@ def scan_and_fly_time_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, 
     @subs_decorator({'stop': finalize_scan})
     # monitor values from xs
     # @monitor_during_decorator([xs.channel1.rois.roi01.value])
-    @monitor_during_decorator([xs.channel1.rois.roi01.value, xs.array_counter])
+    @monitor_during_decorator([xs.channel1.rois.roi01.value])
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
     def plan():
@@ -1213,9 +1214,9 @@ def scan_and_fly_time_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, 
                 print(f'Stop  = {stop}')
             flying_zebra._encoder.pc.dir.set(direction)
             yield from fly_each_step(ymotor, step, start, stop)
-            yield from mov(nano_stage.x.velocity, 1000,
-                           nano_stage.y.velocity, 1000,
-                           nano_stage.z.velocity, 1000)
+            yield from mov(nano_stage.x.velocity, 500,
+                           nano_stage.y.velocity, 500,
+                           nano_stage.z.velocity, 500)
             # print('return from step\t',time.time())
             ystep = ystep + 1
 
