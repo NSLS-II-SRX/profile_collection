@@ -44,6 +44,10 @@ except ImportError:
     from databroker.assets.handlers import Xspress3HDF5Handler, HandlerBase
 
 
+def get_me_the_cam(obj):
+    # Helper function for interopability between QD and Community IOCs
+    return obj.cam if hasattr(obj, 'cam') else obj.settings
+
 class SRXMode(Enum):
     step = 1
     fly = 2

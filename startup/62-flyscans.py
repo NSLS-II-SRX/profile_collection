@@ -260,8 +260,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         if ('xs' in dets_by_name):
             xs = dets_by_name['xs']
             yield from abs_set(xs.hdf5.num_capture, xnum, group='set')
-            yield from abs_set(xs.settings.num_images, xnum, group='set')  # JL changed settings to cam
-            # yield from abs_set(xs.cam.num_images, xnum, group='set')  # JL changed settings to cam
+            yield from abs_set(get_me_the_cam(xs).num_images, xnum, group='set')  # Changed to use helper function
             yield from bps.wait(group='set')
             # yield from mv(xs.hdf5.num_capture, xnum,
             #               xs.settings.num_images, xnum)
@@ -410,7 +409,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Not sure if this is always true
     xs = dets_by_name[flying_zebra.detectors[0].name]
 
-    yield from mv(xs.settings.erase, 0)  # JL replaced xs.erase with xs.cam.erase
+    yield from mv(get_me_the_cam(xs).erase, 0)  # Changed to use helper function
 
     # Setup LivePlot
     if plot:
