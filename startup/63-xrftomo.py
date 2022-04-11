@@ -2,7 +2,7 @@
 #
 print(f'Loading {__file__}...')
 
-
+import gc
 import numpy as np
 import matplotlib.pyplot as plt
 import time as ttime
@@ -30,27 +30,31 @@ def calc_com(run_start_uid, roi=None):
     # Get the data
     flag_get_data = True
     t0 = ttime.monotonic()
-    TMAX = 60  # wait a maximum of 60 seconds
+    TMAX = 120  # wait a maximum of 60 seconds
     while flag_get_data:
         try:
             d = list(h.data('fluor', stream_name='stream0', fill=True))
             d = np.array(d)
             d_I0 = list(h.data('i0', stream_name='stream0', fill=True))
             d_I0 = np.array(d_I0)
-            x = list(h.data('enc1', stream_name='stream0', fill=True))
-            y = list(h.data('enc2', stream_name='stream0', fill=True))
             flag_get_data = False
         except:
-            yield from bps.sleep(1)
+            # yield from bps.sleep(1)
             if (ttime.monotonic() - t0 > TMAX):
                 print('Data collection timed out!')
                 print('Skipping center-of-mass correction...')
                 return x0, x1, y0, y1
+    # HACK to make sure we clear the cache.  The cache size is 1024 so
+    # this would eventually clear, however on this system the maximum
+    # number of open files is 1024 so we fail from resource exaustion before
+    # we evict anything.
+    db._catalog._entries.cache_clear()
+    gc.collect()
 
     # Setup ROI
     if (roi is None):
         # NEED TO CONFIRM VALUES!
-        roi = [xs.channel1.rois.roi_low, xs.channel1.rois.roi_high]
+        roi = [xs.channel1.rois.roi01.bin_low.get(), xs.channel1.rois.roi01.bin_high.get()]
         # NEED TO CONFIRM!
         # JL this is close but not quite right
         roi = [
@@ -99,9 +103,9 @@ def calc_com(run_start_uid, roi=None):
         new_center = com_x 
     x0 = new_center - 0.5 * extentX
     x1 = new_center + 0.5 * extentX
-    print(f'Old center: {old_center}')
-    print(f'New center: {new_center}')
-    print(f'Difference: {dx}')
+    print(f'Old center: {old_center:.4f}')
+    print(f'New center: {new_center:.4f}')
+    print(f'  Difference: {dx:.4f}')
 
     THRESHOLD = 0.50 * extentY
     if np.isfinite(com_y) is False:
@@ -114,9 +118,9 @@ def calc_com(run_start_uid, roi=None):
         new_center_y = com_y 
     y0 = new_center_y - 0.5 * extentY
     y1 = new_center_y + 0.5 * extentY
-    print(f'Old center: {old_center_y}')
-    print(f'New center: {new_center_y}')
-    print(f'Difference: {dy}')
+    print(f'Old center: {old_center_y:.4f}')
+    print(f'New center: {new_center_y:.4f}')
+    print(f'  Difference: {dy:.4f}')
 
     return x0, x1, y0, y1
 
@@ -154,15 +158,15 @@ def nano_tomo(x0, x1, nx, y0, y1, ny, ct, th=None,
 
     # Define callback for center of mass correction
     def cb_calc_com(name, doc):
+        nonlocal x0, x1, y0, y1
         run_start_uid = doc['run_start']
-        x0, x1, y0, y1 = calc_com(run_start_uid)
+        x0, x1, y0, y1 = calc_com(run_start_uid, roi=roi)
 
     # Open the shutter
     yield from check_shutters(shutter, 'Open')
 
     # Run the scan
     for i in th[th_ind_start:]:
-        # print(f'Scanning at: {i:.3f} deg')
         banner(f'Scanning at: {i:.3f} deg')
 
         # Rotate the sample
