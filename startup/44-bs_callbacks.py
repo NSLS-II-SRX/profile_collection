@@ -15,7 +15,7 @@ def cb_print_scaninfo(name, doc):
         except:
             str1 = ''
         str2 = f"Scan ID:    {doc['scan_id']}"
-        str3 = f"Start Time: {doc['time_str']}"
+        str3 = f"Start Time: {ttime.ctime(doc['time'])}"
         banner([str1, str2, str3])
     elif name == "stop":
         try:
@@ -27,7 +27,7 @@ def cb_print_scaninfo(name, doc):
             try:
                 str1 = f"Scan Type:    {start_doc['scan']['type']}"
             except KeyError:
-                str1 = f"Scan Type:  {doc['plan_name'].upper()}"
+                str1 = f"Scan Type:  {start_doc['plan_name'].upper()}"
             except:
                 str1 = ''
             str2 = f"Scan ID:      {start_doc['scan_id']}"

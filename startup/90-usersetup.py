@@ -17,6 +17,11 @@ proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
 saf_num = 307307
 
+proposal_num = 308810
+proposal_title = 'Determining the Effects of a Copper Specific Chelator on the Copper Levels and Speciation in Amyloid Beta Aggregates in Cerebral Amyloid Angiopathy'
+PI_lastname = 'Ambi'
+saf_num = 308880
+
 
 cycle = '2022_cycle1'
 
