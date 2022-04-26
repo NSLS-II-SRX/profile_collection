@@ -17,10 +17,10 @@ proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
 saf_num = 307307
 
-proposal_num = 308192
-proposal_title = 'Development of Integrated Workflow for Unbiased Analysis of Dispersed Particulates using Synchrotron Radiation‐Based Techniques'
-PI_lastname = 'Bowerman'
-saf_num = 307385
+# proposal_num = 308192
+# proposal_title = 'Development of Integrated Workflow for Unbiased Analysis of Dispersed Particulates using Synchrotron Radiation‐Based Techniques'
+# PI_lastname = 'Bowerman'
+# saf_num = 307385
 
 
 cycle = '2022_cycle1'
