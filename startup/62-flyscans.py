@@ -417,8 +417,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             livepopup = [
                 SRX1DFlyerPlot(
                     # JL replaced the following with the corresponding community IOC roi
-                    xs.channel1.rois.roi01.value.name,
-                    # xs.channels.channel01.mcarois.mcaroi01.total_rbv.name,
+                    # xs.channel1.rois.roi01.value.name,
+                    xs.channels.channel01.mcarois.mcaroi01.total_rbv.name,
                     xstart=xstart,
                     xstep=(xstop-xstart)/(xnum-1),
                     xlabel=xmotor.name
@@ -429,8 +429,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 LiveGrid(
                     (ynum, xnum+1),
                     # JL replaced the following with the corresponding community IOC roi
-                    xs.channel1.rois.roi01.value.name,
-                    # xs.channels.channel01.mcarois.mcaroi01.total_rbv.name,
+                    # xs.channel1.rois.roi01.value.name,
+                    xs.channels.channel01.mcarois.mcaroi01.total_rbv.name,
                     extent=(xstart, xstop, ystart, ystop),
                     x_positive='right',
                     y_positive='down'
@@ -443,8 +443,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     @subs_decorator({'stop': finalize_scan})
     # monitor values from xs
     # JL replaced the following with the corresponding community IOC roi
-    @monitor_during_decorator([xs.channel1.rois.roi01.value])
-    # @monitor_during_decorator([xs.channels.channel01.mcarois.mcaroi01.total_rbv])
+    # @monitor_during_decorator([xs.channel1.rois.roi01.value])
+    @monitor_during_decorator([xs.channels.channel01.mcarois.mcaroi01.total_rbv])
     # @monitor_during_decorator([xs.channel1.rois.roi01.value, xs.array_counter])
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
