@@ -3,12 +3,14 @@
 # %run -i ~/.ipython/profile_collection/acceptance_tests/tests.py
 
 
-def test_change_energy():
-    energy.move(7.2)
-
-
 def test_set_roi():
-    setroi(1, 'Fe')
+    """
+    Set ROI, and check PV values to see that it has been set correctly.
+    """
+    result = setroi(1, 'Fe')
+    assert result == "ROI1 set for Fe-ka1 edge."
+    #assert xs.channel1.rois.roi01.bin_high.get() == 650
+    #assert xs.channel1.rois.roi01.bin_low.get() == 630
 
 
 def test_clear_roi():
@@ -43,7 +45,7 @@ def test_xanes_scan():
 
 def test_fly_scan1():
     """
-    Fly scan test 2.
+    Fly scan test 1.
     If db.table() and export scan complete without errors than it was successful.
     """
     print("Starting fly scan test 2")
@@ -73,7 +75,7 @@ def test_fly_scan2():
 
 def test_step_scan():
     """
-    Fly scan test 2.
+    Step scan test.
     If db.table() and export scan complete without errors than it was successful.
     """
     print("Starting fly scan test 2")
@@ -94,4 +96,4 @@ def test_make_hdf():
     make_hdf(12345)
 
 
-test_change_energy()
+test_set_roi()
