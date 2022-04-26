@@ -260,7 +260,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         if ('xs' in dets_by_name):
             xs = dets_by_name['xs']
             yield from abs_set(xs.hdf5.num_capture, xnum, group='set')
-            yield from abs_set(xs.settings.num_images, xnum, group='set')
+            yield from abs_set(get_me_the_cam(xs).num_images, xnum, group='set')  # Changed to use helper function
             yield from bps.wait(group='set')
             # yield from mv(xs.hdf5.num_capture, xnum,
             #               xs.settings.num_images, xnum)
@@ -271,8 +271,10 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             xs2 = dets_by_name['xs2']
             # yield from abs_set(xs2.hdf5.num_capture, xnum, wait=True)
             # yield from abs_set(xs2.settings.num_images, xnum, wait=True)
-            yield from mv(xs2.hdf5.num_capture, xnum,
-                          xs2.settings.num_images, xnum)
+            yield from mv(
+                xs2.hdf5.num_capture, xnum,
+                xs2.cam.num_images, xnum   # JL changed settings to cam
+            )
 
         if ('merlin' in dets_by_name):
             merlin = dets_by_name['merlin']
@@ -407,27 +409,42 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Not sure if this is always true
     xs = dets_by_name[flying_zebra.detectors[0].name]
 
-    yield from mv(xs.erase, 0)
+    yield from mv(get_me_the_cam(xs).erase, 0)  # Changed to use helper function
 
     # Setup LivePlot
     if plot:
         if (ynum == 1):
-            livepopup = [SRX1DFlyerPlot(xs.channel1.rois.roi01.value.name,
-                                        xstart=xstart,
-                                        xstep=(xstop-xstart)/(xnum-1),
-                                        xlabel=xmotor.name)]
+            livepopup = [
+                SRX1DFlyerPlot(
+                    # JL replaced the following with the corresponding community IOC roi
+                    xs.channel1.rois.roi01.value.name,
+                    # xs.channels.channel01.mcarois.mcaroi01.total_rbv.name,
+                    xstart=xstart,
+                    xstep=(xstop-xstart)/(xnum-1),
+                    xlabel=xmotor.name
+                )
+            ]
         else:
-            livepopup = [LiveGrid((ynum, xnum+1),
-                                  xs.channel1.rois.roi01.value.name,
-                                  extent=(xstart, xstop, ystart, ystop),
-                                  x_positive='right', y_positive='down')]
+            livepopup = [
+                LiveGrid(
+                    (ynum, xnum+1),
+                    # JL replaced the following with the corresponding community IOC roi
+                    xs.channel1.rois.roi01.value.name,
+                    # xs.channels.channel01.mcarois.mcaroi01.total_rbv.name,
+                    extent=(xstart, xstop, ystart, ystop),
+                    x_positive='right',
+                    y_positive='down'
+                )
+            ]
     else:
         livepopup = []
     @subs_decorator(livepopup)
     @subs_decorator({'start': at_scan})
     @subs_decorator({'stop': finalize_scan})
     # monitor values from xs
+    # JL replaced the following with the corresponding community IOC roi
     @monitor_during_decorator([xs.channel1.rois.roi01.value])
+    # @monitor_during_decorator([xs.channels.channel01.mcarois.mcaroi01.total_rbv])
     # @monitor_during_decorator([xs.channel1.rois.roi01.value, xs.array_counter])
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
@@ -438,6 +455,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
         # TODO move this to stage sigs
         yield from bps.mov(xs.external_trig, True)
+        if xs2 in flying_zebra.detectors:
+            yield from bps.mov(xs2.external_trig, True)
 
         ystep = 0
         for step in np.linspace(ystart, ystop, ynum):
@@ -474,6 +493,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         ion = flying_zebra.sclr
         yield from bps.mov(xs.external_trig, False,
                            ion.count_mode, 1)
+        if xs2 in flying_zebra.detectors:
+            yield from bps.mov(xs2.external_trig, False)
         yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
         yield from bps.sleep(2)
 

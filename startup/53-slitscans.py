@@ -218,11 +218,13 @@ def slit_nanoflyscan(scan_motor, scan_start, scan_stop, scan_stepsize, acqtime,
     yield from check_shutters(True, 'Open') 
     
     # Setup the scan
-    plotme = HackLiveFlyerPlot(xs.channel1.rois.roi01.value.name,
-                               xstart=scan_start,
-                               xstep=(scan_stop-scan_start)/(snum-1),
-                               xlabel=scan_motor.name,
-                               fig_factory=partial(my_factory, name='Slit Scan'))
+    plotme = HackLiveFlyerPlot(
+        xs.channels.channel01.mcarois.mcaroi01.value.name,
+        xstart=scan_start,
+        xstep=(scan_stop-scan_start)/(snum-1),
+        xlabel=scan_motor.name,
+        fig_factory=partial(my_factory, name='Slit Scan')
+    )
 
     if (scan_motor.name == 'nano_stage_sx'):
         y0 = nano_stage.sy.user_readback.get()
@@ -324,9 +326,9 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
             return
 
         if bin_low is None:
-            bin_low = xs.channel1.rois.roi01.bin_low.get()
+            bin_low = xs.channels.channel01.mcarois.mcaroi01.bin_low.get()
         if bin_high is None:
-           bin_high = xs.channel1.rois.roi01.bin_high.get()
+           bin_high = xs.channels.channel01.mcarois.mcaroi01.bin_high.get()
         if (d.ndim == 1):
             d = np.array(tbl[fluor_key])
         d = np.stack(d)

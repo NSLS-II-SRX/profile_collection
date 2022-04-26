@@ -22,7 +22,6 @@ saf_num = 307307
 # PI_lastname = 'Bowerman'
 # saf_num = 307385
 
-
 cycle = '2022_cycle1'
 
 # Set user data in bluesky

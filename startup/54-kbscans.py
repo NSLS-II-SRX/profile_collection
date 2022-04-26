@@ -203,10 +203,22 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
         y0 = nano_stage.y.user_readback.get()
         dets = [xs2, sclr1]
         yield from abs_set(xs2.total_points, num)
-        livecallbacks = [LiveTable([motor.name,
-                                    xs2.channel1.rois.roi01.value.name])]
-        livecallbacks.append(LivePlot(xs2.channel1.rois.roi01.value.name,
-                                      motor.name))
+        livecallbacks = [
+            LiveTable(
+                [
+                    motor.name,
+                    xs2.channel1.rois.roi01.value.name
+                ]
+            )    
+        ]
+        
+        livecallbacks.append(
+            LivePlot(
+                xs2.channel1.rois.roi01.value.name,
+                motor.name
+            )
+        )
+
         if (shutter):
             yield from mov(shut_b, 'Open')
         yield from subs_wrapper(scan(dets, motor, start, stop, num),
@@ -283,9 +295,10 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=Tru
         y = tbl['it'].values[0] / tbl['im'].values[0]
     else:
         if bin_low is None:
-            bin_low = xs.channel1.rois.roi01.bin_low.get()
+            # JL I don't think we have bin_low and bin_high anymore (?)
+            bin_low = xs.channels.channel01.mcarois.mcaroi01.bin_low.get()
         if bin_high is None:
-            bin_high = xs.channel1.rois.roi01.bin_high.get()
+            bin_high = xs.channels.channel01.mcarois.mcaroi01.bin_high.get()
         d = np.array(tbl[fluor_key])[0]
         if (d.ndim == 1):
             d = np.array(tbl[fluor_key])
