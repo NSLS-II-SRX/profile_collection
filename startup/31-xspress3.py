@@ -756,7 +756,7 @@ try:
     # but putting all channels, all mcarois in one list did not work
 
     # add all channel.channelNN to xs.read_attrs 
-    read_channel_attrs = [f"channels.channel{ch:02}" for ch in xs.channel_numbers]
+    read_channel_attrs = [f"channel{ch:02}" for ch in xs.channel_numbers]
     read_channel_attrs.append("hdf5")
     print(f"read_channel_attrs: {read_channel_attrs}")
     xs.read_attrs = read_channel_attrs
@@ -766,7 +766,7 @@ try:
     for xs_channel in xs.iterate_channels():
         mcaroi_read_attrs = []
         for xs_mcaroi in xs_channel.iterate_mcarois():
-            mcaroi_read_attrs = [f"mcarois.mcaroi{m:02}.total_rbv" for m in range(1, 5)]
+            mcaroi_read_attrs = [f"mcaroi{m:02}.total_rbv" for m in range(1, 5)]
         xs_channel.read_attrs = mcaroi_read_attrs
 
     if os.getenv("TOUCHBEAMLINE", "0") == "1":

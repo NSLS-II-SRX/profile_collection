@@ -12,7 +12,6 @@ from bluesky.preprocessors import (finalize_wrapper, subs_wrapper)
 from bluesky.utils import short_uid as _short_uid
 from epics import PV
 # from databroker import DataBroker as db
-from databroker import get_events
 
 
 def xanes_textout(scan=-1, header=[], userheader={}, column=[], usercolumn={},
@@ -30,7 +29,9 @@ def xanes_textout(scan=-1, header=[], userheader={}, column=[], usercolumn={},
         filedir = userdatadir
     h = db[scan]
     # get events using fill=False so it does not look for the metadata in filestorage with reference (hdf5 here)
-    events = list(get_events(h, fill=False, stream_name='primary'))
+    events = [document for name, document 
+              in db.get_documents(h, fill=False, stream_name="primary") 
+              if name=="event"]
 
     if (filename_add != ''):
         filename = 'scan_' + str(h.start['scan_id']) + '_' + filename_add
