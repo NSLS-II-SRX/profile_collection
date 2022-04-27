@@ -9,7 +9,8 @@ def test_set_roi():
     """
     print("Starting test_set_roi")
     setroi(1, 'Fe')
-    print("setroi complete, check CSS")
+    input("Check CSS, and press any key to continue")
+    print("setroi complete")
     #assert xs.channel1.rois.roi01.bin_high.get() == 650
     #assert xs.channel1.rois.roi01.bin_low.get() == 630
 
@@ -17,6 +18,7 @@ def test_set_roi():
 def test_clear_roi():
     print("Starting test_crear_roi")
     clearroi()
+    input("Check CSS, and press any key to continue")
     print("Test clear_roi complete, check CSS")
 
 
