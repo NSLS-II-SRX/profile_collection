@@ -538,7 +538,7 @@ class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3
 
 try:
     # JL replaced {Xsp:1}: with {Xsp:3}:det1:
-    xs = SrxXspress3Detector("XF:05IDD-ES{Xsp:1}:", name="xs")
+    # xs = SrxXspress3Detector("XF:05IDD-ES{Xsp:1}:", name="xs")
     # xs = CommunitySrxXspress3Detector("XF:05IDD-ES{Xsp:3}:", name="xs")
     # JL commented the next 4 statements
     xs.channel1.rois.read_attrs = ["roi{:02}".format(j)
@@ -739,7 +739,8 @@ class SrxXspress3Detector2(CommunitySRXXspressTrigger, Xspress3Detector):
 try:
     # JL replaced {Xsp:1}: with {Xsp:3}:det1:
     #xs = SrxXspress3Detector("XF:05IDD-ES{Xsp:1}:", name="xs")
-    xs2 = CommunitySrxXspress3Detector("XF:05IDD-ES{Xsp:3}:", name="xs2", f_key="fluor_xs2")
+    xs = CommunitySrxXspress3Detector("XF:05IDD-ES{Xsp:3}:", name="xs", f_key="fluor")
+    xs2 = None
     # JL commented the next 4 statements
     #xs.channel1.rois.read_attrs = ["roi{:02}".format(j)
     #                               for j in [1, 2, 3, 4]]
@@ -755,33 +756,33 @@ try:
     # but putting all channels, all mcarois in one list did not work
 
     # add all channel.channelNN to xs.read_attrs 
-    read_channel_attrs = [f"channels.channel{ch:02}" for ch in xs2.channel_numbers]
+    read_channel_attrs = [f"channel{ch:02}" for ch in xs.channel_numbers]
     read_channel_attrs.append("hdf5")
     print(f"read_channel_attrs: {read_channel_attrs}")
-    xs2.read_attrs = read_channel_attrs
-    print(f"xs2.read_attrs: {xs2.read_attrs}")
+    xs.read_attrs = read_channel_attrs
+    print(f"xs.read_attrs: {xs.read_attrs}")
 
     # add all mcarois.mcaroiNN.total_rbv to each channelMM.read_attrs
-    for xs_channel in xs2.iterate_channels():
+    for xs_channel in xs.iterate_channels():
         mcaroi_read_attrs = []
         for xs_mcaroi in xs_channel.iterate_mcarois():
-            mcaroi_read_attrs = [f"mcarois.mcaroi{m:02}.total_rbv" for m in range(1, 5)]
+            mcaroi_read_attrs = [f"mcaroi{m:02}.total_rbv" for m in range(1, 5)]
         xs_channel.read_attrs = mcaroi_read_attrs
 
     if os.getenv("TOUCHBEAMLINE", "0") == "1":
         # JL replaced settings with cam
         #xs.settings.num_channels.put(4) #4 for ME4 detector
-        xs2.cam.num_channels.put(xs2.get_channel_count()) #4 for ME4 detector
+        xs.cam.num_channels.put(xs.get_channel_count()) #4 for ME4 detector
         # JL commented out the next 4 lines
         #xs.channel1.vis_enabled.put(1)
         #xs.channel2.vis_enabled.put(1)
         #xs.channel3.vis_enabled.put(1)
         #xs.channel4.vis_enabled.put(1)
-        xs2.hdf5.num_extra_dims.put(0)
+        xs.hdf5.num_extra_dims.put(0)
 
         # JL replaced settings with cam
         #xs.settings.configuration_attrs = [
-        xs2.cam.configuration_attrs = [
+        xs.cam.configuration_attrs = [
             "acquire_period",
             "acquire_time",
             # "gain",
@@ -807,7 +808,7 @@ try:
         # This is necessary for when the IOC restarts
         # We have to trigger one image for the hdf5 plugin to work correctly
         # else, we get file writing errors
-        xs2.hdf5.warmup()
+        xs.hdf5.warmup()
 
         # Rename the ROIs
         # JL commented this loop out
@@ -818,12 +819,12 @@ try:
 except TimeoutError as te:
     # JL don't set xs = None during development, it is often unavailable but I want to look at it anyway
     #xs = None
-    print("\nCannot connect to xs2. Continuing without device.\n")
+    print("\nCannot connect to xs. Continuing without device.\n")
     # JL added this raise to help diagnose connection failures
     raise te
 except Exception as ex:
     #xs = None
-    print("\nUnexpected error connecting to xs2.\n")
+    print("\nUnexpected error connecting to xs.\n")
     print(ex, end="\n\n")
     # JL added this raise to help diagnose errors while developing community ioc code
     raise ex

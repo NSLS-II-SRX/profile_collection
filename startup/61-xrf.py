@@ -101,7 +101,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
         roi_name = 'roi{:02}'.format(roi_idx+1)
         
         # roi_key = getattr(xs.channel1.rois, roi_name).value.name
-        roi_key = xs.channels.channel01.get_mcaroi(mcaroi_number=roi_idx).total_rbv.name
+        roi_key = xs.channel01.get_mcaroi(mcaroi_number=roi_idx).total_rbv.name
         livetableitem.append(roi_key)
         roimap = LiveGrid((ynumstep+1, xnumstep+1), roi_key,
                           clim=None, cmap='viridis',
@@ -432,7 +432,7 @@ def nano_xrf(xstart, xstop, xstep,
     livecallbacks = []
 
     # roi_key = getattr(xs.channel1.rois, roi_name).value.name
-    roi_key = xs.channels.channel01.get_mcaroi(mcaroi_number=1).total_rbv.name
+    roi_key = xs.channel01.get_mcaroi(mcaroi_number=1).total_rbv.name
     livecallbacks.append(LiveTable([xmotor.name, ymotor.name, roi_key]))
     # livetableitem.append(roi_key)
     # roi_name = 'roi{:02}'.format(1)
