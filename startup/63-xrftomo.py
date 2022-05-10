@@ -6,7 +6,7 @@ import gc
 import numpy as np
 import matplotlib.pyplot as plt
 import time as ttime
-from scipy.ndimage.measurements import center_of_mass
+from scipy.ndimage import center_of_mass
 
 
 # Convenience function for AMK
