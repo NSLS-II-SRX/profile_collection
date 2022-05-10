@@ -8,6 +8,7 @@ import numpy as np
 import time as ttime
 from ophyd import Device, EpicsSignal, EpicsSignalRO
 from ophyd import Component as Cpt
+from ophyd import FormattedComponent as FC
 from hxntools.detectors.zebra import Zebra, EpicsSignalWithRBV
 
 
@@ -122,6 +123,12 @@ class ZebraPositionCaptureData(Device):
     cap_div3_bool = Cpt(EpicsSignal, "PC_BIT_CAP:B8")
     cap_div4_bool = Cpt(EpicsSignal, "PC_BIT_CAP:B9")
 
+    def stage(self):
+        super().stage()
+
+    def unstage(self):
+        super().unstage()
+
 
 class ZebraPositionCapture(Device):
     """
@@ -173,12 +180,92 @@ class ZebraPositionCapture(Device):
         super().unstage()
 
 
+class SRXZebraOR(Device):
+    # I really appreciate the different indexing for input source
+    # Thank you for that
+    use1 = Cpt(EpicsSignal, '_ENA:B0')
+    use2 = Cpt(EpicsSignal, '_ENA:B1')
+    use3 = Cpt(EpicsSignal, '_ENA:B2')
+    use4 = Cpt(EpicsSignal, '_ENA:B3')
+    input_source1 = Cpt(EpicsSignal, '_INP1')
+    input_source2 = Cpt(EpicsSignal, '_INP2')
+    input_source3 = Cpt(EpicsSignal, '_INP3')
+    input_source4 = Cpt(EpicsSignal, '_INP4')
+    invert1 = Cpt(EpicsSignal, '_INV:B0')
+    invert2 = Cpt(EpicsSignal, '_INV:B1')
+    invert3 = Cpt(EpicsSignal, '_INV:B2')
+    invert4 = Cpt(EpicsSignal, '_INV:B3')
+
+    def stage(self):
+        super().stage()
+
+    def unstage(self):
+        super().unstage()
+
+
+
+class ZebraPulse(Device):
+    width = Cpt(EpicsSignalWithRBV, 'WID')
+    input_addr = Cpt(EpicsSignalWithRBV, 'INP')
+    input_str = Cpt(EpicsSignalRO, 'INP:STR', string=True)
+    input_status = Cpt(EpicsSignalRO, 'INP:STA')
+    delay = Cpt(EpicsSignalWithRBV, 'DLY')
+    delay_sync = Cpt(EpicsSignal, 'DLY:SYNC')
+    time_units = Cpt(EpicsSignalWithRBV, 'PRE', string=True)
+    output = Cpt(EpicsSignal, 'OUT')
+
+    input_edge = FC(EpicsSignal,
+                    '{self._zebra_prefix}POLARITY:{self._edge_addr}')
+
+    _edge_addrs = {1: 'BC',
+                   2: 'BD',
+                   3: 'BE',
+                   4: 'BF',
+                   }
+
+    def stage(self):
+        super().stage()
+
+    def unstage(self):
+        super().unstage()
+
+    def __init__(self, prefix, *, index=None, parent=None,
+                 configuration_attrs=None, read_attrs=None, **kwargs):
+        if read_attrs is None:
+            read_attrs = ['input_addr', 'input_edge', 'delay', 'width', 'time_units']
+        if configuration_attrs is None:
+            configuration_attrs = []
+
+        zebra = parent
+        self.index = index
+        self._zebra_prefix = zebra.prefix
+        self._edge_addr = self._edge_addrs[index]
+
+        super().__init__(prefix, configuration_attrs=configuration_attrs,
+                         read_attrs=read_attrs, parent=parent, **kwargs)
+
+
+
 class SRXZebra(Zebra):
     """
     SRX Zebra device.
     """
 
     pc = Cpt(ZebraPositionCapture, "")
+    or1 = Cpt(SRXZebraOR, "OR1")  # XF:05IDD-ES:1{Dev:Zebra2}:OR1_INV:B0
+    or2 = Cpt(SRXZebraOR, "OR2")
+    or3 = Cpt(SRXZebraOR, "OR3")
+    or4 = Cpt(SRXZebraOR, "OR4")
+    pulse1 = Cpt(ZebraPulse, "PULSE1_", index=1)  # XF:05IDD-ES:1{Dev:Zebra2}:PULSE1_INP
+    pulse2 = Cpt(ZebraPulse, "PULSE2_", index=2)
+    pulse3 = Cpt(ZebraPulse, "PULSE3_", index=3)
+    pulse4 = Cpt(ZebraPulse, "PULSE4_", index=4)
+
+    def stage(self):
+        super().stage()
+
+    def unstage(self):
+        super().unstage()
 
     def __init__(
         self, prefix, *,
@@ -203,39 +290,20 @@ class SRXZebra(Zebra):
 
 class SRXFlyer1Axis(Device):
     """
-    This is the Zebra.
+    This is the flyer object for the Zebra.
+    This is the position based flyer.
     """
 
-    # LARGE_FILE_DIRECTORY_WRITE_PATH = (
-    #     "/nsls2/xf05id1/XF05ID1/data/2021-2/fly_scan_ancillary/"
-    # )
-    # LARGE_FILE_DIRECTORY_READ_PATH = (
-    #     "/nsls2/xf05id1/XF05ID1/data/2021-2/fly_scan_ancillary/"
-    # )
     LARGE_FILE_DIRECTORY_WRITE_PATH = (
         "/nsls2/data/srx/assets/zebra/2021/2021-3/"
     )
     LARGE_FILE_DIRECTORY_READ_PATH = (
         "/nsls2/data/srx/assets/zebra/2021/2021-3/"
     )
-    KNOWN_DETS = {"xs", "xs2", "merlin", "dexela"}
+    KNOWN_DETS = {"xs", "xs2", "xs7", "merlin", "dexela"}
     fast_axis = Cpt(Signal, value="HOR", kind="config")
     slow_axis = Cpt(Signal, value="VER", kind="config")
 
-    # _encoder = Cpt(
-    #     SRXZebra,
-    #     "XF:05IDD-ES:1{Dev:Zebra1}:",
-    #     name="zebra",
-    #     add_prefix=(),
-    #     read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
-    # )
-    # _encoder = Cpt(
-    #     SRXZebra,
-    #     self._zebra_pvname,
-    #     name="zebra",
-    #     add_prefix=(),
-    #     read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
-    # )
     @property
     def encoder(self):
         return self._encoder
@@ -259,8 +327,6 @@ class SRXFlyer1Axis(Device):
     def sclr(self):
         return self._sis
 
-    # def __init__(self, encoder, dets, sclr1, fast_axis, *,
-    #              reg=db.reg, **kwargs):
     def __init__(self, dets, sclr1, zebra, *, reg=db.reg, **kwargs):
         super().__init__("", parent=None, **kwargs)
         self._mode = "idle"
@@ -268,38 +334,75 @@ class SRXFlyer1Axis(Device):
         self._sis = sclr1
         self._filestore_resource = None
         self._encoder = zebra
-        # self._fast_axis = self.fast_axis
-        # _encoder = Cpt(
-        #     SRXZebra,
-        #     zebra_pvname,
-        #     name="zebra",
-        #     add_prefix=(),
-        #     read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
-        # )
-        # print(zebra_pvname)
 
-        # Gating info for encoder capture
+        ## Stage sigs for Zebra - position
+        # PC Tab
+        # Setup
+        self.stage_sigs[self._encoder.pc.data.cap_enc1_bool] = 1
+        self.stage_sigs[self._encoder.pc.data.cap_enc2_bool] = 1
+        self.stage_sigs[self._encoder.pc.data.cap_enc3_bool] = 1
+        self.stage_sigs[self._encoder.pc.data.cap_enc4_bool] = 0
+        # self.stage_sigs[self._encoder.pc.enc] = 0
+        # self.stage_sigs[self._encoder.pc.dir] = 0
+        # self.stage_sigs[self._encoder.pc.tspre] = 1
+        # Arm
+        self.stage_sigs[self._encoder.pc.trig_source] = 0
+        # Gate
+        self.stage_sigs[self._encoder.pc.gate_source] = 0  # 0 = Position, 1 = Time
+        # self.stage_sigs[self._encoder.pc.gate_start] = 0
+        # self.stage_sigs[self._encoder.pc.gate_width] = 10
+        # self.stage_sigs[self._encoder.pc.gate_step] = 10.1
         self.stage_sigs[self._encoder.pc.gate_num] = 1
-        self.stage_sigs[self._encoder.pc.pulse_start] = 0
-
+        # Pulse
+        self.stage_sigs[self._encoder.pc.pulse_source] = 0  # 0 = Position, 1 = Time
+        # self.stage_sigs[self._encoder.pc.pulse_start] = 0
+        # self.stage_sigs[self._encoder.pc.pulse_width] = 0.9
+        # self.stage_sigs[self._encoder.pc.pulse_step] = 1
+        # self.stage_sigs[self._encoder.pc.pulse_max] = 10
+        ## OR Tab
+        self.stage_sigs[self._encoder.or1.use1] = 1  # 0 = No, 1 = Yes
+        self.stage_sigs[self._encoder.or1.use2] = 1
+        self.stage_sigs[self._encoder.or1.use3] = 1
+        self.stage_sigs[self._encoder.or1.use4] = 0
+        self.stage_sigs[self._encoder.or1.input_source1] = 54
+        self.stage_sigs[self._encoder.or1.input_source2] = 55
+        self.stage_sigs[self._encoder.or1.input_source3] = 53
+        self.stage_sigs[self._encoder.or1.input_source4] = 0
+        self.stage_sigs[self._encoder.or1.invert1] = 0  # 0 = No, 1 = Yes
+        self.stage_sigs[self._encoder.or1.invert2] = 0
+        self.stage_sigs[self._encoder.or1.invert3] = 0
+        self.stage_sigs[self._encoder.or1.invert4] = 0
+        ## PULSE Tab
+        # self.stage_sigs[self._encoder.pulse1.input_addr] = 31
+        # self.stage_sigs[self._encoder.pulse1.input_edge] = 1  # 0 = rising, 1 = falling
+        # self.stage_sigs[self._encoder.pulse1.delay] = 0.2
+        # self.stage_sigs[self._encoder.pulse1.width] = 0.1
+        # self.stage_sigs[self._encoder.pulse1.time_units] = 0
+        self.stage_sigs[self._encoder.pulse2.input_addr] = 30
+        self.stage_sigs[self._encoder.pulse2.input_edge] = 0  # 0 = rising, 1 = falling
+        self.stage_sigs[self._encoder.pulse2.delay] = 0
+        self.stage_sigs[self._encoder.pulse2.width] = 0.1
+        self.stage_sigs[self._encoder.pulse2.time_units] = 0
+        self.stage_sigs[self._encoder.pulse3.input_addr] = 31
+        self.stage_sigs[self._encoder.pulse3.input_edge] = 1  # 0 = rising, 1 = falling
+        self.stage_sigs[self._encoder.pulse3.delay] = 0.2
         self.stage_sigs[self._encoder.pulse3.width] = 0.1
+        self.stage_sigs[self._encoder.pulse3.time_units] = 0
+        self.stage_sigs[self._encoder.pulse4.input_addr] = 31
+        self.stage_sigs[self._encoder.pulse4.input_edge] = 1  # 0 = rising, 1 = falling
+        self.stage_sigs[self._encoder.pulse4.delay] = 0
         self.stage_sigs[self._encoder.pulse4.width] = 0.1
-
-        # PC gate output is 31 for zebra. Use it to trigger xspress3 and I0
-        self.stage_sigs[self._encoder.output1.ttl.addr] = 31
-        self.stage_sigs[self._encoder.output3.ttl.addr] = 31
-        # This is for the merlin
-        self.stage_sigs[self._encoder.output2.ttl.addr] = 31
-        # self.stage_sigs[self._encoder.output2.ttl.addr] = 53
-        # This is for the dexela
-        self.stage_sigs[self._encoder.output4.ttl.addr] = 31
-        # This is for the xs2
-        self.stage_sigs[self._encoder.output2.ttl.addr] = 31
-
+        self.stage_sigs[self._encoder.pulse4.time_units] = 0
+        ## ENC tab
         self.stage_sigs[self._encoder.pc.enc_pos1_sync] = 1
         self.stage_sigs[self._encoder.pc.enc_pos2_sync] = 1
         self.stage_sigs[self._encoder.pc.enc_pos3_sync] = 1
         self.stage_sigs[self._encoder.pc.enc_pos4_sync] = 1
+        ## SYS tab
+        self.stage_sigs[self._encoder.output1.ttl.addr] = 31  # PC_PULSE --> TTL1 --> xs
+        self.stage_sigs[self._encoder.output2.ttl.addr] = 31  # PC_PULSE --> TTL2 --> merlin
+        self.stage_sigs[self._encoder.output3.ttl.addr] = 36  # OR1 --> TTL3 --> scaler
+        self.stage_sigs[self._encoder.output4.ttl.addr] = 31  # PC_PULSE --> TTL4 --> dexela
 
         # Put SIS3820 into single count (not autocount) mode
         self.stage_sigs[self._sis.count_mode] = 0
@@ -312,12 +415,6 @@ class SRXFlyer1Axis(Device):
         self._document_cache = []
         self._last_bulk = None
 
-    # def ver_fly_plan():
-    #    yield from mv(zebra.fast_axis, 'VER')
-    #    yield from _real_fly_scan()
-    # def hor_fly_plan():
-    #     yield from mv(zebar.fast_axis, 'HOR')
-    #     yield from _read_fly_scan()
     def stage(self):
         dir = self.fast_axis.get()
         if dir == "HOR":
@@ -350,6 +447,9 @@ class SRXFlyer1Axis(Device):
             self.stage_sigs[self._encoder.pc.enc_res2] = 9.5368e-05
 
         super().stage()
+
+    def unstage(self):
+        super().unstage()
 
     def describe_collect(self):
 
@@ -636,19 +736,15 @@ class SRXFlyer1Axis(Device):
 
 # For microES
 try:
-    # flying_zebra = SRXFlyer1Axis(
-    #     list(xs for xs in [xs] if xs is not None), sclr1, name="flying_zebra"
-    # )
-    # raise Exception
     microZebra = SRXZebra("XF:05IDD-ES:1{Dev:Zebra1}:", name="microZebra",
         read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
     )
     flying_zebra = SRXFlyer1Axis(
         list(xs for xs in [xs] if xs is not None), sclr1, microZebra, name="flying_zebra"
     )
-    # print('huge success!')
 except Exception as ex:
     print("Cannot connect to microZebra. Continuing without device.\n", ex)
+    raise ex
     flying_zebra = None
 
 
@@ -660,7 +756,6 @@ try:
     nano_flying_zebra = SRXFlyer1Axis(
         list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="nano_flying_zebra"
     )
-    # print('huge success!')
 except Exception as ex:
     print("Cannot connect to nanoZebra. Continuing without device.\n", ex)
     nano_flying_zebra = None
