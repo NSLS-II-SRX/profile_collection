@@ -1,6 +1,9 @@
 print(f"Loading {__file__}...")
 
 ## Debugging
+# $ TOUCHBEAMLINE=1 bsui
+# use str below
+#
 # import os
 # if 'TOUCHBEAMLINE' in os.environ and os.environ['TOUCHBEAMLINE'] == 1:
 #     print('int')
