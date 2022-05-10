@@ -83,15 +83,24 @@ class SRXNanoTemp(Device):
 
 temp_nanoKB = SRXNanoTemp('XF:05IDD-ES{LS:1-Chan:', name='temp_nanoKB')
 
+# NanoKB inteferometer monitors
+class SRXNanoKBInterferometer(Device):
+    posX = Cpt(EpicsSignalRO, 'Chan0}Pos-I')
+    posY = Cpt(EpicsSignalRO, 'Chan1}Pos-I')
+    posZ = Cpt(EpicsSignalRO, 'Chan2}Pos-I')
 
-# Lakeshore temperature monitors
-class SRXNanoInterferometer(Device):
+
+nanoKB_interferometer = SRXNanoKBInterferometer('XF:05IDD-ES:1{FPS:1-', name='nanoKB_interferometer')
+
+
+# Nanostage inteferometer monitors
+class SRXNanoStageInterferometer(Device):
     posX = Cpt(EpicsSignalRO, 'POS_0')
     posY = Cpt(EpicsSignalRO, 'POS_1')
     posZ = Cpt(EpicsSignalRO, 'POS_2')
 
 
-nanoKB_interferometer = SRXNanoInterferometer('XF:05IDD-ES:1{PICOSCALE:1}', name='nanoKB_interferometer')
+nano_stage_interferometer = SRXNanoStageInterferometer('XF:05IDD-ES:1{PICOSCALE:1}', name='nano_stage_interferometer')
 
 
 # Center scanner
