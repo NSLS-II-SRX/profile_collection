@@ -9,7 +9,8 @@ import time as ttime
 from ophyd import Device, EpicsSignal, EpicsSignalRO
 from ophyd import Component as Cpt
 from ophyd import FormattedComponent as FC
-from hxntools.detectors.zebra import Zebra, EpicsSignalWithRBV
+# from hxntools.detectors.zebra import Zebra, EpicsSignalWithRBV
+from nslsii.detectors.zebra import Zebra, EpicsSignalWithRBV
 
 
 class CurrentPreampZebra(Device):
@@ -284,9 +285,132 @@ class SRXZebra(Zebra):
         )
 
 
-# zebra = SRXZebra("XF:05IDD-ES:1{Dev:Zebra1}:", name="zebra")
-# zebra.read_attrs = ["pc.data.enc1", "pc.data.enc2", "pc.data.time"]
+def set_flyer_zebra_stage_sigs(flyer, method):
+    # Common stage_sigs
+    ## PC Tab
+    # Setup
+    flyer.stage_sigs[flyer._encoder.pc.data.cap_enc1_bool] = 1
+    flyer.stage_sigs[flyer._encoder.pc.data.cap_enc2_bool] = 1
+    flyer.stage_sigs[flyer._encoder.pc.data.cap_enc3_bool] = 1
+    flyer.stage_sigs[flyer._encoder.pc.data.cap_enc4_bool] = 0
+    # flyer.stage_sigs[flyer._encoder.pc.enc] = 0
+    # flyer.stage_sigs[flyer._encoder.pc.dir] = 0
+    # flyer.stage_sigs[flyer._encoder.pc.tspre] = 1
+    ## ENC tab
+    flyer.stage_sigs[flyer._encoder.pc.enc_pos1_sync] = 1
+    flyer.stage_sigs[flyer._encoder.pc.enc_pos2_sync] = 1
+    flyer.stage_sigs[flyer._encoder.pc.enc_pos3_sync] = 1
+    flyer.stage_sigs[flyer._encoder.pc.enc_pos4_sync] = 1
+    ## SYS tab
+    flyer.stage_sigs[flyer._encoder.output1.ttl.addr] = 31  # PC_PULSE --> TTL1 --> xs
+    flyer.stage_sigs[flyer._encoder.output2.ttl.addr] = 31  # PC_PULSE --> TTL2 --> merlin
+    flyer.stage_sigs[flyer._encoder.output3.ttl.addr] = 36  # OR1 --> TTL3 --> scaler
+    flyer.stage_sigs[flyer._encoder.output4.ttl.addr] = 31  # PC_PULSE --> TTL4 --> dexela
 
+    if method == 'position':
+        ## Specific stage sigs for Zebra - position
+        # PC Tab
+        # Arm
+        flyer.stage_sigs[flyer._encoder.pc.trig_source] = 0
+        # Gate
+        flyer.stage_sigs[flyer._encoder.pc.gate_source] = 0  # 0 = Position, 1 = Time
+        # flyer.stage_sigs[flyer._encoder.pc.gate_start] = 0
+        # flyer.stage_sigs[flyer._encoder.pc.gate_width] = 10
+        # flyer.stage_sigs[flyer._encoder.pc.gate_step] = 10.1
+        flyer.stage_sigs[flyer._encoder.pc.gate_num] = 1
+        # Pulse
+        flyer.stage_sigs[flyer._encoder.pc.pulse_source] = 0  # 0 = Position, 1 = Time
+        # flyer.stage_sigs[flyer._encoder.pc.pulse_start] = 0
+        # flyer.stage_sigs[flyer._encoder.pc.pulse_width] = 0.9
+        # flyer.stage_sigs[flyer._encoder.pc.pulse_step] = 1
+        # flyer.stage_sigs[flyer._encoder.pc.pulse_max] = 10
+        ## OR Tab
+        flyer.stage_sigs[flyer._encoder.or1.use1] = 1  # 0 = No, 1 = Yes
+        flyer.stage_sigs[flyer._encoder.or1.use2] = 1
+        flyer.stage_sigs[flyer._encoder.or1.use3] = 1
+        flyer.stage_sigs[flyer._encoder.or1.use4] = 0
+        flyer.stage_sigs[flyer._encoder.or1.input_source1] = 54
+        flyer.stage_sigs[flyer._encoder.or1.input_source2] = 55
+        flyer.stage_sigs[flyer._encoder.or1.input_source3] = 53
+        flyer.stage_sigs[flyer._encoder.or1.input_source4] = 0
+        flyer.stage_sigs[flyer._encoder.or1.invert1] = 0  # 0 = No, 1 = Yes
+        flyer.stage_sigs[flyer._encoder.or1.invert2] = 0
+        flyer.stage_sigs[flyer._encoder.or1.invert3] = 0
+        flyer.stage_sigs[flyer._encoder.or1.invert4] = 0
+        ## PULSE Tab
+        # flyer.stage_sigs[flyer._encoder.pulse1.input_addr] = 31
+        # flyer.stage_sigs[flyer._encoder.pulse1.input_edge] = 1  # 0 = rising, 1 = falling
+        # flyer.stage_sigs[flyer._encoder.pulse1.delay] = 0.2
+        # flyer.stage_sigs[flyer._encoder.pulse1.width] = 0.1
+        # flyer.stage_sigs[flyer._encoder.pulse1.time_units] = 0
+        flyer.stage_sigs[flyer._encoder.pulse2.input_addr] = 30
+        flyer.stage_sigs[flyer._encoder.pulse2.input_edge] = 0  # 0 = rising, 1 = falling
+        flyer.stage_sigs[flyer._encoder.pulse2.delay] = 0
+        flyer.stage_sigs[flyer._encoder.pulse2.width] = 0.1
+        flyer.stage_sigs[flyer._encoder.pulse2.time_units] = 0
+        flyer.stage_sigs[flyer._encoder.pulse3.input_addr] = 31
+        flyer.stage_sigs[flyer._encoder.pulse3.input_edge] = 1  # 0 = rising, 1 = falling
+        flyer.stage_sigs[flyer._encoder.pulse3.delay] = 0.2
+        flyer.stage_sigs[flyer._encoder.pulse3.width] = 0.1
+        flyer.stage_sigs[flyer._encoder.pulse3.time_units] = 0
+        flyer.stage_sigs[flyer._encoder.pulse4.input_addr] = 31
+        flyer.stage_sigs[flyer._encoder.pulse4.input_edge] = 1  # 0 = rising, 1 = falling
+        flyer.stage_sigs[flyer._encoder.pulse4.delay] = 0
+        flyer.stage_sigs[flyer._encoder.pulse4.width] = 0.1
+        flyer.stage_sigs[flyer._encoder.pulse4.time_units] = 0
+    elif method == 'time':
+        ## Specific stage sigs for Zebra - time
+        # PC Tab
+        # Arm
+        flyer.stage_sigs[flyer._encoder.pc.trig_source] = 0
+        # Gate
+        flyer.stage_sigs[flyer._encoder.pc.gate_source] = 1  # 0 = Position, 1 = Time
+        # flyer.stage_sigs[flyer._encoder.pc.gate_start] = 0
+        # flyer.stage_sigs[flyer._encoder.pc.gate_width] = 10
+        # flyer.stage_sigs[flyer._encoder.pc.gate_step] = 10.1
+        flyer.stage_sigs[flyer._encoder.pc.gate_num] = 1
+        # Pulse
+        flyer.stage_sigs[flyer._encoder.pc.pulse_source] = 1  # 0 = Position, 1 = Time
+        # flyer.stage_sigs[flyer._encoder.pc.pulse_start] = 0
+        # flyer.stage_sigs[flyer._encoder.pc.pulse_width] = 0.9
+        # flyer.stage_sigs[flyer._encoder.pc.pulse_step] = 1
+        # flyer.stage_sigs[flyer._encoder.pc.pulse_max] = 10
+        ## OR Tab
+        flyer.stage_sigs[flyer._encoder.or1.use1] = 1  # 0 = No, 1 = Yes
+        flyer.stage_sigs[flyer._encoder.or1.use2] = 1
+        flyer.stage_sigs[flyer._encoder.or1.use3] = 0
+        flyer.stage_sigs[flyer._encoder.or1.use4] = 0
+        flyer.stage_sigs[flyer._encoder.or1.input_source1] = 54
+        flyer.stage_sigs[flyer._encoder.or1.input_source2] = 55
+        flyer.stage_sigs[flyer._encoder.or1.input_source3] = 53
+        flyer.stage_sigs[flyer._encoder.or1.input_source4] = 0
+        flyer.stage_sigs[flyer._encoder.or1.invert1] = 0  # 0 = No, 1 = Yes
+        flyer.stage_sigs[flyer._encoder.or1.invert2] = 0
+        flyer.stage_sigs[flyer._encoder.or1.invert3] = 0
+        flyer.stage_sigs[flyer._encoder.or1.invert4] = 0
+        ## PULSE Tab
+        # flyer.stage_sigs[flyer._encoder.pulse1.input_addr] = 31
+        # flyer.stage_sigs[flyer._encoder.pulse1.input_edge] = 1  # 0 = rising, 1 = falling
+        # flyer.stage_sigs[flyer._encoder.pulse1.delay] = 0.2
+        # flyer.stage_sigs[flyer._encoder.pulse1.width] = 0.1
+        # flyer.stage_sigs[flyer._encoder.pulse1.time_units] = 0
+        # flyer.stage_sigs[flyer._encoder.pulse2.input_addr] = 30
+        # flyer.stage_sigs[flyer._encoder.pulse2.input_edge] = 0  # 0 = rising, 1 = falling
+        # flyer.stage_sigs[flyer._encoder.pulse2.delay] = 0
+        # flyer.stage_sigs[flyer._encoder.pulse2.width] = 0.1
+        # flyer.stage_sigs[flyer._encoder.pulse2.time_units] = 0
+        flyer.stage_sigs[flyer._encoder.pulse3.input_addr] = 31
+        flyer.stage_sigs[flyer._encoder.pulse3.input_edge] = 0  # 0 = rising, 1 = falling
+        flyer.stage_sigs[flyer._encoder.pulse3.delay] = 0.0
+        flyer.stage_sigs[flyer._encoder.pulse3.width] = 0.1
+        flyer.stage_sigs[flyer._encoder.pulse3.time_units] = 0
+        flyer.stage_sigs[flyer._encoder.pulse4.input_addr] = 31
+        flyer.stage_sigs[flyer._encoder.pulse4.input_edge] = 1  # 0 = rising, 1 = falling
+        flyer.stage_sigs[flyer._encoder.pulse4.delay] = 0
+        flyer.stage_sigs[flyer._encoder.pulse4.width] = 0.1
+        flyer.stage_sigs[flyer._encoder.pulse4.time_units] = 0
+    else:
+        print('i don\'t know what to do')
 
 class SRXFlyer1Axis(Device):
     """
@@ -303,6 +427,8 @@ class SRXFlyer1Axis(Device):
     KNOWN_DETS = {"xs", "xs2", "xs7", "merlin", "dexela"}
     fast_axis = Cpt(Signal, value="HOR", kind="config")
     slow_axis = Cpt(Signal, value="VER", kind="config")
+
+    _staging_delay = 0.010
 
     @property
     def encoder(self):
@@ -335,74 +461,6 @@ class SRXFlyer1Axis(Device):
         self._filestore_resource = None
         self._encoder = zebra
 
-        ## Stage sigs for Zebra - position
-        # PC Tab
-        # Setup
-        self.stage_sigs[self._encoder.pc.data.cap_enc1_bool] = 1
-        self.stage_sigs[self._encoder.pc.data.cap_enc2_bool] = 1
-        self.stage_sigs[self._encoder.pc.data.cap_enc3_bool] = 1
-        self.stage_sigs[self._encoder.pc.data.cap_enc4_bool] = 0
-        # self.stage_sigs[self._encoder.pc.enc] = 0
-        # self.stage_sigs[self._encoder.pc.dir] = 0
-        # self.stage_sigs[self._encoder.pc.tspre] = 1
-        # Arm
-        self.stage_sigs[self._encoder.pc.trig_source] = 0
-        # Gate
-        self.stage_sigs[self._encoder.pc.gate_source] = 0  # 0 = Position, 1 = Time
-        # self.stage_sigs[self._encoder.pc.gate_start] = 0
-        # self.stage_sigs[self._encoder.pc.gate_width] = 10
-        # self.stage_sigs[self._encoder.pc.gate_step] = 10.1
-        self.stage_sigs[self._encoder.pc.gate_num] = 1
-        # Pulse
-        self.stage_sigs[self._encoder.pc.pulse_source] = 0  # 0 = Position, 1 = Time
-        # self.stage_sigs[self._encoder.pc.pulse_start] = 0
-        # self.stage_sigs[self._encoder.pc.pulse_width] = 0.9
-        # self.stage_sigs[self._encoder.pc.pulse_step] = 1
-        # self.stage_sigs[self._encoder.pc.pulse_max] = 10
-        ## OR Tab
-        self.stage_sigs[self._encoder.or1.use1] = 1  # 0 = No, 1 = Yes
-        self.stage_sigs[self._encoder.or1.use2] = 1
-        self.stage_sigs[self._encoder.or1.use3] = 1
-        self.stage_sigs[self._encoder.or1.use4] = 0
-        self.stage_sigs[self._encoder.or1.input_source1] = 54
-        self.stage_sigs[self._encoder.or1.input_source2] = 55
-        self.stage_sigs[self._encoder.or1.input_source3] = 53
-        self.stage_sigs[self._encoder.or1.input_source4] = 0
-        self.stage_sigs[self._encoder.or1.invert1] = 0  # 0 = No, 1 = Yes
-        self.stage_sigs[self._encoder.or1.invert2] = 0
-        self.stage_sigs[self._encoder.or1.invert3] = 0
-        self.stage_sigs[self._encoder.or1.invert4] = 0
-        ## PULSE Tab
-        # self.stage_sigs[self._encoder.pulse1.input_addr] = 31
-        # self.stage_sigs[self._encoder.pulse1.input_edge] = 1  # 0 = rising, 1 = falling
-        # self.stage_sigs[self._encoder.pulse1.delay] = 0.2
-        # self.stage_sigs[self._encoder.pulse1.width] = 0.1
-        # self.stage_sigs[self._encoder.pulse1.time_units] = 0
-        self.stage_sigs[self._encoder.pulse2.input_addr] = 30
-        self.stage_sigs[self._encoder.pulse2.input_edge] = 0  # 0 = rising, 1 = falling
-        self.stage_sigs[self._encoder.pulse2.delay] = 0
-        self.stage_sigs[self._encoder.pulse2.width] = 0.1
-        self.stage_sigs[self._encoder.pulse2.time_units] = 0
-        self.stage_sigs[self._encoder.pulse3.input_addr] = 31
-        self.stage_sigs[self._encoder.pulse3.input_edge] = 1  # 0 = rising, 1 = falling
-        self.stage_sigs[self._encoder.pulse3.delay] = 0.2
-        self.stage_sigs[self._encoder.pulse3.width] = 0.1
-        self.stage_sigs[self._encoder.pulse3.time_units] = 0
-        self.stage_sigs[self._encoder.pulse4.input_addr] = 31
-        self.stage_sigs[self._encoder.pulse4.input_edge] = 1  # 0 = rising, 1 = falling
-        self.stage_sigs[self._encoder.pulse4.delay] = 0
-        self.stage_sigs[self._encoder.pulse4.width] = 0.1
-        self.stage_sigs[self._encoder.pulse4.time_units] = 0
-        ## ENC tab
-        self.stage_sigs[self._encoder.pc.enc_pos1_sync] = 1
-        self.stage_sigs[self._encoder.pc.enc_pos2_sync] = 1
-        self.stage_sigs[self._encoder.pc.enc_pos3_sync] = 1
-        self.stage_sigs[self._encoder.pc.enc_pos4_sync] = 1
-        ## SYS tab
-        self.stage_sigs[self._encoder.output1.ttl.addr] = 31  # PC_PULSE --> TTL1 --> xs
-        self.stage_sigs[self._encoder.output2.ttl.addr] = 31  # PC_PULSE --> TTL2 --> merlin
-        self.stage_sigs[self._encoder.output3.ttl.addr] = 36  # OR1 --> TTL3 --> scaler
-        self.stage_sigs[self._encoder.output4.ttl.addr] = 31  # PC_PULSE --> TTL4 --> dexela
 
         # Put SIS3820 into single count (not autocount) mode
         self.stage_sigs[self._sis.count_mode] = 0
@@ -420,36 +478,153 @@ class SRXFlyer1Axis(Device):
         if dir == "HOR":
             self.stage_sigs[self._encoder.pc.enc] = "Enc2"
             self.stage_sigs[self._encoder.pc.dir] = "Positive"
-            self.stage_sigs[self._encoder.pc.enc_res2] = 5e-6
         elif dir == "VER":
             self.stage_sigs[self._encoder.pc.enc] = "Enc1"
             self.stage_sigs[self._encoder.pc.dir] = "Positive"
-            self.stage_sigs[self._encoder.pc.enc_res1] = 5e-6
         elif dir == "DET2HOR":
             self.stage_sigs[self._encoder.pc.enc] = "Enc3"
             self.stage_sigs[self._encoder.pc.dir] = "Positive"
-            self.stage_sigs[self._encoder.pc.enc_res1] = 5e-5
         elif dir == "DET2VER":
             self.stage_sigs[self._encoder.pc.enc] = "Enc4"
             self.stage_sigs[self._encoder.pc.dir] = "Positive"
-            self.stage_sigs[self._encoder.pc.enc_res1] = 5e-5
         elif dir == "NANOHOR":
             self.stage_sigs[self._encoder.pc.enc] = "Enc1"
             self.stage_sigs[self._encoder.pc.dir] = "Positive"
-            self.stage_sigs[self._encoder.pc.enc_res2] = 9.5368e-05
         elif dir == "NANOVER":
             self.stage_sigs[self._encoder.pc.enc] = "Enc2"
             self.stage_sigs[self._encoder.pc.dir] = "Positive"
-            self.stage_sigs[self._encoder.pc.enc_res2] = 9.5368e-05
         elif dir == "NANOZ":
             self.stage_sigs[self._encoder.pc.enc] = "Enc3"
             self.stage_sigs[self._encoder.pc.dir] = "Positive"
-            self.stage_sigs[self._encoder.pc.enc_res2] = 9.5368e-05
 
-        super().stage()
+        self._stage_with_delay()
+
+    def _stage_with_delay(self):
+        # Staging taken from https://github.com/bluesky/ophyd/blob/master/ophyd/device.py
+        # Device - BlueskyInterface
+        """Stage the device for data collection.
+        This method is expected to put the device into a state where
+        repeated calls to :meth:`~BlueskyInterface.trigger` and
+        :meth:`~BlueskyInterface.read` will 'do the right thing'.
+        Staging not idempotent and should raise
+        :obj:`RedundantStaging` if staged twice without an
+        intermediate :meth:`~BlueskyInterface.unstage`.
+        This method should be as fast as is feasible as it does not return
+        a status object.
+        The return value of this is a list of all of the (sub) devices
+        stage, including it's self.  This is used to ensure devices
+        are not staged twice by the :obj:`~bluesky.run_engine.RunEngine`.
+        This is an optional method, if the device does not need
+        staging behavior it should not implement `stage` (or
+        `unstage`).
+        Returns
+        -------
+        devices : list
+            list including self and all child devices staged
+        """
+        if self._staged == Staged.no:
+            pass  # to short-circuit checking individual cases
+        elif self._staged == Staged.yes:
+            raise RedundantStaging("Device {!r} is already staged. "
+                                   "Unstage it first.".format(self))
+        elif self._staged == Staged.partially:
+            raise RedundantStaging("Device {!r} has been partially staged. "
+                                   "Maybe the most recent unstaging "
+                                   "encountered an error before finishing. "
+                                   "Try unstaging again.".format(self))
+        self.log.debug("Staging %s", self.name)
+        self._staged = Staged.partially
+
+        # Resolve any stage_sigs keys given as strings: 'a.b' -> self.a.b
+        stage_sigs = OrderedDict()
+        for k, v in self.stage_sigs.items():
+            if isinstance(k, str):
+                # Device.__getattr__ handles nested attr lookup
+                stage_sigs[getattr(self, k)] = v
+            else:
+                stage_sigs[k] = v
+
+        # Read current values, to be restored by unstage()
+        original_vals = {sig: sig.get() for sig in stage_sigs}
+
+        # We will add signals and values from original_vals to
+        # self._original_vals one at a time so that
+        # we can undo our partial work in the event of an error.
+
+        # Apply settings.
+        devices_staged = []
+        try:
+            for sig, val in stage_sigs.items():
+                self.log.debug("Setting %s to %r (original value: %r)",
+                               self.name,
+                               val, original_vals[sig])
+                sig.set(val).wait()
+                ttime.sleep(self._staging_delay)
+                # It worked -- now add it to this list of sigs to unstage.
+                self._original_vals[sig] = original_vals[sig]
+            devices_staged.append(self)
+
+            # Call stage() on child devices.
+            for attr in self._sub_devices:
+                device = getattr(self, attr)
+                if hasattr(device, 'stage'):
+                    device.stage()
+                    devices_staged.append(device)
+        except Exception:
+            self.log.debug("An exception was raised while staging %s or "
+                           "one of its children. Attempting to restore "
+                           "original settings before re-raising the "
+                           "exception.", self.name)
+            self.unstage()
+            raise
+        else:
+            self._staged = Staged.yes
+        return devices_staged
+
 
     def unstage(self):
-        super().unstage()
+        self._unstage_with_delay()
+
+
+    def _unstage_with_delay(self):
+        # Staging taken from https://github.com/bluesky/ophyd/blob/master/ophyd/device.py
+        # Device - BlueskyInterface
+        """Unstage the device.
+        This method returns the device to the state it was prior to the
+        last `stage` call.
+        This method should be as fast as feasible as it does not
+        return a status object.
+        This method must be idempotent, multiple calls (without a new
+        call to 'stage') have no effect.
+        Returns
+        -------
+        devices : list
+            list including self and all child devices unstaged
+        """
+        self.log.debug("Unstaging %s", self.name)
+        self._staged = Staged.partially
+        devices_unstaged = []
+
+        # Call unstage() on child devices.
+        for attr in self._sub_devices[::-1]:
+            device = getattr(self, attr)
+            if hasattr(device, 'unstage'):
+                device.unstage()
+                devices_unstaged.append(device)
+
+        # Restore original values.
+        for sig, val in reversed(list(self._original_vals.items())):
+            self.log.debug("Setting %s back to its original value: %r)",
+                           self.name,
+                           val)
+            sig.set(val).wait()
+            ttime.sleep(self._staging_delay)
+            self._original_vals.pop(sig)
+        devices_unstaged.append(self)
+
+        self._staged = Staged.no
+        return devices_unstaged
+
 
     def describe_collect(self):
 
@@ -499,8 +674,8 @@ class SRXFlyer1Axis(Device):
             direction = -1
         pxsize = np.abs(xstop - xstart) / (xnum - 1)
         extent = np.abs(xstop - xstart) + pxsize
-        # 1 ms delay between pulses
-        decrement = (pxsize / dwell) * 0.0010
+        # 0.1 ms delay between pulses
+        decrement = (pxsize / dwell) * 0.0001
         if decrement < 1e-5:
             # print('Changing the pulse width')
             decrement = 1e-5
@@ -739,9 +914,12 @@ try:
     microZebra = SRXZebra("XF:05IDD-ES:1{Dev:Zebra1}:", name="microZebra",
         read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
     )
-    flying_zebra = SRXFlyer1Axis(
-        list(xs for xs in [xs] if xs is not None), sclr1, microZebra, name="flying_zebra"
-    )
+    # There is no flyer attached to Zebra1.
+    # Leaving object as none until it is confirmed that it can be removed.
+    flying_zebra = None
+    # flying_zebra = SRXFlyer1Axis(
+    #     list(xs for xs in [xs] if xs is not None), sclr1, microZebra, name="flying_zebra"
+    # )
 except Exception as ex:
     print("Cannot connect to microZebra. Continuing without device.\n", ex)
     raise ex
@@ -750,15 +928,39 @@ except Exception as ex:
 
 # For nanoES
 try:
+    # Setup nanoZebra
     nanoZebra = SRXZebra("XF:05IDD-ES:1{Dev:Zebra2}:", name="nanoZebra",
         read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.enc3", "pc.data.time"],
     )
+    
+    if os.getenv("TOUCHBEAMLINE", "0") == "1":
+        print('  Touching nanoZebra...', end='')
+        # Set encoder resolution on startup
+        nanoZebra.pc.enc_res1.put(9.5368e-05)
+        nanoZebra.pc.enc_res2.put(9.5368e-05)
+        nanoZebra.pc.enc_res3.put(9.5368e-05)
+        print('done')
+
     nano_flying_zebra = SRXFlyer1Axis(
         list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="nano_flying_zebra"
     )
+    set_flyer_zebra_stage_sigs(nano_flying_zebra, 'position')
+
+    # nano_flying_zebra_coarse = SRXFlyer1Axis(
+    #     list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="nano_flying_zebra_coarse"
+    # )
+    # set_flyer_zebra_stage_sigs(nano_flying_zebra_coarse, 'time')
+
+    # # Temporary flyer for ME4 until ME7 is commissioned
+    # nano_flying_zebra_me4 = SRXFlyer1Axis(
+    #     list(xs4 for xs4 in [xs4] if xs4 is not None), sclr1, nanoZebra, name="nano_flying_zebra_me4"
+    # )
+    # set_flyer_zebra_stage_sigs(nano_flying_zebra_me4, 'position')
 except Exception as ex:
     print("Cannot connect to nanoZebra. Continuing without device.\n", ex)
     nano_flying_zebra = None
+    nano_flying_zebra_coarse = None
+    nano_flying_zebra_me4 = None
 
 
 # For confocal
