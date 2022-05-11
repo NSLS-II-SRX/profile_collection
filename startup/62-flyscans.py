@@ -79,7 +79,7 @@ def toc(t0, str=''):
 # should abstract this method to use fast and slow axes, rather than x and y
 def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
                       flying_zebra, xmotor, ymotor,
-                      delta=None, shutter=True, align=False, plot=True,
+                      delta=None, shutter=True, plot=True,
                       md=None, snake=False, verbose=False):
     """Read IO from SIS3820.
     Zebra buffers x(t) points as a flyer.
@@ -110,8 +110,6 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     delta : float, optional, kwarg only
        offset on the ystage start position.  If not given, derive from
        dwell + pixel size
-    align : bool, optional, kwarg only
-       If True, try to align the beamline
     shutter : bool, optional, kwarg only
        If True, try to open the shutter
     """
@@ -165,24 +163,17 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
     # If delta is None, set delta based on time for acceleration
     if (delta is None):
-        MIN_DELTA = 0.100  # old default value
+        MIN_DELTA = 0.100  # default value
         v = ((xstop - xstart) / (xnum - 1)) / dwell  # compute "stage speed"
         t_acc = xmotor.acceleration.get()  # acceleration time
         delta = 0.5 * t_acc * v  # distance the stage will travel in t_acc
         delta = np.amax((delta, MIN_DELTA))
-        # delta = 0.500 #was 2.5 when npoint scanner drifted
 
     # Move to start scanning location
     # Calculate move to scan start
     pxsize = (xstop - xstart) / (xnum - 1)
     row_start = xstart - delta - (pxsize / 2)
     row_stop = xstop + delta + (pxsize / 2)
-    # yield from mv(xmotor, row_start,
-    #               ymotor, ystart)
-
-    # Run a peakup before the map?
-    if (align):
-        yield from peakup_fine(shutter=shutter)
 
     # Scan metadata
     md['scan']['type'] = 'XRF_FLY'
