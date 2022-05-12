@@ -264,12 +264,10 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         def zebra_kickoff():
             if row_start < row_stop:
                 yield from kickoff(flying_zebra,
-                                   xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell,
-                                   wait=True)
+                                   xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell, tacc=xmotor.acceleration.get(), wait=True)
             else:
                 yield from kickoff(flying_zebra,
-                                   xstart=xstop, xstop=xstart, xnum=xnum, dwell=dwell,
-                                   wait=True)
+                                   xstart=xstop, xstop=xstart, xnum=xnum, dwell=dwell, tacc=xmotor.acceleration.get(), wait=True)
         if verbose:
             t_zebkickoff = tic()
         yield from zebra_kickoff()

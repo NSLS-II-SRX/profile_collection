@@ -308,6 +308,7 @@ def set_flyer_zebra_stage_sigs(flyer, method):
     flyer.stage_sigs[flyer._encoder.output4.ttl.addr] = 31  # PC_PULSE --> TTL4 --> dexela
 
     if method == 'position':
+        flyer.mode.set('position')
         ## Specific stage sigs for Zebra - position
         # PC Tab
         # Arm
@@ -360,6 +361,7 @@ def set_flyer_zebra_stage_sigs(flyer, method):
         flyer.stage_sigs[flyer._encoder.pulse4.time_units] = 0
     elif method == 'time':
         ## Specific stage sigs for Zebra - time
+        flyer.mode.set('time')
         # PC Tab
         # Arm
         flyer.stage_sigs[flyer._encoder.pc.trig_source] = 0
@@ -427,6 +429,7 @@ class SRXFlyer1Axis(Device):
     KNOWN_DETS = {"xs", "xs2", "xs4", "merlin", "dexela"}
     fast_axis = Cpt(Signal, value="HOR", kind="config")
     slow_axis = Cpt(Signal, value="VER", kind="config")
+    mode = Cpt(Signal, value='position', kind='config')
 
     _staging_delay = 0.010
 
@@ -658,13 +661,12 @@ class SRXFlyer1Axis(Device):
 
         return {"stream0": desc}
 
-    def kickoff(self, *, xstart, xstop, xnum, dwell):
+    def kickoff(self, *, xstart, xstop, xnum, dwell, tacc):
         dets_by_name = {d.name: d for d in self.detectors}
 
-        ## TODO: Need to make sure zebra is full setup for scan
-        ## pulses2/3/4
-        ## OR logic
-        ## PC on position (NOT TIME!)
+        mode = self.mode.get()
+        # print(f'{mode=}')
+
         self._encoder.pc.arm.put(0)
         self._mode = "kicked off"
         self._npts = int(xnum)
@@ -674,22 +676,35 @@ class SRXFlyer1Axis(Device):
             direction = -1
         pxsize = np.abs(xstop - xstart) / (xnum - 1)
         extent = np.abs(xstop - xstart) + pxsize
-        # 0.1 ms delay between pulses
-        decrement = (pxsize / dwell) * 0.0001
-        if decrement < 1e-5:
-            # print('Changing the pulse width')
-            decrement = 1e-5
-        self._encoder.pc.gate_start.put(xstart - direction * (pxsize / 2))
-        self._encoder.pc.gate_step.put(extent + 0.051)
-        self._encoder.pc.gate_width.put(extent + 0.050)
+        v = pxsize / dwell
+
+        if mode == 'position':
+            # 0.1 ms delay between pulses
+            decrement = (pxsize / dwell) * 0.0001
+            if decrement < 1e-5:
+                print('Warning: Changing the pulse width!')
+                decrement = 1e-5
+        elif mode == 'time':
+            decrement = 0.0001
+
+        if mode == 'position':
+            self._encoder.pc.gate_start.put(xstart - direction * (pxsize / 2))
+            self._encoder.pc.gate_step.put(extent + 0.051)
+            self._encoder.pc.gate_width.put(extent + 0.050)
+        elif mode == 'time':
+            self._encoder.pc.gate_start.put(tacc)
+            self._encoder.pc.gate_step.put(extent / v)
+            self._encoder.pc.gate_width.put(extent / v + 0.050)
+
 
         self._encoder.pc.pulse_start.put(0.0)
         self._encoder.pc.pulse_max.put(xnum)
-        self._encoder.pc.pulse_step.put(pxsize)
-        self._encoder.pc.pulse_width.put(pxsize - decrement)
-        # If decrement is too small, then zebra will not send individual pulses
-        # but integrate over the entire line
-        # Hopefully taken care of with decrement check above
+        if mode == 'position':
+            self._encoder.pc.pulse_step.put(pxsize)
+            self._encoder.pc.pulse_width.put(pxsize - decrement)
+        elif mode == 'time':
+            self._encoder.pc.pulse_step.put(dwell)
+            self._encoder.pc.pulse_width.put(dwell - decrement)
 
         # For dexela, we will use time triggering in a pixel, not position
         # if "dexela" in dets_by_name:
@@ -703,11 +718,6 @@ class SRXFlyer1Axis(Device):
         #     self._encoder.pulse3.input_addr.put(31)
         #     self._encoder.pulse4.input_addr.put(31)
 
-        self._encoder.output1.ttl.addr.put(31)
-        self._encoder.output3.ttl.addr.put(36)
-        self._encoder.pulse3.input_addr.put(31)
-        self._encoder.pulse4.input_addr.put(31)
-
         self._encoder.pc.enc_pos1_sync.put(1)  # Scanner X
         self._encoder.pc.enc_pos2_sync.put(1)  # Scanner Y
         self._encoder.pc.enc_pos3_sync.put(1)  # Scanner Z
@@ -715,7 +725,6 @@ class SRXFlyer1Axis(Device):
 
         # Arm the zebra
         self._encoder.pc.arm.put(1)
-        # ttime.sleep(1)
 
         st = (
             NullStatus()
