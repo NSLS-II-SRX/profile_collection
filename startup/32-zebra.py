@@ -936,7 +936,7 @@ try:
     if os.getenv("TOUCHBEAMLINE", "0") == "1":
         print('  Touching nanoZebra...', end='')
         # Set encoder resolution on startup
-        nanoZebra.pc.enc_res1.put(9.5368e-05)
+        nanoZebra.pc.enc_res1.put(-9.5368e-05)
         nanoZebra.pc.enc_res2.put(9.5368e-05)
         nanoZebra.pc.enc_res3.put(9.5368e-05)
         print('done')
