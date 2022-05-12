@@ -62,7 +62,7 @@ def timer_wrapper(func):
         t0 = ttime.monotonic()
         yield from func(*args, **kwargs)
         dt = ttime.monotonic() - t0
-        print('%s: dt = %f' % (func.__name__, dt))
+        print(f'{func.__name__}: dt = {dt}')
     return wrapper
 
 
@@ -84,10 +84,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     """Read IO from SIS3820.
     Zebra buffers x(t) points as a flyer.
     Xpress3 is our detector.
-    The aerotech has the x and y positioners.
-    delta should be chosen so that it takes about 0.5 sec to reach the gate??
-    ymotor  slow axis
-    xmotor  fast axis
+    ## CHECK! delta should be chosen so that it takes about 0.5 sec to reach the gate??
+    ymotor  slow (stepping) axis
+    xmotor  fast (flying) axis
 
     Parameters
     ----------
@@ -118,8 +117,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
     # Check for negative number of points
     if (xnum < 1 or ynum < 1):
-        print('Error: Number of points is negative.')
-        return
+        raise AttributeError('Number of points must be positive!')
 
     # Set metadata
     if md is None:
