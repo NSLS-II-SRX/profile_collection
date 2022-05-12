@@ -419,12 +419,12 @@ class SRXFlyer1Axis(Device):
     """
 
     LARGE_FILE_DIRECTORY_WRITE_PATH = (
-        "/nsls2/data/srx/assets/zebra/2021/2021-3/"
+        "/nsls2/data/srx/assets/zebra/2022/2022-2/"
     )
     LARGE_FILE_DIRECTORY_READ_PATH = (
-        "/nsls2/data/srx/assets/zebra/2021/2021-3/"
+        "/nsls2/data/srx/assets/zebra/2022/2022-2/"
     )
-    KNOWN_DETS = {"xs", "xs2", "xs7", "merlin", "dexela"}
+    KNOWN_DETS = {"xs", "xs2", "xs4", "merlin", "dexela"}
     fast_axis = Cpt(Signal, value="HOR", kind="config")
     slow_axis = Cpt(Signal, value="VER", kind="config")
 

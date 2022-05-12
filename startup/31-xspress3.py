@@ -379,12 +379,12 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
         return ret
 
     def stage(self):
-        print("stage!")
+        # print("stage!")
         # Erase what is currently in the system
         # This prevents a single hot pixel in the upper-left corner of a map
         # JL replaced xs.erase.put(0) with self.cam.erase.put(0)
         #    why was xs.erase.put(0) not self.erase.put(0) ?
-        xs.erase.put(0)
+        self.erase.put(0)
         # JL commented out the next line because it caused a significant delay in starting acqusitions
         #self.cam.erase.put(0)
         # JL added the next line, it is not pretty
@@ -400,7 +400,7 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
         return super().stage()
 
     def unstage(self):
-        print("unstage!")
+        # print("unstage!")
         # JL added the next two lines
         #self.hdf5.auto_save.put(0)
         # self.hdf5.file_write_mode.put(self.previous_file_write_mode_value)
