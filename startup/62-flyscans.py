@@ -57,13 +57,14 @@ from hxntools.handlers import register
 
 
 # Define wrapper to time a function
-def timer_wrapper(func):
-    def wrapper(*args, **kwargs):
+def timer_wrapper(func, *args, **kwargs):
+    def wrapper():
         t0 = ttime.monotonic()
         yield from func(*args, **kwargs)
         dt = ttime.monotonic() - t0
-        print(f'{func.__name__}: dt = {dt}')
-    return wrapper
+        print(f'{func.__name__}: dt = {dt:.6f}')
+    ret = yield from wrapper()
+    return ret
 
 
 def tic():
@@ -113,11 +114,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
        If True, try to open the shutter
     """
 
-    # t_setup = tic()
+    t_setup = tic()
 
     # Check for negative number of points
     if (xnum < 1 or ynum < 1):
-        raise AttributeError('Number of points must be positive!')
+        raise ValueError('Number of points must be positive!')
 
     # Get the scan speed
     v = ((xstop - xstart) / (xnum - 1)) / dwell  # compute "stage speed"
@@ -210,11 +211,13 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             yield from bps.abs_set(xmotor, row_start, group=row_str)
             yield from bps.abs_set(motor, step, group=row_str)
             yield from bps.wait(group=row_str)
-            yield from bps.trigger_and_read([temp_nanoKB, motor])
+            # Beginning of line read
+            yield from bps.trigger_and_read([motor, nano_stage_interferometer])
 
         if verbose:
-            t_mvstartfly = tic()
-        yield from move_to_start_fly()
+            yield from timer_wrapper(move_to_start_fly)
+        else:
+            yield from move_to_start_fly()
 
         # TODO  Why are we re-trying the move?  This should be fixed at
         # a lower level
@@ -233,9 +236,6 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             x_dial = xmotor.user_readback.get()
         if (i != 0):
             print('done')
-
-        if verbose:
-            toc(t_mvstartfly, str='Move to start fly each')
 
         if ('xs2' in dets_by_name):
             xs2 = dets_by_name['xs2']
@@ -260,25 +260,36 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         yield from abs_set(ion.nuse_all, 2*xnum)
 
         # arm the Zebra (start caching x positions)
-        # @timer_wrapper
         def zebra_kickoff():
             if row_start < row_stop:
-                yield from kickoff(flying_zebra,
-                                   xstart=xstart, xstop=xstop, xnum=xnum, dwell=dwell, tacc=xmotor.acceleration.get(), wait=True)
+                _row_start = xstart
+                _row_stop = xstop
             else:
-                yield from kickoff(flying_zebra,
-                                   xstart=xstop, xstop=xstart, xnum=xnum, dwell=dwell, tacc=xmotor.acceleration.get(), wait=True)
-        if verbose:
-            t_zebkickoff = tic()
-        yield from zebra_kickoff()
-        if verbose:
-            toc(t_zebkickoff, str='Zebra kickoff')
+                _row_start = xstop
+                _row_stop = xstart
 
+            yield from kickoff(flying_zebra,
+                               xstart=_row_start,
+                               xstop=_row_stop,
+                               xnum=xnum,
+                               dwell=dwell,
+                               tacc=xmotor.acceleration.get(),
+                               wait=True)
+        if verbose:
+            yield from timer_wrapper(zebra_kickoff)
+        else:
+            yield from zebra_kickoff()
+
+        # Need this tic for detector timing
         if verbose:
             t_datacollect = tic()
-        yield from abs_set(ion.erase_start, 1)
+
+        def fly_scan_reset_scaler():
+            yield from abs_set(ion.erase_start, 1)
         if verbose:
-            toc(t_datacollect, str='  reset scaler')
+            yield from timer_wrapper(fly_scan_reset_scaler)
+        else:
+            yield from fly_scan_reset_scaler()
 
         # trigger all of the detectors
         row_str = short_uid('row')
@@ -323,27 +334,20 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         # we still know about ion from above
         yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
 
-        # set speed back
-        # reset_scanner_velocity()
-
-        # @timer_wrapper
         def zebra_complete():
             yield from complete(flying_zebra)  # tell the Zebra we are done
         if verbose:
-            t_zebcomplete = tic()
-        yield from zebra_complete()
-        if verbose:
-            toc(t_zebcomplete, str='Zebra complete')
+            yield from timer_wrapper(zebra_complete)
+        else:
+            yield from zebra_complete()
 
 
-        # @timer_wrapper
         def zebra_collect():
             yield from collect(flying_zebra)  # extract data from Zebra
         if verbose:
-            t_zebcollect = tic()
-        yield from zebra_collect()
-        if verbose:
-            toc(t_zebcollect, str='Zebra collect')
+            yield from timer_wrapper(zebra_collect)
+        else:
+            yield from zebra_collect()
 
     def at_scan(name, doc):
         scanrecord.current_scan.put(doc['uid'][:6])
@@ -404,6 +408,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
     def plan():
+        toc(t_setup, str='Setup time + into plan()')
+
         # TODO move this to stage sigs
         for d in flying_zebra.detectors:
             yield from bps.mov(d.total_points, xnum)
@@ -412,16 +418,6 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         yield from bps.mov(xs.external_trig, True)
         if xs2 in flying_zebra.detectors:
             yield from bps.mov(xs2.external_trig, True)
-
-        # Set up all of the detectors
-        # if ('xs' in dets_by_name):
-        #     xs = dets_by_name['xs']
-        #     yield from mv(xs.hdf5.num_capture, xnum,
-        #                   get_me_the_cam(xs).num_images, xnum)
-        # if ('xs4' in dets_by_name):
-        #     xs = dets_by_name['xs4']
-        #     yield from mv(xs.hdf5.num_capture, xnum,
-        #                   get_me_the_cam(xs).num_images, xnum)
 
         ystep = 0
         for step in np.linspace(ystart, ystop, ynum):
@@ -445,12 +441,16 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                     start = row_stop
                     stop = row_start
             # Do work
-            if verbose:
-                print(f'Direction = {direction}')
-                print(f'Start = {start}')
-                print(f'Stop  = {stop}')
+            # if verbose:
+            #     print(f'Direction = {direction}')
+            #     print(f'Start = {start}')
+            #     print(f'Stop  = {stop}')
             flying_zebra._encoder.pc.dir.set(direction)
-            yield from fly_each_step(ymotor, step, start, stop)
+            if verbose:
+                yield from timer_wrapper(fly_each_step, ymotor, step, start, stop)
+                print('\n')
+            else:
+                yield from fly_each_step(ymotor, step, start, stop)
             # print('return from step\t',time.time())
             ystep = ystep + 1
 
@@ -461,23 +461,25 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         if xs2 in flying_zebra.detectors:
             yield from bps.mov(xs2.external_trig, False)
         yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
-        yield from bps.sleep(2)
-
-    # toc(t_setup, str='Setup time')
 
     # Setup the final scan plan
     if shutter:
-        final_plan = finalize_wrapper(plan(),
-                                      check_shutters(shutter, 'Close'))
+        if verbose:
+            final_plan = finalize_wrapper(plan(),
+                                          timer_wrapper(check_shutters, shutter, 'Close'))
+        else:
+            final_plan = finalize_wrapper(plan(),
+                                          check_shutters(shutter, 'Close'))
     else:
         final_plan = plan()
 
+    toc(t_setup, str='Setup time')
+
     # Open the shutter
     if verbose:
-        t_open = tic()
-    yield from check_shutters(shutter, 'Open')
-    if verbose:
-        toc(t_open, str='Open shutter')
+        yield from timer_wrapper(check_shutters, shutter, 'Open')
+    else:
+        yield from check_shutters(shutter, 'Open')
 
     # Run the scan
     uid = yield from final_plan
@@ -504,7 +506,7 @@ def nano_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
         yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
 
 
-def nano_y_scan_and_fly(*args, extra_dets=None, **kwargs):
+def nano_y_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
     kwargs.setdefault('xmotor', nano_stage.sy)
     kwargs.setdefault('ymotor', nano_stage.sx)
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
@@ -515,13 +517,16 @@ def nano_y_scan_and_fly(*args, extra_dets=None, **kwargs):
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
+
+    if center:
+        yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
     yield from scan_and_fly_base(dets, *args, **kwargs)
-    # print('Scan finished. Centering the scanner...')
-    yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
+    if center:
+        yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
 
 
 
-def nano_z_scan_and_fly(*args, extra_dets=None, **kwargs):
+def nano_z_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
     kwargs.setdefault('xmotor', nano_stage.sz)
     kwargs.setdefault('ymotor', nano_stage.sx)
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
@@ -531,26 +536,34 @@ def nano_z_scan_and_fly(*args, extra_dets=None, **kwargs):
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
+
+    if center:
+        yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
     yield from scan_and_fly_base(dets, *args, **kwargs)
-    # print('Scan finished. Centering the scanner...')
-    yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
+    if center:
+        yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
 
 
-
-def scan_and_fly(*args, extra_dets=None, **kwargs):
-    kwargs.setdefault('xmotor', hf_stage.x)
-    kwargs.setdefault('ymotor', hf_stage.y)
-    kwargs.setdefault('flying_zebra', flying_zebra)
-    yield from abs_set(flying_zebra.fast_axis, 'HOR')
+def coarse_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
+    kwargs.setdefault('xmotor', nano_stage.x)
+    kwargs.setdefault('ymotor', nano_stage.y)
+    kwargs.setdefault('flying_zebra', nano_flying_zebra_coarse)
+    yield from abs_set(kwargs['flying_zebra'].fast_axis, 'NANOHOR')
+    yield from abs_set(kwargs['flying_zebra'].slow_axis, 'NANOVER')
 
     _xs = kwargs.pop('xs', xs)
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
+
+    if center:
+        yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
     yield from scan_and_fly_base(dets, *args, **kwargs)
+    if center:
+        yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
 
 
-def y_scan_and_fly(*args, extra_dets=None, **kwargs):
+def coarse_y_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
     '''
     Convenience wrapper for scanning Y as the fast axis.
     Call scan_and_fly_base, forcing slow and fast axes to be X and Y.
@@ -558,16 +571,22 @@ def y_scan_and_fly(*args, extra_dets=None, **kwargs):
     i.e., the vertical, and the second three for the *slow axis*, horizontal.
     '''
 
-    kwargs.setdefault('xmotor', hf_stage.y)
-    kwargs.setdefault('ymotor', hf_stage.x)
-    kwargs.setdefault('flying_zebra', flying_zebra)
-    yield from abs_set(flying_zebra.fast_axis, 'VER')
+    kwargs.setdefault('xmotor', nano_stage.y)
+    kwargs.setdefault('ymotor', nano_stage.x)
+    kwargs.setdefault('flying_zebra', nano_flying_zebra_coarse)
+    yield from abs_set(kwargs['flying_zebra'].fast_axis, 'NANOVER')
+    yield from abs_set(kwargs['flying_zebra'].slow_axis, 'NANOHOR')
 
     _xs = kwargs.pop('xs', xs)
-    if (extra_dets is None):
+    if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
+
+    if center:
+        yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
     yield from scan_and_fly_base(dets, *args, **kwargs)
+    if center:
+        yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
 
 
 # This class is not used in this file
