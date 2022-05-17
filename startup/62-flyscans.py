@@ -310,14 +310,15 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             toc(t_datacollect, str='  move start')
         @stage_decorator([xmotor])
         def move_row():
-            yield from abs_set(xmotor, row_stop, wait=True, group=row_str)
-        yield from move_row()
+            # yield from abs_set(xmotor, row_stop, wait=False, group=row_str)
+            yield from abs_set(xmotor, row_stop, wait=True)
+        yield from timer_wrapper(move_row)
 
-        if verbose and False:
-            ttime.sleep(1)
-            while (xmotor.motor_is_moving.get()):
-                ttime.sleep(0.001)
-            toc(t_datacollect, str='  move end')
+        if verbose and True:
+            # ttime.sleep(0.1)
+            # while (xmotor.motor_is_moving.get()):
+            #     ttime.sleep(0.001)
+            # toc(t_datacollect, str='  move end')
             while (get_me_the_cam(xs).detector_state.get()):  # switched to get_me_cam
                 ttime.sleep(0.001)
             toc(t_datacollect, str='  xs done')

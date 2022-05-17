@@ -685,7 +685,7 @@ class SRXFlyer1Axis(Device):
                 print('Warning: Changing the pulse width!')
                 decrement = 1e-5
         elif mode == 'time':
-            decrement = 0.0001
+            decrement = 0.0002
 
         if mode == 'position':
             self._encoder.pc.gate_start.put(xstart - direction * (pxsize / 2))
