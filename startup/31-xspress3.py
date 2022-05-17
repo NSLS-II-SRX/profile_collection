@@ -105,7 +105,7 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
         Also modified the stage sigs.
 
         """
-        print("Warming up the hdf5 plugin...", end="")
+        print("  Warming up the hdf5 plugin...", end="", flush=True)
         set_and_wait(self.enable, 1)
         sigs = OrderedDict(
             [
@@ -140,6 +140,7 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
                 "external": "FileStore:",
                 "dtype": "array",
                 # TODO do not hard code
+                # TODO shape should match number of channels
                 "shape": (self.parent.settings.num_images.get(), 3, 4096),
                 "source": self.prefix,
             }
@@ -189,7 +190,7 @@ class CommunityXspress3FileStoreFlyable(CommunityXspress3FileStore):
         Also modified the stage sigs.
 
         """
-        print("Warming up the hdf5 plugin...", end="")
+        print("  Warming up the hdf5 plugin...", end="", flush=True)
         set_and_wait(self.enable, 1)
         sigs = OrderedDict(
             [
@@ -378,12 +379,12 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
         return ret
 
     def stage(self):
-        print("stage!")
+        # print("stage!")
         # Erase what is currently in the system
         # This prevents a single hot pixel in the upper-left corner of a map
         # JL replaced xs.erase.put(0) with self.cam.erase.put(0)
         #    why was xs.erase.put(0) not self.erase.put(0) ?
-        xs.erase.put(0)
+        self.erase.put(0)
         # JL commented out the next line because it caused a significant delay in starting acqusitions
         #self.cam.erase.put(0)
         # JL added the next line, it is not pretty
@@ -399,7 +400,7 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
         return super().stage()
 
     def unstage(self):
-        print("unstage!")
+        # print("unstage!")
         # JL added the next two lines
         #self.hdf5.auto_save.put(0)
         # self.hdf5.file_write_mode.put(self.previous_file_write_mode_value)
@@ -502,7 +503,7 @@ class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3
         return ret
 
     def stage(self):
-        print("stage!")
+        # print("stage!")
         # Erase what is currently in the system
         # This prevents a single hot pixel in the upper-left corner of a map
         # JL replaced xs.erase.put(0) with self.cam.erase.put(0)
@@ -523,7 +524,7 @@ class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3
         return super().stage()
 
     def unstage(self):
-        print("unstage!")
+        # print("unstage!")
         # JL added the next two lines
         #self.hdf5.auto_save.put(0)
         self.hdf5.file_write_mode.put(self.previous_file_write_mode_value)
@@ -537,17 +538,18 @@ class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3
 
 
 try:
+    print('Setting up xs4...')
     # JL replaced {Xsp:1}: with {Xsp:3}:det1:
-    # xs = SrxXspress3Detector("XF:05IDD-ES{Xsp:1}:", name="xs")
+    xs4 = SrxXspress3Detector("XF:05IDD-ES{Xsp:1}:", name="xs4")
     # xs = CommunitySrxXspress3Detector("XF:05IDD-ES{Xsp:3}:", name="xs")
     # JL commented the next 4 statements
-    xs.channel1.rois.read_attrs = ["roi{:02}".format(j)
+    xs4.channel1.rois.read_attrs = ["roi{:02}".format(j)
                                    for j in [1, 2, 3, 4]]
-    xs.channel2.rois.read_attrs = ["roi{:02}".format(j)
+    xs4.channel2.rois.read_attrs = ["roi{:02}".format(j)
                                    for j in [1, 2, 3, 4]]
-    xs.channel3.rois.read_attrs = ["roi{:02}".format(j)
+    xs4.channel3.rois.read_attrs = ["roi{:02}".format(j)
                                    for j in [1, 2, 3, 4]]
-    xs.channel4.rois.read_attrs = ["roi{:02}".format(j)
+    xs4.channel4.rois.read_attrs = ["roi{:02}".format(j)
                                    for j in [1, 2, 3, 4]]
 
     # the next line worked!
@@ -569,19 +571,20 @@ try:
     #     xs_channel.read_attrs = mcaroi_read_attrs
 
     if os.getenv("TOUCHBEAMLINE", "0") == "1":
+        print('  Touching xs4...')
         # JL replaced settings with cam
-        xs.settings.num_channels.put(4) #4 for ME4 detector
+        xs4.settings.num_channels.put(4) #4 for ME4 detector
         # xs.cam.num_channels.put(xs.get_channel_count()) #4 for ME4 detector
         # JL commented out the next 4 lines
-        xs.channel1.vis_enabled.put(1)
-        xs.channel2.vis_enabled.put(1)
-        xs.channel3.vis_enabled.put(1)
-        xs.channel4.vis_enabled.put(1)
-        xs.hdf5.num_extra_dims.put(0)
+        xs4.channel1.vis_enabled.put(1)
+        xs4.channel2.vis_enabled.put(1)
+        xs4.channel3.vis_enabled.put(1)
+        xs4.channel4.vis_enabled.put(1)
+        xs4.hdf5.num_extra_dims.put(0)
 
         # JL replaced settings with cam
         #xs.settings.configuration_attrs = [
-        xs.settings.configuration_attrs = [
+        xs4.settings.configuration_attrs = [
             "acquire_period",
             "acquire_time",
             "gain",
@@ -607,23 +610,23 @@ try:
         # This is necessary for when the IOC restarts
         # We have to trigger one image for the hdf5 plugin to work correctly
         # else, we get file writing errors
-        xs.hdf5.warmup()
+        xs4.hdf5.warmup()
 
         # Rename the ROIs
         # JL commented this loop out
         #   revisit this
         for i in range(1, 4):
-            ch = getattr(xs.channel1.rois, "roi{:02}.value".format(i))
+            ch = getattr(xs4.channel1.rois, "roi{:02}.value".format(i))
             ch.name = "ROI_{:02}".format(i)
 except TimeoutError as te:
     # JL don't set xs = None during development, it is often unavailable but I want to look at it anyway
-    xs = None
-    print("\nCannot connect to xs. Continuing without device.\n")
+    xs4 = None
+    print("\nCannot connect to xs4. Continuing without device.\n")
     # JL added this raise to help diagnose connection failures
     # raise te
 except Exception as ex:
-    xs = None
-    print("\nUnexpected error connecting to xs.\n")
+    xs4 = None
+    print("\nUnexpected error connecting to xs4.\n")
     print(ex, end="\n\n")
     # JL added this raise to help diagnose errors while developing community ioc code
     # raise ex
@@ -737,19 +740,11 @@ class SrxXspress3Detector2(CommunitySRXXspressTrigger, Xspress3Detector):
 #     xs2 = None
 #     print("\nUnexpected error connecting to xs2.\n", ex, end="\n\n")
 try:
+    print('Setting up xs...')
     # JL replaced {Xsp:1}: with {Xsp:3}:det1:
     #xs = SrxXspress3Detector("XF:05IDD-ES{Xsp:1}:", name="xs")
     xs = CommunitySrxXspress3Detector("XF:05IDD-ES{Xsp:3}:", name="xs", f_key="fluor")
     xs2 = None
-    # JL commented the next 4 statements
-    #xs.channel1.rois.read_attrs = ["roi{:02}".format(j)
-    #                               for j in [1, 2, 3, 4]]
-    #xs.channel2.rois.read_attrs = ["roi{:02}".format(j)
-    #                               for j in [1, 2, 3, 4]]
-    #xs.channel3.rois.read_attrs = ["roi{:02}".format(j)
-    #                               for j in [1, 2, 3, 4]]
-    #xs.channel4.rois.read_attrs = ["roi{:02}".format(j)
-    #                               for j in [1, 2, 3, 4]]
 
     # the next line worked!
     # xs.read_attrs = ["channels.channel01.mcarois.mcaroi01.total_rbv"]    
@@ -758,9 +753,9 @@ try:
     # add all channel.channelNN to xs.read_attrs 
     read_channel_attrs = [f"channel{ch:02}" for ch in xs.channel_numbers]
     read_channel_attrs.append("hdf5")
-    print(f"read_channel_attrs: {read_channel_attrs}")
+    # print(f"read_channel_attrs: {read_channel_attrs}")
     xs.read_attrs = read_channel_attrs
-    print(f"xs.read_attrs: {xs.read_attrs}")
+    # print(f"xs.read_attrs: {xs.read_attrs}")
 
     # add all mcarois.mcaroiNN.total_rbv to each channelMM.read_attrs
     for xs_channel in xs.iterate_channels():
@@ -770,14 +765,9 @@ try:
         xs_channel.read_attrs = mcaroi_read_attrs
 
     if os.getenv("TOUCHBEAMLINE", "0") == "1":
-        # JL replaced settings with cam
-        #xs.settings.num_channels.put(4) #4 for ME4 detector
-        xs.cam.num_channels.put(xs.get_channel_count()) #4 for ME4 detector
-        # JL commented out the next 4 lines
-        #xs.channel1.vis_enabled.put(1)
-        #xs.channel2.vis_enabled.put(1)
-        #xs.channel3.vis_enabled.put(1)
-        #xs.channel4.vis_enabled.put(1)
+        print('  Touching xs...')
+        # TODO add cam function
+        xs.cam.num_channels.put(xs.get_channel_count())  # 4 for ME4 detector
         xs.hdf5.num_extra_dims.put(0)
 
         # JL replaced settings with cam
@@ -817,16 +807,11 @@ try:
         #    ch = getattr(xs.channel1.rois, "roi{:02}.value".format(i))
         #    ch.name = "ROI_{:02}".format(i)
 except TimeoutError as te:
-    # JL don't set xs = None during development, it is often unavailable but I want to look at it anyway
-    #xs = None
+    xs = None
     print("\nCannot connect to xs. Continuing without device.\n")
-    # JL added this raise to help diagnose connection failures
-    raise te
 except Exception as ex:
-    #xs = None
+    xs = None
     print("\nUnexpected error connecting to xs.\n")
     print(ex, end="\n\n")
-    # JL added this raise to help diagnose errors while developing community ioc code
-    raise ex
 
 

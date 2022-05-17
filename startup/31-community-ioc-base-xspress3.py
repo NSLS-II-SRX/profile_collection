@@ -125,8 +125,8 @@ class CommunityXspress3FileStore(FileStorePluginBase, HDF5Plugin):
     # using the xspress3 community IOC 'key' looks like
     #   xs_channels_channel01
     def generate_datum(self, key, timestamp, datum_kwargs):
-        print("!!! CommunityXspress3FileStore.generate_datum !!!")
-        print(f"  key: {key}")
+        # print("!!! CommunityXspress3FileStore.generate_datum !!!")
+        # print(f"  key: {key}")
         
         # JL the intention here seems to be to create the string
         #     f'channel{j}'
@@ -145,7 +145,7 @@ class CommunityXspress3FileStore(FileStorePluginBase, HDF5Plugin):
         #   and use a regular exspression to find the channel number
         channel_number_match = self._channel_number_pattern.search(key)
         channel_number = int(channel_number_match.group("channel_number"))
-        print(f"  found channel_number {channel_number}")
+        # print(f"  found channel_number {channel_number}")
 
         datum_kwargs.update(
             {
@@ -249,7 +249,7 @@ class CommunityXspress3FileStore(FileStorePluginBase, HDF5Plugin):
     # JL CommunityXspress3FileStoreFlyable overrides this method
     #   but it is used by step scans
     def describe(self):
-        print("!!! CommunityXspress3FileStore.describe !!!")
+        # print("!!! CommunityXspress3FileStore.describe !!!")
         # should this use a better value?
         size = (self.width.get(), )
 
@@ -263,12 +263,12 @@ class CommunityXspress3FileStore(FileStorePluginBase, HDF5Plugin):
         desc = OrderedDict()
         for chan in self.channels:
            key = self.mds_keys[chan]
-           print(f"\tchan: {chan}\n\tkey: {key}")
+           # print(f"\tchan: {chan}\n\tkey: {key}")
            #desc[key] = spec_desc
 
         # JL can this take the place of the loop above?
         for channel in self.parent.iterate_channels():
-            print(f"channel name: {channel.name}")
+            # print(f"channel name: {channel.name}")
             desc[channel.name] = spec_desc
 
         return desc

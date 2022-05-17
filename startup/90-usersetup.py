@@ -1,7 +1,6 @@
 print(f'Loading {__file__}...')
 
 import os
-# import os.path
 import time as ttime
 import shutil
 
@@ -12,17 +11,17 @@ import shutil
 # PI_lastname = None
 # saf_num = None
 
-proposal_num = 308774
+# proposal_num = 308774
+# proposal_title = 'SRX Beamline Commissioning'
+# PI_lastname = 'Kiss'
+# saf_num = 307307
+
+proposal_num = 310663
 proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
-saf_num = 307307
+saf_num = 309204
 
-# proposal_num = 308192
-# proposal_title = 'Development of Integrated Workflow for Unbiased Analysis of Dispersed Particulates using Synchrotron Radiation‐Based Techniques'
-# PI_lastname = 'Bowerman'
-# saf_num = 307385
-
-cycle = '2022_cycle1'
+cycle = '2022_cycle2'
 
 # Set user data in bluesky
 RE.md['proposal']  = {'proposal_num': str(proposal_num),
@@ -31,14 +30,12 @@ RE.md['proposal']  = {'proposal_num': str(proposal_num),
                       'saf_num': str(saf_num),
                       'cycle': str(cycle)}
 
-if 'TOUCHBEAMLINE' in os.environ and os.environ['TOUCHBEAMLINE'] == 1:
-    # Set user data in scanbroker
+# Set user data in scanbroker
+if os.getenv("TOUCHBEAMLINE", "0") == "1":
     scanrecord.update_metadata()
 
 # User data directory and simple scripts
-# userdatadir = '/nsls2/xf05id1/experiments/' + str(cycle) + '/' + str(saf_num) + '_' + str(PI_lastname) + '/'
 userdatadir = '/nsls2/data/srx/legacy/xf05id1/experiments/' + str(cycle) + '/' + str(saf_num) + '_' + str(PI_lastname) + '/'
-# scriptdir = '/nsls2/xf05id1/shared/src/bluesky_scripts/'
 scriptdir = '/nsls2/data/srx/legacy/xf05id1/shared/src/bluesky_scripts/'
 
 # Create the user directory
@@ -69,22 +66,6 @@ os.symlink(userdatadir, '/nsls2/data/srx/legacy/xf05id1/shared/current_user_data
 
 
 def get_stock_md(scan_md):
-    # Should this be ChainMap(scan_md, {...})?
-    # This should also be put into baseline, and not start document
-    # scan_md['beamline_status']  = {'energy':  energy.energy.position}
-    # scan_md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
-    #                                       'hf_stage_y': hf_stage.y.position,
-    #                                       'hf_stage_z': hf_stage.z.position}
-    # scan_md['wb_slits'] = {'v_gap' : slt_wb.v_gap.position,
-    #                        'h_gap' : slt_wb.h_gap.position,
-    #                        'v_cen' : slt_wb.v_cen.position,
-    #                        'h_cen' : slt_wb.h_cen.position}
-    # scan_md['hfm'] = {'y' : hfm.y.position,
-    #                   'bend' : hfm.bend.position}
-    # scan_md['ssa_slits'] = {'v_gap' : slt_ssa.v_gap.position,
-    #                         'h_gap' : slt_ssa.h_gap.position,
-    #                         'v_cen' : slt_ssa.v_cen.position,
-    #                         'h_cen' : slt_ssa.h_cen.position}
     scan_md['time_str'] =  ttime.ctime(ttime.time())
     scan_md['proposal'] = {'proposal_num': str(proposal_num),
                            'proposal_title': str(proposal_title),

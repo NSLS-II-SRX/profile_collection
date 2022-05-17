@@ -192,7 +192,8 @@ def setroi_quantum(roinum, element, edge=None, det=None):
         cpt = getattr(det.channel1.rois, f'roi{roinum:02d}')
         cpt.kind = 'hinted'
     else:
-        for d in [xs.channel1, xs.channel2, xs.channel3, xs.channel4]:
+        det = xs4
+        for d in [det.channel1, det.channel2, det.channel3, det.channel4]:
             d.set_roi(roinum, e_ch-100, e_ch+100, name=element + '_' + e)
             cpt = getattr(d.rois, f'roi{roinum:02d}')
             cpt.kind = 'hinted'
