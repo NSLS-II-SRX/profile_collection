@@ -2,6 +2,7 @@
 # Running the tests from IPython
 # %run -i ~/.ipython/profile_collection/acceptance_tests/test_deployments.py
 
+import os
 
 def test_set_roi():
     """
@@ -45,8 +46,15 @@ def test_fly_scan1():
     RE.preprocessors.clear()
     uid, = RE(nano_scan_and_fly(-5, 5, 11, 0, 2, 3, 0.1, shutter=False))
     print("Fly scan complete")
-    print("Reading scan from databroker")
+    print("Reading scan from databroker: 'primary' stream")
     db[uid].table(fill=True)
+    print("Reading scan from databroker: 'stream0' stream")
+    db[uid].table(stream_name="stream0", fill=True)
+    print("Loading data using PyXRF")
+    from pyxrf.api import make_hdf
+    dir_name = "/tmp/acceptance_tests"
+    os.makedirs(dir_name, exist_ok=True)
+    make_hdf(uid, wd=dir_name, create_each_det=True, file_overwrite_existing=True)
     print("Test is complete")
 
 
@@ -60,8 +68,15 @@ def test_fly_scan2():
     RE.preprocessors.clear()
     uid, = RE(nano_y_scan_and_fly(-5, 5, 11, 0, 2, 3, 0.1, shutter=False))
     print("Fly scan complete")
-    print("Reading scan from databroker")
+    print("Reading scan from databroker: 'primary' stream")
     db[uid].table(fill=True)
+    print("Reading scan from databroker: 'stream0' stream")
+    db[uid].table(stream_name="stream0", fill=True)
+    print("Loading data using PyXRF")
+    from pyxrf.api import make_hdf
+    dir_name = "/tmp/acceptance_tests"
+    os.makedirs(dir_name, exist_ok=True)
+    make_hdf(uid, wd=dir_name, create_each_det=True, file_overwrite_existing=True)
     print("Test is complete")
 
 
@@ -73,8 +88,15 @@ def test_step_scan():
     print("Starting fly scan test 2")
     uid, = RE(nano_xrf(-5, 5, 1, 0, 2, 1, 0.1, shutter=False))
     print("Fly scan complete")
-    print("Reading scan from databroker")
+    print("Reading scan from databroker: 'primary' stream")
     db[uid].table(fill=True)
+    print("Reading scan from databroker: 'stream0' stream")
+    db[uid].table(stream_name="stream0", fill=True)
+    print("Loading data using PyXRF")
+    from pyxrf.api import make_hdf
+    dir_name = "/tmp/acceptance_tests"
+    os.makedirs(dir_name, exist_ok=True)
+    make_hdf(uid, wd=dir_name, create_each_det=True, file_overwrite_existing=True)
     print("Test is complete")
 
 
