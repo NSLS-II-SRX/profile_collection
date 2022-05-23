@@ -34,7 +34,7 @@ This program provides functionality to calibrate HDCM energy:
 def mono_calib(Element, acqtime=1.0, peakup=False,
                peakup_calib=True):
     """
-    SRX mono_calib(Element)
+    SRX mono_calib(Element, acqtime=1.0, peakup=False, peakup_calib=True)
 
     Go to the edge of the specified element, do a peakup, setroi, and automatic perform a xanes scan (+-50eV) on the specified element
 
@@ -56,16 +56,29 @@ def mono_calib(Element, acqtime=1.0, peakup=False,
     EnergyX = getbindingE(Element)
     # energy.move(EnergyX)
     yield from mov(energy, EnergyX)
-    setroi(1, Element)
+    setroi_quantum(1, Element)
     if peakup:
         yield from bps.sleep(5)
         yield from peakup_fine(use_calib=peakup_calib)
-    yield from xanes_plan(erange=[EnergyX-50,EnergyX+50],
+    yield from xanes_plan(erange=[EnergyX-100,EnergyX+50],
                           estep=[1.0],
                           samplename=f'{Element}Foil',
                           filename=f'{Element}Foilstd',
                           acqtime=acqtime,
-                          shutter=True)
+                          shutter=True,
+                          det_xs=xs4)
+def scan_all_foils(el_list = ['V', 'Cr', 'Fe', 'Cu', 'Zn', 'Se']):
+    pos = {'V' : (12750, 700),
+           'Cr': (21750, 700),
+           'Fe': (39750, 700),
+           'Cu': (21750, 8700),
+           'Zn': (30750, 8700),
+           'Se': (39750, 8700)}
+    for el in el_list:
+        yield from mov(nano_stage.x, pos[el][0])
+        yield from mov(nano_stage.y, pos[el][1])
+        yield from mono_calib(el, peakup=True, peakup_calib=False)
+
 
 def scanderive(xaxis, yaxis, ax, xlabel='', ylabel='', title=''):
     dyaxis = np.gradient(yaxis, xaxis)
@@ -144,7 +157,7 @@ def braggcalib(scanlogDic={}, use_xrf=True, man_correction={}):
 
     energyDic = {'Cu': 8.979, 'Se': 12.658, 'Zr': 17.998, 'Nb': 18.986,
                  'Ti': 4.966, 'Cr': 5.989, 'Co': 7.709, 'V': 5.465,
-                 'Ni': 8.333, 'Fe': 7.112, 'Mn': 6.539}
+                 'Ni': 8.333, 'Fe': 7.112, 'Mn': 6.539, 'Zn': 9.659}
     BraggRBVDic = {}
     EnergyRBVDic = {}
     fitBragg = []
@@ -361,6 +374,11 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
 
     paired_callback = PairedCallback(scaler, dcm.c2_pitch.name, pitch_guess)
 
+    if scaler == 'bpm4_total_current':
+        scan_delta = 0.2
+    else:
+        scan_delta = 10_000
+
     # Run the C2 pitch fine scan
     # @subs_decorator(livecallbacks)
     # @subs_decorator(lpf)
@@ -377,7 +395,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
             #                          0.01, 0.1, 10000, True, md=scan_md)
             yield from adaptive_scan(det, scaler, dcm.c2_fine,
                                      pitch_lim[0], pitch_lim[1],
-                                     0.01, 0.1, 10000, True, md=scan_md)
+                                     0.01, 0.1, scan_delta, True, md=scan_md)
         )
     uid = yield from myplan()
 

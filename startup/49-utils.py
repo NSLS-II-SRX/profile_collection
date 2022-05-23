@@ -76,16 +76,18 @@ def mv_position(pos=[]):
     elif (pos == 3):
         print('Will go to Simens Star position.')
         pos = [30.114, 22.464, 53.874]
-    elif (len(pos) > 2):
-        print('You will move to the defined positions now.')
+    elif (len(pos)>1):
+        print(f'You will move to the defined positions: {pos} now.')
+        if len(pos <3):
+            yield from mv(nano_stage.x, pos[0],
+                          nano_stage.y, pos[1])
+        else:
+            yield from mv(nano_stage.x, pos[0],
+                          nano_stage.y, pos[1],
+                          nano_stage.z, pos[2])
     else:
         print('Not a position, exiting...')
         return
-
-    yield from mv(nano_stage.x, pos[0],
-                  nano_stage.y, pos[1],
-                  nano_stage.z, pos[2])
-
 
 def copyscanparam(src_num, dest_num):
     '''
