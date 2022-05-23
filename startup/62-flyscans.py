@@ -302,6 +302,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             st.add_callback(lambda x: toc(t_datacollect, str=f"  status object  {datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S.%f')}"))
             if (d.name == 'dexela'):
                 yield from bps.sleep(1)
+        # The zebra needs to be armed last for time-based scanning.
+        # If it is armed too early, the timing may be off and the xs3 will miss the first point
+        yield from mov(flying_zebra._encoder.pc.arm, 1)
         if verbose:
             toc(t_datacollect, str='  trigger detectors')
 
@@ -310,9 +313,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             toc(t_datacollect, str='  move start')
         @stage_decorator([xmotor])
         def move_row():
-            # yield from abs_set(xmotor, row_stop, wait=False, group=row_str)
             yield from abs_set(xmotor, row_stop, wait=True)
-        yield from timer_wrapper(move_row)
+        if verbose:
+            yield from timer_wrapper(move_row)
+        else:
+            yield from move_row()
 
         if verbose and True:
             # ttime.sleep(0.1)
@@ -409,7 +414,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
     def plan():
-        toc(t_setup, str='Setup time + into plan()')
+        if verbose:
+            toc(t_setup, str='Setup time + into plan()')
 
         # TODO move this to stage sigs
         for d in flying_zebra.detectors:
@@ -474,7 +480,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     else:
         final_plan = plan()
 
-    toc(t_setup, str='Setup time')
+    if verbose:
+        toc(t_setup, str='Setup time')
 
     # Open the shutter
     if verbose:
