@@ -284,7 +284,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     det = [ring_current, sclr1, xbpm2, det_xs]
     # Setup xspress3
     yield from abs_set(det_xs.external_trig, False)
-    yield from abs_set(det_xs.cam.acquire_time, acqtime)
+    yield from abs_set(get_me_the_cam(det_xs).acquire_time, acqtime)
     yield from abs_set(det_xs.total_points, len(ept))
 
     # Setup the scaler
@@ -316,20 +316,22 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     livetableitem = ['energy_energy', 'sclr_i0', 'sclr_it']
     roi_name = 'roi{:02}'.format(roinum[0])
 
-    # roi_key = []
-    # roi_key.append(getattr(det_xs.channel1.rois, roi_name).value.name)
-    # try:
-    #     roi_key.append(getattr(det_xs.channel2.rois, roi_name).value.name)
-    #     roi_key.append(getattr(det_xs.channel3.rois, roi_name).value.name)
-    #     roi_key.append(getattr(det_xs.channel4.rois, roi_name).value.name)
-    # except NameError:
-    #     pass
+    if hasattr(det_xs, 'cam'):
+        roi_key = [
+            det_xs_channel.get_mcaroi(mcaroi_number=roinum[0]).total_rbv.name
+            for det_xs_channel
+            in det_xs.iterate_channels()
+        ]
+    else:
+        roi_key = []
+        roi_key.append(getattr(det_xs.channel1.rois, roi_name).value.name)
+        try:
+            roi_key.append(getattr(det_xs.channel2.rois, roi_name).value.name)
+            roi_key.append(getattr(det_xs.channel3.rois, roi_name).value.name)
+            roi_key.append(getattr(det_xs.channel4.rois, roi_name).value.name)
+        except NameError:
+            pass
     # the following code will fail if det_xs is not a new xspress3 IOC ophyd object
-    roi_key = [
-        det_xs_channel.get_mcaroi(mcaroi_number=roinum[0]).total_rbv.name
-        for det_xs_channel
-        in det_xs.iterate_channels()
-    ]
     print(f"roi_key: {roi_key}")
 
     livetableitem.append(roi_key[0])
