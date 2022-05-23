@@ -492,7 +492,7 @@ def nano_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
     kwargs.setdefault('xmotor', nano_stage.sx)
     kwargs.setdefault('ymotor', nano_stage.sy)
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
-    yield from abs_set(kwargs['flying_zebra'].fast_axis, 'NANOHOR')
+    yield from abs_set(kwargs['flying_zebra'].fast_axis, 'NANOHOR', wait=True)
     yield from abs_set(kwargs['flying_zebra'].slow_axis, 'NANOVER')
 
     _xs = kwargs.pop('xs', xs)
@@ -511,8 +511,8 @@ def nano_y_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
     kwargs.setdefault('xmotor', nano_stage.sy)
     kwargs.setdefault('ymotor', nano_stage.sx)
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
-    yield from abs_set(nano_flying_zebra.fast_axis, 'NANOVER')
-    yield from abs_set(nano_flying_zebra.slow_axis, 'NANOHOR')
+    yield from abs_set(kwargs['flying_zebra'].fast_axis, 'NANOVER', wait=True)
+    yield from abs_set(kwargs['flying_zebra'].slow_axis, 'NANOHOR')
 
     _xs = kwargs.pop('xs', xs)
     if extra_dets is None:
@@ -531,7 +531,7 @@ def nano_z_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
     kwargs.setdefault('xmotor', nano_stage.sz)
     kwargs.setdefault('ymotor', nano_stage.sx)
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
-    yield from abs_set(nano_flying_zebra.fast_axis, 'NANOZ')
+    yield from abs_set(kwargs['flying_zebra'].fast_axis, 'NANOZ')
 
     _xs = kwargs.pop('xs', xs)
     if extra_dets is None:
@@ -548,11 +548,11 @@ def nano_z_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
 def coarse_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
     kwargs.setdefault('xmotor', nano_stage.x)
     kwargs.setdefault('ymotor', nano_stage.y)
-    kwargs.setdefault('flying_zebra', nano_flying_zebra_coarse)
+    kwargs.setdefault('flying_zebra', nano_flying_zebra_coarse_me4)
     yield from abs_set(kwargs['flying_zebra'].fast_axis, 'NANOHOR')
     yield from abs_set(kwargs['flying_zebra'].slow_axis, 'NANOVER')
 
-    _xs = kwargs.pop('xs', xs)
+    _xs = kwargs.pop('xs', xs4)
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
@@ -574,11 +574,11 @@ def coarse_y_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
 
     kwargs.setdefault('xmotor', nano_stage.y)
     kwargs.setdefault('ymotor', nano_stage.x)
-    kwargs.setdefault('flying_zebra', nano_flying_zebra_coarse)
+    kwargs.setdefault('flying_zebra', nano_flying_zebra_coarse_me4)
     yield from abs_set(kwargs['flying_zebra'].fast_axis, 'NANOVER')
     yield from abs_set(kwargs['flying_zebra'].slow_axis, 'NANOHOR')
 
-    _xs = kwargs.pop('xs', xs)
+    _xs = kwargs.pop('xs', xs4)
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets

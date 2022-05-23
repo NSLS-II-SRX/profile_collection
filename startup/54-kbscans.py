@@ -253,7 +253,8 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
 
 # Written quickly
 def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=True, plot_guess=False,
-                    bin_low=None, bin_high=None, plotme=None):
+                    bin_low=934, bin_high=954, plotme=None):
+                    # bin_low=None, bin_high=None, plotme=None):
     # Get the scanid
     h = db[int(scanid)]
     id_str = h.start['scan_id']

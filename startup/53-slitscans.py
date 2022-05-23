@@ -219,7 +219,8 @@ def slit_nanoflyscan(scan_motor, scan_start, scan_stop, scan_stepsize, acqtime,
     
     # Setup the scan
     plotme = HackLiveFlyerPlot(
-        xs.channels.channel01.mcarois.mcaroi01.value.name,
+        # xs.channels.channel01.mcarois.mcaroi01.value.name,
+        xs4.channel1.rois.roi01.value.name,
         xstart=scan_start,
         xstep=(scan_stop-scan_start)/(snum-1),
         xlabel=scan_motor.name,
@@ -232,14 +233,14 @@ def slit_nanoflyscan(scan_motor, scan_start, scan_stop, scan_stepsize, acqtime,
         def _knife_plan():
            yield from  nano_scan_and_fly(scan_start, scan_stop, snum,
                                          y0, y0, 1, acqtime,
-                                         shutter=False, plot=False)
+                                         shutter=False, plot=False, flying_zebra=nano_flying_zebra_me4, xs=xs4)
     else:
         x0 = nano_stage.sx.user_readback.get()
         @subs_decorator(plotme)
         def _knife_plan():
             yield from nano_y_scan_and_fly(scan_start, scan_stop, snum,
                                            x0, x0, 1, acqtime,
-                                           shutter=False, plot=False)
+                                           shutter=False, plot=False, flying_zebra=nano_flying_zebra_me4, xs=xs4)
 
     def _plan():
         uid = yield from _knife_plan()
@@ -260,7 +261,7 @@ def slit_nanoflyscan(scan_motor, scan_start, scan_stop, scan_stepsize, acqtime,
 
 
 def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False, plotme=None,
-                         bin_low=None, bin_high=None, normalize=True):
+                         bin_low=934, bin_high=954, normalize=True):
    
     """
     This function takes a list of scan_id, process them one by one, then analyzes the optical abberations.

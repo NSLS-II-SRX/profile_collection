@@ -965,6 +965,12 @@ try:
         list(xs4 for xs4 in [xs4] if xs4 is not None), sclr1, nanoZebra, name="nano_flying_zebra_me4"
     )
     set_flyer_zebra_stage_sigs(nano_flying_zebra_me4, 'position')
+
+    # Temporary flyer for ME4 until ME7 is commissioned
+    nano_flying_zebra_coarse_me4 = SRXFlyer1Axis(
+        list(xs4 for xs4 in [xs4] if xs4 is not None), sclr1, nanoZebra, name="nano_flying_zebra_coarse_me4"
+    )
+    set_flyer_zebra_stage_sigs(nano_flying_zebra_coarse_me4, 'time')
 except Exception as ex:
     print("Cannot connect to nanoZebra. Continuing without device.\n", ex)
     nano_flying_zebra = None
