@@ -663,6 +663,7 @@ class SRXFlyer1Axis(Device):
 
     def kickoff(self, *, xstart, xstop, xnum, dwell, tacc):
         dets_by_name = {d.name: d for d in self.detectors}
+        t_delay = 0.000  # guess of 100 ms delay between kickoff and stage moving
 
         mode = self.mode.get()
         # print(f'{mode=}')
@@ -692,7 +693,7 @@ class SRXFlyer1Axis(Device):
             self._encoder.pc.gate_step.put(extent + 0.051)
             self._encoder.pc.gate_width.put(extent + 0.050)
         elif mode == 'time':
-            self._encoder.pc.gate_start.put(tacc)
+            self._encoder.pc.gate_start.put(tacc + t_delay)
             self._encoder.pc.gate_step.put(extent / v)
             self._encoder.pc.gate_width.put(extent / v + 0.050)
 
@@ -724,7 +725,8 @@ class SRXFlyer1Axis(Device):
         # self._encoder.pc.enc_pos4_sync.put(1)  # None
 
         # Arm the zebra
-        self._encoder.pc.arm.put(1)
+        # Moved to be in 62-flyscans so the timing can be more refined
+        # self._encoder.pc.arm.put(1)
 
         st = (
             NullStatus()

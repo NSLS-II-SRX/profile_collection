@@ -258,9 +258,15 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=Tru
     # Get the scanid
     h = db[int(scanid)]
     id_str = h.start['scan_id']
+    if 'FLY' in h.start['scan']['type']:
+        fly = True
+    else:
+        fly = False
+
+    fast_axis = h.start['scan']['fast_axis']['motor_name']
 
     try:
-        if (h.start['scan']['fast_axis']['motor_name']=='nano_stage_sx'):
+        if (fast_axis=='nano_stage_sx'):
             pos = 'enc1'
         else:
             pos = 'enc2'
@@ -382,7 +388,7 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=Tru
         ax.plot(x_plot, f_two_erfs(x_plot, *p_guess), '--', label='Guess fit')
     ax.plot(x_plot, y_plot, '-', label='Final fit')
     ax.set_title(f'Scan {id_str}')
-    ax.set_xlabel(motor.name)
+    ax.set_xlabel(fast_axis)
     if (normalize):
         ax.set_ylabel('Normalized ROI Counts')
     else:

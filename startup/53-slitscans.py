@@ -444,12 +444,14 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
     p = np.poly1d(calpoly_fit[0])
     line_plt = p(slit_range[interp_range])
     p2v_line_pos = np.max(line_pos_seq[interp_range])-np.min(line_pos_seq[interp_range])
-   
+ 
+    print(f'{flag_dir}') 
+  
     if flag_dir == 'VER':
         C_f = f_v
         C_theta = theta_v
         conversion_factor_orth = conversion_factor_orth[0]
-        pitch_motion_conversion = pitch_motion_conversion[0] 
+        pitch_motion_conversion = pitch_motion_conversion[0]
     else:
         C_f = f_h
         C_theta = theta_h
@@ -467,7 +469,9 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
     print(f'\tP2V of line position is {p2v_line_pos:.4f} um')
     if (flag_dir == 'VER'):
         print(f'\tDefocus is {defocus:7.3f} um. Vkb correct by this amount.')
+
     if (flag_dir == 'HOR'):
+        print(f'\tDefocus is {defocus:7.3f} um. Hkb correct by this amount.')
         print(f'\tEquivalent to {delta_theta:7.6f} mrad. Hkb correct by this amount.')
         print(f'\tActuator should move by {actuator_move_h:7.3f} um.')
         print(f'\tLine feature should move {line_move_h:7.3f} um for h mirror pitch correction')
@@ -512,11 +516,11 @@ def focusKB(direction, **kwargs):
     if 'hor' in direction.lower():
         kwargs.setdefault('scan_motor', nano_stage.sx)
         kwargs.setdefault('slit_motor', jjslits.h_trans)
-        slit_range = 0.400
+        slit_range = 0.500
         kwargs.setdefault('slit_stepsize', 0.05)
         kwargs.setdefault('slitgap_motor', jjslits.h_gap)
         kwargs.setdefault('slit_gap', 0.05)
-        N = 9
+        N = 11
     elif 'ver' in direction.lower():
         kwargs.setdefault('scan_motor', nano_stage.sy)
         kwargs.setdefault('slit_motor', jjslits.v_trans)
