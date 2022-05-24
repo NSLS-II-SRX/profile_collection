@@ -39,7 +39,7 @@ from bluesky.preprocessors import (stage_decorator,
                                    run_decorator, subs_decorator,
                                    monitor_during_decorator)
 import bluesky.plan_stubs as bps
-from bluesky.plan_stubs import (one_1d_step, kickoff, collect,
+from bluesky.plan_stubs import (kickoff, collect,
                                 complete, abs_set, mv, checkpoint)
 from bluesky.plans import (scan, )
 from bluesky.callbacks import CallbackBase, LiveGrid
@@ -113,6 +113,10 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     shutter : bool, optional, kwarg only
        If True, try to open the shutter
     """
+
+    # It is not desirable to display plots when the plan is executed by Queue Server.
+    if is_re_worker_active():
+        plot = False
 
     t_setup = tic()
 
@@ -201,7 +205,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                            'units' : xmotor.motor_egu.get()}
     md['scan']['snake'] = snake
     md['scan']['shape'] = (xnum, ynum)
-    
+
 
     @stage_decorator(flying_zebra.detectors)
     def fly_each_step(motor, step, row_start, row_stop):
@@ -366,7 +370,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         logscan_detailed('XRF_FLY')
         scanrecord.scanning.put(False)
         scanrecord.time_remaining.put(0)
-        
+
 
     # TODO remove this eventually?
     # xs = dets_by_name['xs']
@@ -780,4 +784,3 @@ def scan_and_fly_xs2_xz(*args, extra_dets=None, **kwargs):
         extra_dets = []
     dets = [_xs] + extra_dets
     yield from scan_and_fly_base(dets, *args, **kwargs)
-
