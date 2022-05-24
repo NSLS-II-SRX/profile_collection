@@ -13,5 +13,5 @@ sd.baseline = [ring_current, fe, energy, dcm, hfm,                # Front-end sl
                nanoKB_interferometer, nano_stage_interferometer]  # nanoKB interferometer, sample interferometer
 
 RE.preprocessors.append(sd)
-bec.disable_baseline()
 
+bec.disable_baseline()

@@ -1,4 +1,9 @@
 
+@parameter_annotation_decorator({
+    "parameters": {
+        "dets": {"default": "['xs2', 'sclr1']"},
+    }
+})
 def xs2_1d_scan(stage, x0, x1, nx, dwell, dets=[xs2, sclr1], shutter=True):
     yield from check_shutters(shutter, 'Open')
     yield from mov(xs2.external_trig, False)
@@ -19,6 +24,12 @@ def xs2_1d_scan(stage, x0, x1, nx, dwell, dets=[xs2, sclr1], shutter=True):
     )
     yield from check_shutters(shutter, 'Close')
 
+
+@parameter_annotation_decorator({
+    "parameters": {
+        "dets": {"default": "['xs2', 'sclr1']"},
+    }
+})
 def xs2_1d_relscan(stage, neg_dx, pos_dx, nx, dwell, dets=[xs2, sclr1], shutter=True):
     yield from check_shutters(shutter, 'Open')
     yield from mov(xs2.external_trig, False)
@@ -49,4 +60,3 @@ def overnight():
         yield from mov(confocal_stage.x, xi)
         yield from xs2_1d_relscan(confocal_stage.y, -0.5, 0.5, 101, 1)
         yield from xs2_1d_relscan(confocal_stage.z, -0.5, 0.5, 101, 1)
-

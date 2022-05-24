@@ -18,6 +18,12 @@ from bluesky.plan_stubs import mv, abs_set
 from bluesky.simulators import plot_raster_path
 
 
+@parameter_annotation_decorator({
+    "parameters": {
+        "xmotor": {"default": "'hf_stage.x'"},
+        "ymotor": {"default": "'hf_stage.y'"},
+    }
+})
 def hf2dxrf(*, xstart, xnumstep, xstepsize,
             ystart, ynumstep, ystepsize, acqtime,
             shutter=True, align=False, xmotor=hf_stage.x, ymotor=hf_stage.y,
@@ -41,6 +47,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             detune in the unit of keV
 
     '''
+
     # Record relevant metadata in the Start document, defined in 90-usersetup.py
     scan_md = {}
     get_stock_md(scan_md)
@@ -99,7 +106,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
     for roi_idx in range(numrois):
         roi_name = 'roi{:02}'.format(roi_idx+1)
-        
+
         # roi_key = getattr(xs.channel1.rois, roi_name).value.name
         roi_key = xs.channel01.get_mcaroi(mcaroi_number=roi_idx).total_rbv.name
         livetableitem.append(roi_key)
@@ -382,6 +389,12 @@ def export_merlin2tiff(scanid=-1, wd=None):
     np.savetxt(wd + fn_txt, np.array((x, y, I0)))
 
 
+@parameter_annotation_decorator({
+    "parameters": {
+        "xmotor": {"default": "'hf_stage.sx'"},
+        "ymotor": {"default": "'hf_stage.sy'"},
+    }
+})
 def nano_xrf(xstart, xstop, xstep,
              ystart, ystop, ystep, dwell,
              shutter=True, extra_dets=None,
@@ -464,4 +477,3 @@ def nano_xrf(xstart, xstop, xstep,
     yield from check_shutters(shutter, 'Close')
 
     return uid
-
