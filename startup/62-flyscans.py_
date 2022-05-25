@@ -784,3 +784,9 @@ def scan_and_fly_xs2_xz(*args, extra_dets=None, **kwargs):
         extra_dets = []
     dets = [_xs] + extra_dets
     yield from scan_and_fly_base(dets, *args, **kwargs)
+
+
+def test_plan_2():
+    print(f"get_stock_md={get_stock_md({})}")
+    yield from bps.sleep(1)
+

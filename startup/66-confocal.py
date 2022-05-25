@@ -60,3 +60,9 @@ def overnight():
         yield from mov(confocal_stage.x, xi)
         yield from xs2_1d_relscan(confocal_stage.y, -0.5, 0.5, 101, 1)
         yield from xs2_1d_relscan(confocal_stage.z, -0.5, 0.5, 101, 1)
+
+
+def test_plan_4():
+    print(f"get_stock_md={get_stock_md({})}")
+    yield from bps.sleep(1)
+

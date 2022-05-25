@@ -64,6 +64,10 @@ except FileNotFoundError:
 
 os.symlink(userdatadir, '/nsls2/data/srx/legacy/xf05id1/shared/current_user_data')
 
+def test_plan():
+    print(f"get_stock_md={get_stock_md({})}")
+    yield from bps.sleep(1)
+
 
 def get_stock_md(scan_md):
     scan_md['time_str'] =  ttime.ctime(ttime.time())
@@ -158,3 +162,5 @@ def scantime_batchoutput(filename='scantimelog.txt', scanlist=[]):
             starttime_s, endtime_s, starttime, endtime = scantime(i, printresults=False)
             f.write(str(i) + '\t' + str(starttime_s) + '\t' + str(endtime_s) + '\t' \
                     + starttime[12::] + '\t' + endtime[12::] + '\n')
+
+

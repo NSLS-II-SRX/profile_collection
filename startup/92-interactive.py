@@ -111,3 +111,8 @@ def attach_planner(ax, stage, write_overlay, pixel_scale,
     x2, y2 = pt2.xdata, pt2.ydata    
     
 '''
+
+def test_plan_3():
+    print(f"get_stock_md={get_stock_md({})}")
+    yield from bps.sleep(1)
+

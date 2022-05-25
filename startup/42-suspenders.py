@@ -43,3 +43,10 @@ RE.install_suspender(susp_rc)
 #RE.install_suspender(susp_shut_fe)
 RE.install_suspender(susp_dcm_bragg_temp)
 # RE.install_suspender(susp_shut_testing)
+
+def clear_suspenders():
+    """
+    Clear suspenders for testing without beam.
+    """
+    RE.clear_suspenders()
+
