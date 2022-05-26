@@ -380,14 +380,24 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Setup LivePlot
     # Set the ROI pv
     if hasattr(xs, 'channel01'):
-        roi_pv = xs.channel01.mcaroi01.total_rbv
+        # if ynum == 1:
+        if True:
+            roi_pv = EpicsSignalRO('XF:05IDD-ES{Xsp:3}:MCA1ROI:1:TSTotal', name=xs.channel01.mcaroi01.roi_name.get())
+            ts_start = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSControl', name='ts_start')
+            ts_N = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSNumPoints', name='ts_N')
+            ## Erase the TS buffer
+            yield from mov(ts_start, 0)
+            yield from mov(ts_start, 2)
+        else:
+            roi_pv = xs.channel01.mcaroi01.total_rbv
     else:
         roi_pv = xs.channel1.rois.roi01.value
 
     if plot:
         if (ynum == 1):
             livepopup = [
-                SRX1DFlyerPlot(
+                # SRX1DFlyerPlot(
+                SRX1DTSFlyerPlot(
                     roi_pv.name,
                     xstart=xstart,
                     xstep=(xstop-xstart)/(xnum-1),
@@ -396,8 +406,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             ]
         else:
             livepopup = [
-                LiveGrid(
-                    (ynum, xnum+1),
+                # LiveGrid(
+                TSLiveGrid(
+                    (ynum, xnum),
                     roi_pv.name,
                     extent=(xstart, xstop, ystart, ystop),
                     x_positive='right',
@@ -426,6 +437,12 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         if xs2 in flying_zebra.detectors:
             yield from bps.mov(xs2.external_trig, True)
 
+        # TESTING TimeSeries
+        # if ynum == 1:
+        if True:
+            yield from mov(ts_N, xnum)
+            yield from mov(ts_start, 0)
+
         ystep = 0
         for step in np.linspace(ystart, ystop, ynum):
             yield from abs_set(scanrecord.time_remaining,
@@ -452,6 +469,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             #     print(f'Direction = {direction}')
             #     print(f'Start = {start}')
             #     print(f'Stop  = {stop}')
+            yield from mov(ts_start, 0)
             flying_zebra._encoder.pc.dir.set(direction)
             if verbose:
                 yield from timer_wrapper(fly_each_step, ymotor, step, start, stop)
@@ -491,6 +509,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
     # Run the scan
     uid = yield from final_plan
+
+    # Testing 
+    # if ynum == 1:
+    if True:
+        yield from mov(ts_start, 2)
 
     return uid
 
