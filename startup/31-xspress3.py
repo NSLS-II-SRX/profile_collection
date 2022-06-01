@@ -539,6 +539,7 @@ class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3
 
 try:
     print('Setting up xs4...')
+    raise Exception
     # JL replaced {Xsp:1}: with {Xsp:3}:det1:
     xs4 = SrxXspress3Detector("XF:05IDD-ES{Xsp:1}:", name="xs4")
     # xs = CommunitySrxXspress3Detector("XF:05IDD-ES{Xsp:3}:", name="xs")

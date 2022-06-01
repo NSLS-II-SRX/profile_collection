@@ -386,6 +386,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             ts_start = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSControl', name='ts_start')
             ts_N = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSNumPoints', name='ts_N')
             ## Erase the TS buffer
+            yield from mov(xs.cam.acquire, 'Done')
             yield from mov(ts_start, 0)
             yield from mov(ts_start, 2)
         else:
@@ -578,11 +579,11 @@ def nano_z_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
 def coarse_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
     kwargs.setdefault('xmotor', nano_stage.x)
     kwargs.setdefault('ymotor', nano_stage.y)
-    kwargs.setdefault('flying_zebra', nano_flying_zebra_coarse_me4)
+    kwargs.setdefault('flying_zebra', nano_flying_zebra_coarse)
     yield from abs_set(kwargs['flying_zebra'].fast_axis, 'NANOHOR')
     yield from abs_set(kwargs['flying_zebra'].slow_axis, 'NANOVER')
 
-    _xs = kwargs.pop('xs', xs4)
+    _xs = kwargs.pop('xs', xs)
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
@@ -604,11 +605,11 @@ def coarse_y_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
 
     kwargs.setdefault('xmotor', nano_stage.y)
     kwargs.setdefault('ymotor', nano_stage.x)
-    kwargs.setdefault('flying_zebra', nano_flying_zebra_coarse_me4)
+    kwargs.setdefault('flying_zebra', nano_flying_zebra_coarse)
     yield from abs_set(kwargs['flying_zebra'].fast_axis, 'NANOVER')
     yield from abs_set(kwargs['flying_zebra'].slow_axis, 'NANOHOR')
 
-    _xs = kwargs.pop('xs', xs4)
+    _xs = kwargs.pop('xs', xs)
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
