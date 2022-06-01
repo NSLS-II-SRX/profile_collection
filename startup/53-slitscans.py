@@ -81,7 +81,7 @@ def ssa_hcen_scan(start, stop, num,
     x_key = 'slt_ssa_h_cen_readback'
     y_key = 'xbpm2_sumX'
     x = tbl[x_key].values
-    y = -tbl[y_key].values # the sum used to be negative
+    y = tbl[y_key].values # the sum used to be negative
     x = x.astype(np.float64)
     y = y.astype(np.float64)
     dydx = np.gradient(y, x)
@@ -98,7 +98,7 @@ def ssa_hcen_scan(start, stop, num,
     # def f_offset_erf(x, A, sigma, x0, y0):
     # def f_two_erfs(x, A1, sigma1, x1, y1,
     #                   A2, sigma2, x2, y2):
-    p_guess = [np.amin(y),
+    p_guess = [np.amax(y),
                0.017,
                0.5*(x[0] + x[-1]),
                np.mean(y[:3]),
@@ -219,8 +219,8 @@ def slit_nanoflyscan(scan_motor, scan_start, scan_stop, scan_stepsize, acqtime,
     
     # Setup the scan
     plotme = HackLiveFlyerPlot(
-        # xs.channels.channel01.mcarois.mcaroi01.value.name,
-        xs4.channel1.rois.roi01.value.name,
+        xs.channel01.mcaroi01.total_rbv.name,
+        # xs4.channel1.rois.roi01.value.name,
         xstart=scan_start,
         xstep=(scan_stop-scan_start)/(snum-1),
         xlabel=scan_motor.name,
@@ -230,17 +230,21 @@ def slit_nanoflyscan(scan_motor, scan_start, scan_stop, scan_stepsize, acqtime,
     if (scan_motor.name == 'nano_stage_sx'):
         y0 = nano_stage.sy.user_readback.get()
         @subs_decorator(plotme)
+        @monitor_during_decorator([xs.channel01.mcaroi01.total_rbv])
         def _knife_plan():
            yield from  nano_scan_and_fly(scan_start, scan_stop, snum,
                                          y0, y0, 1, acqtime,
-                                         shutter=False, plot=False, flying_zebra=nano_flying_zebra_me4, xs=xs4)
+                                         shutter=False, plot=False)
+                                         # shutter=False, plot=False, flying_zebra=nano_flying_zebra_me4, xs=xs4)
     else:
         x0 = nano_stage.sx.user_readback.get()
         @subs_decorator(plotme)
+        @monitor_during_decorator([xs.channel01.mcaroi01.total_rbv])
         def _knife_plan():
             yield from nano_y_scan_and_fly(scan_start, scan_stop, snum,
                                            x0, x0, 1, acqtime,
-                                           shutter=False, plot=False, flying_zebra=nano_flying_zebra_me4, xs=xs4)
+                                           shutter=False, plot=False)
+                                           # shutter=False, plot=False, flying_zebra=nano_flying_zebra_me4, xs=xs4)
 
     def _plan():
         uid = yield from _knife_plan()
@@ -445,32 +449,32 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
     line_plt = p(slit_range[interp_range])
     p2v_line_pos = np.max(line_pos_seq[interp_range])-np.min(line_pos_seq[interp_range])
  
-    print(f'{flag_dir}') 
-  
     if flag_dir == 'VER':
         C_f = f_v
         C_theta = theta_v
         conversion_factor_orth = conversion_factor_orth[0]
         pitch_motion_conversion = pitch_motion_conversion[0]
-    else:
+    elif flag_dir == 'HOR':
         C_f = f_h
         C_theta = theta_h
         conversion_factor_orth = conversion_factor_orth[1]
         pitch_motion_conversion = pitch_motion_conversion[1] 
+    else:
+        print(f"Unknown direction: {flag_dir}")
+        raise Exception
 
 
     defocus = -calpoly_fit[0][0] * C_f
     delta_theta = calpoly_fit[0][0] * C_theta
     actuator_move_h = delta_theta * L_h
     line_move_h = -2 * delta_theta * C_f * 1e-3
-    print('Fitting results:')
+    print(f'Fitting results for {flag_dir} direction:')
     print(f'\tp is {calpoly_fit[0]}')
     # print(f'residual is {calpoly_fit[1]*1e+6} nm')
     print(f'\tP2V of line position is {p2v_line_pos:.4f} um')
     if (flag_dir == 'VER'):
         print(f'\tDefocus is {defocus:7.3f} um. Vkb correct by this amount.')
-
-    if (flag_dir == 'HOR'):
+    elif (flag_dir == 'HOR'):
         print(f'\tDefocus is {defocus:7.3f} um. Hkb correct by this amount.')
         print(f'\tEquivalent to {delta_theta:7.6f} mrad. Hkb correct by this amount.')
         print(f'\tActuator should move by {actuator_move_h:7.3f} um.')
@@ -553,4 +557,21 @@ def focusKB(direction, **kwargs):
     scanids = np.linspace(-N, -1, num=N)
     slit_nanoflyscan_cal(scan_id_list=scanids, interp_range=scanids[1:-1].astype('int'), orthogonality=False, plotme=plotme)
 
+
+def plot_slit_scans(start_id, N):
+    fig, ax = plt.subplots()
+    for scanid in [start_id + i for i in range(N)]:
+        print(f'Loading {scanid}...', end='')
+        h = db[int(scanid)]
+        d = np.array(list(h.data('fluor', stream_name='stream0', fill=True)))
+        d_i0 = np.array(list(h.data('i0', stream_name='stream0', fill=True)))
+        d = np.squeeze(d)
+        d = np.sum(d[:, :, 934:954], axis=(-1, -2))
+        d = np.squeeze(d)
+        dd = d / np.squeeze(d_i0.T)
+
+        ax.plot(dd, label=f"{scanid}")
+        print('done')
+
+    ax.legend()
 

@@ -219,7 +219,7 @@ def braggcalib(scanlogDic={}, use_xrf=True, man_correction={}):
 
 
 class PairedCallback(QtAwareCallback):
-    def __init__(self, scaler, dcm_c2_pitch_name, pitch_guess, *args, **kwargs):
+    def __init__(self, scaler, dcm_c2_pitch_name, pitch_guess, gauss_height, *args, **kwargs):
         super().__init__(use_teleporter=kwargs.pop('use_teleporter', None))
         self.__setup_lock = threading.Lock()
         self.__setup_event = threading.Event()
@@ -241,7 +241,7 @@ class PairedCallback(QtAwareCallback):
             # Setup LiveFit
             # f_gauss(x, A, sigma, x0, y0, m)
             model = lmfit.Model(f_gauss, ['x'])
-            init_guess = {'A': lmfit.Parameter('A', 100000, min=0),
+            init_guess = {'A': lmfit.Parameter('A', gauss_height, min=0),
                           'sigma': lmfit.Parameter('sigma', 0.001, min=0),
                           'x0': lmfit.Parameter('x0', pitch_guess),
                           'y0': lmfit.Parameter('y0', 0, min=0),
@@ -348,6 +348,8 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     pitch_guess = 0.072
     # 2022-03-03
     pitch_guess = 0.030
+    # 2022-03-03
+    pitch_guess = 0.050
 
 
     # Use calibration
@@ -372,12 +374,14 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     #     yield from bps.mov(shut_b, 'Open')
     yield from check_shutters(shutter, 'Open')
 
-    paired_callback = PairedCallback(scaler, dcm.c2_pitch.name, pitch_guess)
-
     if scaler == 'bpm4_total_current':
         scan_delta = 0.2
+        gauss_height = 2
     else:
         scan_delta = 10_000
+        gauss_height = 100_000
+
+    paired_callback = PairedCallback(scaler, dcm.c2_pitch.name, pitch_guess, gauss_height)
 
     # Run the C2 pitch fine scan
     # @subs_decorator(livecallbacks)
@@ -469,6 +473,20 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
         paired_callback.ax.plot((pitch_new, pitch_new), (y_min, y_max), '--k', label='max')
         paired_callback.ax.legend()
 
+
+def plot_all_peakup(scanid=-1):
+    def normalize_y(d):
+        return (d - np.amin(d)) / (np.amax(d) - np.amin(d))
+
+    h = db[int(scanid)]
+    tbl = h.table(fill=True)
+    fig, ax = plt.subplots()
+    x = tbl['dcm_c2_pitch'].values
+    ax.plot(x, normalize_y(tbl['bpm4_total_current'].values), label='B-hutch XBPM')
+    ax.plot(x, normalize_y(tbl['sclr_i0'].values), label='I0')
+    ax.set_xlabel('DCM C2 Pitch')
+    ax.set_ylabel('Normalized Counts')
+    ax.legend()
 
 def ic_energy_batch(estart, estop, npts,
                     acqtime=1.0, count_pts=50, outfile=None):
