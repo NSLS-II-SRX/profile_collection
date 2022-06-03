@@ -18,7 +18,6 @@ print(f"Loading {__file__}...")
 # TODO: remove this block once https://github.com/bluesky/ophyd/pull/959 is
 # merged/released.
 from datetime import datetime
-from operator import is_
 from ophyd.signal import EpicsSignalBase, EpicsSignal, DEFAULT_CONNECTION_TIMEOUT
 from bluesky_queueserver import is_re_worker_active, parameter_annotation_decorator
 

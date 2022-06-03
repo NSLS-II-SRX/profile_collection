@@ -214,7 +214,7 @@ def xanes_afterscan_plan(scanid, filename, roinum):
     }
 })
 def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
-               det_xs=None, harmonic=1, detune=0, align=False, align_at=None,
+               det_xs=xs, harmonic=1, detune=0, align=False, align_at=None,
                roinum=1, shutter=True, per_step=None):
     '''
     erange (list of floats): energy ranges for XANES in eV, e.g. erange = [7112-50, 7112-20, 7112+50, 7112+120]
