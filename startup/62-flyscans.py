@@ -302,6 +302,16 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             st.add_callback(lambda x: toc(t_datacollect, str=f"  status object  {datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S.%f')}"))
             if (d.name == 'dexela'):
                 yield from bps.sleep(1)
+        # AMK paranoid check
+        t0 = ttime.monotonic()
+        while (ts_state.get() != 1 or xs.cam.detector_state.get() != 1):
+            yield from mov(ts_state, 1)
+            # yield from bps.trigger(xs, group=row_str)
+            yield from bps.sleep(0.1)
+            if (ttime.monotonic() - t0) > 10:
+                print('XS Acquire timeout!')
+                raise Exception
+
         # The zebra needs to be armed last for time-based scanning.
         # If it is armed too early, the timing may be off and the xs3 will miss the first point
         yield from mov(flying_zebra._encoder.pc.arm, 1)
@@ -385,10 +395,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             roi_pv = EpicsSignalRO('XF:05IDD-ES{Xsp:3}:MCA1ROI:1:TSTotal', name=xs.channel01.mcaroi01.roi_name.get())
             ts_start = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSControl', name='ts_start')
             ts_N = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSNumPoints', name='ts_N')
+            ts_state = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSAcquiring', name='ts_state')
             ## Erase the TS buffer
             yield from mov(xs.cam.acquire, 'Done')
-            yield from mov(ts_start, 0)
-            yield from mov(ts_start, 2)
+            # yield from mov(ts_start, 0)  # Start time series collection
+            yield from mov(ts_start, 2)  # Stop time series collection
         else:
             roi_pv = xs.channel01.mcaroi01.total_rbv
     else:
@@ -442,7 +453,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         # if ynum == 1:
         if True:
             yield from mov(ts_N, xnum)
-            yield from mov(ts_start, 0)
+            # yield from mov(ts_start, 0)
 
         ystep = 0
         for step in np.linspace(ystart, ystop, ynum):
