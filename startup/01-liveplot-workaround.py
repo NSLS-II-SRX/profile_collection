@@ -526,6 +526,7 @@ class TSLiveGrid(QtAwareCallback):
             self.y_positive = y_positive
 
             self._index = 0
+            self._start = 0
 
         self.__setup = setup
 
@@ -579,19 +580,23 @@ class TSLiveGrid(QtAwareCallback):
         if self.I not in doc['data']:
             return
 
-        # seq_num = doc['seq_num'] - 1
-        # pos = list(np.unravel_index(seq_num, self.raster_shape))
-        # if self.snaking[1] and (pos[0] % 2):
-        #     pos[1] = self.raster_shape[1] - pos[1] - 1
-        # pos = tuple(pos)
         I = np.array(doc['data'][self.I])  # noqa: E741
-        new_I = np.ones((self.raster_shape[1], )) * np.nan
-        new_I[:I.shape[0]] = I
-        if self.snaking[1] and (self._index % 2):
-            new_I = new_I[::-1]
-        self.update(new_I)
-        if I.shape[0] == self.raster_shape[1]:
-            self._index += 1
+
+        # There can be old data still in the TimeSeries PV,
+        # which can then plot and increase the index because it is the full row.
+        # Here, we wait for an empty array meaning the TimeSeries has been erased
+        # and then start plotting
+        if I.shape[0] == 0:
+            self._start = 1
+
+        if self._start:
+            new_I = np.ones((self.raster_shape[1], )) * np.nan
+            new_I[:I.shape[0]] = I
+            if self.snaking[1] and (self._index % 2):
+                new_I = new_I[::-1]
+            self.update(new_I)
+            if I.shape[0] == self.raster_shape[1]:
+                self._index += 1
         super().event(doc)
 
     def update(self, I):  # noqa: E741
