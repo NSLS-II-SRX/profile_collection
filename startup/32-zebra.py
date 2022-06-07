@@ -561,7 +561,7 @@ class SRXFlyer1Axis(Device):
                 self.log.debug("Setting %s to %r (original value: %r)",
                                self.name,
                                val, original_vals[sig])
-                sig.set(val).wait()
+                sig.set(val, timeout=10).wait()
                 ttime.sleep(self._staging_delay)
                 # It worked -- now add it to this list of sigs to unstage.
                 self._original_vals[sig] = original_vals[sig]
@@ -620,7 +620,7 @@ class SRXFlyer1Axis(Device):
             self.log.debug("Setting %s back to its original value: %r)",
                            self.name,
                            val)
-            sig.set(val).wait()
+            sig.set(val, timeout=10).wait()
             ttime.sleep(self._staging_delay)
             self._original_vals.pop(sig)
         devices_unstaged.append(self)
