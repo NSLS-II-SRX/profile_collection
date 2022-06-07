@@ -299,7 +299,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             if verbose:
                 print(f'  triggering {d.name}')
             st = yield from bps.trigger(d, group=row_str)
-            st.add_callback(lambda x: toc(t_datacollect, str=f"  status object  {datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S.%f')}"))
+            if verbose:
+                st.add_callback(lambda x: toc(t_datacollect, str=f"  status object  {datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S.%f')}"))
             if (d.name == 'dexela'):
                 yield from bps.sleep(1)
         # AMK paranoid check
