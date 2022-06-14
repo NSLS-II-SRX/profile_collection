@@ -207,6 +207,28 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     md['scan']['snake'] = snake
     md['scan']['shape'] = (xnum, ynum)
 
+    # Setup LivePlot
+    # Set the ROI pv
+    xs_ = dets_by_name[flying_zebra.detectors[0].name]
+    if hasattr(xs_, 'channel01'):
+        # if ynum == 1:
+        if True:
+            roi_pv = EpicsSignalRO('XF:05IDD-ES{Xsp:3}:MCA1ROI:1:TSTotal', name=xs_.channel01.mcaroi01.roi_name.get())
+            ts_start = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSControl', name='ts_start')
+            ts_N = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSNumPoints', name='ts_N')
+            ts_state = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSAcquiring', name='ts_state')
+            ## Erase the TS buffer
+            yield from mov(xs_.cam.acquire, 'Done')
+            # yield from mov(ts_start, 0)  # Start time series collection
+            yield from mov(ts_start, 2)  # Stop time series collection
+            yield from mov(ts_start, 0)  # Stop time series collection
+            yield from mov(ts_start, 2)  # Stop time series collection
+
+        else:
+            roi_pv = xs_.channel01.mcaroi01.total_rbv
+    else:
+        roi_pv = xs_.channel1.rois.roi01.value
+
 
     @stage_decorator(flying_zebra.detectors)
     def fly_each_step(motor, step, row_start, row_stop):
