@@ -32,6 +32,7 @@ import matplotlib.pyplot as plt
 from collections import ChainMap
 
 from ophyd import Device
+from ophyd.status import WaitTimeoutError
 from ophyd.sim import NullStatus
 from ophyd.areadetector.filestore_mixins import resource_factory
 
@@ -306,6 +307,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         # AMK paranoid check
         t0 = ttime.monotonic()
         while (ts_state.get() != 1 or xs.cam.detector_state.get() != 1):
+            if verbose:
+                print(f"{ttime.ctime(t0)}\tParanoid check was worth it...")
             yield from mov(ts_state, 1)
             # yield from bps.trigger(xs, group=row_str)
             yield from bps.sleep(0.1)
@@ -342,8 +345,20 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 ttime.sleep(0.001)
             toc(t_datacollect, str='  sclr1 done')
         # wait for the motor and detectors to all agree they are done
-        yield from bps.wait(group=row_str)
-        st.wait()
+        try:
+            st.wait(timeout=15)
+            yield from bps.wait(group=row_str)
+        except WaitTimeoutError as e:
+            N_xs = get_me_the_cam(xs).array_counter.get()
+            if N_xs == 0:
+                print("X3X did not receive any pulses!")
+            elif N_xs != xnum:
+                print("X3X did not receive {xnum} pulses! ({N}/{xnum})")
+            else:
+                print("Unknown error!")
+                print(e)
+            # yield from bps.mov(microZebra.pc.arm, 1)
+            raise e
 
         if verbose:
             toc(t_datacollect, str='Total time')
