@@ -453,7 +453,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     @subs_decorator(livepopup)
     @subs_decorator({'start': at_scan})
     @subs_decorator({'stop': finalize_scan})
-    @monitor_during_decorator([roi_pv])
+    @ts_monitor_during_decorator([roi_pv])
+    # @monitor_during_decorator([roi_pv])
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
     def plan():
@@ -542,7 +543,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Run the scan
     uid = yield from final_plan
 
-    # Testing 
+    # Testing
     # if ynum == 1:
     if True:
         yield from mov(ts_start, 2)
