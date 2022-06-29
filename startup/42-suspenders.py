@@ -19,12 +19,12 @@ def another_generator(pv, value):
 
 # Ring current suspender
 dummy_rc = EpicsSignalRO("XF:05IDD-ES:1{Dev:Zebra1}:PC_GATE_WID:RBV", name="dummy_rc")
-susp_rc = SuspendFloor(dummy_rc, 140, resume_thresh=160, sleep=10,
-                       pre_plan=list(shuttergenerator(shut_b, 'Close')),
-                       post_plan=list(shuttergenerator(shut_b, 'Open')))
-# susp_rc = SuspendFloor(ring_current, 140, resume_thresh=160, sleep=10*60,
+# susp_rc = SuspendFloor(dummy_rc, 140, resume_thresh=160, sleep=10,
 #                        pre_plan=list(shuttergenerator(shut_b, 'Close')),
 #                        post_plan=list(shuttergenerator(shut_b, 'Open')))
+susp_rc = SuspendFloor(ring_current, 140, resume_thresh=160, sleep=10*60,
+                       pre_plan=list(shuttergenerator(shut_b, 'Close')),
+                       post_plan=list(shuttergenerator(shut_b, 'Open')))
 
 
 # Cryo cooler suspender
