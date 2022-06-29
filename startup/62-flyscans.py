@@ -211,21 +211,16 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Set the ROI pv
     xs_ = dets_by_name[flying_zebra.detectors[0].name]
     if hasattr(xs_, 'channel01'):
-        # if ynum == 1:
-        if True:
-            roi_pv = EpicsSignalRO('XF:05IDD-ES{Xsp:3}:MCA1ROI:1:TSTotal', name=xs_.channel01.mcaroi01.roi_name.get())
-            ts_start = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSControl', name='ts_start')
-            ts_N = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSNumPoints', name='ts_N')
-            ts_state = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSAcquiring', name='ts_state')
-            ## Erase the TS buffer
-            yield from mov(xs_.cam.acquire, 'Done')
-            # yield from mov(ts_start, 0)  # Start time series collection
-            yield from mov(ts_start, 2)  # Stop time series collection
-            yield from mov(ts_start, 0)  # Stop time series collection
-            yield from mov(ts_start, 2)  # Stop time series collection
-
-        else:
-            roi_pv = xs_.channel01.mcaroi01.total_rbv
+        roi_pv = EpicsSignalRO('XF:05IDD-ES{Xsp:3}:MCA1ROI:1:TSTotal', name=xs_.channel01.mcaroi01.roi_name.get())
+        ts_start = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSControl', name='ts_start')
+        ts_N = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSNumPoints', name='ts_N')
+        ts_state = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSAcquiring', name='ts_state')
+        ## Erase the TS buffer
+        yield from mov(xs_.cam.acquire, 'Done')
+        # yield from mov(ts_start, 0)  # Start time series collection
+        yield from mov(ts_start, 2)  # Stop time series collection
+        yield from mov(ts_start, 0)  # Start time series collection
+        yield from mov(ts_start, 2)  # Stop time series collection
     else:
         roi_pv = xs_.channel1.rois.roi01.value
 
@@ -372,19 +367,25 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             toc(t_datacollect, str='  sclr1 done')
         # wait for the motor and detectors to all agree they are done
         try:
-            st.wait(timeout=15)
-            yield from bps.wait(group=row_str)
+            print('Waiting for x3x...\n')
+            st.wait(timeout=xnum*dwell + 20)
+            print('Waiting done.\n')
+            # yield from bps.wait(group=row_str)
         except WaitTimeoutError as e:
+            print('WaitTimeoutError!')
             N_xs = get_me_the_cam(xs).array_counter.get()
+            print(f"  {N_xs=}\n")
             if N_xs == 0:
                 print("X3X did not receive any pulses!")
             elif N_xs != xnum:
-                print("X3X did not receive {xnum} pulses! ({N}/{xnum})")
+                print(f"X3X did not receive {xnum} pulses! ({N_xs}/{xnum})")
             else:
                 print("Unknown error!")
                 print(e)
             # yield from bps.mov(microZebra.pc.arm, 1)
-            raise e
+            print('Raising exception!\n')
+            print(e)
+            # raise e
 
         if verbose:
             toc(t_datacollect, str='Total time')
@@ -428,24 +429,6 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     xs = dets_by_name[flying_zebra.detectors[0].name]
 
     yield from mv(get_me_the_cam(xs).erase, 0)  # Changed to use helper function
-
-    # Setup LivePlot
-    # Set the ROI pv
-    if hasattr(xs, 'channel01'):
-        # if ynum == 1:
-        if True:
-            roi_pv = EpicsSignalRO('XF:05IDD-ES{Xsp:3}:MCA1ROI:1:TSTotal', name=xs.channel01.mcaroi01.roi_name.get())
-            ts_start = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSControl', name='ts_start')
-            ts_N = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSNumPoints', name='ts_N')
-            ts_state = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSAcquiring', name='ts_state')
-            ## Erase the TS buffer
-            yield from mov(xs.cam.acquire, 'Done')
-            # yield from mov(ts_start, 0)  # Start time series collection
-            yield from mov(ts_start, 2)  # Stop time series collection
-        else:
-            roi_pv = xs.channel01.mcaroi01.total_rbv
-    else:
-        roi_pv = xs.channel1.rois.roi01.value
 
     if plot:
         if (ynum == 1):
@@ -492,16 +475,14 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         if xs2 in flying_zebra.detectors:
             yield from bps.mov(xs2.external_trig, True)
 
-        # TESTING TimeSeries
-        # if ynum == 1:
-        if True:
-            yield from mov(ts_N, xnum)
-            # yield from mov(ts_start, 0)
-
+        # Set TimeSeries to collect correct number of points
+        yield from abs_set(ts_N, xnum, timeout=10)
+        
         ystep = 0
         for step in np.linspace(ystart, ystop, ynum):
             yield from abs_set(scanrecord.time_remaining,
-                               (ynum - ystep) * ( dwell * xnum + 3.8 ) / 3600.)
+                               (ynum - ystep) * ( dwell * xnum + 3.8 ) / 3600.,
+                               timeout=10)
             # 'arm' the all of the detectors for outputting fly data
             for d in flying_zebra.detectors:
                 yield from bps.mov(d.fly_next, True)
@@ -524,7 +505,13 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             #     print(f'Direction = {direction}')
             #     print(f'Start = {start}')
             #     print(f'Stop  = {stop}')
-            yield from mov(ts_start, 0)
+            print(' x3x time-series erase-start...\n')
+            try:
+                yield from abs_set(ts_start, 0, timeout=10)
+                print(' x3x time-series erase-start...done\n')
+            except Exception as e:
+                print('Timeout on starting time-series!')
+                print(e)
             flying_zebra._encoder.pc.dir.set(direction)
             if verbose:
                 yield from timer_wrapper(fly_each_step, ymotor, step, start, stop)
@@ -565,10 +552,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Run the scan
     uid = yield from final_plan
 
-    # Testing
-    # if ynum == 1:
-    if True:
-        yield from mov(ts_start, 2)
+    # Stop TimeSeries collection
+    yield from abs_set(ts_start, 2, timeout=10)
 
     return uid
 
