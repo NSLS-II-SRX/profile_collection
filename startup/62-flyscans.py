@@ -379,6 +379,12 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 print("X3X did not receive any pulses!")
             elif N_xs != xnum:
                 print(f"X3X did not receive {xnum} pulses! ({N_xs}/{xnum})")
+                try:
+                    yield from abs_set(xs.hdf5.capture, 'Done', timeout=10)
+                    yield from abs_set(xs.hdf5.write_file, 1, timeout=10)
+                except ex:
+                    print('Hopefully a timeout error')
+                    print(ex)
             else:
                 print("Unknown error!")
                 print(e)
