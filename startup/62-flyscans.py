@@ -216,11 +216,24 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         ts_N = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSNumPoints', name='ts_N')
         ts_state = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSAcquiring', name='ts_state')
         ## Erase the TS buffer
-        yield from mov(xs_.cam.acquire, 'Done')
         # yield from mov(ts_start, 0)  # Start time series collection
-        yield from mov(ts_start, 2)  # Stop time series collection
-        yield from mov(ts_start, 0)  # Start time series collection
-        yield from mov(ts_start, 2)  # Stop time series collection
+        # yield from mov(ts_start, 2)  # Stop time series collection
+        # yield from mov(ts_start, 0)  # Start time series collection
+        # yield from mov(ts_start, 2)  # Stop time series collection
+        try:
+            yield from abs_set(xs_.cam.acquire, 'Done', timeout=1)
+        except Exception as e:
+            print('Timeout setting X3X to status \"Done\". Continuing...')
+            print(e)
+        try:
+            # This erases the time-series array, otherwise we see the previous scan
+            yield from abs_set(ts_start, 2, wait=True, timeout=1)  # Stop time series collection
+            yield from abs_set(ts_start, 0, wait=True, timeout=1)  # Start/erase time series collection
+            yield from abs_set(ts_start, 2, wait=True, timeout=1)  # Stop time series collection
+        except Exception as e:
+            # Eating the exception
+            print('The time-series did not clear correctly. Continuing...')
+            print(e)
     else:
         roi_pv = xs_.channel1.rois.roi01.value
 
@@ -330,7 +343,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         while (ts_state.get() != 1 or xs.cam.detector_state.get() != 1):
             if verbose:
                 print(f"{ttime.ctime(t0)}\tParanoid check was worth it...")
-            yield from mov(ts_state, 1)
+            yield from abs_set(ts_state, 1)
             # yield from bps.trigger(xs, group=row_str)
             yield from bps.sleep(0.1)
             if (ttime.monotonic() - t0) > 10:
@@ -339,7 +352,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
         # The zebra needs to be armed last for time-based scanning.
         # If it is armed too early, the timing may be off and the xs3 will miss the first point
-        yield from mov(flying_zebra._encoder.pc.arm, 1)
+        try:
+            yield from abs_set(flying_zebra._encoder.pc.arm, 1, wait=True, timeout=1, settle_time=0.010)
+        except Exception as e:
+            print('Failed to arm the Zebra! This line WILL FAIL!')
+            # raise e
         if verbose:
             toc(t_datacollect, str='  trigger detectors')
 
@@ -367,9 +384,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             toc(t_datacollect, str='  sclr1 done')
         # wait for the motor and detectors to all agree they are done
         try:
-            print('Waiting for x3x...\n')
+            # print('Waiting for x3x...\n')
             st.wait(timeout=xnum*dwell + 20)
-            print('Waiting done.\n')
+            # print('Waiting done.\n')
             # yield from bps.wait(group=row_str)
         except WaitTimeoutError as e:
             print('WaitTimeoutError!')
@@ -389,9 +406,14 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 print("Unknown error!")
                 print(e)
             # yield from bps.mov(microZebra.pc.arm, 1)
-            print('Raising exception!\n')
-            print(e)
-            # raise e
+            flag_raise_timeout = False
+            if flag_raise_timeout:
+                print('Raising exception!\n')
+                print(e)
+                raise e
+            else:
+                print('Continuing despite TimeoutError...')
+                print(e)
 
         if verbose:
             toc(t_datacollect, str='Total time')
@@ -511,12 +533,12 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             #     print(f'Direction = {direction}')
             #     print(f'Start = {start}')
             #     print(f'Stop  = {stop}')
-            print(' x3x time-series erase-start...\n')
+            # print(' x3x time-series erase-start...\n')
             try:
-                yield from abs_set(ts_start, 0, timeout=10)
-                print(' x3x time-series erase-start...done\n')
+                yield from abs_set(ts_start, 0, timeout=3)
+                # print(' x3x time-series erase-start...done\n')
             except Exception as e:
-                print('Timeout on starting time-series!')
+                print('Timeout on starting time-series! Continuing...')
                 print(e)
             flying_zebra._encoder.pc.dir.set(direction)
             if verbose:
@@ -559,7 +581,10 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     uid = yield from final_plan
 
     # Stop TimeSeries collection
-    yield from abs_set(ts_start, 2, timeout=10)
+    try:
+        yield from abs_set(ts_start, 2, wait=True, timeout=1)
+    except Exception:
+        print('Timout stopping time series at end of scan.')
 
     return uid
 
