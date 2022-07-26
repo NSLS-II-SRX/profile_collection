@@ -452,15 +452,15 @@ def xanes_batch_plan(xypos=[], erange=[], estep=[], acqtime=1.0,
         print(f'Moving to:')
         print(f'\tx = {xypos[i][0]}')
         print(f'\ty = {xypos[i][1]}')
-        hf_stage.x.move(xypos[i][0])
-        hf_stage.y.move(xypos[i][1])
+        yield from mov(nano_stage.sx, xypos[i][0])
+        yield from mov(nano_stage.sy, xypos[i][1])
         if (len(xypos[i]) == 3):
             print(f'\tz = {xypos[i][2]}')
-            hf_stage.z.move(xypos[i][2])
+            yield from mov(nano_stage.sz, xypos[i][2])
 
         # Move above edge and peak up
         if (i % peakup_N == 0):
-            yield from mv(energy, peakup_E)
+            yield from mov(energy, peakup_E)
             yield from peakup_fine()
 
         # Run the energy scan
@@ -469,7 +469,7 @@ def xanes_batch_plan(xypos=[], erange=[], estep=[], acqtime=1.0,
         # Wait
         if (i != (N-1)):
             print(f'Scan complete. Waiting {waittime} seconds...')
-            bps.sleep(waittime)
+            yield from bps.sleep(waittime)
 
 
 def hfxanes_ioc(erange=[], estep=[], acqtime=1.0, samplename='', filename='',
