@@ -253,8 +253,7 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
 
 # Written quickly
 def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=True, plot_guess=False,
-                    bin_low=934, bin_high=954, plotme=None):
-                    # bin_low=None, bin_high=None, plotme=None):
+                    bin_low=None, bin_high=None, plotme=None):
     # Get the scanid
     h = db[int(scanid)]
     id_str = h.start['scan_id']
@@ -302,10 +301,9 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=Tru
         y = tbl['it'].values[0] / tbl['im'].values[0]
     else:
         if bin_low is None:
-            # JL I don't think we have bin_low and bin_high anymore (?)
-            bin_low = xs.channels.channel01.mcarois.mcaroi01.bin_low.get()
+            bin_low = xs.channel01.mcaroi01.min_x.get()
         if bin_high is None:
-            bin_high = xs.channels.channel01.mcarois.mcaroi01.bin_high.get()
+            bin_high = xs.channel01.mcaroi01.min_x.get() + xs.channel01.mcaroi01.size_x.get()
         d = np.array(tbl[fluor_key])[0]
         if (d.ndim == 1):
             d = np.array(tbl[fluor_key])
