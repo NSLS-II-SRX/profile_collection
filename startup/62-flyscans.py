@@ -303,17 +303,26 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 _row_start = xstop
                 _row_stop = xstart
 
-            yield from kickoff(flying_zebra,
-                               xstart=_row_start,
-                               xstop=_row_stop,
-                               xnum=xnum,
-                               dwell=dwell,
-                               tacc=xmotor.acceleration.get(),
-                               wait=True)
-        if verbose:
-            yield from timer_wrapper(zebra_kickoff)
-        else:
-            yield from zebra_kickoff()
+            st = yield from kickoff(flying_zebra,
+                                   xstart=_row_start,
+                                   xstop=_row_stop,
+                                   xnum=xnum,
+                                   dwell=dwell,
+                                   tacc=xmotor.acceleration.get(),
+                                   wait=True)
+            st.wait(timeout=10)
+        try:
+            if verbose:
+                yield from timer_wrapper(zebra_kickoff)
+            else:
+                yield from zebra_kickoff()
+        except WaitTimeoutError as e:
+            print('WaitTimeoutError during kickoff!')
+            raise e
+        except Exception as e:
+            print('Unknown exception!')
+            print(e)
+            raise e
 
         # Need this tic for detector timing
         if verbose:
@@ -396,16 +405,31 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 print("X3X did not receive any pulses!")
             elif N_xs != xnum:
                 print(f"X3X did not receive {xnum} pulses! ({N_xs}/{xnum})")
-                try:
-                    yield from abs_set(xs.hdf5.capture, 'Done', timeout=10)
-                    yield from abs_set(xs.hdf5.write_file, 1, timeout=10)
-                except ex:
-                    print('Hopefully a timeout error')
-                    print(ex)
             else:
                 print("Unknown error!")
                 print(e)
-            # yield from bps.mov(microZebra.pc.arm, 1)
+
+            # Cleanup
+            ## Clean up X3X
+            try:
+                yield from abs_set(xs.hdf5.capture, 'Done', timeout=10)
+                yield from abs_set(xs.hdf5.write_file, 1, timeout=10)
+            except ex:
+                print('Hopefully a timeout error while cleaning up X3X...')
+                print(ex)
+            ## Clean up scaler
+            try:
+                yield from abs_set(ion.stop_all, 1, timeout=10)  # stop acquiring scaler
+            except ex:
+                print('Hopefully a timeout error while cleaning up scaler...')
+                print(ex)
+            ## Clean up zebra
+            try:
+                yield from abs_set(flying_zebra._encoder.pc.disarm, 1, timeout=10)  # stop acquiring zebra
+            except ex:
+                print('Hopefully a timeout error while cleaning up scaler...')
+                print(ex)
+
             flag_raise_timeout = False
             if flag_raise_timeout:
                 print('Raising exception!\n')
@@ -584,7 +608,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     try:
         yield from abs_set(ts_start, 2, wait=True, timeout=1)
     except Exception:
-        print('Timout stopping time series at end of scan.')
+        print('Timeout stopping time series at end of scan.')
 
     return uid
 
