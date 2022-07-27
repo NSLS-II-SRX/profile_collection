@@ -40,7 +40,7 @@ from bluesky.preprocessors import (stage_decorator,
                                    run_decorator, subs_decorator,
                                    monitor_during_decorator)
 import bluesky.plan_stubs as bps
-from bluesky.plan_stubs import (one_1d_step, kickoff, collect,
+from bluesky.plan_stubs import (kickoff, collect,
                                 complete, abs_set, mv, checkpoint)
 from bluesky.plans import (scan, )
 from bluesky.callbacks import CallbackBase, LiveGrid
@@ -114,6 +114,10 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     shutter : bool, optional, kwarg only
        If True, try to open the shutter
     """
+
+    # It is not desirable to display plots when the plan is executed by Queue Server.
+    if is_re_worker_active():
+        plot = False
 
     t_setup = tic()
 
@@ -202,7 +206,37 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                            'units' : xmotor.motor_egu.get()}
     md['scan']['snake'] = snake
     md['scan']['shape'] = (xnum, ynum)
-    
+
+    # Setup LivePlot
+    # Set the ROI pv
+    xs_ = dets_by_name[flying_zebra.detectors[0].name]
+    if hasattr(xs_, 'channel01'):
+        roi_pv = EpicsSignalRO('XF:05IDD-ES{Xsp:3}:MCA1ROI:1:TSTotal', name=xs_.channel01.mcaroi01.roi_name.get())
+        ts_start = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSControl', name='ts_start')
+        ts_N = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSNumPoints', name='ts_N')
+        ts_state = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSAcquiring', name='ts_state')
+        ## Erase the TS buffer
+        # yield from mov(ts_start, 0)  # Start time series collection
+        # yield from mov(ts_start, 2)  # Stop time series collection
+        # yield from mov(ts_start, 0)  # Start time series collection
+        # yield from mov(ts_start, 2)  # Stop time series collection
+        try:
+            yield from abs_set(xs_.cam.acquire, 'Done', timeout=1)
+        except Exception as e:
+            print('Timeout setting X3X to status \"Done\". Continuing...')
+            print(e)
+        try:
+            # This erases the time-series array, otherwise we see the previous scan
+            yield from abs_set(ts_start, 2, wait=True, timeout=1)  # Stop time series collection
+            yield from abs_set(ts_start, 0, wait=True, timeout=1)  # Start/erase time series collection
+            yield from abs_set(ts_start, 2, wait=True, timeout=1)  # Stop time series collection
+        except Exception as e:
+            # Eating the exception
+            print('The time-series did not clear correctly. Continuing...')
+            print(e)
+    else:
+        roi_pv = xs_.channel1.rois.roi01.value
+
 
     @stage_decorator(flying_zebra.detectors)
     def fly_each_step(motor, step, row_start, row_stop):
@@ -269,17 +303,26 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 _row_start = xstop
                 _row_stop = xstart
 
-            yield from kickoff(flying_zebra,
-                               xstart=_row_start,
-                               xstop=_row_stop,
-                               xnum=xnum,
-                               dwell=dwell,
-                               tacc=xmotor.acceleration.get(),
-                               wait=True)
-        if verbose:
-            yield from timer_wrapper(zebra_kickoff)
-        else:
-            yield from zebra_kickoff()
+            st = yield from kickoff(flying_zebra,
+                                   xstart=_row_start,
+                                   xstop=_row_stop,
+                                   xnum=xnum,
+                                   dwell=dwell,
+                                   tacc=xmotor.acceleration.get(),
+                                   wait=True)
+            st.wait(timeout=10)
+        try:
+            if verbose:
+                yield from timer_wrapper(zebra_kickoff)
+            else:
+                yield from zebra_kickoff()
+        except WaitTimeoutError as e:
+            print('WaitTimeoutError during kickoff!')
+            raise e
+        except Exception as e:
+            print('Unknown exception!')
+            print(e)
+            raise e
 
         # Need this tic for detector timing
         if verbose:
@@ -309,7 +352,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         while (ts_state.get() != 1 or xs.cam.detector_state.get() != 1):
             if verbose:
                 print(f"{ttime.ctime(t0)}\tParanoid check was worth it...")
-            yield from mov(ts_state, 1)
+            yield from abs_set(ts_state, 1)
             # yield from bps.trigger(xs, group=row_str)
             yield from bps.sleep(0.1)
             if (ttime.monotonic() - t0) > 10:
@@ -318,7 +361,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
         # The zebra needs to be armed last for time-based scanning.
         # If it is armed too early, the timing may be off and the xs3 will miss the first point
-        yield from mov(flying_zebra._encoder.pc.arm, 1)
+        try:
+            yield from abs_set(flying_zebra._encoder.pc.arm, 1, wait=True, timeout=1, settle_time=0.010)
+        except Exception as e:
+            print('Failed to arm the Zebra! This line WILL FAIL!')
+            # raise e
         if verbose:
             toc(t_datacollect, str='  trigger detectors')
 
@@ -346,19 +393,51 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             toc(t_datacollect, str='  sclr1 done')
         # wait for the motor and detectors to all agree they are done
         try:
-            st.wait(timeout=15)
-            yield from bps.wait(group=row_str)
+            # print('Waiting for x3x...\n')
+            st.wait(timeout=xnum*dwell + 20)
+            # print('Waiting done.\n')
+            # yield from bps.wait(group=row_str)
         except WaitTimeoutError as e:
+            print('WaitTimeoutError!')
             N_xs = get_me_the_cam(xs).array_counter.get()
+            print(f"  {N_xs=}\n")
             if N_xs == 0:
                 print("X3X did not receive any pulses!")
             elif N_xs != xnum:
-                print("X3X did not receive {xnum} pulses! ({N}/{xnum})")
+                print(f"X3X did not receive {xnum} pulses! ({N_xs}/{xnum})")
             else:
                 print("Unknown error!")
                 print(e)
-            # yield from bps.mov(microZebra.pc.arm, 1)
-            raise e
+
+            # Cleanup
+            ## Clean up X3X
+            try:
+                yield from abs_set(xs.hdf5.capture, 'Done', timeout=10)
+                yield from abs_set(xs.hdf5.write_file, 1, timeout=10)
+            except ex:
+                print('Hopefully a timeout error while cleaning up X3X...')
+                print(ex)
+            ## Clean up scaler
+            try:
+                yield from abs_set(ion.stop_all, 1, timeout=10)  # stop acquiring scaler
+            except ex:
+                print('Hopefully a timeout error while cleaning up scaler...')
+                print(ex)
+            ## Clean up zebra
+            try:
+                yield from abs_set(flying_zebra._encoder.pc.disarm, 1, timeout=10)  # stop acquiring zebra
+            except ex:
+                print('Hopefully a timeout error while cleaning up scaler...')
+                print(ex)
+
+            flag_raise_timeout = False
+            if flag_raise_timeout:
+                print('Raising exception!\n')
+                print(e)
+                raise e
+            else:
+                print('Continuing despite TimeoutError...')
+                print(e)
 
         if verbose:
             toc(t_datacollect, str='Total time')
@@ -392,7 +471,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         logscan_detailed('XRF_FLY')
         scanrecord.scanning.put(False)
         scanrecord.time_remaining.put(0)
-        
+
 
     # TODO remove this eventually?
     # xs = dets_by_name['xs']
@@ -402,24 +481,6 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     xs = dets_by_name[flying_zebra.detectors[0].name]
 
     yield from mv(get_me_the_cam(xs).erase, 0)  # Changed to use helper function
-
-    # Setup LivePlot
-    # Set the ROI pv
-    if hasattr(xs, 'channel01'):
-        # if ynum == 1:
-        if True:
-            roi_pv = EpicsSignalRO('XF:05IDD-ES{Xsp:3}:MCA1ROI:1:TSTotal', name=xs.channel01.mcaroi01.roi_name.get())
-            ts_start = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSControl', name='ts_start')
-            ts_N = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSNumPoints', name='ts_N')
-            ts_state = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSAcquiring', name='ts_state')
-            ## Erase the TS buffer
-            yield from mov(xs.cam.acquire, 'Done')
-            # yield from mov(ts_start, 0)  # Start time series collection
-            yield from mov(ts_start, 2)  # Stop time series collection
-        else:
-            roi_pv = xs.channel01.mcaroi01.total_rbv
-    else:
-        roi_pv = xs.channel1.rois.roi01.value
 
     if plot:
         if (ynum == 1):
@@ -449,7 +510,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     @subs_decorator(livepopup)
     @subs_decorator({'start': at_scan})
     @subs_decorator({'stop': finalize_scan})
-    @monitor_during_decorator([roi_pv])
+    @ts_monitor_during_decorator([roi_pv])
+    # @monitor_during_decorator([roi_pv])
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
     def plan():
@@ -465,16 +527,14 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         if xs2 in flying_zebra.detectors:
             yield from bps.mov(xs2.external_trig, True)
 
-        # TESTING TimeSeries
-        # if ynum == 1:
-        if True:
-            yield from mov(ts_N, xnum)
-            # yield from mov(ts_start, 0)
-
+        # Set TimeSeries to collect correct number of points
+        yield from abs_set(ts_N, xnum, timeout=10)
+        
         ystep = 0
         for step in np.linspace(ystart, ystop, ynum):
             yield from abs_set(scanrecord.time_remaining,
-                               (ynum - ystep) * ( dwell * xnum + 3.8 ) / 3600.)
+                               (ynum - ystep) * ( dwell * xnum + 3.8 ) / 3600.,
+                               timeout=10)
             # 'arm' the all of the detectors for outputting fly data
             for d in flying_zebra.detectors:
                 yield from bps.mov(d.fly_next, True)
@@ -497,7 +557,13 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             #     print(f'Direction = {direction}')
             #     print(f'Start = {start}')
             #     print(f'Stop  = {stop}')
-            yield from mov(ts_start, 0)
+            # print(' x3x time-series erase-start...\n')
+            try:
+                yield from abs_set(ts_start, 0, timeout=3)
+                # print(' x3x time-series erase-start...done\n')
+            except Exception as e:
+                print('Timeout on starting time-series! Continuing...')
+                print(e)
             flying_zebra._encoder.pc.dir.set(direction)
             if verbose:
                 yield from timer_wrapper(fly_each_step, ymotor, step, start, stop)
@@ -538,10 +604,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Run the scan
     uid = yield from final_plan
 
-    # Testing 
-    # if ynum == 1:
-    if True:
-        yield from mov(ts_start, 2)
+    # Stop TimeSeries collection
+    try:
+        yield from abs_set(ts_start, 2, wait=True, timeout=1)
+    except Exception:
+        print('Timeout stopping time series at end of scan.')
 
     return uid
 
@@ -831,4 +898,3 @@ def scan_and_fly_xs2_xz(*args, extra_dets=None, **kwargs):
         extra_dets = []
     dets = [_xs] + extra_dets
     yield from scan_and_fly_base(dets, *args, **kwargs)
-

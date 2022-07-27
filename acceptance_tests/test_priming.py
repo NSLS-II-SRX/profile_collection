@@ -61,7 +61,7 @@ def scan_and_fly_test(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *,
     def fly_each_step(detectors, motor, step, firststep):
         "See http://nsls-ii.github.io/bluesky/plans.html#the-per-step-hook"
         # First, let 'scan' handle the normal y step, including a checkpoint.
-        yield from one_1d_step(detectors, motor, step)
+        yield from bps.one_1d_step(detectors, motor, step)
 
         # Now do the x steps.
         v = (xstop - xstart) / (xnum-1) / dwell  # compute "stage speed"

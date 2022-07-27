@@ -663,12 +663,13 @@ class SRXFlyer1Axis(Device):
 
     def kickoff(self, *, xstart, xstop, xnum, dwell, tacc):
         dets_by_name = {d.name: d for d in self.detectors}
-        t_delay = 0.000  # guess of 100 ms delay between kickoff and stage moving
+        t_delay = 0.025  # delay after each write/put to zebra, this value is taken from _stage_with_delay
 
         mode = self.mode.get()
         # print(f'{mode=}')
 
         self._encoder.pc.arm.put(0)
+        ttime.sleep(t_delay)
         self._mode = "kicked off"
         self._npts = int(xnum)
         if xstart < xstop:
@@ -690,22 +691,34 @@ class SRXFlyer1Axis(Device):
 
         if mode == 'position':
             self._encoder.pc.gate_start.put(xstart - direction * (pxsize / 2))
+            ttime.sleep(t_delay)
             self._encoder.pc.gate_step.put(extent + 0.051)
+            ttime.sleep(t_delay)
             self._encoder.pc.gate_width.put(extent + 0.050)
+            ttime.sleep(t_delay)
         elif mode == 'time':
             self._encoder.pc.gate_start.put(tacc + t_delay)
+            ttime.sleep(t_delay)
             self._encoder.pc.gate_step.put(extent / v)
+            ttime.sleep(t_delay)
             self._encoder.pc.gate_width.put(extent / v + 0.050)
+            ttime.sleep(t_delay)
 
 
         self._encoder.pc.pulse_start.put(0.0)
+        ttime.sleep(t_delay)
         self._encoder.pc.pulse_max.put(xnum)
+        ttime.sleep(t_delay)
         if mode == 'position':
             self._encoder.pc.pulse_step.put(pxsize)
+            ttime.sleep(t_delay)
             self._encoder.pc.pulse_width.put(pxsize - decrement)
+            ttime.sleep(t_delay)
         elif mode == 'time':
             self._encoder.pc.pulse_step.put(dwell)
+            ttime.sleep(t_delay)
             self._encoder.pc.pulse_width.put(dwell - decrement)
+            ttime.sleep(t_delay)
 
         # For dexela, we will use time triggering in a pixel, not position
         # if "dexela" in dets_by_name:
@@ -720,8 +733,11 @@ class SRXFlyer1Axis(Device):
         #     self._encoder.pulse4.input_addr.put(31)
 
         self._encoder.pc.enc_pos1_sync.put(1)  # Scanner X
+        ttime.sleep(t_delay)
         self._encoder.pc.enc_pos2_sync.put(1)  # Scanner Y
+        ttime.sleep(t_delay)
         self._encoder.pc.enc_pos3_sync.put(1)  # Scanner Z
+        ttime.sleep(t_delay)
         # self._encoder.pc.enc_pos4_sync.put(1)  # None
 
         # Arm the zebra
@@ -745,8 +761,16 @@ class SRXFlyer1Axis(Device):
         amk_debug_flag = False
 
         # Our acquisition complete PV is: XF:05IDD-ES:1{Dev:Zebra1}:ARRAY_ACQ
+        t0 = ttime.monotonic()
         while self._encoder.pc.data_in_progress.get() == 1:
             ttime.sleep(0.01)
+            if (ttime.monotonic() - t0) > 60:
+                print("{self.name} is behaving badly!")
+                self._encoder.pc.disarm.put(1)
+                ttime.sleep(0.100)
+                if self._encoder.pc.data_in_progress.get() == 1:
+                    raise TimeoutError
+
         # ttime.sleep(.1)
         self._mode = "complete"
         self._encoder.pc.block_state_reset.put(1)

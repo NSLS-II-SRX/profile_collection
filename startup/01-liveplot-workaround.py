@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import threading
 from bluesky.callbacks.core import CallbackBase, get_obj_fields, make_class_safe
 from ophyd.sim import det1, det2, motor
+import numpy as np
 
 
 import logging
@@ -313,9 +314,24 @@ class SRX1DTSFlyerPlot(QtAwareCallback):
     >>> my_plotter = LivePlot('det', 'motor', legend_keys=['sample'])
     >>> RE(my_scan, my_plotter)
     """
-    def __init__(self, y, x=None, xstart=0, xstep=1, xlabel=None, *, legend_keys=None, xlim=None, ylim=None,
-                 ax=None, fig=None, epoch='run', **kwargs):
-        super().__init__(use_teleporter=kwargs.pop('use_teleporter', None))
+
+    def __init__(
+        self,
+        y,
+        x=None,
+        xstart=0,
+        xstep=1,
+        xlabel=None,
+        *,
+        legend_keys=None,
+        xlim=None,
+        ylim=None,
+        ax=None,
+        fig=None,
+        epoch="run",
+        **kwargs
+    ):
+        super().__init__(use_teleporter=kwargs.pop("use_teleporter", None))
         self.__setup_lock = threading.Lock()
         self.__setup_event = threading.Event()
 
@@ -323,23 +339,28 @@ class SRX1DTSFlyerPlot(QtAwareCallback):
         self._xstep = xstep
         self._xind = 0
         self._xlabel = xlabel
+        self.x_data, self.y_data = [], []
 
         def setup():
             # Run this code in start() so that it runs on the correct thread.
             nonlocal y, x, legend_keys, xlim, ylim, ax, fig, epoch, kwargs
             import matplotlib.pyplot as plt
+
             with self.__setup_lock:
                 if self.__setup_event.is_set():
                     return
                 self.__setup_event.set()
             if fig is not None:
                 if ax is not None:
-                    raise ValueError("Values were given for both `fig` and `ax`. "
-                                     "Only one can be used; prefer ax.")
-                warnings.warn("The `fig` keyword arugment of LivePlot is "
-                              "deprecated and will be removed in the future. "
-                              "Instead, use the new keyword argument `ax` to "
-                              "provide specific Axes to plot on.")
+                    raise ValueError(
+                        "Values were given for both `fig` and `ax`. " "Only one can be used; prefer ax."
+                    )
+                warnings.warn(
+                    "The `fig` keyword arugment of LivePlot is "
+                    "deprecated and will be removed in the future. "
+                    "Instead, use the new keyword argument `ax` to "
+                    "provide specific Axes to plot on."
+                )
                 ax = fig.gca()
             if ax is None:
                 fig, ax = plt.subplots()
@@ -347,22 +368,22 @@ class SRX1DTSFlyerPlot(QtAwareCallback):
 
             if legend_keys is None:
                 legend_keys = []
-            self.legend_keys = ['scan_id'] + legend_keys
+            self.legend_keys = ["scan_id"] + legend_keys
             if x is not None:
                 self.x, *others = get_obj_fields([x])
             else:
-                self.x = 'seq_num'
+                self.x = "seq_num"
             self.y, *others = get_obj_fields([y])
             self.ax.set_ylabel(y)
-            if (self._xlabel is None):
-                self.ax.set_xlabel(x or 'sequence #')
+            if self._xlabel is None:
+                self.ax.set_xlabel(x or "sequence #")
             else:
                 self.ax.set_xlabel(self._xlabel)
             if xlim is not None:
                 self.ax.set_xlim(*xlim)
             if ylim is not None:
                 self.ax.set_ylim(*ylim)
-            self.ax.margins(.1)
+            self.ax.margins(0.1)
             self.kwargs = kwargs
             self.lines = []
             self.legend = None
@@ -375,12 +396,11 @@ class SRX1DTSFlyerPlot(QtAwareCallback):
     def start(self, doc):
         self.__setup()
         # The doc is not used; we just use the signal that a new run began.
-        self._epoch_offset = doc['time']  # used if self.x == 'time'
-        self.x_data, self.y_data = [], []
-        label = " :: ".join(
-            [str(doc.get(name, name)) for name in self.legend_keys])
-        kwargs = ChainMap(self.kwargs, {'label': label})
-        self.current_line, = self.ax.plot([], [], **kwargs)
+        self._epoch_offset = doc["time"]  # used if self.x == 'time'
+        self.clear_caches()
+        label = " :: ".join([str(doc.get(name, name)) for name in self.legend_keys])
+        kwargs = ChainMap(self.kwargs, {"label": label})
+        (self.current_line,) = self.ax.plot([], [], **kwargs)
         self.lines.append(self.current_line)
         legend = self.ax.legend(loc=0, title=self.legend_title)
         try:
@@ -391,43 +411,48 @@ class SRX1DTSFlyerPlot(QtAwareCallback):
             self.legend = legend.draggable(True)
         super().start(doc)
 
-    def event(self, doc):
-        "Unpack data from the event and call self.update()."
-        # This outer try/except block is needed because multiple event
-        # streams will be emitted by the RunEngine and not all event
-        # streams will have the keys we want.
+    def event_page(self, doc):
         try:
             # This inner try/except block handles seq_num and time, which could
             # be keys in the data or accessing the standard entries in every
             # event.
             try:
-                new_x = doc['data'][self.x]
+                new_x = doc["data"][self.x]
             except KeyError:
-                if self.x in ('time', 'seq_num'):
+                if self.x in ("time", "seq_num"):
                     new_x = doc[self.x]
                 else:
                     raise
-            new_y = doc['data'][self.y]
+            new_y = doc["data"][self.y]
+            new_x_ind = doc["data"]["index_count"]
         except KeyError:
             # wrong event stream, skip it
             return
 
+        new_x, new_y = np.asarray(new_x), np.asarray(new_y)
+
         # Special-case 'time' to plot against against experiment epoch, not
         # UNIX epoch.
-        if self.x == 'time' and self._epoch == 'run':
+        if self.x == "time" and self._epoch == "run":
             new_x -= self._epoch_offset
 
-        #overright the x value
-        self._xind = len(new_y)
-        new_x = [self._xstart + self._xstep * N for N in range(len(new_y))]
+        # override the x value
+        new_x = np.asarray(new_x_ind)  # Index
+        new_x = new_x * self._xstep + self._xstart
 
         self.update_caches(new_x, new_y)
         self.update_plot()
-        super().event(doc)
+
+        super().event_page(doc)
+
+    def clear_caches(self):
+        self.x_data = np.array([])
+        self.y_data = np.array([])
 
     def update_caches(self, x, y):
-        self.y_data = y
-        self.x_data = x
+        if y.size:
+            self.y_data = np.append(self.y_data, y)
+            self.x_data = np.append(self.x_data, x)
 
     def update_plot(self):
         self.current_line.set_data(self.x_data, self.y_data)
@@ -437,15 +462,15 @@ class SRX1DTSFlyerPlot(QtAwareCallback):
         self.ax.figure.canvas.draw_idle()
 
     def stop(self, doc):
-        if not self.x_data:
-            print('LivePlot did not get any data that corresponds to the '
-                  'x axis. {}'.format(self.x))
-        if not self.y_data:
-            print('LivePlot did not get any data that corresponds to the '
-                  'y axis. {}'.format(self.y))
+        if not len(self.x_data):
+            print("LivePlot did not get any data that corresponds to the " "x axis. {}".format(self.x))
+        if not len(self.y_data):
+            print("LivePlot did not get any data that corresponds to the " "y axis. {}".format(self.y))
         if len(self.y_data) != len(self.x_data):
-            print('LivePlot has a different number of elements for x ({}) and'
-                  'y ({})'.format(len(self.x_data), len(self.y_data)))
+            print(
+                "LivePlot has a different number of elements for x ({}) and"
+                "y ({})".format(len(self.x_data), len(self.y_data))
+            )
         super().stop(doc)
 
 
@@ -486,15 +511,29 @@ class TSLiveGrid(QtAwareCallback):
     --------
     :class:`bluesky.callbacks.mpl_plotting.LiveScatter`.
     """
-    def __init__(self, raster_shape, I, *,  # noqa: E741
-                 clim=None, cmap='viridis',
-                 xlabel='x', ylabel='y', extent=None, aspect='equal',
-                 ax=None, x_positive='right', y_positive='up', **kwargs):
+
+    def __init__(
+        self,
+        raster_shape,
+        I,
+        *,  # noqa: E741
+        clim=None,
+        cmap="viridis",
+        xlabel="x",
+        ylabel="y",
+        extent=None,
+        aspect="equal",
+        ax=None,
+        x_positive="right",
+        y_positive="up",
+        **kwargs
+    ):
         super().__init__(**kwargs)
         self.__setup_lock = threading.Lock()
         self.__setup_event = threading.Event()
+        self.x_data, self.y_data = [], []
 
-        def setup():
+        def setup(doc):
             # Run this code in start() so that it runs on the correct thread.
             nonlocal raster_shape, I, clim, cmap, xlabel, ylabel, extent  # noqa: E741
             nonlocal aspect, ax, x_positive, y_positive, kwargs
@@ -504,6 +543,7 @@ class TSLiveGrid(QtAwareCallback):
                 self.__setup_event.set()
             import matplotlib.pyplot as plt
             import matplotlib.colors as mcolors
+
             if ax is None:
                 fig, ax = plt.subplots()
             ax.cla()
@@ -525,13 +565,16 @@ class TSLiveGrid(QtAwareCallback):
             self.x_positive = x_positive
             self.y_positive = y_positive
 
+            self.snake = doc["scan"]["snake"]
+            self.nx, self.ny = doc["scan"]["shape"]
+
             self._index = 0
             self._start = 0
 
         self.__setup = setup
 
     def start(self, doc):
-        self.__setup()
+        self.__setup(doc)
         if self.im is not None:
             raise RuntimeError("Can not re-use LiveGrid")
         self._Idata = np.ones(self.raster_shape) * np.nan
@@ -540,67 +583,80 @@ class TSLiveGrid(QtAwareCallback):
         # origin must be 'lower' for the plot to fill in correctly
         # (the first voxel filled must be closest to what mpl thinks
         # is the 'lower left' of the image)
-        im = self.ax.imshow(self._Idata, norm=self._norm,
-                            cmap=self.cmap, interpolation='none',
-                            extent=extent, aspect=self.aspect,
-                            origin='lower')
+        im = self.ax.imshow(
+            self._Idata,
+            norm=self._norm,
+            cmap=self.cmap,
+            interpolation="none",
+            extent=extent,
+            aspect=self.aspect,
+            origin="lower",
+        )
 
         # make sure the 'positive direction' of the axes matches what
         # is defined in axes_positive
         xmin, xmax = self.ax.get_xlim()
-        if ((xmin > xmax and self.x_positive == 'right') or
-                (xmax > xmin and self.x_positive == 'left')):
+        if (xmin > xmax and self.x_positive == "right") or (xmax > xmin and self.x_positive == "left"):
             self.ax.set_xlim(xmax, xmin)
-        elif ((xmax >= xmin and self.x_positive == 'right') or
-                (xmin >= xmax and self.x_positive == 'left')):
+        elif (xmax >= xmin and self.x_positive == "right") or (xmin >= xmax and self.x_positive == "left"):
             self.ax.set_xlim(xmin, xmax)
         else:
             raise ValueError('x_positive must be either "right" or "left"')
 
         ymin, ymax = self.ax.get_ylim()
-        if ((ymin > ymax and self.y_positive == 'up') or
-                (ymax > ymin and self.y_positive == 'down')):
+        if (ymin > ymax and self.y_positive == "up") or (ymax > ymin and self.y_positive == "down"):
             self.ax.set_ylim(ymax, ymin)
-        elif ((ymax >= ymin and self.y_positive == 'up') or
-                (ymin >= ymax and self.y_positive == 'down')):
+        elif (ymax >= ymin and self.y_positive == "up") or (ymin >= ymax and self.y_positive == "down"):
             self.ax.set_ylim(ymin, ymax)
         else:
             raise ValueError('y_positive must be either "up" or "down"')
 
         self.im = im
-        self.ax.set_title('scan {uid} [{sid}]'.format(sid=doc['scan_id'],
-                                                      uid=doc['uid'][:6]))
-        self.snaking = doc.get('snaking', (False, False))
+        self.ax.set_title("scan {uid} [{sid}]".format(sid=doc["scan_id"], uid=doc["uid"][:6]))
+        self.snaking = doc.get("snaking", (False, False))
 
         cb = self.ax.figure.colorbar(im, ax=self.ax)
         cb.set_label(self.I)
         super().start(doc)
 
-    def event(self, doc):
-        if self.I not in doc['data']:
+    def event_page(self, doc):
+        try:
+            # This inner try/except block handles seq_num and time, which could
+            # be keys in the data or accessing the standard entries in every
+            # event.
+            new_y = doc["data"][self.I]
+            new_x_ind = doc["data"]["index_count"]
+        except KeyError:
+            # wrong event stream, skip it
             return
 
-        I = np.array(doc['data'][self.I])  # noqa: E741
+        new_x, new_y = np.asarray(new_x_ind), np.asarray(new_y)
+        if len(new_y):
+            self.y_data = np.append(self.y_data, new_y)
+            self.x_data = np.append(self.x_data, new_x)
 
-        # There can be old data still in the TimeSeries PV,
-        # which can then plot and increase the index because it is the full row.
-        # Here, we wait for an empty array meaning the TimeSeries has been erased
-        # and then start plotting
-        if I.shape[0] == 0:
-            self._start = 1
+            n_total = self.nx * self.ny
+            if len(self.y_data) > n_total:
+                image_data = self.y_data[:n_total]
+            else:
+                image_data = np.pad(self.y_data, (0, n_total - len(self.y_data)), constant_values=np.nan)
+            image_data = image_data.reshape([self.ny, self.nx])
 
-        if self._start:
-            new_I = np.ones((self.raster_shape[1], )) * np.nan
-            new_I[:I.shape[0]] = I
-            if self.snaking[1] and (self._index % 2):
-                new_I = new_I[::-1]
-            self.update(new_I)
-            if I.shape[0] == self.raster_shape[1]:
-                self._index += 1
-        super().event(doc)
+            if self.snake:
+                ind = np.arange(1, self.ny, 2)
+                image_data[ind] = np.fliplr(image_data[ind])
+
+            self.update(image_data)
+
+        super().event_page(doc)
+
+    def clear_caches(self):
+        self.x_data = np.array([])
+        self.y_data = np.array([])
 
     def update(self, I):  # noqa: E741
-        self._Idata[self._index, :] = I
+        # self._Idata[self._index, :] = I
+        self._Idata = I
         if self.clim is None:
             self.im.set_clim(np.nanmin(self._Idata), np.nanmax(self._Idata))
 
@@ -773,8 +829,3 @@ class HackLiveFlyerPlot(QtAwareCallback):
             print('LivePlot has a different number of elements for x ({}) and'
                   'y ({})'.format(len(self.x_data), len(self.y_data)))
         super().stop(doc)
-
-
-
-
-

@@ -7,10 +7,10 @@ print(f"Loading {__file__}...")
 # import os
 # if 'TOUCHBEAMLINE' in os.environ and os.environ['TOUCHBEAMLINE'] == 1:
 #     print('int')
-# 
+#
 # if os.getenv("TOUCHBEAMLINE", "0") == "1":
 #     print('str')
-# 
+#
 # raise Exception
 
 
@@ -19,6 +19,7 @@ print(f"Loading {__file__}...")
 # merged/released.
 from datetime import datetime
 from ophyd.signal import EpicsSignalBase, EpicsSignal, DEFAULT_CONNECTION_TIMEOUT
+from bluesky_queueserver import is_re_worker_active, parameter_annotation_decorator
 
 def print_now():
     return datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S.%f')
@@ -187,3 +188,8 @@ RE.md = PersistentDict(runengine_metadata_dir)
 RE.md["beamline_id"] = "SRX"
 RE.md["md_version"] = "1.0"
 
+
+# The following plan stubs are automatically imported in global namespace by 'nslsii.configure_base', 
+# but have signatures that are not compatible with the Queue Server. They should not exist in the global
+# namespace, but can be accessed as 'bps.one_1d_step' etc. from other plans.
+del one_1d_step, one_nd_step, one_shot

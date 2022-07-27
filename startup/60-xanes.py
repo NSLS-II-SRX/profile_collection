@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 
 import bluesky.plans as bp
 from bluesky.plans import list_scan
-from bluesky.plan_stubs import (mv, one_1d_step)
+import bluesky.plan_stubs as bps
+from bluesky.plan_stubs import mv
 from bluesky.preprocessors import (finalize_wrapper, subs_wrapper)
 from bluesky.utils import short_uid as _short_uid
 from epics import PV
@@ -29,8 +30,8 @@ def xanes_textout(scan=-1, header=[], userheader={}, column=[], usercolumn={},
         filedir = userdatadir
     h = db[scan]
     # get events using fill=False so it does not look for the metadata in filestorage with reference (hdf5 here)
-    events = [document for name, document 
-              in db.get_documents(h, fill=False, stream_name="primary") 
+    events = [document for name, document
+              in db.get_documents(h, fill=False, stream_name="primary")
               if name=="event"]
 
     if (filename_add != ''):
@@ -207,10 +208,14 @@ def xanes_afterscan_plan(scanid, filename, roinum):
                   output = False, filename_add = filename, filedir=userdatadir)
 
 
+@parameter_annotation_decorator({
+    "parameters": {
+        "det_xs": {"default": "'xs'"},
+    }
+})
 def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
                det_xs=xs, harmonic=1, detune=0, align=False, align_at=None,
                roinum=1, shutter=True, per_step=None):
-
     '''
     erange (list of floats): energy ranges for XANES in eV, e.g. erange = [7112-50, 7112-20, 7112+50, 7112+120]
     estep  (list of floats): energy step size for each energy range in eV, e.g. estep = [2, 1, 5]
@@ -228,7 +233,6 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     shutter:  instruct the scan to control the B shutter [bool]
     per_step:  use a custom function for each energy point
     '''
-
     # Make sure user provided correct input
     if (erange is []):
         raise AttributeError("An energy range must be provided in a list by means of the 'erange' keyword.")
@@ -448,15 +452,15 @@ def xanes_batch_plan(xypos=[], erange=[], estep=[], acqtime=1.0,
         print(f'Moving to:')
         print(f'\tx = {xypos[i][0]}')
         print(f'\ty = {xypos[i][1]}')
-        hf_stage.x.move(xypos[i][0])
-        hf_stage.y.move(xypos[i][1])
+        yield from mov(nano_stage.sx, xypos[i][0])
+        yield from mov(nano_stage.sy, xypos[i][1])
         if (len(xypos[i]) == 3):
             print(f'\tz = {xypos[i][2]}')
-            hf_stage.z.move(xypos[i][2])
+            yield from mov(nano_stage.sz, xypos[i][2])
 
         # Move above edge and peak up
         if (i % peakup_N == 0):
-            yield from mv(energy, peakup_E)
+            yield from mov(energy, peakup_E)
             yield from peakup_fine()
 
         # Run the energy scan
@@ -465,7 +469,7 @@ def xanes_batch_plan(xypos=[], erange=[], estep=[], acqtime=1.0,
         # Wait
         if (i != (N-1)):
             print(f'Scan complete. Waiting {waittime} seconds...')
-            bps.sleep(waittime)
+            yield from bps.sleep(waittime)
 
 
 def hfxanes_ioc(erange=[], estep=[], acqtime=1.0, samplename='', filename='',

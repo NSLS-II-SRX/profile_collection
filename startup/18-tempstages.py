@@ -20,8 +20,17 @@ class XFMstage(Device):
     y = Cpt(EpicsMotor, 'Y}Mtr')
     z = Cpt(EpicsMotor, 'Z}Mtr')
 
-
 confocal_stage = XFMstage('XF:05IDD-ES:1{Stg:Cxrf-Ax:', name='confocal_stage')
+
+
+# XFM slit setup for cryo/confocal experiments
+class XFMslit(Device):
+    h_trans = Cpt(EpicsMotor, 'HT}Mtr')
+    h_gap = Cpt(EpicsMotor, 'HA}Mtr')
+    v_trans = Cpt(EpicsMotor, 'VT}Mtr')
+    v_gap = Cpt(EpicsMotor, 'VA}Mtr')
+
+confocal_slit = XFMslit('XF:05IDD-OP:1{Slt:Cxrf-Ax:', name='confocal_slit')
 
 
 # Stage setup for Dexela beamstop
