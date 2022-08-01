@@ -559,7 +559,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             #     print(f'Stop  = {stop}')
             # print(' x3x time-series erase-start...\n')
             try:
-                yield from abs_set(ts_start, 0, timeout=3)
+                yield from abs_set(ts_start, 0, timeout=3, wait=True)
                 # print(' x3x time-series erase-start...done\n')
             except Exception as e:
                 print('Timeout on starting time-series! Continuing...')
