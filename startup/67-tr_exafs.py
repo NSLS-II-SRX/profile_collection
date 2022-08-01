@@ -6,38 +6,38 @@ import matplotlib.pyplot as plt
 from itertools import product
 import logging
 import os
-import epics
 
 #a lot of the these are currently useless...
 import bluesky.plans as bp
-from bluesky.plans import (rel_scan, list_scan)
-from bluesky.plan_stubs import (mov, movr, one_1d_step)
-from bluesky.preprocessors import (finalize_wrapper, subs_wrapper)
-from bluesky.utils import short_uid as _short_uid
+from bluesky.plan_stubs import (mov, movr)
 
 # Notes from Andy
 '''User directory is 
 /home/xf05id1/current_user_data
-
     with open(userlogfile, 'a') as userlogf:
         userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype + '\n')'''
 
 # Setting up a logging file
-logfile = ttime.strftime("%y-%m-%d_T%H%M%S",ttime.localtime(ttime.time())) + '_logfile.txt'
-logdir = '/home/xf05id1/current_user_data/log_files/'
-os.makedirs(logdir, exist_ok=True)
+def start_logging():
+    logfile = ttime.strftime("%y-%m-%d_T%H%M%S",ttime.localtime(ttime.time())) + '_logfile.txt'
+    logdir = '/home/xf05id1/current_user_data/log_files/'
+    os.makedirs(logdir, exist_ok=True)
 
-logging.basicConfig(filename=logdir+logfile, 
-                    level=logging.DEBUG,
-                    format='%(asctime)s| %(name)-4s: %(levelname)-12s %(message)s',
-                    datefmt='%m-%d %H:%M')
+    logging.basicConfig(filename=logdir+logfile, 
+                        level=logging.DEBUG,
+                        format='%(asctime)s| %(name)-4s: %(levelname)-12s %(message)s',
+                        datefmt='%m-%d %H:%M')
 
-console = logging.StreamHandler()
-console.setLevel(logging.INFO)
-formatter = logging.Formatter('%(message)s')
-console.setFormatter(formatter)
-logging.getLogger().addHandler(console)
-main_logger = logging.getLogger('main')
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(message)s')
+    console.setFormatter(formatter)
+    logging.getLogger().addHandler(console)
+    main_logger = logging.getLogger('main')
+    
+    note('Log file start.')
+
+    return main_logger
 
 # Log function to print to console and log file. Replaces print function.
 def log(message):
@@ -48,13 +48,15 @@ def log(message):
 def note(message):
     print(message)
     main_logger.debug(message)
-note('Log file start.')
+
 
 # Changing VLM from production to laser VLM
 nano_flying_zebra_laser = SRXFlyer1Axis(
     list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="nano_flying_zebra_laser"
 )
 set_flyer_zebra_stage_sigs(nano_flying_zebra_laser, 'time')
+
+# something with nano_flying_zebra_laser._mode(SRXmode.fly)
 
 
 # Laser controller as defined in pyEPICS
@@ -79,28 +81,12 @@ laser.power.set(0)
 laser.hold.set(0)
 laser.ramp.set(0)
 
-# Create the fake laser control
-'''class fake_positioner(PVpositioner):
-    setpoint = Cpt(EpicsSignal, "")
-    readback = Cpt(EpicsSignalR0, "")
-    done = Cpt(EpicsSignalR0, "")
-
-laser_signaler = fake_positioner('', name='laser_signaler')'''
-
-# Create actual laser controller
-'''class laser_template(PVpositioner):
-    setpoint = Cpt(EpicsSignal, "XF:05IDD-ES{I0:3}A0:1-SP")
-    readback = Cpt(EpicsSignalR0, "XF:05IDD-ES{I0:3}A0:1-RB")
-    done = Cpt(EpicsSignalR0, "XF:05IDD-ES:1{nKB:Smpl-Ax:zth}Mtr.MOVN")
-
-laser = laser_template('', name='laser')'''
 
 # Defining a new scaler (sclr2) with photodiode channel included
 # All of the following code will use sclr2 even when ip is not needed
 # Will haveing two objects with the possibility to read from the same detectors going to cause problems??
 '''sclr2 = SRXScaler("XF:05IDD-ES:1{Sclr:1}", name="sclr2")
 sclr2.read_attrs = ["channels.chan2", "channels.chan3", "channels.chan4", "channels.chan5"]
-
 i0_channel = getattr(sclr2.channels, "chan2")
 i0_channel.name = "sclr_i0"
 it_channel = getattr(sclr2.channels, "chan4")
@@ -110,24 +96,28 @@ im_channel.name = "sclr_im"
 # How to confifure as voltage measurement??
 vp_channel = getattr(sclr2.channels, "chan5")
 vp_channel.name = "sclr_vp"
-
 i0 = sclr2.channels.chan2
 it = sclr2.channels.chan4
 im = sclr2.channels.chan3
 vp = sclr2.channels.chan5'''
 
 
+#######################################
+###     Main Utitiity Functions     ###
+#######################################
+
+
 def gen_xye_pos(erange = [11817, 11862, 11917, 12267], estep = [2, 0.5, 5], filedir='', filename='', start=[], end=[], spacing=10, replicates=1):
 
     '''
-    erange      (array)
-    estep       (array)
-    filedir     (str)
-    filename    (str)
-    start       (array)
-    end         (array)
-    spacing     (float)
-    replicates  (int)
+    erange      (array) energy range for XANES/EXAFS in eV. e.g., [11867-50, 11867-20, 11867+50, 11867+400]
+    estep       (array) energy step size for each energy range in eV. e.g., = [2, 0.5, 5]
+    filedir     (str)   file directory for where to save xye position data
+    filename    (str)   file name for where to save xye position data
+    start       (array) [x, y] coordinates for starting corner of rectangular ROI. nano_stage_x
+    end         (array) [x, y] coordinates for ending corner of rectangular ROI. nano_stage_y
+    spacing     (float) Spacing in microns between individual event coordinates. Large enough to avoid overlap
+    replicates  (int)   Number of replicates at each energy of interest
     '''
 
     # Make sure user provided correct input
@@ -177,67 +167,48 @@ def gen_xye_pos(erange = [11817, 11862, 11917, 12267], estep = [2, 0.5, 5], file
     xye_pos = np.asarray(xye_pos)
 
     # Save the positions and energies with 
-    np.savetxt(filedir+filename, xye_pos, delimiter=',')
+    np.savetxt(filedir+filename, xye_pos, delimiter=',', fmt='%1.4f')
     note('xye_pos saved to ' + filedir+filename)
 
 
 def read_xye_pos(filedir, filename):
 
     '''
-    filedir     (str)
-    filename    (str)
+    filedir     (str)   file directory for where to load xye position data
+    filename    (str)   file name for where to load xye position data
     '''
 
+    # Checking for filedir and filename. Loading most recent if not
+    if (filedir == '') or (filename == ''):
+        log("No file location information given. Loading most recent.")
+        # Setting up a logging file
+        filedir = '/home/xf05id1/current_user_data/xye_data/'
+        filename =  os.listdir(calibdir)[-1]
+
+    # Reading data into an array
     xye_pos = np.genfromtxt(filedir+filename, delimiter=',')
     return xye_pos
-
-'''def laser_setup(power, time_int, calibration=[a,b,c], ramp=5):
-
-
-    power       (float) Target laser power. Controlled by calibration curve
-    time_int    (float) Time between specified voltage commands in seconds
-    calibration (list)  Quadratic coefficients between modulation voltage and laser power past objective lens
-    ramp        (float) Time for ramp up to target laser power
-
-
-    # Log laser paramters used
-    note(f'Laser setup for {power} mW ramped for {ramp} secs.')
-    note(f'Calibration parameters used: {calibration}.')
-
-    # Determine threshold voltage and voltage for target output power
-    voltage = []
-    for i in [0,power]:
-        P = np.asarray(calibration) - np.array([0,0,i])
-        roots = np.array([(-P[1]+np.sqrt(P[1]*P[1]-4*P[0]*P[2]))/(2*P[0]), 
-                            (-P[1]-np.sqrt(P[1]*P[1]-4*P[0]*P[2]))/(2*P[0])])
-        voltage.extend(roots[(roots<2) & (roots>0)])
-    if (voltage == []) or (len(voltage) != 2):
-        log("Double check power calibration. Expected voltages exceed limits or are ambiguous.") #raise errors instead
-
-    # Create list of target voltages to build ramp-hold power curve
-    if ramp == 0:
-        volt_lst = [voltage[1]]
-    else:
-        volt_lst = np.linspace(voltage[0],voltage[1], ramp/time_int)
-
-    note(f'Volt list: {volt_list}')
-    note(f'Time interval: {time_int}')
-    return volt_lst, time_int'''
 
 
 def laser_on(power, hold, ramp=5, delay=0):
 
     '''
-    volt_lst    (list)  Target laser power. Controlled by calibration curve
-    time_int    (float) Time between specified voltage commands in seconds
-    hold        (float) Hold time at target laser power. If -1, then holds indefinitely
+    All variables sans delay are passed to laser_controller.py via laser object.
+    power       (float) Target laser power in mW
+    hold        (float) Hold time at target laser power in sec. Not currently used
+    ramp        (float) Ramp time to target laser power in sec
+    delay       (float) Delay befor triggering laser in sec
     '''
+
+    # Make sure user provided correct input
+    if any((power < 0), (hold < 0), (ramp < 0), (delay < 0)):
+        raise ValueError("Values must be positive floats.")
 
     # Log some info
     note('Laser startup!')
     note(f'{power} mW power, {hold} sec hold, {ramp} sec ramp.')
     
-    # Set up variables
+    # Set up variables. Settle_time to not overwhelm zebra
     yield from abs_set(laser.power, power, settle_time=0.010)
     yield from abs_set(laser.hold, hold, settle_time=0.010)
     yield from abs_set(laser.ramp, ramp, settle_time=0.010)
@@ -255,14 +226,8 @@ def laser_off():
     yield from abs_set(laser.signal, 0)
 
 
-
-
-
-a = 0
-b = 0
-c = 0
 def beam_knife_edge_scan(beam, direction, edge, distance, stepsize, 
-                         acqtime=1.0, calibration=[a,b,c], shutter=True):
+                         acqtime=1.0, shutter=True):
 
     '''
     beam        (str)   'x-ray', 'laser', or 'both' Specifies appropriate detectors
@@ -271,7 +236,6 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
     distance    (float) Distance in µm to either side of feature to scan across
     stepsize    (float) Step size in µm of scans
     acqtime     (float) Acquisition time of detectors
-    calibration (list)  Quadratic coefficients between modulation voltage and laser power past objective lens 
     shutter     (bool)  Use X-rays or not
     '''
     
@@ -316,8 +280,8 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
         
         # Turn laser on if used        
         if vlaser_on:
-            # WIP Change this
-            yield from laser_on(laser_setup(4, 0.05, '', calibration=calibration), -1) #arbitrary 4 mW power
+            yield from laser_on(4, 200, ramp=5, delay=0) #arbitrary 4 mW power
+            yield from bps.sleep(5) # let laser reach full power
 
         # Specifying scan type and *args
         if direction == 'x':
@@ -345,32 +309,44 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
 
     # Plot and process the data
     beam_param = []
+    ext_scan = False 
     for beam_1 in ['laser', 'x-ray']:
-        if beam_1 not in ['laser', 'both']:
-            continue
-        try:
-            cent_position, FWHM = beam_knife_edge_plot(beam=beam_1, scan_motor=scan_motor, plotme=plotme)
-        except: # Errors for nonideal fitting. Trying to fix by extended scan range
-            try:
-                if beam_1 == 'x-ray':
-                    log('Already using doubled scan range.')
-                    raise RuntimeError()
-                log('Doubling scan range.')
-                yield from _plan(distance_1 = 2 * distance)
-                cent_position, FWHM = beam_knife_edge_plot(beam=beam_1, scan_motor=scan_motor, plotme=plotme)
-            except:
-                if (not shutter) & (beam_1 != 'laser'):
-                    log('No x-rays to properly perform knife edge scan.')
-                    cent_position = edge[variables.index(direction)]
-                    FWHM = -1 # this way we obviously know something is wrong
-                else:
-                    log('Knife edge scan failed to find position.')
-                    log('Insurmountable error.')
-                    raise RuntimeError()
-        
-        beam_param.append(cent_position, FWHM)
 
-    return beam_param # Cent_position then FWHM. Laser parameters first if 'both'
+        # If laser was not used, skips to checking x-ray signal
+        if beam not in ['laser', 'both']: #seeing if the original beam used the laser
+            continue #if not skips to only fitting x-ray data
+
+        # When checking x-rays, see if any x-rays were avialable
+        if (beam_1 == 'x-ray') & (not shutter):
+            log('No x-rays to properly perform knife edge scan.')
+            cent_position = edge[variables.index(direction)]
+            fwhm = -1 # this way we obviously know something is wrong
+            continue
+        
+        # Try to find edge
+        try:
+            cent_position, fwhm = beam_knife_edge_plot(beam=beam_1, scan_motor=scan_motor, plotme=plotme)
+
+        # RuntimeErrors for nonideal fitting. Trying to fix by extended scan range    
+        except RuntimeError: 
+            if not ext_scan:
+                try:
+                    log('Doubling scan range.')
+                    yield from _plan(distance_1 = 2 * distance)
+                    ext_scan = True
+                    cent_position, fwhm = beam_knife_edge_plot(beam=beam_1, scan_motor=scan_motor, plotme=plotme)
+            
+                except RuntimeError:
+                    log('Knife edge scan failed to find position.')
+                    raise RuntimeError()
+           
+            else:
+                log('Knife edge scan failed to find position.')
+                raise RuntimeError()
+        
+        beam_param.append(cent_position, fwhm)
+
+    return beam_param # Cent_position then fwhm. Laser parameters first if 'both'
 
 
 def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True, 
@@ -383,7 +359,7 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
     plot_guess  (bool)  If true, plot guess function. Helps if curve fitting is poor
     bin_low     (int)   Start bin of table data #number for foil of interest
     bin_high    (int)   End bin of table data
-    plotme      (ax)    pyplot axis. Creates one if None.
+    plotme      (ax)    Pyplot axis. Creates one if None.
     '''
 
     # Get the scanid
@@ -408,12 +384,12 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
             break
         except:
             loop_counter += 1
-            time.sleep(1) #are we not supposed to use sleep inside the run engine??
+            ttime.sleep(1) #are we not supposed to use sleep inside the run engine??
 
     # Check if we haz data
     if (not haz_data):
         log('Data collection timed out!')
-        return
+        raise OSError()
 
     # Get the data from either x3 or the photodiode
     if (beam == 'x-ray'):
@@ -422,9 +398,11 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
         y = tbl['it'].values[0] #redifined for when channel 4 is using the photodiode
 
     # Get position data
-    x = np.array(tbl[pos])[0]
-    if (x.size ==1):
-        x = np.array(tbl[pos])
+    # x = np.array(tbl[pos])[0]
+    # if (x.size ==1):
+    #    x = np.array(tbl[pos])
+    ## Need to interpolate x values
+    x = ???
     x, y = x.astype(np.float64), y.astype(np.float64)
     note(f'Data acquired for {beam}! Now fitting...')
 
@@ -444,13 +422,13 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
         log('Raw fit failed.')
         popt, pcov = p_guess, 2*p_guess #guaranteed to raise an error later
     cent_position = popt[2]
-    FWHM = 2 * np.sqrt(2 * np.log(2))*popt[1]
+    fwhm = 2 * np.sqrt(2 * np.log(2))*popt[1]
     perr = np.sqrt(np.diag(pcov))
     frac_err = np.abs(perr/popt)
 
     # Report useful data
     log(f'The beam center is at {cent_position:.4f} µm along ' + variables[i] + '.')
-    log(f'The beam FWHM is {FWHM:.4f} µm along ' + variables[i] + '.')
+    log(f'The beam fwhm is {fwhm:.4f} µm along ' + variables[i] + '.')
 
     # Set plotting variables
     x_plot = np.linspace(np.amin(x), np.amax(x), num=100)
@@ -494,10 +472,10 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
         log('Poor fitting. Coefficient error exceeds predicted values.')
         raise RuntimeError()
 
-    return cent_position, FWHM
+    return cent_position, fwhm
 
 
-def auto_beam_alignment(v_edge, h_edge, distance, stepsize, acqtime=1.0, calibration=[a,b,c],
+def auto_beam_alignment(v_edge, h_edge, distance, stepsize, acqtime=1.0,
                         shutter=True, check=False):
 
     '''
@@ -506,7 +484,6 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize, acqtime=1.0, calibra
     distance        (float) Distance in µm to either side of feature to scan across
     stepsize        (float) Step size in µm of scans
     acqtime         (float) Acquisition time of detectors
-    calibration     (list)  Quadratic coefficients between modulation voltage and laser power past objective lens
     shutter         (bool)  Use X-rays or not
     check           (bool)  If True, double check the laser adjustment and correspondence between sample and vlm stages
     '''
@@ -527,8 +504,7 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize, acqtime=1.0, calibra
 
         # Determine beam positions along variable
         beam_param = yield from beam_knife_edge_scan('both', variables[i], j, distance=distance, stepsize=stepsize, 
-                                                                acqtime=acqtime, calibration=calibration, 
-                                                                shutter=shutter )
+                                                                acqtime=acqtime, shutter=shutter )
         
         # Adjust VLM position
         offset = beam_param[2] - beam_param[0]
@@ -544,8 +520,7 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize, acqtime=1.0, calibra
 
             # Re-determine laser position along variable
             new_laser_pos, new_laser_size = yield from beam_knife_edge_scan('laser', variables[i], j, distance=distance, stepsize=stepsize, 
-                                                                  acqtime=acqtime, calibration=calibration, 
-                                                                  shutter=shutter )
+                                                                  acqtime=acqtime, shutter=shutter )
             
             # Adjust VLM position
             new_offset = beam_param[2] - new_laser_pos
@@ -565,7 +540,7 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize, acqtime=1.0, calibra
 
 
 def laser_time_series(power, hold, ramp=5, dets=[xs, merlin, nano_vlm], 
-                      binning=1, acqtime=0.001, shutter=True):
+                      acqtime=0.001, shutter=True):
     
     '''
     power
@@ -614,8 +589,6 @@ def laser_time_series(power, hold, ramp=5, dets=[xs, merlin, nano_vlm],
         merlin.cam.stage_sigs['tigger_mode'] = 0
         merlin.cam.stage_sigs['acquire_time'] = acqtime
         merlin.cam.stage_sigs['acquire_period'] = acqtime + 0.005 #can I implement binning via the stage_sigs??
-        merlin.cam.stage_sigs['binx'] = binning
-        merlin.cam.stage_sigs['biny'] = binning
         merlin.cam.stage_sigs['num_images'] = N_tot #this is not supposed to be one
         merlin.hdf5.stage_sigs['num_capture'] = N_tot
         merlin._mod = SRXMode.step #what does this do???
@@ -645,6 +618,7 @@ def laser_time_series(power, hold, ramp=5, dets=[xs, merlin, nano_vlm],
     # Turn on laser and start counting!
     yield from laser_on(power, hold, ramp, delay=0) #if laser is in an opyd object, can it also be triggered at same time as everythin else??
     yield from count(dets, num=N_tot, md=scan_md) #not actually counting
+    yield from laser_off()
 
     # Close shutter
     yield from check_shutter(shutter, 'Close')
@@ -656,7 +630,7 @@ def laser_time_series(power, hold, ramp=5, dets=[xs, merlin, nano_vlm],
 
 
 def tr_xanes_plan(xye_pos, power, hold, v_edge, h_edge, distance, stepsize, N_start=0, z_pos=[], ramp=5,
-                  dets=[xs, merlin, nano_vlm], acqtime=0.001, calibration=[a,b,c],
+                  dets=[xs, merlin, nano_vlm], acqtime=0.001,
                   waittime=5, peakup_N=15, align_N=15, shutter=True):
 
     '''
@@ -672,7 +646,6 @@ def tr_xanes_plan(xye_pos, power, hold, v_edge, h_edge, distance, stepsize, N_st
     ramp        (float) Time for ramp up to target laser power
     dets        (list)  detectors used to collect time-resolved data
     acqtime     (float) Acquisition/integration time. Defualt is 0.001 seconds
-    calibration (list)  Quadratic coefficients between modulation voltage and laser power past objective lens
     waittime    (float) Wait time between collecting times series
     peakup_N    (int)   Run a peakup every peakup_N time series. Consider the number of replicate energies
     align_N     (int)   Run auto beam alignment align_N time series
@@ -796,43 +769,7 @@ def tr_xanes_plan(xye_pos, power, hold, v_edge, h_edge, distance, stepsize, N_st
         # Wait
         if (i != (N-1)):
             log(f'Waiting {waittime} seconds until next event starts.')
-            bps.sleep(waittime)
+            yield from bps.sleep(waittime)
 
     # Log end of batch
     log('Batch is complete!!!')
-
-
-
-'''#Not for bluesky
-import inotify.adapters
-from inotify_simple import flags
-import smtplib
-from email.message import EmailMessage
-
-
-def _main():
-    i = inotify.adapters.Inotify(block_duration_s=300)
-    i.add_watch('/nsls2/data/srx/legacy/xf05id1/experiments/2022_cycle2/')
-    i.add_watch('/nsls2/users/emusterma/scripts/file_monitor')
-
-    timeout_set = 1800 #units:s
-    events = i.event_gen(yield_nones=False, timeout_s=timeout_set)
-    evetns = list(events)
-    print(events)
-
-    # Send Emails
-    msg = EmailMessage()
-    msg.set_content(f'Warning: no new files made for {timeout_set} seconds!!!')
-    recipients = ["emusterma@bnl.gov", "ejm218@lehigh.edu"]
-    msg['Subject'] = f'Warning after {timeout_set} sec time out'
-    msg['From'] = "emusterma@bnl.gov"
-    msg['To'] = ", ".join(recipients)
-
-    # Send messages via SMTP server
-    s = smtplib.SMTP('smtpgw.bnl.gov')
-    s.send_message(msg)
-    s.quit()
-
-#not sure what this is doing
-if __name__ == '__main__':
-    _main()'''
