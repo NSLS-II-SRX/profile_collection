@@ -290,14 +290,14 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
             yield from coarse_scan_and_fly(xstart, xstop, xnum,
                                            ystart, ystop, ynum, acqtime,
                                            flying_zebra=nano_flying_zebra_coarse,
-                                           shutter=xray_on)
+                                           shutter=xray_on, plot=False)
         elif direction == 'y':
             xstart, xstop, xnum = edge[0], edge[0], 1 #should xnum be zero???
             ystart, ystop, ynum = edge[1] - distance_1, edge[1] + distance_1, num
             yield from coarse_y_scan_and_fly(ystart, ystop, ynum,
                                            xstart, xstop, xnum, acqtime,
                                            flying_zebra=nano_flying_zebra_coarse,
-                                           shutter=xray_on)
+                                           shutter=xray_on, plot=False)
         # Turn laser off if used
         if vlaser_on:
             yield from laser_off()
@@ -364,11 +364,12 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
 
     # Get the scanid
     h = db[int(scanid)]
-    id_str = h.start['scan_id']
+    start_doc = h.start
+    id_str = start_doc['scan_id']
     note(f'Trying to determine beam parameters from {scanid} scan.')
 
     motors = [nano_stage.x, nano_stage.y, nano_stage.z]
-    pos = scan_motor.name
+    pos = start_doc['scan']['fast_axis']['motor_name']
     variables = ['x', 'y']
 
     # Get the information from the previous scan
@@ -395,14 +396,17 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
     if (beam == 'x-ray'):
         y = np.sum(np.array(tbl['fluor'])[0][:, :, bin_low:bin_high], axis=(1, 2)) #these number change depending on material
     elif (beam == 'laser'):
-        y = tbl['it'].values[0] #redifined for when channel 4 is using the photodiode
+        y = tbl['it'].values[0] #redefined for when channel 4 is using the photodiode
 
     # Get position data
     # x = np.array(tbl[pos])[0]
     # if (x.size ==1):
     #    x = np.array(tbl[pos])
     ## Need to interpolate x values
-    x = ???
+    xstart = start_doc['scan']['scan_input'][0]
+    xstop = start_doc['scan']['scan_input'][1]
+    xnum = start_doc['scan']['scan_input'][2]
+    x = np.linspace(xstart, xstop, xnum)
     x, y = x.astype(np.float64), y.astype(np.float64)
     note(f'Data acquired for {beam}! Now fitting...')
 
@@ -435,32 +439,35 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
 
     # Display the fit of the raw data
     if (plotme is None):
-        fig, ax = plt.subplots(1, 2)
+        fig, ax = plt.subplots(1, 1)
     else:
         ax = plotme.ax
 
     #is it worth just saving these to a designated folder?
     # Display fit of raw data
-    ax[0].cla()
-    ax[0].plot(x, y, '+', label='Raw Data', c='k')
+    ax.cla()
+    ax.plot(x, y, '+', label='Raw Data', c='k')
     if plot_guess:
-        ax[0].plot(x_plot, f_int_gauss(x_plot, *p_guess), '--', label='Guess Fit', c='0.5')
-    ax[0].plot(x_plot, f_int_gauss(x_plot, *popt), '-', label='Erf Fit', c='r')
-    ax[0].set_title(f'Scan {id_str} of ' + beam)
-    ax[0].set_xlabel(motors[i].name)
-    ax[0].set_ylabel('ROI Counts')
-    ax[0].legend()
+        ax.plot(x_plot, f_int_gauss(x_plot, *p_guess), '--', label='Guess Fit', c='0.5')
+    ax.plot(x_plot, f_int_gauss(x_plot, *popt), '-', label='Erf Fit', c='r')
+    ax.set_title(f'Scan {id_str} of ' + beam)
+    ax.set_xlabel(pos)
+    ax.set_ylabel('ROI Counts')
+    ax.legend()
+    plt.savefig(f'/home/xf05id1/current_user_data/{id_str}_erf_{beam}_{direction}.png')
 
     # Display the fit derivative
-    ax[1].cla()
-    ax[1].plot(x, np.gradient(y, x), '+', label='Derivative Data', c='k')
+    ax.cla()
+    ax.plot(x, np.gradient(y, x), '+', label='Derivative Data', c='k')
     if plot_guess:
-        ax[1].plot(x_plot, np.gradient(f_int_gauss(x_plot, *p_guess), x_plot), '--', label='Guess Fit', c='0.5')
-    ax[1].plot(x_plot, np.gradient(f_int_gauss(x_plot, *popt), x_plot), '-', label='Erf Fit', c='r')
-    ax[1].set_title(f'Scan {id_str} of ' + beam)
-    ax[1].set_xlabel(motors[i].name)
-    ax[1].set_ylabel('Derivative ROI Counts')
-    ax[1].legend()
+        ax.plot(x_plot, np.gradient(f_int_gauss(x_plot, *p_guess), x_plot), '--', label='Guess Fit', c='0.5')
+    ax.plot(x_plot, np.gradient(f_int_gauss(x_plot, *popt), x_plot), '-', label='Erf Fit', c='r')
+    ax.set_title(f'Scan {id_str} of ' + beam)
+    ax.set_xlabel(pos)
+    ax.set_ylabel('Derivative ROI Counts')
+    ax.legend()
+    plt.savefig(f'/home/xf05id1/current_user_data/{id_str}_gauss_{beam}_{direction}.png')
+    plt.close()
     
     # Check the quality of the fit and to see if the edge is mostly within range
     # For the failure, rerun the scan outside of this function
