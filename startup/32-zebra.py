@@ -181,7 +181,7 @@ class ZebraPositionCapture(Device):
         super().unstage()
 
 
-class SRXZebraOR(Device):
+class SRXZebraANDOR(Device):
     # I really appreciate the different indexing for input source
     # Thank you for that
     use1 = Cpt(EpicsSignal, '_ENA:B0')
@@ -204,6 +204,45 @@ class SRXZebraOR(Device):
         super().unstage()
 
 
+class SRXZebraDIV(Device):
+    input_source = Cpt(EpicsSignal, 'INP')
+    div = Cpt(EpicsSignal, 'DIV')
+    first_pulse = FC(EpicsSignal, '{self._zebra_prefix}DIV_FIRST:{self._div_addr}')
+    trigger_on = FC(EpicsSignal, '{self._zebra_prefix}POLARITY:{self._edge_addr}')
+
+    _edge_addrs = {1: 'B8',
+                   2: 'B9',
+                   3: 'BA',
+                   4: 'BB',
+                   }
+    _div_addrs = {1: 'B0',
+                  2: 'B1',
+                  3: 'B2',
+                  4: 'B3',
+                 }
+
+    def stage(self):
+        super().stage()
+
+    def unstage(self):
+        super().unstage()
+
+    def __init__(self, prefix, *, index=None, parent=None,
+                 configuration_attrs=None, read_attrs=None, **kwargs):
+        if read_attrs is None:
+            read_attrs = ['input_source', 'div', 'first_pulse', 'trigger_on']
+        if configuration_attrs is None:
+            configuration_attrs = []
+
+        zebra = parent
+        self.index = index
+        self._zebra_prefix = zebra.prefix
+        self._edge_addr = self._edge_addrs[index]
+        self._div_addr = self._div_addrs[index]
+
+        super().__init__(prefix, configuration_attrs=configuration_attrs,
+                         read_attrs=read_attrs, parent=parent, **kwargs)
+
 
 class ZebraPulse(Device):
     width = Cpt(EpicsSignalWithRBV, 'WID')
@@ -215,8 +254,7 @@ class ZebraPulse(Device):
     time_units = Cpt(EpicsSignalWithRBV, 'PRE', string=True)
     output = Cpt(EpicsSignal, 'OUT')
 
-    input_edge = FC(EpicsSignal,
-                    '{self._zebra_prefix}POLARITY:{self._edge_addr}')
+    input_edge = FC(EpicsSignal, '{self._zebra_prefix}POLARITY:{self._edge_addr}')
 
     _edge_addrs = {1: 'BC',
                    2: 'BD',
@@ -253,14 +291,22 @@ class SRXZebra(Zebra):
     """
 
     pc = Cpt(ZebraPositionCapture, "")
-    or1 = Cpt(SRXZebraOR, "OR1")  # XF:05IDD-ES:1{Dev:Zebra2}:OR1_INV:B0
-    or2 = Cpt(SRXZebraOR, "OR2")
-    or3 = Cpt(SRXZebraOR, "OR3")
-    or4 = Cpt(SRXZebraOR, "OR4")
+    and1 = Cpt(SRXZebraANDOR, "AND1")
+    and2 = Cpt(SRXZebraANDOR, "AND2")
+    and3 = Cpt(SRXZebraANDOR, "AND3")
+    and4 = Cpt(SRXZebraANDOR, "AND4")
+    or1 = Cpt(SRXZebraANDOR, "OR1")  # XF:05IDD-ES:1{Dev:Zebra2}:OR1_INV:B0
+    or2 = Cpt(SRXZebraANDOR, "OR2")
+    or3 = Cpt(SRXZebraANDOR, "OR3")
+    or4 = Cpt(SRXZebraANDOR, "OR4")
     pulse1 = Cpt(ZebraPulse, "PULSE1_", index=1)  # XF:05IDD-ES:1{Dev:Zebra2}:PULSE1_INP
     pulse2 = Cpt(ZebraPulse, "PULSE2_", index=2)
     pulse3 = Cpt(ZebraPulse, "PULSE3_", index=3)
     pulse4 = Cpt(ZebraPulse, "PULSE4_", index=4)
+    div1 = Cpt(SRXZebraDIV, "DIV1_", index=1)
+    div2 = Cpt(SRXZebraDIV, "DIV2_", index=2)
+    div3 = Cpt(SRXZebraDIV, "DIV3_", index=3)
+    div4 = Cpt(SRXZebraDIV, "DIV4_", index=4)
 
     def stage(self):
         super().stage()
