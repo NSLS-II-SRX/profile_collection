@@ -7,9 +7,9 @@ from itertools import product
 import logging
 import os
 
-#a lot of the these are currently useless...
 import bluesky.plans as bp
 from bluesky.plan_stubs import (mov, movr)
+from bluesky.log import logger, config_bluesky_logging, LogFormatter
 
 # Notes from Andy
 '''User directory is 
@@ -18,45 +18,88 @@ from bluesky.plan_stubs import (mov, movr)
         userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype + '\n')'''
 
 # Setting up a logging file
+debug_logging = False
 def start_logging():
-    logfile = ttime.strftime("%y-%m-%d_T%H%M%S",ttime.localtime(ttime.time())) + '_logfile.txt'
+    logfile = ttime.strftime("%y-%m-%d_T%H%M%S",ttime.localtime(ttime.time())) + '_logfile.log'
     logdir = '/home/xf05id1/current_user_data/log_files/'
     os.makedirs(logdir, exist_ok=True)
 
-    logging.basicConfig(filename=logdir+logfile, 
-                        level=logging.DEBUG,
-                        format='%(asctime)s| %(name)-4s: %(levelname)-12s %(message)s',
-                        datefmt='%m-%d %H:%M')
+    # Setting up pre-configured log file with Bluesky
+    temp_handler = config_bluesky_logging(file=logdir+logfile, level='DEBUG', color=False)
+    logger.removeHandler(temp_handler)
 
+    # How log file messages appear
+    file_log = logging.FileHandler(logdir+logfile)
+    file_formatter = logging.Formatter('[%(levelname)s| %(asctime)s] %(message)s', '%Y-%m-%d %H:%M:%S')
+    file_log.setFormatter(file_formatter)
+    logger.addHandler(file_log)
+
+    # How console message appears. Only for info
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(message)s')
-    console.setFormatter(formatter)
-    logging.getLogger().addHandler(console)
-    main_logger = logging.getLogger('main')
-    
-    note('Log file start.')
+    format = '%(color)s[%(asctime)s]%(end_color)s %(message)s'
+    datefmt = '%Y-%m-%d %H:%M:%S'
+    console.setFormatter(LogFormatter(format, datefmt=datefmt))
+    logger.addHandler(console)
 
-    return main_logger
+    note('Log file start.')
+    global debug_logging
+    debug_logging = True
 
 # Log function to print to console and log file. Replaces print function.
 def log(message):
-    print(message)
-    main_logger.info(message)
+    if debug_logging:
+        logger.info(message)
+    else:
+        print(message)
+    
 
 # Log function to print only to log file
 def note(message):
-    print(message)
-    main_logger.debug(message)
+    if debug_logging:
+        logger.debug(message)
+    else:
+        print(message)
 
 
-# Changing VLM from production to laser VLM
-nano_flying_zebra_laser = SRXFlyer1Axis(
-    list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="nano_flying_zebra_laser"
-)
-set_flyer_zebra_stage_sigs(nano_flying_zebra_laser, 'time')
+class SRXZebraTimeRes(Device): # zebra 1 or 2???
+    
+    zebra_trigger = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:SOFT_IN:B0')
+    collect_time = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:PC_GATE_WID')
+    #ttl_pulses = Cpt(EpicsSignal, 'kHz clock')
+    pc_gate = Cpt(EpicsSignal, 'pc_gate')
+    div1 = Cpt(EpicsSignal, 'DIVD1')
+    div2 = Cpt(EpicsSignal, 'DIVD2')
+    div3 = Cpt(EpicsSignal, 'DIVD3')
+    div4 = Cpt(EpicsSignal, 'DIVD4')
+    and1 = Cpt(EpicsSignal, 'And gate 1')
+    ttl1 = Cpt(EpicsSignal, 'ttl output1')
+    ttl2 = Cpt(EpicsSignal, 'ttl output2')
+    ttl3 = Cpt(EpicsSignal, 'ttl output3')
+    ttl4 = Cpt(EpicsSignal, 'ttl output4')
 
-# something with nano_flying_zebra_laser._mode(SRXmode.fly)
+
+def set_tr_flyer_stage_sigs(flyer, divs=[]):
+
+    if divs == []:
+        raise ValueError('Need to define the divisions for appropriate detectors!')
+
+    ## SYS tab
+    flyer.stage_sigs[flyer._encoder.output1.ttl.addr] = 31  # PC_PULSE --> TTL1 --> xs
+    flyer.stage_sigs[flyer._encoder.output2.ttl.addr] = 31  # PC_PULSE --> TTL2 --> merlin
+    flyer.stage_sigs[flyer._encoder.output3.ttl.addr] = 36  # OR1 --> TTL3 --> scaler
+    flyer.stage_sigs[flyer._encoder.output4.ttl.addr] = 31  # PC_PULSE --> TTL4 --> dexela
+
+    # Arm
+    flyer.stage_sigs[flyer._encoder.pc.trig_source] = 0
+
+    # Gate
+    flyer.stage_sigs[flyer._encoder.pc.gate_source] = 1
+    flyer.stage_sigs[flyer._encoder.pc.gate_num] = 1
+
+    # Pulse
+    flyer.stage_sigs[flyer._encoder.pc.pulse_source] = 1
+
 
 
 # Laser controller as defined in pyEPICS
@@ -80,6 +123,16 @@ laser.signal.set(0)
 laser.power.set(0)
 laser.hold.set(0)
 laser.ramp.set(0)
+
+
+# Changing VLM from production to laser VLM
+nano_flying_zebra_laser = SRXFlyer1Axis(
+    list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="nano_flying_zebra_laser"
+)
+set_flyer_zebra_stage_sigs(nano_flying_zebra_laser, 'time')
+
+# something with nano_flying_zebra_laser._mode(SRXmode.fly)
+
 
 
 # Defining a new scaler (sclr2) with photodiode channel included
@@ -368,7 +421,6 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
     id_str = start_doc['scan_id']
     note(f'Trying to determine beam parameters from {scanid} scan.')
 
-    motors = [nano_stage.x, nano_stage.y, nano_stage.z]
     pos = start_doc['scan']['fast_axis']['motor_name']
     variables = ['x', 'y']
 
@@ -399,10 +451,7 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
         y = tbl['it'].values[0] #redefined for when channel 4 is using the photodiode
 
     # Get position data
-    # x = np.array(tbl[pos])[0]
-    # if (x.size ==1):
-    #    x = np.array(tbl[pos])
-    ## Need to interpolate x values
+    # Interpolate x data
     xstart = start_doc['scan']['scan_input'][0]
     xstop = start_doc['scan']['scan_input'][1]
     xnum = start_doc['scan']['scan_input'][2]
