@@ -11,11 +11,6 @@ import shutil
 # PI_lastname = None
 # saf_num = None
 
-# proposal_num = 308774
-# proposal_title = 'SRX Beamline Commissioning'
-# PI_lastname = 'Kiss'
-# saf_num = 307307
-
 proposal_num = 310663
 proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
