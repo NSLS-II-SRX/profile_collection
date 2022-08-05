@@ -11,11 +11,6 @@ import bluesky.plans as bp
 from bluesky.plan_stubs import (mov, movr)
 from bluesky.log import logger, config_bluesky_logging, LogFormatter
 
-# Notes from Andy
-'''User directory is 
-/home/xf05id1/current_user_data
-    with open(userlogfile, 'a') as userlogf:
-        userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype + '\n')'''
 
 # Setting up a logging file
 debug_logging = False
@@ -62,25 +57,7 @@ def note(message):
         print(message)
 
 
-class SRXZebraTimeRes(Device): # zebra 1 or 2???
-    
-    zebra_trigger = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:SOFT_IN:B0')
-    collect_time = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:PC_GATE_WID')
-    #ttl_pulses = Cpt(EpicsSignal, 'kHz clock')
-    pc_gate = Cpt(EpicsSignal, 'pc_gate')
-    div1 = Cpt(EpicsSignal, 'DIVD1')
-    div2 = Cpt(EpicsSignal, 'DIVD2')
-    div3 = Cpt(EpicsSignal, 'DIVD3')
-    div4 = Cpt(EpicsSignal, 'DIVD4')
-    and1 = Cpt(EpicsSignal, 'And gate 1')
-    ttl1 = Cpt(EpicsSignal, 'ttl output1')
-    ttl2 = Cpt(EpicsSignal, 'ttl output2')
-    ttl3 = Cpt(EpicsSignal, 'ttl output3')
-    ttl4 = Cpt(EpicsSignal, 'ttl output4')
-
-
 def set_tr_flyer_stage_sigs(flyer, divs=[1, 3, 10, 100]):
-
     if divs == []:
         raise ValueError('Need to define the divisions for appropriate detectors!')
 
@@ -131,18 +108,9 @@ def set_tr_flyer_stage_sigs(flyer, divs=[1, 3, 10, 100]):
 
 
 
-# Laser controller as defined in pyEPICS
-#can I set this up as a single ophyd object??
-# laser_signal = epics.PV('XF:05IDD-ES:1{Dev:Zebra1}:SOFT_IN:B0') #zebra 1 or 2??
-# laser_signal = EpicsSignal('XF:05IDD-ES:1{Dev:Zebra1}:SOFT_IN:B0', name='laser_signal')
-# laser_power = epics.PV('XF:05IDD-ES:1{Dev:Zebra1}:PC_GATE_NGATE')
-# laser_hold = epics.PV('XF:05IDD-ES:1{Dev:Zebra1}:PC_GATE_STEP')
-# laser_ramp = epics.PV('XF:05IDD-ES:1{Dev:Zebra1}:PC_GATE_WID')
-# laser_signal.put(0), laser_power.put(0), laser_hold.put(30), laser_ramp.put(5)
-
 class SRXLaser(Device):
     signal = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:SOFT_IN:B0')
-    power = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:PC_GATE_NGATE')
+    power = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:PC_GATE_START')
     hold = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:PC_GATE_STEP')
     ramp = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:PC_GATE_WID')
 
@@ -155,10 +123,10 @@ laser.ramp.set(0)
 
 
 # Changing VLM from production to laser VLM
-nano_flying_zebra_laser = SRXFlyer1Axis(
-    list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="nano_flying_zebra_laser"
+flying_zebra_laser = SRXFlyer1Axis(
+    list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="flying_zebra_laser"
 )
-set_flyer_zebra_stage_sigs(nano_flying_zebra_laser, 'time')
+set_tr_flyer_stage_sigs(flying_zebra_laser, divs=[1, 3, 10, 100])
 
 # something with nano_flying_zebra_laser._mode(SRXmode.fly)
 
@@ -189,7 +157,14 @@ vp = sclr2.channels.chan5'''
 #######################################
 
 
-def gen_xye_pos(erange = [11817, 11862, 11917, 12267], estep = [2, 0.5, 5], filedir='', filename='', start=[], end=[], spacing=10, replicates=1):
+def gen_xye_pos(erange = [11817, 11862, 11917, 12267],
+                estep = [2, 0.5, 5],
+                filedir='',
+                filename='',
+                start=[],
+                end=[],
+                spacing=10,
+                replicates=1):
 
     '''
     erange      (array) energy range for XANES/EXAFS in eV. e.g., [11867-50, 11867-20, 11867+50, 11867+400]
@@ -253,7 +228,7 @@ def gen_xye_pos(erange = [11817, 11862, 11917, 12267], estep = [2, 0.5, 5], file
     note('xye_pos saved to ' + filedir+filename)
 
 
-def read_xye_pos(filedir, filename):
+def read_xye_pos(filedir='', filename=''):
 
     '''
     filedir     (str)   file directory for where to load xye position data
@@ -265,7 +240,7 @@ def read_xye_pos(filedir, filename):
         log("No file location information given. Loading most recent.")
         # Setting up a logging file
         filedir = '/home/xf05id1/current_user_data/xye_data/'
-        filename =  os.listdir(calibdir)[-1]
+        filename =  os.listdir(filedir)[-1]
 
     # Reading data into an array
     xye_pos = np.genfromtxt(filedir+filename, delimiter=',')
@@ -283,8 +258,13 @@ def laser_on(power, hold, ramp=5, delay=0):
     '''
 
     # Make sure user provided correct input
-    if any((power < 0), (hold < 0), (ramp < 0), (delay < 0)):
+    if any([(power < 0), (hold < 0), (ramp < 0), (delay < 0)]):
         raise ValueError("Values must be positive floats.")
+
+    # Make sure laser is off
+    print('Laser is already on!')
+    yield from abs_set(laser.signal, 0)
+    yield from bps.sleep(0.25)
 
     # Log some info
     note('Laser startup!')
@@ -432,7 +412,7 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
 
 
 def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True, 
-                         bin_low=934, bin_high=954, plotme=None):
+                         bin_low=795, bin_high=815, plotme=None):
 
     '''
     beam        (str)   'x-ray' or 'laser' Specifies appropriate detectors, motors, and curve shape
