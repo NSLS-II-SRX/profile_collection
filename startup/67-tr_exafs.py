@@ -79,26 +79,55 @@ class SRXZebraTimeRes(Device): # zebra 1 or 2???
     ttl4 = Cpt(EpicsSignal, 'ttl output4')
 
 
-def set_tr_flyer_stage_sigs(flyer, divs=[]):
+def set_tr_flyer_stage_sigs(flyer, divs=[1, 3, 10, 100]):
 
     if divs == []:
         raise ValueError('Need to define the divisions for appropriate detectors!')
 
-    ## SYS tab
-    flyer.stage_sigs[flyer._encoder.output1.ttl.addr] = 31  # PC_PULSE --> TTL1 --> xs
-    flyer.stage_sigs[flyer._encoder.output2.ttl.addr] = 31  # PC_PULSE --> TTL2 --> merlin
-    flyer.stage_sigs[flyer._encoder.output3.ttl.addr] = 36  # OR1 --> TTL3 --> scaler
-    flyer.stage_sigs[flyer._encoder.output4.ttl.addr] = 31  # PC_PULSE --> TTL4 --> dexela
-
+    ## PC tab
     # Arm
     flyer.stage_sigs[flyer._encoder.pc.trig_source] = 0
-
     # Gate
     flyer.stage_sigs[flyer._encoder.pc.gate_source] = 1
     flyer.stage_sigs[flyer._encoder.pc.gate_num] = 1
 
-    # Pulse
-    flyer.stage_sigs[flyer._encoder.pc.pulse_source] = 1
+    ## AND tab
+    flyer.stage_sigs[flyer._encoder.and1.use1] = 1
+    flyer.stage_sigs[flyer._encoder.and1.use2] = 1
+    flyer.stage_sigs[flyer._encoder.and1.use3] = 0
+    flyer.stage_sigs[flyer._encoder.and1.use4] = 0
+    flyer.stage_sigs[flyer._encoder.and1.input_source1] = 58
+    flyer.stage_sigs[flyer._encoder.and1.input_source2] = 31
+    # flyer.stage_sigs[flyer._encoder.and1.input_source3] = 0
+    # flyer.stage_sigs[flyer._encoder.and1.input_source4] = 0
+    flyer.stage_sigs[flyer._encoder.and1.invert1] = 0
+    flyer.stage_sigs[flyer._encoder.and1.invert2] = 0
+    flyer.stage_sigs[flyer._encoder.and1.invert3] = 0
+    flyer.stage_sigs[flyer._encoder.and1.invert4] = 0
+
+    ## DIV tab
+    flyer.stage_sigs[flyer._encoder.div1.input_source] = 32
+    flyer.stage_sigs[flyer._encoder.div2.input_source] = 32
+    flyer.stage_sigs[flyer._encoder.div3.input_source] = 32
+    flyer.stage_sigs[flyer._encoder.div4.input_source] = 32
+    flyer.stage_sigs[flyer._encoder.div1.trigger_on] = 0
+    flyer.stage_sigs[flyer._encoder.div2.trigger_on] = 0
+    flyer.stage_sigs[flyer._encoder.div3.trigger_on] = 0
+    flyer.stage_sigs[flyer._encoder.div4.trigger_on] = 0
+    flyer.stage_sigs[flyer._encoder.div1.div] = divs[0]
+    flyer.stage_sigs[flyer._encoder.div2.div] = divs[1]
+    flyer.stage_sigs[flyer._encoder.div3.div] = divs[2]
+    flyer.stage_sigs[flyer._encoder.div4.div] = divs[3]
+    flyer.stage_sigs[flyer._encoder.div1.first_pulse] = 0
+    flyer.stage_sigs[flyer._encoder.div2.first_pulse] = 0
+    flyer.stage_sigs[flyer._encoder.div3.first_pulse] = 0
+    flyer.stage_sigs[flyer._encoder.div4.first_pulse] = 0
+    
+    ## SYS tab
+    flyer.stage_sigs[flyer._encoder.output1.ttl.addr] = 44  # TTL1 --> xs
+    flyer.stage_sigs[flyer._encoder.output2.ttl.addr] = 45  # TTL2 --> merlin
+    flyer.stage_sigs[flyer._encoder.output3.ttl.addr] = 46  # TTL3 --> scaler
+    flyer.stage_sigs[flyer._encoder.output4.ttl.addr] = 47  # TTL4 --> nanoVLM
 
 
 
