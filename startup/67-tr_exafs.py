@@ -659,6 +659,7 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
     scan_md['scan']['dwell'] = acqtime
 
     # Register the detectors
+    flying_zebra_laser.detectors = extra_dets
     dets = [sclr1] + extra_dets
     dets_by_name = {d.name : d for d in dets}
     note(f'{dets_by_name} recording for {total_time} sec at {acqtime} intervals.')
@@ -672,26 +673,27 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
 
     # Setup xspress3
     # TODO move this to stage sigs
-    if 'xs' in extra_dets:
+    if 'xs' in dets_by_name:
         yield from bps.mov(xs.total_points, N_tot)
-    if 'merlin' in extra_dets:
+    if 'merlin' in dets_by_name:
         yield from bps.mov(merlin.total_points, N_tot // 3)
-    if 'nano_vlm' in extra_dets:
+    if 'nano_vlm' in dets_by_name:
         yield from bps.mov(nano_vlm.total_points, N_tot // 100)
 
     if ('xs' in dets_by_name):
-        xs.stage_sigs['total_points'] = N_tot
+        # xs.stage_sigs['total_points'] = N_tot
         yield from bps.mov(xs.external_trig, True)
  
     # Setup Merlin area detector
     if ('merlin' in dets_by_name):
-        merlin.cam.stage_sigs['tigger_mode'] = 2
+        yield from abs_set(merlin.fly_next, True)
+        merlin.cam.stage_sigs['trigger_mode'] = 2
         merlin.cam.stage_sigs['acquire_time'] = 0.0010
         merlin.cam.stage_sigs['acquire_period'] = 0.002 #can I implement binning via the stage_sigs??
         merlin.cam.stage_sigs['num_images'] = N_tot #this is not supposed to be one
         merlin.hdf5.stage_sigs['num_capture'] = N_tot
         # merlin._mode = SRXMode.step #what does this do???
-        merlin.stage_sigs['total_points'] = N_tot
+        # merlin.stage_sigs['total_points'] = N_tot
 
     # Setup VLM camera
     # if('nano_vlm' in dets_by_name):
@@ -729,8 +731,8 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
         yield from abs_set(flying_zebra_laser._encoder.pc.gate_width, total_time, settle_time=0.010)
         yield from abs_set(flying_zebra_laser._encoder.pc.gate_step, total_time+0.001, settle_time=0.010)
 
-        yield from abs_set(sclr1.erase_start, 1, wait=True)
-        yield from bps.trigger(xs)
+        yield from abs_set(sclr1.erase_start, 1, wait=True, settle_time=0.5)
+        st = yield from bps.trigger(xs)
 
         # Turn on laser
         yield from laser_on(power, hold, ramp, delay=0) #if laser is in an opyd object, can it also be triggered at same time as everythin else??
@@ -738,7 +740,8 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
         yield from bps.abs_set(flying_zebra_laser._encoder.pc.arm, 1)
         
         # start counting on detectors
-        
+        st.wait()
+
         # stop counting
         yield from abs_set(sclr1.stop_all, 1, timeout=10)  # stop acquiring scaler
 
