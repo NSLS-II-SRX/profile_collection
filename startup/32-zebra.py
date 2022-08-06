@@ -709,7 +709,7 @@ class SRXFlyer1Axis(Device):
 
     def kickoff(self, *, xstart, xstop, xnum, dwell, tacc):
         dets_by_name = {d.name: d for d in self.detectors}
-        t_delay = 0.025  # delay after each write/put to zebra, this value is taken from _stage_with_delay
+        t_delay = 0.010  # delay after each write/put to zebra, this value is taken from _stage_with_delay
 
         mode = self.mode.get()
         # print(f'{mode=}')
