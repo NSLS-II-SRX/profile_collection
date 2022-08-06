@@ -61,6 +61,10 @@ def set_tr_flyer_stage_sigs(flyer, divs=[1, 3, 10, 100]):
     if divs == []:
         raise ValueError('Need to define the divisions for appropriate detectors!')
 
+    # Stage sigs for scaler
+    flyer.stage_sigs[sclr1.count_mode] = 0
+
+
     ## PC tab
     # Arm
     flyer.stage_sigs[flyer._encoder.pc.trig_source] = 0
@@ -74,7 +78,7 @@ def set_tr_flyer_stage_sigs(flyer, divs=[1, 3, 10, 100]):
     flyer.stage_sigs[flyer._encoder.and1.use3] = 0
     flyer.stage_sigs[flyer._encoder.and1.use4] = 0
     flyer.stage_sigs[flyer._encoder.and1.input_source1] = 58
-    flyer.stage_sigs[flyer._encoder.and1.input_source2] = 31
+    flyer.stage_sigs[flyer._encoder.and1.input_source2] = 30
     # flyer.stage_sigs[flyer._encoder.and1.input_source3] = 0
     # flyer.stage_sigs[flyer._encoder.and1.input_source4] = 0
     flyer.stage_sigs[flyer._encoder.and1.invert1] = 0
@@ -100,8 +104,15 @@ def set_tr_flyer_stage_sigs(flyer, divs=[1, 3, 10, 100]):
     flyer.stage_sigs[flyer._encoder.div3.first_pulse] = 0
     flyer.stage_sigs[flyer._encoder.div4.first_pulse] = 0
     
+    ## PULSE tab
+    flyer.stage_sigs[flyer._encoder.pulse1.width] = 0.5
+    flyer.stage_sigs[flyer._encoder.pulse1.input_addr] = 32
+    flyer.stage_sigs[flyer._encoder.pulse1.delay] = 0
+    flyer.stage_sigs[flyer._encoder.pulse1.time_units] = "ms"
+    flyer.stage_sigs[flyer._encoder.pulse1.input_edge] = 0
+    
     ## SYS tab
-    flyer.stage_sigs[flyer._encoder.output1.ttl.addr] = 44  # TTL1 --> xs
+    flyer.stage_sigs[flyer._encoder.output1.ttl.addr] = 52  # TTL1 --> xs
     flyer.stage_sigs[flyer._encoder.output2.ttl.addr] = 45  # TTL2 --> merlin
     flyer.stage_sigs[flyer._encoder.output3.ttl.addr] = 46  # TTL3 --> scaler
     flyer.stage_sigs[flyer._encoder.output4.ttl.addr] = 47  # TTL4 --> nanoVLM
@@ -240,7 +251,9 @@ def read_xye_pos(filedir='', filename=''):
         log("No file location information given. Loading most recent.")
         # Setting up a logging file
         filedir = '/home/xf05id1/current_user_data/xye_data/'
-        filename =  os.listdir(filedir)[-1]
+        filenames = os.listdir(filedir)
+        filenames.sort()
+        filename =  filenames[-1]
 
     # Reading data into an array
     xye_pos = np.genfromtxt(filedir+filename, delimiter=',')
@@ -351,14 +364,12 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
             ystart, ystop, ynum = edge[1], edge[1], 1 #should ynum be zero???
             yield from coarse_scan_and_fly(xstart, xstop, xnum,
                                            ystart, ystop, ynum, acqtime,
-                                           flying_zebra=nano_flying_zebra_coarse,
                                            shutter=xray_on, plot=False)
         elif direction == 'y':
             xstart, xstop, xnum = edge[0], edge[0], 1 #should xnum be zero???
             ystart, ystop, ynum = edge[1] - distance_1, edge[1] + distance_1, num
             yield from coarse_y_scan_and_fly(ystart, ystop, ynum,
                                            xstart, xstop, xnum, acqtime,
-                                           flying_zebra=nano_flying_zebra_coarse,
                                            shutter=xray_on, plot=False)
         # Turn laser off if used
         if vlaser_on:
@@ -372,10 +383,15 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
     # Plot and process the data
     beam_param = []
     ext_scan = False 
+    first_fit = True
     for beam_1 in ['laser', 'x-ray']:
 
         # If laser was not used, skips to checking x-ray signal
-        if beam not in ['laser', 'both']: #seeing if the original beam used the laser
+        print(f'{beam=}')
+        print(f'{beam_1=}')
+        if (beam not in ['laser', 'both']) and (first_fit): #seeing if the original beam used the laser
+            print('I am in here!')
+            first_fit = False
             continue #if not skips to only fitting x-ray data
 
         # When checking x-rays, see if any x-rays were avialable
@@ -383,11 +399,16 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
             log('No x-rays to properly perform knife edge scan.')
             cent_position = edge[variables.index(direction)]
             fwhm = -1 # this way we obviously know something is wrong
+            print(f'{cent_position=}')
+            print(f'{fwhm=}')
             continue
         
         # Try to find edge
         try:
+            print('fitting...')
             cent_position, fwhm = beam_knife_edge_plot(beam=beam_1, scan_motor=scan_motor, plotme=plotme)
+            print(f'{cent_position=}')
+            print(f'{fwhm=}')
 
         # RuntimeErrors for nonideal fitting. Trying to fix by extended scan range    
         except RuntimeError: 
@@ -428,10 +449,10 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
     h = db[int(scanid)]
     start_doc = h.start
     id_str = start_doc['scan_id']
-    note(f'Trying to determine beam parameters from {scanid} scan.')
+    note(f'Trying to determine beam parameters from {id_str} scan.')
 
     pos = start_doc['scan']['fast_axis']['motor_name']
-    variables = ['x', 'y']
+    direction = pos[-1]
 
     # Get the information from the previous scan
     haz_data = False
@@ -464,7 +485,8 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
     xstart = start_doc['scan']['scan_input'][0]
     xstop = start_doc['scan']['scan_input'][1]
     xnum = start_doc['scan']['scan_input'][2]
-    x = np.linspace(xstart, xstop, xnum)
+    distance = np.abs(xstop - xstart)
+    x = np.linspace(xstart, xstop, int(xnum))
     x, y = x.astype(np.float64), y.astype(np.float64)
     note(f'Data acquired for {beam}! Now fitting...')
 
@@ -489,8 +511,8 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
     frac_err = np.abs(perr/popt)
 
     # Report useful data
-    log(f'The beam center is at {cent_position:.4f} µm along ' + variables[i] + '.')
-    log(f'The beam fwhm is {fwhm:.4f} µm along ' + variables[i] + '.')
+    log(f'The beam center is at {cent_position:.4f} µm along {direction}.')
+    log(f'The beam fwhm is {fwhm:.4f} µm along {direction}.')
 
     # Set plotting variables
     x_plot = np.linspace(np.amin(x), np.amax(x), num=100)
@@ -499,6 +521,7 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
     if (plotme is None):
         fig, ax = plt.subplots(1, 1)
     else:
+        # fig = plotme.fig
         ax = plotme.ax
 
     #is it worth just saving these to a designated folder?
@@ -519,7 +542,7 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
     ax.plot(x, np.gradient(y, x), '+', label='Derivative Data', c='k')
     if plot_guess:
         ax.plot(x_plot, np.gradient(f_int_gauss(x_plot, *p_guess), x_plot), '--', label='Guess Fit', c='0.5')
-    ax.plot(x_plot, np.gradient(f_int_gauss(x_plot, *popt), x_plot), '-', label='Erf Fit', c='r')
+    ax.plot(x_plot, np.gradient(f_int_gauss(x_plot, *popt), x_plot), '-', label='Gauss Fit', c='r')
     ax.set_title(f'Scan {id_str} of ' + beam)
     ax.set_xlabel(pos)
     ax.set_ylabel('Derivative ROI Counts')
@@ -530,11 +553,13 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
     # Check the quality of the fit and to see if the edge is mostly within range
     # For the failure, rerun the scan outside of this function
     # After plotting, so there is way to guage fit quality visually
-    if np.abs(cent_position) > 0.8*np.abs(distance):
-        log('Edge position barely within FOV.')
-        raise RuntimeError()
     if any(frac_err > 1):
         log('Poor fitting. Coefficient error exceeds predicted values.')
+        yield from bps.sleep(1)
+        raise RuntimeError()
+    if np.abs(cent_position) > 0.8*np.abs(distance):
+        log('Edge position barely within FOV.')
+        yield from bps.sleep(1)
         raise RuntimeError()
 
     return cent_position, fwhm
@@ -604,8 +629,8 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize, acqtime=1.0,
         return xray_pos, xray_sizes, laser_pos, laser_sizes, off_adj
 
 
-def laser_time_series(power, hold, ramp=5, dets=[xs, merlin, nano_vlm], 
-                      acqtime=0.001, shutter=True):
+def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin], 
+                      shutter=True):
     
     '''
     power
@@ -617,10 +642,16 @@ def laser_time_series(power, hold, ramp=5, dets=[xs, merlin, nano_vlm],
     shutter     (bool)  Use X-rays or not
     '''
 
+    # Total number of time steps
+    acqtime = 0.001
+    total_time = hold + ramp
+    N_tot = total_time / acqtime #how does this incorporate dead time??
+    #define the N_tot as a function of TTL pulses
+    #how to trigger off of theses pulses and for how long?
+
     # Record relevant meta data in the Start document, define in 90-usersetup.py
     # Add user meta data
     note('Setting up time series collection...')
-    note(f'{dets_by_name} recording for {total_time} sec at {acqtime} intervals.')
     scan_md = {}
     get_stock_md(scan_md)
     scan_md['scan']['type'] = 'XAS_TIME' #Should this be something different?
@@ -628,65 +659,102 @@ def laser_time_series(power, hold, ramp=5, dets=[xs, merlin, nano_vlm],
     scan_md['scan']['dwell'] = acqtime
 
     # Register the detectors
-    dets = [ring_current, sclr1] + dets #what is xbpm2???
+    dets = [sclr1] + extra_dets
     dets_by_name = {d.name : d for d in dets}
+    note(f'{dets_by_name} recording for {total_time} sec at {acqtime} intervals.')
 
     # Setup scaler
     if (acqtime < 0.001):
         acqtime = 0.001 #limits the time resolution. Why???
-    sclr1.stage_sigs['external_trig'] = True #how to define this value
-
-    # Total number of time steps
-    total_time = hold + ramp
-    N_tot = total_time/acqtime #how does this incorporate dead time??
-    #define the N_tot as a function of TTL pulses
-    #how to trigger off of theses pulses and for how long?
+    yield from abs_set(sclr1.nuse_all, 10_000)
+            # Don't put this here!
+            #yield from abs_set(ion.erase_start, 1)
 
     # Setup xspress3
+    # TODO move this to stage sigs
+    if 'xs' in extra_dets:
+        yield from bps.mov(xs.total_points, N_tot)
+    if 'merlin' in extra_dets:
+        yield from bps.mov(merlin.total_points, N_tot // 3)
+    if 'nano_vlm' in extra_dets:
+        yield from bps.mov(nano_vlm.total_points, N_tot // 100)
+
     if ('xs' in dets_by_name):
-        xs.stage_sigs['external_trig'] = True # how to define this
-        xs.cam.stage_sigs['acquire_time'] = acqtime
-        xs.cam.stage_sigs['acquire_period'] = acqtime + 0.005 #too match the area detectors
         xs.stage_sigs['total_points'] = N_tot
+        yield from bps.mov(xs.external_trig, True)
  
     # Setup Merlin area detector
     if ('merlin' in dets_by_name):
-        merlin.cam.stage_sigs['tigger_mode'] = 0
-        merlin.cam.stage_sigs['acquire_time'] = acqtime
-        merlin.cam.stage_sigs['acquire_period'] = acqtime + 0.005 #can I implement binning via the stage_sigs??
+        merlin.cam.stage_sigs['tigger_mode'] = 2
+        merlin.cam.stage_sigs['acquire_time'] = 0.0010
+        merlin.cam.stage_sigs['acquire_period'] = 0.002 #can I implement binning via the stage_sigs??
         merlin.cam.stage_sigs['num_images'] = N_tot #this is not supposed to be one
         merlin.hdf5.stage_sigs['num_capture'] = N_tot
-        merlin._mod = SRXMode.step #what does this do???
+        # merlin._mode = SRXMode.step #what does this do???
         merlin.stage_sigs['total_points'] = N_tot
 
     # Setup VLM camera
-    if('nano_vlm' in dets_by_name):
-        # I cannot find anything about the acquisistion rate of this camera. Was that not put in the code since it is not really used??
-        # I am not sure if the nano_vlm is actually setup to record data or not.
-        # Do I need to implement binning on this one as well?? Also built on CamBase like Merlin
-        nano_vlm.cam.stage_sigs['tigger_mode'] = 0
-        nano_vlm.cam.stage_sigs['acquire_time'] = acqtime
-        nano_vlm.cam.stage_sigs['acquire_period'] = acqtime + 0.005
-        nano_vlm.cam.stage_sigs['num_images'] = N_tot
-        #does nano_vlm have a hdf5 thing??
-        nano_vlm.hdf5.stage_sigs['num_capture'] = N_tot
-        nano_vlm._mod = SRXMode.step #what does this do???
-        nano_vlm.stage_sigs['total_points'] = N_tot
+    # if('nano_vlm' in dets_by_name):
+    #     # I cannot find anything about the acquisistion rate of this camera. Was that not put in the code since it is not really used??
+    #     # I am not sure if the nano_vlm is actually setup to record data or not.
+    #     # Do I need to implement binning on this one as well?? Also built on CamBase like Merlin
+    #     nano_vlm.cam.stage_sigs['tigger_mode'] = 0
+    #     nano_vlm.cam.stage_sigs['acquire_time'] = acqtime
+    #     nano_vlm.cam.stage_sigs['acquire_period'] = acqtime + 0.005
+    #     nano_vlm.cam.stage_sigs['num_images'] = N_tot
+    #     #does nano_vlm have a hdf5 thing??
+    #     nano_vlm.hdf5.stage_sigs['num_capture'] = N_tot
+    #     nano_vlm.stage_sigs['total_points'] = N_tot
 
     # Setup Dexela area detector
     #if('dexela' in dets_by_name):
         #add the important things for the dexela. Including dark frame??
 
     # Check shutter
-    yield from check_shutter(shutter, 'Open')
+    yield from check_shutters(shutter, 'Open')
 
-    # Turn on laser and start counting!
-    yield from laser_on(power, hold, ramp, delay=0) #if laser is in an opyd object, can it also be triggered at same time as everythin else??
-    yield from count(dets, num=N_tot, md=scan_md) #not actually counting
+    # yield from count(dets, num=N_tot, md=scan_md) #not actually counting
+
+    # @subs_decorator(livepopup)
+    # @subs_decorator({'start': at_scan})
+    # @subs_decorator({'stop': finalize_scan})
+    # @ts_monitor_during_decorator([roi_pv])
+    # @monitor_during_decorator([roi_pv])
+    @run_decorator(md=scan_md)
+    @stage_decorator([flying_zebra_laser])  # Below, 'scan' stage ymotor.
+    @stage_decorator(flying_zebra_laser.detectors)
+    def plan():
+        # Setup zebra
+        yield from abs_set(flying_zebra_laser._encoder.pc.gate_start, 0, settle_time=0.010)
+        yield from abs_set(flying_zebra_laser._encoder.pc.gate_width, total_time, settle_time=0.010)
+        yield from abs_set(flying_zebra_laser._encoder.pc.gate_step, total_time+0.001, settle_time=0.010)
+
+        yield from abs_set(sclr1.erase_start, 1, wait=True)
+        yield from bps.trigger(xs)
+
+        # Turn on laser
+        yield from laser_on(power, hold, ramp, delay=0) #if laser is in an opyd object, can it also be triggered at same time as everythin else??
+        # yield from bps.sleep(ramp)
+        yield from bps.abs_set(flying_zebra_laser._encoder.pc.arm, 1)
+        
+        # start counting on detectors
+        
+        # stop counting
+        yield from abs_set(sclr1.stop_all, 1, timeout=10)  # stop acquiring scaler
+
+        # turn off laser
+        yield from laser_off()
+
+        # save all data to file
+
+        # save pointers to file in db
+
+    yield from plan() 
+    
     yield from laser_off()
 
     # Close shutter
-    yield from check_shutter(shutter, 'Close')
+    yield from check_shutters(shutter, 'Close')
 
     # Plotting data
     #will be useful, but maybe after the acqusition and not live. Does this make it easier??
