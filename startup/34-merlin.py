@@ -227,11 +227,17 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
 
 
 try:
+    print('Setting up merlin...', end='', flush=True)
     merlin = SRXMerlin('XF:05IDD-ES{Merlin:1}',
                        name='merlin',
                        read_attrs=['hdf5', 'cam', 'stats1'])
+    print('done')
+    print('  Setting read_attrs...', end='', flush=True)
     merlin.hdf5.read_attrs = []
+    print('done')
+    print('  Warming up merlin...', end='', flush=True)
     merlin.hdf5.warmup()
+    print('done')
 except TimeoutError:
     print('\nCannot connect to Merlin. Continuing without device.\n')
 except Exception:
