@@ -682,18 +682,21 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
 
     if ('xs' in dets_by_name):
         # xs.stage_sigs['total_points'] = N_tot
-        yield from bps.mov(xs.external_trig, True)
+        yield from bps.abs_set(xs.external_trig, True, timeout=10)
+
+    for d in extra_dets:
+        yield from bps.abs_set(d.fly_next, True, timeout=10)
  
     # Setup Merlin area detector
     if ('merlin' in dets_by_name):
-        yield from abs_set(merlin.fly_next, True)
         merlin.cam.stage_sigs['trigger_mode'] = 2
         merlin.cam.stage_sigs['acquire_time'] = 0.0010
         merlin.cam.stage_sigs['acquire_period'] = 0.002 #can I implement binning via the stage_sigs??
+        # merlin.cam.stage_sigs['num_images'] = 1
         merlin.cam.stage_sigs['num_images'] = N_tot #this is not supposed to be one
+        merlin.stage_sigs['total_points'] = N_tot
         merlin.hdf5.stage_sigs['num_capture'] = N_tot
         # merlin._mode = SRXMode.step #what does this do???
-        # merlin.stage_sigs['total_points'] = N_tot
 
     # Setup VLM camera
     # if('nano_vlm' in dets_by_name):
@@ -727,12 +730,17 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
     @stage_decorator(flying_zebra_laser.detectors)
     def plan():
         # Setup zebra
-        yield from abs_set(flying_zebra_laser._encoder.pc.gate_start, 0, settle_time=0.010)
-        yield from abs_set(flying_zebra_laser._encoder.pc.gate_width, total_time, settle_time=0.010)
-        yield from abs_set(flying_zebra_laser._encoder.pc.gate_step, total_time+0.001, settle_time=0.010)
+        yield from abs_set(flying_zebra_laser._encoder.pc.gate_start, 0, settle_time=0.010, wait=True, timeout=10)
+        yield from abs_set(flying_zebra_laser._encoder.pc.gate_width, total_time, settle_time=0.010, wait=True, timeout=10)
+        yield from abs_set(flying_zebra_laser._encoder.pc.gate_step, total_time+0.001, settle_time=0.010, wait=True, timeout=10)
 
-        yield from abs_set(sclr1.erase_start, 1, wait=True, settle_time=0.5)
-        st = yield from bps.trigger(xs)
+        yield from abs_set(sclr1.erase_start, 1, wait=True, settle_time=0.5, timeout=10)
+        # st = yield from bps.trigger(xs)
+        row_str = short_uid('row')
+        print('Starting data collection...', end='', flush=True)
+        for d in extra_dets:
+            print(f'  triggering {d.name}')
+            st = yield from bps.trigger(d, group=row_str)
 
         # Turn on laser
         yield from laser_on(power, hold, ramp, delay=0) #if laser is in an opyd object, can it also be triggered at same time as everythin else??
@@ -740,20 +748,34 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
         yield from bps.abs_set(flying_zebra_laser._encoder.pc.arm, 1)
         
         # start counting on detectors
-        st.wait()
+        #   Do we want to turn off the laser and close the X-ray
+        #   shutter while waiting for data collection to complete?
+        #   I think the timeout would to a "total time" since trigger
+        #   not waiting at a given point in the code for timeout
+        st.wait(timeout=600)  # Putting default 600 s = 10 min timeout
 
         # stop counting
         yield from abs_set(sclr1.stop_all, 1, timeout=10)  # stop acquiring scaler
-
         # turn off laser
         yield from laser_off()
 
-        # save all data to file
+        # Reset detector values
+        yield from abs_set(sclr1.count_mode, 1, timeout=10)
+        for d in extra_dets:
+            yield from abs_set(d.external_trig, False)
 
-        # save pointers to file in db
+        # save all data to file
+        print('Completing scan...', end='', flush=True)
+        yield from complete(flying_zebra_laser)
+        print('done')
+
+        print('Collecting data...', end='', flush=True)
+        yield from collect(flying_zebra_laser)
+        print('done')
 
     yield from plan() 
     
+    # This is duplicate...although, probably good to make sure the laser is off
     yield from laser_off()
 
     # Close shutter
@@ -763,9 +785,17 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
     #will be useful, but maybe after the acqusition and not live. Does this make it easier??
     #plot each series after they have been acquired??
     note('Time series acquired!') #How to add scan ID information??
+    # One way to do it (probably not the best way) would be to simply
+    # do a h = db[-1] and the grab whatever information you need from
+    # there (h.start ...)
+    # The right way is to subscribe (subs_wrapper or decorator) to
+    # the stop document and write your note when that document is
+    # received. The stop document only has the UUID, but you can use
+    # that to get a scan ID
 
-
-def tr_xanes_plan(xye_pos, power, hold, v_edge, h_edge, distance, stepsize, N_start=0, z_pos=[], ramp=5,
+def tr_xanes_plan(xye_pos, power, hold,
+                  v_edge, h_edge, distance, stepsize,
+                  N_start=0, z_pos=[], ramp=5,
                   dets=[xs, merlin, nano_vlm], acqtime=0.001,
                   waittime=5, peakup_N=15, align_N=15, shutter=True):
 
@@ -796,7 +826,7 @@ def tr_xanes_plan(xye_pos, power, hold, v_edge, h_edge, distance, stepsize, N_st
     N = len(xye_pos)
 
     # Check N_start
-    if any((N_start < 0), (N_start <= N), (not isinstance(erange,int))):
+    if any((N_start < 0), (N_start <= N), (not isinstance(erange, int))):
         raise ValueError("N_start must be a positive integer within the number of events.")
     
     # Checking for improper hold time input
@@ -831,11 +861,11 @@ def tr_xanes_plan(xye_pos, power, hold, v_edge, h_edge, distance, stepsize, N_st
         log('No z-coordinate given. Assuming position already at sample plane.') #how to record current z_pos
         note(f'Current z_pos is {z_pos}.')
 
-    # Timining statistics
-    N_time = N-N_start
-    num_peakup = int((N_time+peakup_N-1)/peakup_N)
+    # Timing statistics
+    N_time = N - N_start
+    num_peakup = int((N_time + peakup_N - 1) / peakup_N)
     peakup_count = 0
-    num_align = int((N_time+align_N-1)/align_N)
+    num_align = int((N_time + align_N - 1) / align_N)
     align_count = 0
     t_elap_p, t_elap_a, t_elap_e = 0, 0, 0
 
@@ -850,7 +880,7 @@ def tr_xanes_plan(xye_pos, power, hold, v_edge, h_edge, distance, stepsize, N_st
             t0_p = ttime.time()
             log('Performing peakup...')
             yield from peakup_fine(shutter=shutter) #shutter=shutter necessary?
-            t_elap_p += ttime.time()-t0_p
+            t_elap_p += ttime.time() - t0_p
 
         # Periodically perform auto_align to confirm laser and x-ray coincidence
         if (i % align_N == 0) or (i == N_start):
@@ -870,28 +900,30 @@ def tr_xanes_plan(xye_pos, power, hold, v_edge, h_edge, distance, stepsize, N_st
             v_edge = [xray_pos[0], v_edge[1]] #update x-position
             h_edge = [h_edge[0], xray_pos[1]] #updated y-position
             note(f'New edge positions: vertical {v_edge} and horizontal {h_edge}')
-            t_elap_a += ttime.time()-t0_a
+            t_elap_a += ttime.time() - t0_a
         
         # Move to positions and energy
         t0_e = ttime.time()
         log(f'Scanning though event {i} of {N} events.')
         log('Moving to:')
-        log(f'\tx = {xye_pos[i][0]}')
+        log(f'\tx = {xye_pos[i][0]}')  # should these be {xye_pos[i][0]:.3f} (so it will only show 3 decimal places and look nicer?
         log(f'\ty = {xye_pos[i][1]}')
         log(f'\te = {xye_pos[i][2]}')
-        yield from mov(nano_stage.x, xye_pos[i][0], nano_stage.y, xye_pos[i][1], energy, xye_pos[i][2])
+        yield from mov(nano_stage.x, xye_pos[i][0],
+                       nano_stage.y, xye_pos[i][1],
+                       energy, xye_pos[i][2])
 
         # Trigger laser and collect time series data
         yield from laser_time_series(power, hold, ramp, xye_pos[i][2], dets=dets, total_time=total_time, acqtime=acqtime, shutter=shutter)
 
         # Time estimates
-        t_elap_e += ttime.time()-t0_e
-        t_rem_p = (num_peakup-peakup_count)*(t_elap_p/num_peakup)
-        t_rem_a = (num_align-align_count)*(t_elap_a/num_align)
-        t_rem_e = (N_time-i+1)*(t_elap_e/N_time)
+        t_elap_e += ttime.time() - t0_e
+        t_rem_p = (num_peakup - peakup_count) * (t_elap_p / num_peakup)
+        t_rem_a = (num_align - align_count) * (t_elap_a / num_align)
+        t_rem_e = (N_time - i + 1) * (t_elap_e / N_time)
         t_rem_tot = np.sum(t_rem_p, t_rem_a, t_rem_e)
         if t_rem_tot < 86400:
-            str_rem = ttime.strftime("%#H:%M:%S",ttime.gmtime(t_rem_tot))
+            str_rem = ttime.strftime("%#H:%M:%S", ttime.gmtime(t_rem_tot))
         elif t_rem_tot >= 86400:
             str_rem = ttime.strftime("%-d day and %#H:%M:%S",ttime.gmtime(t_rem_tot))
         elif t_rem_tot > 86400 * 2: #this really is just to have pural days...
