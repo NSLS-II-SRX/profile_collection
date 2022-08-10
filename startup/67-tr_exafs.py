@@ -275,9 +275,10 @@ def laser_on(power, hold, ramp=5, delay=0):
         raise ValueError("Values must be positive floats.")
 
     # Make sure laser is off
-    print('Laser is already on!')
-    yield from abs_set(laser.signal, 0)
-    yield from bps.sleep(0.25)
+    if laser.signal.get() > 0:
+        print('Laser is already on!')
+        yield from abs_set(laser.signal, 0)
+        yield from bps.sleep(0.25)
 
     # Log some info
     note('Laser startup!')
@@ -405,8 +406,8 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
         
         # Try to find edge
         try:
-            print('fitting...')
-            cent_position, fwhm = beam_knife_edge_plot(beam=beam_1, scan_motor=scan_motor, plotme=plotme)
+            log('Fitting...')
+            cent_position, fwhm = beam_knife_edge_plot(beam=beam_1, plotme=plotme)
             print(f'{cent_position=}')
             print(f'{fwhm=}')
 
@@ -417,7 +418,7 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
                     log('Doubling scan range.')
                     yield from _plan(distance_1 = 2 * distance)
                     ext_scan = True
-                    cent_position, fwhm = beam_knife_edge_plot(beam=beam_1, scan_motor=scan_motor, plotme=plotme)
+                    cent_position, fwhm = beam_knife_edge_plot(beam=beam_1, plotme=plotme)
             
                 except RuntimeError:
                     log('Knife edge scan failed to find position.')
@@ -432,12 +433,11 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
     return beam_param # Cent_position then fwhm. Laser parameters first if 'both'
 
 
-def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True, 
+def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True, 
                          bin_low=795, bin_high=815, plotme=None):
 
     '''
     beam        (str)   'x-ray' or 'laser' Specifies appropriate detectors, motors, and curve shape
-    scan_motor  (motor) 
     scanid      (int)   ID of previous scan. Default is -1
     plot_guess  (bool)  If true, plot guess function. Helps if curve fitting is poor
     bin_low     (int)   Start bin of table data #number for foil of interest
@@ -524,6 +524,9 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
         # fig = plotme.fig
         ax = plotme.ax
 
+    dir = '/home/xf05id1/current_user_data/alignments/'
+    os.makedirs(dir, exist_ok=True)
+
     #is it worth just saving these to a designated folder?
     # Display fit of raw data
     ax.cla()
@@ -535,7 +538,7 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
     ax.set_xlabel(pos)
     ax.set_ylabel('ROI Counts')
     ax.legend()
-    plt.savefig(f'/home/xf05id1/current_user_data/{id_str}_erf_{beam}_{direction}.png')
+    plt.savefig(f'/home/xf05id1/current_user_data/alignments/{id_str}_erf_{beam}_{direction}.png')
 
     # Display the fit derivative
     ax.cla()
@@ -547,7 +550,7 @@ def beam_knife_edge_plot(beam, scan_motor, scanid=-1, plot_guess=True,
     ax.set_xlabel(pos)
     ax.set_ylabel('Derivative ROI Counts')
     ax.legend()
-    plt.savefig(f'/home/xf05id1/current_user_data/{id_str}_gauss_{beam}_{direction}.png')
+    plt.savefig(f'/home/xf05id1/current_user_data/alignments/{id_str}_gauss_{beam}_{direction}.png')
     plt.close()
     
     # Check the quality of the fit and to see if the edge is mostly within range
@@ -582,7 +585,7 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize, acqtime=1.0,
     # Setting up label variables
     motors = [nano_stage.x, nano_stage.y, nano_stage.z]
     variables = ['x','y']
-    FOV = [500, 500] # FOV of VLM in um. What is this? Laser spot should start within VLM image.
+    FOV = [1000, 1000] # FOV of VLM in um. What is this? Laser spot should start within VLM image.
     vlm_motors = [nano_vlm_stage.x, nano_vlm_stage.y, nano_vlm_stage.z]
     xray_pos, xray_sizes = [], []
     laser_pos, laser_sizes = [], []
@@ -599,7 +602,8 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize, acqtime=1.0,
         # Adjust VLM position
         offset = beam_param[2] - beam_param[0]
         if np.abs(offset) > 0.5*FOV[i]:
-            raise RuntimeError("Trying to adjust stage by more than 50% of FOV. Retry beam alignment.")
+            log("Trying to adjust stage by more than 50% of FOV. Retry beam alignment.")
+            raise RuntimeError()
         yield from movr(vlm_motors[i], (offset * 0.001)) # vlm motors in mm not um
         log(f'Offset VLM by {offset:.4f} µm along ' + variables[i] + '-axis.')
 
@@ -859,7 +863,7 @@ def tr_xanes_plan(xye_pos, power, hold,
         yield from mov(nano_stage.z, z_pos)
     else:
         log('No z-coordinate given. Assuming position already at sample plane.') #how to record current z_pos
-        note(f'Current z_pos is {z_pos}.')
+        note(f'Current z_pos is {z_pos:.3f}.')
 
     # Timing statistics
     N_time = N - N_start
@@ -906,8 +910,8 @@ def tr_xanes_plan(xye_pos, power, hold,
         t0_e = ttime.time()
         log(f'Scanning though event {i} of {N} events.')
         log('Moving to:')
-        log(f'\tx = {xye_pos[i][0]}')  # should these be {xye_pos[i][0]:.3f} (so it will only show 3 decimal places and look nicer?
-        log(f'\ty = {xye_pos[i][1]}')
+        log(f'\tx = {xye_pos[i][0]:.3f}')
+        log(f'\ty = {xye_pos[i][1]:.3f}')
         log(f'\te = {xye_pos[i][2]}')
         yield from mov(nano_stage.x, xye_pos[i][0],
                        nano_stage.y, xye_pos[i][1],
