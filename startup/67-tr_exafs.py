@@ -655,7 +655,7 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
 
     # Record relevant meta data in the Start document, define in 90-usersetup.py
     # Add user meta data
-    note('Setting up time series collection...')
+    log('Setting up time series collection...')
     scan_md = {}
     get_stock_md(scan_md)
     scan_md['scan']['type'] = 'XAS_TIME' #Should this be something different?
@@ -693,10 +693,9 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
  
     # Setup Merlin area detector
     if ('merlin' in dets_by_name):
-        merlin.cam.stage_sigs['trigger_mode'] = 2
+        merlin.cam.stage_sigs['trigger_mode'] = 2 # may be redundant
         merlin.cam.stage_sigs['acquire_time'] = 0.0010
         merlin.cam.stage_sigs['acquire_period'] = 0.002 #can I implement binning via the stage_sigs??
-        # merlin.cam.stage_sigs['num_images'] = 1
         merlin.cam.stage_sigs['num_images'] = N_tot #this is not supposed to be one
         merlin.stage_sigs['total_points'] = N_tot
         merlin.hdf5.stage_sigs['num_capture'] = N_tot
@@ -718,9 +717,6 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
     # Setup Dexela area detector
     #if('dexela' in dets_by_name):
         #add the important things for the dexela. Including dark frame??
-
-    # Check shutter
-    yield from check_shutters(shutter, 'Open')
 
     # yield from count(dets, num=N_tot, md=scan_md) #not actually counting
 
@@ -747,9 +743,12 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
             st = yield from bps.trigger(d, group=row_str)
 
         # Turn on laser
-        yield from laser_on(power, hold, ramp, delay=0) #if laser is in an opyd object, can it also be triggered at same time as everythin else??
+        yield from laser_on(power, hold, ramp, delay=0)
         # yield from bps.sleep(ramp)
         yield from bps.abs_set(flying_zebra_laser._encoder.pc.arm, 1)
+
+        # move st after laser off and x-rays off to avoid unecessary sample modification?
+        # How to improve write speeds. e.g., IOC streaming and cs plotting...
         
         # start counting on detectors
         #   Do we want to turn off the laser and close the X-ray
@@ -760,6 +759,7 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
 
         # stop counting
         yield from abs_set(sclr1.stop_all, 1, timeout=10)  # stop acquiring scaler
+        
         # turn off laser
         yield from laser_off()
 
@@ -777,10 +777,14 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
         yield from collect(flying_zebra_laser)
         print('done')
 
-    yield from plan() 
-    
-    # This is duplicate...although, probably good to make sure the laser is off
-    yield from laser_off()
+    # Check shutter
+    yield from check_shutters(shutter, 'Open')
+
+    # Collect time series
+    yield from plan()
+
+    # Confirm laser is off
+    yield from laser_off() 
 
     # Close shutter
     yield from check_shutters(shutter, 'Close')
@@ -788,7 +792,10 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
     # Plotting data
     #will be useful, but maybe after the acqusition and not live. Does this make it easier??
     #plot each series after they have been acquired??
-    note('Time series acquired!') #How to add scan ID information??
+    h = db[-1]
+    id_str = h.start['scan_id']
+
+    log(f'Time series acquired for {id_str} scan!') #How to add scan ID information??
     # One way to do it (probably not the best way) would be to simply
     # do a h = db[-1] and the grab whatever information you need from
     # there (h.start ...)
@@ -800,7 +807,7 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
 def tr_xanes_plan(xye_pos, power, hold,
                   v_edge, h_edge, distance, stepsize,
                   N_start=0, z_pos=[], ramp=5,
-                  dets=[xs, merlin, nano_vlm], acqtime=0.001,
+                  dets=[xs, merlin], acqtime=0.001,
                   waittime=5, peakup_N=15, align_N=15, shutter=True):
 
     '''
