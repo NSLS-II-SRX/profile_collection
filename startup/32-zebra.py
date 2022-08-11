@@ -909,7 +909,12 @@ class SRXFlyer1Axis(Device):
 
         if amk_debug_flag:
             t_sisdata = tic()
-        get_sis_data()
+        if 'laser' in self.name:
+            export_sis_data_laser(
+                self._sis, self.__write_filepath_sis, self._encoder
+            )
+        else:
+            get_sis_data()
         if amk_debug_flag:
             toc(t_sisdata, str='Get SIS data')
 
