@@ -666,7 +666,7 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
     nano_flying_zebra_laser.detectors = extra_dets
     dets = [sclr1] + extra_dets
     dets_by_name = {d.name : d for d in dets}
-    note(f'{dets_by_name} recording for {total_time} sec at {acqtime} intervals.')
+    note(f'{[d.name for d in dets]} recording for {total_time} sec at {acqtime} intervals.')
 
     # Setup scaler
     if (acqtime < 0.001):
@@ -699,9 +699,9 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
         merlin.cam.stage_sigs['trigger_mode'] = 2 # may be redundant
         merlin.cam.stage_sigs['acquire_time'] = 0.0010
         merlin.cam.stage_sigs['acquire_period'] = 0.002 #can I implement binning via the stage_sigs??
-        merlin.cam.stage_sigs['num_images'] = N_tot #this is not supposed to be one
-        merlin.stage_sigs['total_points'] = N_tot
-        merlin.hdf5.stage_sigs['num_capture'] = N_tot
+        merlin.cam.stage_sigs['num_images'] = N_tot // 3 #this is not supposed to be one
+        merlin.stage_sigs['total_points'] = N_tot // 3
+        merlin.hdf5.stage_sigs['num_capture'] = N_tot // 3
         # merlin._mode = SRXMode.step #what does this do???
 
     # Setup VLM camera
@@ -772,12 +772,13 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
 
         # Reset detector values
         yield from abs_set(sclr1.count_mode, 1, timeout=10)
+        
+        # Write file
         for d in extra_dets:
-            # Write file
-            yield from abs_set(xs.hdf5.capture, 'Done', timeout=10)
-            yield from abs_set(xs.hdf5.write_file, 1, timeout=10)
-            # reset
-            yield from abs_set(d.external_trig, False)
+            yield from abs_set(d.hdf5.capture, 'Done', wait=True, timeout=10)
+            # yield from abs_set(d.hdf5.write_file, 1, wait=True, timeout=10)
+        # reset
+        yield from abs_set(xs.external_trig, False)
 
         # save all data to file
         print('Completing scan...', end='', flush=True)
