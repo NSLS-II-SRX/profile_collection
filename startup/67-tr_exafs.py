@@ -134,10 +134,10 @@ laser.ramp.set(0)
 
 
 # Changing VLM from production to laser VLM
-flying_zebra_laser = SRXFlyer1Axis(
-    list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="flying_zebra_laser"
+nano_flying_zebra_laser = SRXFlyer1Axis(
+    list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="nano_flying_zebra_laser"
 )
-set_tr_flyer_stage_sigs(flying_zebra_laser, divs=[1, 3, 10, 100])
+set_tr_flyer_stage_sigs(nano_flying_zebra_laser, divs=[1, 3, 10, 100])
 
 # something with nano_flying_zebra_laser._mode(SRXmode.fly)
 
@@ -663,7 +663,7 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
     scan_md['scan']['dwell'] = acqtime
 
     # Register the detectors
-    flying_zebra_laser.detectors = extra_dets
+    nano_flying_zebra_laser.detectors = extra_dets
     dets = [sclr1] + extra_dets
     dets_by_name = {d.name : d for d in dets}
     note(f'{dets_by_name} recording for {total_time} sec at {acqtime} intervals.')
@@ -671,7 +671,10 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
     # Setup scaler
     if (acqtime < 0.001):
         acqtime = 0.001 #limits the time resolution. Why???
-    yield from abs_set(sclr1.nuse_all, 10_000)
+    if (N_tot < 10_000):
+        yield from abs_set(sclr1.nuse_all, N_tot + 1)
+    else:
+        yield from abs_set(sclr1.nuse_all, 10_000)
             # Don't put this here!
             #yield from abs_set(ion.erase_start, 1)
 
@@ -726,26 +729,30 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
     # @ts_monitor_during_decorator([roi_pv])
     # @monitor_during_decorator([roi_pv])
     @run_decorator(md=scan_md)
-    @stage_decorator([flying_zebra_laser])  # Below, 'scan' stage ymotor.
-    @stage_decorator(flying_zebra_laser.detectors)
+    @stage_decorator([nano_flying_zebra_laser])  # Below, 'scan' stage ymotor.
+    @stage_decorator(nano_flying_zebra_laser.detectors)
     def plan():
         # Setup zebra
-        yield from abs_set(flying_zebra_laser._encoder.pc.gate_start, 0, settle_time=0.010, wait=True, timeout=10)
-        yield from abs_set(flying_zebra_laser._encoder.pc.gate_width, total_time, settle_time=0.010, wait=True, timeout=10)
-        yield from abs_set(flying_zebra_laser._encoder.pc.gate_step, total_time+0.001, settle_time=0.010, wait=True, timeout=10)
+        yield from abs_set(nano_flying_zebra_laser._encoder.pc.gate_start, 0, settle_time=0.010, wait=True, timeout=10)
+        yield from abs_set(nano_flying_zebra_laser._encoder.pc.gate_width, total_time, settle_time=0.010, wait=True, timeout=10)
+        yield from abs_set(nano_flying_zebra_laser._encoder.pc.gate_step, total_time+0.001, settle_time=0.010, wait=True, timeout=10)
+
+        nano_flying_zebra_laser._mode = "kicked off"
+        nano_flying_zebra_laser._npts = int(N_tot)
 
         yield from abs_set(sclr1.erase_start, 1, wait=True, settle_time=0.5, timeout=10)
         # st = yield from bps.trigger(xs)
         row_str = short_uid('row')
-        print('Starting data collection...', end='', flush=True)
+        print('Starting data collection...')
         for d in extra_dets:
-            print(f'  triggering {d.name}')
+            print(f'  Triggering {d.name}')
             st = yield from bps.trigger(d, group=row_str)
+        yield from abs_set(xs.hdf5.capture, 1, wait=True, timeout=10)
 
         # Turn on laser
         yield from laser_on(power, hold, ramp, delay=0)
-        # yield from bps.sleep(ramp)
-        yield from bps.abs_set(flying_zebra_laser._encoder.pc.arm, 1)
+        yield from bps.sleep(ramp)
+        yield from bps.abs_set(nano_flying_zebra_laser._encoder.pc.arm, 1)
 
         # move st after laser off and x-rays off to avoid unecessary sample modification?
         # How to improve write speeds. e.g., IOC streaming and cs plotting...
@@ -766,15 +773,19 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
         # Reset detector values
         yield from abs_set(sclr1.count_mode, 1, timeout=10)
         for d in extra_dets:
+            # Write file
+            yield from abs_set(xs.hdf5.capture, 'Done', timeout=10)
+            yield from abs_set(xs.hdf5.write_file, 1, timeout=10)
+            # reset
             yield from abs_set(d.external_trig, False)
 
         # save all data to file
         print('Completing scan...', end='', flush=True)
-        yield from complete(flying_zebra_laser)
+        yield from complete(nano_flying_zebra_laser)
         print('done')
 
         print('Collecting data...', end='', flush=True)
-        yield from collect(flying_zebra_laser)
+        yield from collect(nano_flying_zebra_laser)
         print('done')
 
     # Check shutter
