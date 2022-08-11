@@ -106,6 +106,7 @@ class MerlinFileStoreHDF5(FileStoreBase):
         # These must be set before parent is staged (specifically
         # before capture mode is turned on. They will not be reset
         # on 'unstage' anyway.
+        self.file_path.put(write_path)
         # set_and_wait(self.file_path, write_path)
         set_and_wait(self.file_name, filename)
         set_and_wait(self.file_number, 0)
