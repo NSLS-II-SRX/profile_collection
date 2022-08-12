@@ -342,9 +342,9 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
     num = np.round(((2 * distance) / stepsize) + 1)
 
     # Move sample stage to center position of features
+    yield form mov(motors[2], edge[2])
     yield from mov(motors[0], edge[0],
-                   motors[1], edge[1],
-                   motors[2], edge[2])
+                   motors[1], edge[1])
     note(f'Moving motors to {edge} coordinates.')
 
     # Perform scan with stage to be adjusted
@@ -661,6 +661,7 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
     scan_md['scan']['type'] = 'XAS_TIME' #Should this be something different?
     scan_md['scan']['acquisition'] = total_time #Can I make up new entries like this?
     scan_md['scan']['dwell'] = acqtime
+    scan_md['scan']['detectors'] = [sclr1.name] + [d.name for d in extra_dets]
 
     # Register the detectors
     nano_flying_zebra_laser.detectors = extra_dets
