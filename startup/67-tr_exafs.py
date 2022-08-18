@@ -276,7 +276,7 @@ def laser_on(power, hold, ramp=5, delay=0):
 
     # Make sure laser is off
     if laser.signal.get() > 0:
-        print('Laser is already on!')
+        log('Laser is already on!')
         yield from abs_set(laser.signal, 0)
         yield from bps.sleep(0.25)
 
@@ -327,7 +327,6 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
 
     # Defining up the motors
     motors = [nano_stage.x, nano_stage.y, nano_stage.z]
-    scan_motor = motors[variables.index(direction)]
 
     # Which beams are used
     vlaser_on = (beam == 'laser') or (beam == 'both')
@@ -813,9 +812,9 @@ def laser_time_series(power, hold, ramp=5, wait = 0,
         yield from abs_set(sclr1.erase_start, 1, wait=True, settle_time=0.5, timeout=10)
         # st = yield from bps.trigger(xs)
         row_str = short_uid('row')
-        print('Starting data collection...')
+        log('Starting data collection...')
         for d in extra_dets:
-            print(f'  Triggering {d.name}')
+            log(f'  Triggering {d.name}')
             st = yield from bps.trigger(d, group=row_str)
         yield from abs_set(xs.hdf5.capture, 1, wait=True, timeout=10)
 
