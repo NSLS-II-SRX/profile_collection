@@ -137,7 +137,7 @@ laser.ramp.set(0)
 nano_flying_zebra_laser = SRXFlyer1Axis(
     list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="nano_flying_zebra_laser"
 )
-set_tr_flyer_stage_sigs(nano_flying_zebra_laser, divs=[1, 3, 10, 100])
+set_tr_flyer_stage_sigs(nano_flying_zebra_laser, divs=[1, 3, 1, 100])
 
 # something with nano_flying_zebra_laser._mode(SRXmode.fly)
 
@@ -342,7 +342,7 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
     num = np.round(((2 * distance) / stepsize) + 1)
 
     # Move sample stage to center position of features
-    yield form mov(motors[2], edge[2])
+    yield from mov(motors[2], edge[2])
     yield from mov(motors[0], edge[0],
                    motors[1], edge[1])
     note(f'Moving motors to {edge} coordinates.')
@@ -395,19 +395,19 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
             first_fit = False
             continue #if not skips to only fitting x-ray data
 
-        # When checking x-rays, see if any x-rays were avialable
-        if (beam_1 == 'x-ray') & (not shutter):
-            log('No x-rays to properly perform knife edge scan.')
-            cent_position = edge[variables.index(direction)]
-            fwhm = -1 # this way we obviously know something is wrong
-            print(f'{cent_position=}')
-            print(f'{fwhm=}')
-            continue
+        if beam_1 == 'x-ray':
+            if (beam != 'x-ray') and (beam != 'both'):
+                print('Now I am in here!')
+                continue
+            elif not shutter:
+                log('No x-rays to properly perform knife edge scan.')
+                cent_position = edge[variables.index(direction)]
+                fwhm = -1 # this way we obviously know something is wrong 
         
         # Try to find edge
         try:
             log('Fitting...')
-            cent_position, fwhm = beam_knife_edge_plot(beam=beam_1, plotme=plotme)
+            cent_position, fwhm = yield from beam_knife_edge_plot(beam=beam_1, plotme=plotme)
             print(f'{cent_position=}')
             print(f'{fwhm=}')
 
@@ -418,7 +418,7 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
                     log('Doubling scan range.')
                     yield from _plan(distance_1 = 2 * distance)
                     ext_scan = True
-                    cent_position, fwhm = beam_knife_edge_plot(beam=beam_1, plotme=plotme)
+                    cent_position, fwhm = yield from beam_knife_edge_plot(beam=beam_1, plotme=plotme)
             
                 except RuntimeError:
                     log('Knife edge scan failed to find position.')
@@ -428,7 +428,8 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
                 log('Knife edge scan failed to find position.')
                 raise RuntimeError()
         
-        beam_param.append(cent_position, fwhm)
+        beam_param.append(cent_position)
+        beam_param.append(fwhm)
 
     return beam_param # Cent_position then fwhm. Laser parameters first if 'both'
 
@@ -449,7 +450,9 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     h = db[int(scanid)]
     start_doc = h.start
     id_str = start_doc['scan_id']
-    note(f'Trying to determine beam parameters from {id_str} scan.')
+    scan_ext = start_doc['scan']['scan_input'][0:1]
+    scan_cent = np.mean(scan_ext)
+    note(f'Trying to determine {beam} beam parameters from {id_str} scan.')
 
     pos = start_doc['scan']['fast_axis']['motor_name']
     direction = pos[-1]
@@ -491,28 +494,37 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     note(f'Data acquired for {beam}! Now fitting...')
 
     # Guessing the function and fitting the raw data
-    p_guess = [np.amax(y),
-                0.5,
+    p_guess = [0.5 * np.amax(y),
+                15,
                 x[np.argmax(np.abs(np.gradient(y,x)))],
-                np.amin(y) + 0.5*np.amax(y),
-                0.1]
+                np.amin(y),
+                10
+                ]
+    
+    p_guess = p_guess[0:4]
+    
     if np.mean(y[:3]) > np.mean(y[-3:]):
-        p_guess[0] = -np.amax(y)
+        p_guess[0] = -0.5 * np.amax(y)
+    if beam == 'x-ray':
+        p_guess[1] = 10
 
     # Fitting and useful information
     try:
-        popt, pcov = curve_fit(f_int_gauss, x, y, p0=p_guess)
+        print(f'Guess coeffcients are {p_guess}')
+        popt, pcov = curve_fit(f_offset_erf, x, y, p0=p_guess)
     except:
         log('Raw fit failed.')
-        popt, pcov = p_guess, 2*p_guess #guaranteed to raise an error later
+        popt, pcov = p_guess, p_guess
+    print(f'Fit coefficients are {popt}')
     cent_position = popt[2]
-    fwhm = 2 * np.sqrt(2 * np.log(2))*popt[1]
+    fwhm = 2 * np.sqrt(2 * np.log(2)) * popt[1]
     perr = np.sqrt(np.diag(pcov))
-    frac_err = np.abs(perr/popt)
+    frac_err = np.abs(np.array(perr) / np.array(popt))
+    print(f'{frac_err[:3]=}')
 
     # Report useful data
-    log(f'The beam center is at {cent_position:.4f} µm along {direction}.')
-    log(f'The beam fwhm is {fwhm:.4f} µm along {direction}.')
+    log(f'{beam} beam center is at {cent_position:.4f} µm along {direction}.')
+    log(f'{beam} beam fwhm is {fwhm:.4f} µm along {direction}.')
 
     # Set plotting variables
     x_plot = np.linspace(np.amin(x), np.amax(x), num=100)
@@ -532,36 +544,40 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     ax.cla()
     ax.plot(x, y, '+', label='Raw Data', c='k')
     if plot_guess:
-        ax.plot(x_plot, f_int_gauss(x_plot, *p_guess), '--', label='Guess Fit', c='0.5')
-    ax.plot(x_plot, f_int_gauss(x_plot, *popt), '-', label='Erf Fit', c='r')
+        ax.plot(x_plot, f_offset_erf(x_plot, *p_guess), '--', label='Guess Fit', c='0.5')
+    ax.plot(x_plot, f_offset_erf(x_plot, *popt), '-', label='Erf Fit', c='r')
     ax.set_title(f'Scan {id_str} of ' + beam)
     ax.set_xlabel(pos)
     ax.set_ylabel('ROI Counts')
     ax.legend()
-    plt.savefig(f'/home/xf05id1/current_user_data/alignments/{id_str}_erf_{beam}_{direction}.png')
+    ax.figure.figure.savefig(f'/home/xf05id1/current_user_data/alignments/{id_str}_erf_{beam}_{direction}.png')
 
     # Display the fit derivative
     ax.cla()
     ax.plot(x, np.gradient(y, x), '+', label='Derivative Data', c='k')
     if plot_guess:
-        ax.plot(x_plot, np.gradient(f_int_gauss(x_plot, *p_guess), x_plot), '--', label='Guess Fit', c='0.5')
-    ax.plot(x_plot, np.gradient(f_int_gauss(x_plot, *popt), x_plot), '-', label='Gauss Fit', c='r')
+        ax.plot(x_plot, np.gradient(f_offset_erf(x_plot, *p_guess), x_plot), '--', label='Guess Fit', c='0.5')
+    ax.plot(x_plot, np.gradient(f_offset_erf(x_plot, *popt), x_plot), '-', label='Gauss Fit', c='r')
     ax.set_title(f'Scan {id_str} of ' + beam)
     ax.set_xlabel(pos)
     ax.set_ylabel('Derivative ROI Counts')
     ax.legend()
-    plt.savefig(f'/home/xf05id1/current_user_data/alignments/{id_str}_gauss_{beam}_{direction}.png')
+    ax.figure.figure.savefig(f'/home/xf05id1/current_user_data/alignments/{id_str}_gauss_{beam}_{direction}.png')
     plt.close()
     
     # Check the quality of the fit and to see if the edge is mostly within range
     # For the failure, rerun the scan outside of this function
     # After plotting, so there is way to guage fit quality visually
-    if any(frac_err > 1):
+    if any([d >= 1 for d in frac_err[0:3]]):
         log('Poor fitting. Coefficient error exceeds predicted values.')
         yield from bps.sleep(1)
         raise RuntimeError()
-    if np.abs(cent_position) > 0.8*np.abs(distance):
+    if np.abs(scan_cent - cent_position) > 0.8*np.abs(distance):
         log('Edge position barely within FOV.')
+        yield from bps.sleep(1)
+        raise RuntimeError()
+    if (np.abs(2 * popt[0]) < 0.2 * np.amax(y)):
+        log('No edge detected!')
         yield from bps.sleep(1)
         raise RuntimeError()
 
@@ -585,17 +601,18 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize, acqtime=1.0,
     # Setting up label variables
     motors = [nano_stage.x, nano_stage.y, nano_stage.z]
     variables = ['x','y']
-    FOV = [1000, 1000] # FOV of VLM in um. What is this? Laser spot should start within VLM image.
+    FOV = [500, 500] # FOV of VLM in um. What is this? Laser spot should start within VLM image.
     vlm_motors = [nano_vlm_stage.x, nano_vlm_stage.y, nano_vlm_stage.z]
     xray_pos, xray_sizes = [], []
     laser_pos, laser_sizes = [], []
     off_adj = []
 
     # Alignment
-    note('Running auto beam alignment')
+    log('Running auto beam alignment')
     for i, j in enumerate([v_edge, h_edge]):
 
         # Determine beam positions along variable
+        log(f'Performing edge scan along {variables[i]}.')
         beam_param = yield from beam_knife_edge_scan('both', variables[i], j, distance=distance, stepsize=stepsize, 
                                                                 acqtime=acqtime, shutter=shutter )
         
@@ -608,29 +625,32 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize, acqtime=1.0,
         log(f'Offset VLM by {offset:.4f} µm along ' + variables[i] + '-axis.')
 
         # Confirm adjustment
-        adjustment = 0
+        tot_offset = offset
+        new_laser_pos, new_laser_size = beam_param[0], beam_param[1]
         if check:
             log('Checking VLM stage correspondence. Determining new laser position.')
 
             # Re-determine laser position along variable
-            new_laser_pos, new_laser_size = yield from beam_knife_edge_scan('laser', variables[i], j, distance=distance, stepsize=stepsize, 
+            laser_beam = yield from beam_knife_edge_scan('laser', variables[i], j, distance=distance, stepsize=stepsize, 
                                                                   acqtime=acqtime, shutter=shutter )
+            new_laser_pos, new_laser_size = laser_beam[0], laser_beam[1]
             
             # Adjust VLM position
             new_offset = beam_param[2] - new_laser_pos
-            adjustment = offset-new_offset
-            if np.abs(new_offset) > np.abs(offset):
+            tot_offset = offset + new_offset
+            if (np.abs(new_offset) > np.abs(offset)) and (new_offset > stepsize):
                 raise RuntimeError("Stage correspondence issue. Beam alignment will not converge.")
-            yield from movr(vlm_motors[i], new_offset)
-            log(f'Offset VLM by {new_offset:.4f} µm along ' + variables[i] + '-axis.')
-            log(f'Sample and VLM stage correlation off by {adjustment:.4f} µm along ' + variables[i] + '-axis.')
+            yield from movr(vlm_motors[i], new_offset * 0.001)
+            log(f'Adjusted offset VLM by {new_offset:.4f} µm along ' + variables[i] + '-axis.')
+            log(f'Sample and VLM stage total offset of {tot_offset:.4f} µm along ' + variables[i] + '-axis.')
 
         # Record information
+        note('Recording useful alignment parameters.')
         laser_pos.append(new_laser_pos), laser_sizes.append(new_laser_size)
         xray_pos.append(beam_param[2]), xray_sizes.append(beam_param[3])
-        off_adj.append(offset, adjustment)
+        off_adj.append(offset), off_adj.append(tot_offset)
 
-        return xray_pos, xray_sizes, laser_pos, laser_sizes, off_adj
+    return xray_pos, xray_sizes, laser_pos, laser_sizes, off_adj
 
 
 def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin], 
@@ -752,8 +772,13 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
 
         # Turn on laser
         yield from laser_on(power, hold, ramp, delay=0)
-        yield from bps.sleep(ramp)
+        #yield from bps.sleep(ramp)
         yield from bps.abs_set(nano_flying_zebra_laser._encoder.pc.arm, 1)
+        yield from bps.sleep(total_time)
+
+        # Turn laser off
+        yield from laser_off()
+        print('Waiting for data...', end='', flush=True)
 
         # move st after laser off and x-rays off to avoid unecessary sample modification?
         # How to improve write speeds. e.g., IOC streaming and cs plotting...
@@ -764,12 +789,10 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
         #   I think the timeout would to a "total time" since trigger
         #   not waiting at a given point in the code for timeout
         st.wait(timeout=600)  # Putting default 600 s = 10 min timeout
+        print('done')
 
         # stop counting
-        yield from abs_set(sclr1.stop_all, 1, timeout=10)  # stop acquiring scaler
-        
-        # turn off laser
-        yield from laser_off()
+        yield from abs_set(sclr1.stop_all, 1, wait=True, timeout=10)  # stop acquiring scaler
 
         # Reset detector values
         yield from abs_set(sclr1.count_mode, 1, timeout=10)

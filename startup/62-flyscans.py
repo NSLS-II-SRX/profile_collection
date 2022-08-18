@@ -419,7 +419,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 print(ex)
             ## Clean up scaler
             try:
-                yield from abs_set(ion.stop_all, 1, timeout=10)  # stop acquiring scaler
+                yield from abs_set(ion.stop_all, 1, wait=True, timeout=10)  # stop acquiring scaler
             except ex:
                 print('Hopefully a timeout error while cleaning up scaler...')
                 print(ex)
@@ -443,7 +443,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             toc(t_datacollect, str='Total time')
 
         # we still know about ion from above
-        yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
+        yield from abs_set(ion.stop_all, 1, wait=True)  # stop acquiring scaler
 
         def zebra_complete():
             yield from complete(flying_zebra)  # tell the Zebra we are done

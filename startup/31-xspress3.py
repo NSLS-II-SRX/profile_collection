@@ -324,6 +324,10 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
     # replace HDF5:FileCreateDir with HDF1:FileCreateDir
     create_dir = Cpt(EpicsSignal, "HDF5:FileCreateDir")
 
+    # deadtime correction on/off attribute, added by YY
+    # dt_correction = Cpt(EpicsSignal, "det1:CTRL_DTC")
+
+
     hdf5 = Cpt(
         Xspress3FileStoreFlyable,
         "HDF5:",
