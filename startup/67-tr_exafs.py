@@ -20,7 +20,7 @@ def start_logging():
     os.makedirs(logdir, exist_ok=True)
 
     # Setting up pre-configured log file with Bluesky
-    temp_handler = config_bluesky_logging(file=logdir+logfile, level='DEBUG', color=False)
+    temp_handler = config_bluesky_logging(file=logdir+logfile, level='INFO', color=False)
     logger.removeHandler(temp_handler)
 
     # How log file messages appear
@@ -37,22 +37,15 @@ def start_logging():
     console.setFormatter(LogFormatter(format, datefmt=datefmt))
     logger.addHandler(console)
 
-    note('Log file start.')
+    log('Log file start.')
     global debug_logging
     debug_logging = True
+
 
 # Log function to print to console and log file. Replaces print function.
 def log(message):
     if debug_logging:
         logger.info(message)
-    else:
-        print(message)
-    
-
-# Log function to print only to log file
-def note(message):
-    if debug_logging:
-        logger.debug(message)
     else:
         print(message)
 
@@ -236,7 +229,7 @@ def gen_xye_pos(erange = [11817, 11862, 11917, 12267],
 
     # Save the positions and energies with 
     np.savetxt(filedir+filename, xye_pos, delimiter=',', fmt='%1.4f')
-    note('xye_pos saved to ' + filedir+filename)
+    log('xye_pos saved to ' + filedir+filename)
 
 
 def read_xye_pos(filedir='', filename=''):
@@ -281,8 +274,8 @@ def laser_on(power, hold, ramp=5, delay=0):
         yield from bps.sleep(0.25)
 
     # Log some info
-    note('Laser startup!')
-    note(f'{power} mW power, {hold} sec hold, {ramp} sec ramp.')
+    log('Laser startup!')
+    log(f'{power} mW power, {hold} sec hold, {ramp} sec ramp.')
     
     # Set up variables. Settle_time to not overwhelm zebra
     yield from abs_set(laser.power, power, settle_time=0.010)
@@ -293,11 +286,11 @@ def laser_on(power, hold, ramp=5, delay=0):
     if delay > 0:
         yield from bps.sleep(delay)
     yield from abs_set(laser.signal, 1)
-    note('Laser on!')
+    log('Laser on!')
 
 
 def laser_off():
-    note('Laser off!')
+    log('Laser off!')
     # Turn laser off
     yield from abs_set(laser.signal, 0)
 
@@ -345,7 +338,7 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
     yield from mov(motors[2], edge[2])
     yield from mov(motors[0], edge[0],
                    motors[1], edge[1])
-    note(f'Moving motors to {edge} coordinates.')
+    log(f'Moving motors to {edge} coordinates.')
 
     # Perform scan with stage to be adjusted
     #yield from rel_scan(det, scan_motor, -distance, distance, num) #depricated
@@ -452,7 +445,7 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     id_str = start_doc['scan_id']
     scan_ext = start_doc['scan']['scan_input'][0:1]
     scan_cent = np.mean(scan_ext)
-    note(f'Trying to determine {beam} beam parameters from {id_str} scan.')
+    log(f'Trying to determine {beam} beam parameters from {id_str} scan.')
 
     pos = start_doc['scan']['fast_axis']['motor_name']
     direction = pos[-1]
@@ -491,7 +484,7 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     distance = np.abs(xstop - xstart)
     x = np.linspace(xstart, xstop, int(xnum))
     x, y = x.astype(np.float64), y.astype(np.float64)
-    note(f'Data acquired for {beam}! Now fitting...')
+    log(f'Data acquired for {beam}! Now fitting...')
 
     # Guessing the function and fitting the raw data
     p_guess = [0.5 * np.amax(y),
@@ -645,7 +638,7 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize, acqtime=1.0,
             log(f'Sample and VLM stage total offset of {tot_offset:.4f} µm along ' + variables[i] + '-axis.')
 
         # Record information
-        note('Recording useful alignment parameters.')
+        log('Recording useful alignment parameters.')
         laser_pos.append(new_laser_pos), laser_sizes.append(new_laser_size)
         xray_pos.append(beam_param[2]), xray_sizes.append(beam_param[3])
         off_adj.append(offset), off_adj.append(tot_offset)
@@ -687,7 +680,7 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
     nano_flying_zebra_laser.detectors = extra_dets
     dets = [sclr1] + extra_dets
     dets_by_name = {d.name : d for d in dets}
-    note(f'{[d.name for d in dets]} recording for {total_time} sec at {acqtime} intervals.')
+    log(f'{[d.name for d in dets]} recording for {total_time} sec at {acqtime} intervals.')
 
     # Setup scaler
     if (acqtime < 0.001):
@@ -893,11 +886,11 @@ def tr_xanes_plan(xye_pos, power, hold,
         log('Starting TR_XANES batch...')
     else:
         log('Re-starting TR_XANES batch...')
-    note('Target paramters are:')
-    note(f'{N} events. {total_time} sec acquire periods. {acqtime} sec acquisition rate.')
-    note(f'{power} mW laser power. {ramp} sec ramp with {hold} sec hold.')
-    note(f'Alignment every {align_N} events. Peakup every {peakup_N} events.')
-    note(f'Edges at: vertical {v_edge}, horizontal {h_edge}')
+    log('Target paramters are:')
+    log(f'{N} events. {total_time} sec acquire periods. {acqtime} sec acquisition rate.')
+    log(f'{power} mW laser power. {ramp} sec ramp with {hold} sec hold.')
+    log(f'Alignment every {align_N} events. Peakup every {peakup_N} events.')
+    log(f'Edges at: vertical {v_edge}, horizontal {h_edge}')
 
     # Move z-stage to sample plane if given
     if (z_pos != []):
@@ -906,7 +899,7 @@ def tr_xanes_plan(xye_pos, power, hold,
         yield from mov(nano_stage.z, z_pos)
     else:
         log('No z-coordinate given. Assuming position already at sample plane.') #how to record current z_pos
-        note(f'Current z_pos is {z_pos:.3f}.')
+        log(f'Current z_pos is {z_pos:.3f}.')
 
     # Timing statistics
     N_time = N - N_start
@@ -946,7 +939,7 @@ def tr_xanes_plan(xye_pos, power, hold,
             # Will these positions drift along direction of edge??
             v_edge = [xray_pos[0], v_edge[1]] #update x-position
             h_edge = [h_edge[0], xray_pos[1]] #updated y-position
-            note(f'New edge positions: vertical {v_edge} and horizontal {h_edge}')
+            log(f'New edge positions: vertical {v_edge} and horizontal {h_edge}')
             t_elap_a += ttime.time() - t0_a
         
         # Move to positions and energy
