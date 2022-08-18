@@ -546,11 +546,15 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     ax.set_xlabel(pos)
     ax.set_ylabel('ROI Counts')
     ax.legend()
-    ax.annotate(f'Center = {cent_position:.4f} µm     FWHM  = {fwhm:.4f} µm',
-            xy=(0.5, 0.02),
+    meta_string = (f'Cent = {cent_position:.3f} µm     ' +
+                  f'FWHM  = {fwhm:.3f} µm     ' +
+                  f'Step = {x[1]-x[0]:.1f} µm')
+    ax.annotate(meta_string,
+            xy=(0.5, 0.01),
             xycoords='axes fraction',
             ha='center')
-    ax.figure.figure.savefig(f'{dir}{id_str}_erf_{beam}_{direction}.png')
+    ax.figure.figure.savefig(f'{dir}{id_str}_erf_{beam}_{direction}.png',
+                             transparent=False)
 
     # Display the fit derivative
     ax.cla()
@@ -562,11 +566,12 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     ax.set_xlabel(pos)
     ax.set_ylabel('Derivative ROI Counts')
     ax.legend()
-    ax.annotate(f'Center = {cent_position:.4f} µm     FWHM  = {fwhm:.4f} µm',
-            xy=(0.5, 0.02),
+    ax.annotate(meta_string,
+            xy=(0.5, 0.01),
             xycoords='axes fraction',
             ha='center')
-    ax.figure.figure.savefig(f'{dir}{id_str}_gauss_{beam}_{direction}.png')
+    ax.figure.figure.savefig(f'{dir}{id_str}_gauss_{beam}_{direction}.png',
+                             transparent=False)
     plt.close()
     
     # Check the quality of the fit and to see if the edge is mostly within range
