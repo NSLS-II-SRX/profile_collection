@@ -98,7 +98,7 @@ def set_tr_flyer_stage_sigs(flyer, divs=[1, 3, 10, 100]):
     flyer.stage_sigs[flyer._encoder.div4.first_pulse] = 0
     
     ## PULSE tab
-    flyer.stage_sigs[flyer._encoder.pulse1.width] = 0.5
+    flyer.stage_sigs[flyer._encoder.pulse1.width] = 0.5 # change to 0.9??
     flyer.stage_sigs[flyer._encoder.pulse1.input_addr] = 32
     flyer.stage_sigs[flyer._encoder.pulse1.delay] = 0
     flyer.stage_sigs[flyer._encoder.pulse1.time_units] = "ms"
@@ -450,6 +450,11 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     pos = start_doc['scan']['fast_axis']['motor_name']
     direction = pos[-1]
 
+    # Make a new directory if necessary
+    dir = '/home/xf05id1/current_user_data/alignments/'
+    os.makedirs(dir, exist_ok=True)
+    os.makedirs(dir + 'raw_data/', exis_ok=True)
+
     # Get the information from the previous scan
     haz_data = False
     loop_counter = 0
@@ -476,15 +481,18 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     elif (beam == 'laser'):
         y = tbl['it'].values[0] #redefined for when channel 4 is using the photodiode
 
-    # Get position data
-    # Interpolate x data
+    # Interpolate position data
     xstart = start_doc['scan']['scan_input'][0]
     xstop = start_doc['scan']['scan_input'][1]
     xnum = start_doc['scan']['scan_input'][2]
     distance = np.abs(xstop - xstart)
     x = np.linspace(xstart, xstop, int(xnum))
     x, y = x.astype(np.float64), y.astype(np.float64)
-    log(f'Data acquired for {beam}! Now fitting...')
+
+    # Save the raw data for easy access later
+    np.savetxt(f'{dir}raw_data/scan_{id_str}_{beam}_{direction}.txt',
+                np.asarray([x, y]), delimiter=',')
+    log(f'Raw data acquired and saved for {beam}! Now fitting...')
 
     # Guessing the function and fitting the raw data
     p_guess = [0.5 * np.amax(y),
@@ -526,24 +534,19 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     if (plotme is None):
         fig, ax = plt.subplots(1, 1)
     else:
-        # fig = plotme.fig
         ax = plotme.ax
 
-    dir = '/home/xf05id1/current_user_data/alignments/'
-    os.makedirs(dir, exist_ok=True)
-
-    #is it worth just saving these to a designated folder?
     # Display fit of raw data
     ax.cla()
     ax.plot(x, y, '+', label='Raw Data', c='k')
     if plot_guess:
         ax.plot(x_plot, f_offset_erf(x_plot, *p_guess), '--', label='Guess Fit', c='0.5')
     ax.plot(x_plot, f_offset_erf(x_plot, *popt), '-', label='Erf Fit', c='r')
-    ax.set_title(f'Scan {id_str} of ' + beam)
+    ax.set_title(f'Scan {id_str} of {beam} along {direction}')
     ax.set_xlabel(pos)
     ax.set_ylabel('ROI Counts')
     ax.legend()
-    ax.figure.figure.savefig(f'/home/xf05id1/current_user_data/alignments/{id_str}_erf_{beam}_{direction}.png')
+    ax.figure.figure.savefig(f'{dir}{id_str}_erf_{beam}_{direction}.png')
 
     # Display the fit derivative
     ax.cla()
@@ -551,11 +554,11 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     if plot_guess:
         ax.plot(x_plot, np.gradient(f_offset_erf(x_plot, *p_guess), x_plot), '--', label='Guess Fit', c='0.5')
     ax.plot(x_plot, np.gradient(f_offset_erf(x_plot, *popt), x_plot), '-', label='Gauss Fit', c='r')
-    ax.set_title(f'Scan {id_str} of ' + beam)
+    ax.set_title(f'Derivative of scan {id_str} of {beam} along {direction}')
     ax.set_xlabel(pos)
     ax.set_ylabel('Derivative ROI Counts')
     ax.legend()
-    ax.figure.figure.savefig(f'/home/xf05id1/current_user_data/alignments/{id_str}_gauss_{beam}_{direction}.png')
+    ax.figure.figure.savefig(f'{dir}{id_str}_gauss_{beam}_{direction}.png')
     plt.close()
     
     # Check the quality of the fit and to see if the edge is mostly within range
