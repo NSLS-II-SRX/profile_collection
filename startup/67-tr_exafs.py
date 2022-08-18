@@ -18,9 +18,7 @@ from bluesky.log import logger, config_bluesky_logging, LogFormatter
 #   Liveplot needs to be buried within another function??
 #   Maybe just call when calling both...
 # Allow for auto_beam_alignment to align just one direction
-# Better fill out XAS_TIME metadata
-#   Add input parameters
-#   Check other scans to see their meta data
+# Add delay time into time series and laser on
 
 
 # Setting up a logging file
@@ -696,31 +694,44 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
                       shutter=True):
     
     '''
-    power
-    hold
-    ramp
+    power       (float) Target laser power in mW
+    hold        (float) Hold time at target laser power in sec. Not currently used
+    ramp        (float) Ramp time to target laser power in sec
     dets        (list) detectors used to collect time-resolved data
     total_time  (float) Total acquisition time. Defualt is 60 seconds
     acqtime     (float) Acquisition/integration time. Defualt is 0.001 seconds
     shutter     (bool)  Use X-rays or not
     '''
 
-    # Total number of time steps
+    # Timings and data points
     acqtime = 0.001
     total_time = hold + ramp
-    N_tot = total_time / acqtime #how does this incorporate dead time??
-    #define the N_tot as a function of TTL pulses
-    #how to trigger off of theses pulses and for how long?
+    N_tot = total_time / acqtime
 
-    # Record relevant meta data in the Start document, define in 90-usersetup.py
-    # Add user meta data
+
+    # Meta data
     log('Setting up time series collection...')
     scan_md = {}
     get_stock_md(scan_md)
     scan_md['scan']['type'] = 'XAS_TIME' #Should this be something different?
-    scan_md['scan']['acquisition'] = total_time #Can I make up new entries like this?
-    scan_md['scan']['dwell'] = acqtime
+    scan_md['scan']['scan_input'] = [power, hold, ramp, extra_dets, shutter]
+    scan_md['scan']['timings'] = [acqtime, ramp, hold, total_time]
     scan_md['scan']['detectors'] = [sclr1.name] + [d.name for d in extra_dets]
+    scan_md['scan']['energy'] = energy.get()
+    scan_md['scan']['stage_positions'] = {'x' : nano_stage.x.get(),
+                                        'y' : nano_stage.y.get(),
+                                        'z' : nano_stage.z.get(),
+                                        'th' : nanostage.th.user_readback.get()}
+    scan_md['scan']['vlm_positions'] = {'x' : nano_vlm_stage.x.get(),
+                                        'y' : nano_vlm_stage.y.get(),
+                                        'z' : nano_vlm_stage.z.get()}
+    scan_md['scan']['laser'] = {'manufacturer': 'ThorLabs',
+                                'product_id' : 'LP637-SF70',
+                                'type' : 'continuous wave',
+                                'wavelength' : '639',
+                                'power' : power,
+                                'ramp' : ramp}                                    
+    scan_md['scan']['start_time'] = ttime.ctime(ttime.time())
 
     # Register the detectors
     nano_flying_zebra_laser.detectors = extra_dets
