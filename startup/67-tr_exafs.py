@@ -546,6 +546,10 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     ax.set_xlabel(pos)
     ax.set_ylabel('ROI Counts')
     ax.legend()
+    ax.annotate(f'Center = {cent_position:.4f} µm     FWHM  = {fwhm:.4f} µm',
+            xy=(0.5, 0.02),
+            xycoords='axes fraction',
+            ha='center')
     ax.figure.figure.savefig(f'{dir}{id_str}_erf_{beam}_{direction}.png')
 
     # Display the fit derivative
@@ -558,6 +562,10 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     ax.set_xlabel(pos)
     ax.set_ylabel('Derivative ROI Counts')
     ax.legend()
+    ax.annotate(f'Center = {cent_position:.4f} µm     FWHM  = {fwhm:.4f} µm',
+            xy=(0.5, 0.02),
+            xycoords='axes fraction',
+            ha='center')
     ax.figure.figure.savefig(f'{dir}{id_str}_gauss_{beam}_{direction}.png')
     plt.close()
     
