@@ -17,8 +17,6 @@ from bluesky.log import logger, config_bluesky_logging, LogFormatter
 # Add plot of both x-ray and laser knife edge
 #   Liveplot needs to be buried within another function??
 #   Maybe just call when calling both...
-# Allow for auto_beam_alignment to align just one direction
-# Add delay time into time series and laser on
 
 
 # Setting up a logging file
@@ -690,14 +688,15 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
     return xray_pos, xray_sizes, laser_pos, laser_sizes, off_adj
 
 
-def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin], 
-                      shutter=True):
+def laser_time_series(power, hold, ramp=5, wait = 0,
+                      extra_dets=[xs, merlin], shutter=True):
     
     '''
     power       (float) Target laser power in mW
     hold        (float) Hold time at target laser power in sec. Not currently used
     ramp        (float) Ramp time to target laser power in sec
-    dets        (list) detectors used to collect time-resolved data
+    wait        (float) Time in sec between laser triggering and detector counting
+    extra_dets  (list) detectors used to collect time-resolved data
     total_time  (float) Total acquisition time. Defualt is 60 seconds
     acqtime     (float) Acquisition/integration time. Defualt is 0.001 seconds
     shutter     (bool)  Use X-rays or not
@@ -820,9 +819,11 @@ def laser_time_series(power, hold, ramp=5, extra_dets=[xs, merlin],
             st = yield from bps.trigger(d, group=row_str)
         yield from abs_set(xs.hdf5.capture, 1, wait=True, timeout=10)
 
-        # Turn on laser
+        # Turn on laser and wait
         yield from laser_on(power, hold, ramp, delay=0)
-        #yield from bps.sleep(ramp)
+        yield from bps.sleep(wait)
+
+        # Start counting and wait until total time is done
         yield from bps.abs_set(nano_flying_zebra_laser._encoder.pc.arm, 1)
         yield from bps.sleep(total_time)
 
