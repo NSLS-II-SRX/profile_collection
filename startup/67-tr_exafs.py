@@ -12,6 +12,17 @@ from bluesky.plan_stubs import (mov, movr)
 from bluesky.log import logger, config_bluesky_logging, LogFormatter
 
 
+### TODO ###
+# Find a way to add XAS_TIME to logscan_detailed file
+# Add plot of both x-ray and laser knife edge
+#   Liveplot needs to be buried within another function??
+#   Maybe just call when calling both...
+# Allow for auto_beam_alignment to align just one direction
+# Better fill out XAS_TIME metadata
+#   Add input parameters
+#   Check other scans to see their meta data
+
+
 # Setting up a logging file
 debug_logging = False
 def start_logging():
@@ -313,6 +324,11 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
     if not any(direction in variables for direction in variables):
         raise ValueError("Incorrect direction assignment. Please specify 'x' or 'y' for direction.")
 
+    # Checking beam inputs
+    poss_beams = ['x-ray', 'laser', 'both']
+    if not any(beam in poss_beams for beam in poss_beams):
+        raise ValueError("Incorrect beam assignment. Please specify 'x-ray', 'laser', or 'both' for direction.")
+
     # Defining up the motors
     motors = [nano_stage.x, nano_stage.y, nano_stage.z]
     scan_motor = motors[variables.index(direction)]
@@ -546,7 +562,7 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     ax.set_xlabel(pos)
     ax.set_ylabel('ROI Counts')
     ax.legend()
-    meta_string = (f'Cent = {cent_position:.3f} µm     ' +
+    meta_string = (f'Cent = {cent_position:.3f} µm     ' + #\t doesn't work in pyplot??
                   f'FWHM  = {fwhm:.3f} µm     ' +
                   f'Step = {x[1]-x[0]:.1f} µm')
     ax.annotate(meta_string,
@@ -593,7 +609,8 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     return cent_position, fwhm
 
 
-def auto_beam_alignment(v_edge, h_edge, distance, stepsize, acqtime=1.0,
+def auto_beam_alignment(v_edge, h_edge, distance, stepsize, 
+                        acqtime=1.0, direction = 'both',
                         shutter=True, check=False):
 
     '''
@@ -602,10 +619,15 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize, acqtime=1.0,
     distance        (float) Distance in µm to either side of feature to scan across
     stepsize        (float) Step size in µm of scans
     acqtime         (float) Acquisition time of detectors
+    direction       (str)   'x', 'y', or 'both'. Which direction to align. Default: 'both'
     shutter         (bool)  Use X-rays or not
     check           (bool)  If True, double check the laser adjustment and correspondence between sample and vlm stages
     '''
 
+    # Checking direction inputs
+    poss_direct = ['x', 'y', 'both']
+    if not any(direction in poss_direct for direction in poss_direct):
+        raise ValueError("Incorrect direction assignment. Please specify 'x', 'y', or 'both' for direction.")
 
     # Setting up label variables
     motors = [nano_stage.x, nano_stage.y, nano_stage.z]
@@ -619,11 +641,19 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize, acqtime=1.0,
     # Alignment
     log('Running auto beam alignment')
     for i, j in enumerate([v_edge, h_edge]):
+        # Do not align across vertical edge if only aligning along y
+        if (direction == 'y') and variables[i] == 'x':
+            log(f'Warning: Aligning only along {direction}. Outputs may not be expected size.')
+            continue
+        # Do not align across horizontal edge if only aligning along x
+        elif (direction == 'x') and variables[i] == 'y':
+            log(f'Warning: Aligning only along {direction}. Outputs may not be expected size.')
+            continue
 
         # Determine beam positions along variable
         log(f'Performing edge scan along {variables[i]}.')
         beam_param = yield from beam_knife_edge_scan('both', variables[i], j, distance=distance, stepsize=stepsize, 
-                                                                acqtime=acqtime, shutter=shutter )
+                                                                acqtime=acqtime, shutter=shutter)
         
         # Adjust VLM position
         offset = beam_param[2] - beam_param[0]
