@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from itertools import product
 import logging
 import os
+import csv
 
 import bluesky.plans as bp
 from bluesky.plan_stubs import (mov, movr)
@@ -14,9 +15,11 @@ from bluesky.log import logger, config_bluesky_logging, LogFormatter
 
 ### TODO ###
 # Find a way to add XAS_TIME to logscan_detailed file
-# Add plot of both x-ray and laser knife edge
-#   Liveplot needs to be buried within another function??
-#   Maybe just call when calling both...
+# Add leaky relu for better knife edge fitting?
+# Batch script of beam alignments with progressively smaller steps
+#   A run and forget alignment procedure?
+# More verbose descriptions of stage movements during alignment
+# Find a better way to deal with fractional error for qualifying curve fitting
 
 
 # Setting up a logging file
@@ -138,9 +141,6 @@ nano_flying_zebra_laser = SRXFlyer1Axis(
     list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="nano_flying_zebra_laser"
 )
 set_tr_flyer_stage_sigs(nano_flying_zebra_laser, divs=[1, 3, 1, 100])
-
-# something with nano_flying_zebra_laser._mode(SRXmode.fly)
-
 
 
 # Defining a new scaler (sclr2) with photodiode channel included
@@ -303,7 +303,7 @@ def laser_off():
 
 
 def beam_knife_edge_scan(beam, direction, edge, distance, stepsize, 
-                         acqtime=1.0, shutter=True):
+                         acqtime=1.0, check = False, shutter=True):
 
     '''
     beam        (str)   'x-ray', 'laser', or 'both' Specifies appropriate detectors
@@ -312,6 +312,7 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
     distance    (float) Distance in µm to either side of feature to scan across
     stepsize    (float) Step size in µm of scans
     acqtime     (float) Acquisition time of detectors
+    check       (bool)  Passed from auto_beam_alignment() to plot_beam_alignment()
     shutter     (bool)  Use X-rays or not
     '''
     
@@ -334,11 +335,8 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
 
     # Setting up the detectors 
     det = [sclr1]
-    # sclr1.stage_sigs['preset_time'] = acqtime 
     if beam in ['x-ray', 'both']:
         det.append(xs)
-        # xs.stage_sigs['preset_time'] = acqtime
-        # xs.cam.stage_sigs['acqtime'] = acqtime #whcih is appropriate??
     elif beam != 'laser':
         raise ValueError("Incorrect beam assignment. Please specify 'x-ray', 'laser', or 'both'.")
 
@@ -380,10 +378,8 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
         if vlaser_on:
             yield from laser_off()
 
-
     # Perform the actual scan
     yield from _plan(distance_1=distance)
-
 
     # Plot and process the data
     beam_param = []
@@ -434,6 +430,10 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
         
         beam_param.append(cent_position)
         beam_param.append(fwhm)
+
+        # Plot beam alignment
+        if beam == 'both':
+            yield from plot_beam_alignment(direction, check=check)
 
     return beam_param # Cent_position then fwhm. Laser parameters first if 'both'
 
@@ -499,10 +499,6 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     distance = np.abs(xstop - xstart)
     x = np.linspace(xstart, xstop, int(xnum))
     x, y = x.astype(np.float64), y.astype(np.float64)
-
-    # Save the raw data for easy access later
-    np.savetxt(f'{dir}raw_data/scan_{id_str}_{beam}_{direction}.txt',
-                np.asarray([x, y]), delimiter=',')
     log(f'Raw data acquired and saved for {beam}! Now fitting...')
 
     # Guessing the function and fitting the raw data
@@ -533,6 +529,12 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     perr = np.sqrt(np.diag(pcov))
     frac_err = np.abs(np.array(perr) / np.array(popt))
     print(f'{frac_err[:3]=}')
+
+    # Save the raw data and fitting parameters for access later
+    with open(f'{dir}raw_data/scan_{id_str}_{beam}_{direction}.txt', 'w+') as f:
+        csvWriter = csv.writer(f, delimiter=',')
+        csvWriter.writerows([x, y, popt, frac_err])
+        f.close
 
     # Report useful data
     log(f'{beam} beam center is at {cent_position:.4f} µm along {direction}.')
@@ -604,6 +606,124 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     return cent_position, fwhm
 
 
+def plot_beam_alignment(direction, scanid=-1, 
+                        arrow=True, plotme=None, check=False):
+
+    '''
+    Only when performing knife edge scans measuring both beams
+    direction   (str)   'x' or 'y'
+    scanid      (int)   id of alignment scan. Must have both signals, or check.
+                        If check, then use laser check scan id  
+    arrow       (bool)  Plots alignment arrows
+    plotme      (ax)    Pyplot axis. Creates one if None
+    check       (bool)  Staggers scan ids when checking laser alignment
+    '''
+
+    # Checking direction inputs
+    poss_direct = ['x', 'y']
+    if not any(direction in poss_direct for direction in poss_direct):
+        raise ValueError("Incorrect direction assignment. Please specify 'x' or 'y' for direction.")
+
+    # Define some useful variables
+    dir = '/home/xf05id1/current_user_data/alignments/'
+    data_dir = dir + 'raw_data/'
+    colors = ['k', 'r']
+    sides = ['left', 'right']
+
+    # Check if the file(s) exist
+    if not os.path.exists(data_dir + f'scan_{id_str}_{beam}_{direction}.txt'):
+        raise ValueError("Specified scan data does not exist. Scan may not exist or has not yet been fitted.")
+    if check and (not os.path.exists(data_dir + f'scan_{float(id_str) - 1}_{beam}_{direction}.txt')):
+        raise ValueError("Specified x-ray scan data does not exist for indicated laser scan. Double check scan id input.")
+
+    # Get proper scan id
+    h = db[int(scanid)]
+    start_doc = h.start
+    id_str = start_doc['scan_id']
+
+    # Set up the initial plots
+    if (plotme is None):
+        fig, ax1 = plt.subplots(1, 1)
+    else:
+        ax1 = plotme.ax
+    ax1.cla()
+    axs = [ax1, ax1.twinx()]
+    lns, meta_string, centers, y0s = [], [], [], []
+
+    # Work thorugh each scanning beam
+    for i, beam in enumerate['x-ray', 'laser']:
+        # Load the data
+        if check and beam == 'x-ray':
+            with open(data_dir + f'scan_{float(id_str) - 1}_{beam}_{direction}.txt', newline='\n') as f:
+                reader = csv.reader(f)
+                data = list(reader)
+                f.close()
+        else:
+            with open(data_dir + f'scan_{id_str}_{beam}_{direction}.txt', newline='\n') as f:
+                reader = csv.reader(f)
+                data = list(reader)
+                f.close()
+
+        # Format the data
+        x = [float(d) for d in data[0]]
+        y = [float(d) for d in data[1]]
+        popt = [float(d) for d in data[2]]
+        x_fit = np.linspace(np.amin(x), np.amax(x), num=100)
+        y_fit = f_offset_erf(x_fit, *popt)
+
+        # Plot the data
+        ax1.set_title(f'Scan {id_str} Alignemnt along {direction}')
+        if check:
+            ax1.set_title(f'Scans {float(id_str) - 1}:{id_str} Alignemnt along {direction}')
+        ln1 = axs[i].plot(x, y, '+', label=f'{beam} Data', c=colors[i])
+        ln2 = axs[i].plot(x_fit, y_fit, '-', label=f'{beam} Fit', c=colors[i], alpha=0.5)
+        lns.append(ln1[0]), lns.append(ln2[0])
+        axs[i].set_ylim(axs[i].get_ylim()[0] - 0.15 * np.abs(axs[i].get_ylim()[0]),
+                        axs[i].get_ylim()[1])
+        axs[i].set_ylabel(f'{beam} intensity (cts)', color=colors[i])
+        axs[i].tick_params(axis='y', colors=colors[i])
+        axs[i].spines[sides[i]].set_color(colors[i])
+
+        # Meta data as text
+        cent_position = popt[2]
+        fwhm = 2 * np.sqrt(2 * np.log(2)) * popt[1]
+        centers.append(cent_position)
+        y0s.append(popt[3])
+        meta_string.append(f'Cent = {cent_position:.3f} µm     ' + #\t doesn't work in pyplot??
+                           f'FWHM  = {fwhm:.3f} µm     ' +
+                           f'Step = {x[1]-x[0]:.1f} µm')
+
+    # Adding text to plot
+    ax1.legend(handles=lns, loc=6)
+    ax1.set_xlim(ax1.get_xlim()[0] - 0.15 * np.abs(ax1.get_xlim()[0]),
+                 ax1.get_xlim()[1])
+    ax1.set_xlabel(f'{direction} coordinates (µm)')
+
+    annotation = f'x-ray: {meta_string[0]}\nlaser: {meta_string[1]}'
+    ax1.annotate(annotation,
+                 xy=(0.5, 0.01),
+                 xycoords='axes fraction',
+                 ha='center')
+
+    # Plot VLM offset if indicated
+    if arrow:
+        arw_y = y0s[0]
+        arw_x = centers[0] - centers[1]
+        ax1.arrow(centers[1], arw_y, arw_x * 0.9, 0, 
+                head_width=1, head_length=np.abs(0.1 * arw_x), fc='k')
+        ax1.annotate(f'VLM offset:\n{arw_x:.4f} µm',
+                    xy=(0.9, 0.55),
+                    xycoords='axes fraction',
+                    ha='center')
+    
+    # Save the figure
+    save_str = id_str
+    if check:
+        save_str = f'{float(id_str) - 1}_{id_str}'
+    ax1.figure.figure.savefig(dir + f'{save_str}_alignemnt_{direction}.png',
+                             transparent=False)
+
+
 def auto_beam_alignment(v_edge, h_edge, distance, stepsize, 
                         acqtime=1.0, direction = 'both',
                         shutter=True, check=False):
@@ -636,19 +756,16 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
     # Alignment
     log('Running auto beam alignment')
     for i, j in enumerate([v_edge, h_edge]):
-        # Do not align across vertical edge if only aligning along y
-        if (direction == 'y') and variables[i] == 'x':
-            log(f'Warning: Aligning only along {direction}. Outputs may not be expected size.')
-            continue
-        # Do not align across horizontal edge if only aligning along x
-        elif (direction == 'x') and variables[i] == 'y':
+        # Scan across only the edge of interest
+        if (((direction == 'y') and variables[i] == 'x') or 
+            ((direction == 'x') and variables[i] == 'y')):
             log(f'Warning: Aligning only along {direction}. Outputs may not be expected size.')
             continue
 
         # Determine beam positions along variable
         log(f'Performing edge scan along {variables[i]}.')
         beam_param = yield from beam_knife_edge_scan('both', variables[i], j, distance=distance, stepsize=stepsize, 
-                                                                acqtime=acqtime, shutter=shutter)
+                                                                acqtime=acqtime, shutter=shutter, check=False)
         
         # Adjust VLM position
         offset = beam_param[2] - beam_param[0]
@@ -666,7 +783,7 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
 
             # Re-determine laser position along variable
             laser_beam = yield from beam_knife_edge_scan('laser', variables[i], j, distance=distance, stepsize=stepsize, 
-                                                                  acqtime=acqtime, shutter=shutter )
+                                                                  acqtime=acqtime, shutter=shutter, check=True)
             new_laser_pos, new_laser_size = laser_beam[0], laser_beam[1]
             
             # Adjust VLM position
