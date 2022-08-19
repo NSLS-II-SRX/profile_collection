@@ -388,16 +388,16 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
     for beam_1 in ['laser', 'x-ray']:
 
         # If laser was not used, skips to checking x-ray signal
-        print(f'{beam=}')
-        print(f'{beam_1=}')
+        #print(f'{beam=}')
+        #print(f'{beam_1=}')
         if (beam not in ['laser', 'both']) and (first_fit): #seeing if the original beam used the laser
-            print('I am in here!')
+            log('Checking x-ray scan...')
             first_fit = False
             continue #if not skips to only fitting x-ray data
 
         if beam_1 == 'x-ray':
             if (beam != 'x-ray') and (beam != 'both'):
-                print('Now I am in here!')
+                log('Checking laser scan...')
                 continue
             elif not shutter:
                 log('No x-rays to properly perform knife edge scan.')
@@ -408,8 +408,8 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
         try:
             log('Fitting...')
             cent_position, fwhm = yield from beam_knife_edge_plot(beam=beam_1, plotme=plotme)
-            print(f'{cent_position=}')
-            print(f'{fwhm=}')
+            #print(f'{cent_position=}')
+            #print(f'{fwhm=}')
 
         # RuntimeErrors for nonideal fitting. Trying to fix by extended scan range    
         except RuntimeError: 
@@ -560,8 +560,8 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     ax.set_ylabel('ROI Counts')
     ax.legend()
     meta_string = (f'Cent = {cent_position:.3f} µm     ' + #\t doesn't work in pyplot??
-                  f'FWHM  = {fwhm:.3f} µm     ' +
-                  f'Step = {x[1]-x[0]:.1f} µm')
+                   f'FWHM  = {fwhm:.3f} µm     ' +
+                   f'Step = {x[1]-x[0]:.1f} µm')
     ax.annotate(meta_string,
             xy=(0.5, 0.01),
             xycoords='axes fraction',
@@ -765,18 +765,26 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
             continue
 
         # Determine beam positions along variable
-        log(f'Performing edge scan along {variables[i]}.')
+        log(f'Performing edge scan along {variables[i]} centered at {j:.4f}.')
         beam_param = yield from beam_knife_edge_scan('both', variables[i], j, distance=distance, stepsize=stepsize, 
                                                                 acqtime=acqtime, shutter=shutter, check=False)
         
         # Adjust VLM position
         offset = beam_param[2] - beam_param[0]
         if np.abs(offset) > 0.5*FOV[i]:
-            log("Trying to adjust stage by more than 50% of FOV. Retry beam alignment.")
+            log("Trying to adjust VLM stage by more than 50% of FOV. Retry beam alignment.")
             raise RuntimeError()
+        log(f'Previous VLM stage coordinates at:\n' +
+            f'x = {nano_vlm_stage.x.get()}\n' +
+            f'y = {nano_vlm_stage.y.get()}\n' +
+            f'z = {nano_vlm_stage.z.get()}')
         if vlm_move:
             yield from movr(vlm_motors[i], (offset * 0.001)) # vlm motors in mm not um
         log(f'Offset VLM by {offset:.4f} µm along ' + variables[i] + '-axis.')
+        log(f'New VLM stage coordinates at:\n' +
+            f'x = {nano_vlm_stage.x.get()}\n' +
+            f'y = {nano_vlm_stage.y.get()}\n' +
+            f'z = {nano_vlm_stage.z.get()}')
 
         # Confirm adjustment
         tot_offset = offset
@@ -794,9 +802,17 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
             tot_offset = offset + new_offset
             if (np.abs(new_offset) > np.abs(offset)) and (new_offset > stepsize):
                 raise RuntimeError("Stage correspondence issue. Beam alignment will not converge.")
+            log(f'Previous VLM stage coordinates at:\n' +
+            f'x = {nano_vlm_stage.x.get()}\n' +
+            f'y = {nano_vlm_stage.y.get()}\n' +
+            f'z = {nano_vlm_stage.z.get()}')
             if vlm_move:
                 yield from movr(vlm_motors[i], new_offset * 0.001)
             log(f'Adjusted offset VLM by {new_offset:.4f} µm along ' + variables[i] + '-axis.')
+            log(f'New VLM stage coordinates at:\n' +
+            f'x = {nano_vlm_stage.x.get()}\n' +
+            f'y = {nano_vlm_stage.y.get()}\n' +
+            f'z = {nano_vlm_stage.z.get()}')
             log(f'Sample and VLM stage total offset of {tot_offset:.4f} µm along ' + variables[i] + '-axis.')
 
         # Record information
