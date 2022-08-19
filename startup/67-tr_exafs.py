@@ -18,7 +18,6 @@ from bluesky.log import logger, config_bluesky_logging, LogFormatter
 # Add leaky relu for better knife edge fitting?
 # Batch script of beam alignments with progressively smaller steps
 #   A run and forget alignment procedure?
-# More verbose descriptions of stage movements during alignment
 # Find a better way to deal with fractional error for qualifying curve fitting
 
 
@@ -59,6 +58,20 @@ def log(message):
     else:
         print(message)
 
+
+# More generalized functions for knife edge fitting
+def f_bent_line(x, x0, m1, m2):
+    y = []
+    for x in x:
+        if x < x0:
+            y.append(m1 * (x - x0))
+        else:
+            y.append(m2 * (x - x0))
+    return y
+
+def f_edge(x, A, sigma, x0, y0, m1, m2):
+    return (f_offset_erf(x, A, sigma, x0, y0) +
+           f_bent_line(x, x0, m1, m2))
 
 def set_tr_flyer_stage_sigs(flyer, divs=[1, 3, 10, 100]):
     if divs == []:
