@@ -725,8 +725,9 @@ def plot_beam_alignment(direction, scanid=-1,
 
 
 def auto_beam_alignment(v_edge, h_edge, distance, stepsize, 
-                        acqtime=1.0, direction = 'both',
-                        shutter=True, check=False):
+                        acqtime=1.0, direction='both',
+                        shutter=True, check=False,
+                        vlm_move=True):
 
     '''
     v_edge          (list)  [x,y,z] location of vertical line/edge. Scan across for x position
@@ -737,6 +738,7 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
     direction       (str)   'x', 'y', or 'both'. Which direction to align. Default: 'both'
     shutter         (bool)  Use X-rays or not
     check           (bool)  If True, double check the laser adjustment and correspondence between sample and vlm stages
+    vlm_move        (bool)  Moves the VLM stages after determining beam misalignments
     '''
 
     # Checking direction inputs
@@ -772,7 +774,8 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
         if np.abs(offset) > 0.5*FOV[i]:
             log("Trying to adjust stage by more than 50% of FOV. Retry beam alignment.")
             raise RuntimeError()
-        yield from movr(vlm_motors[i], (offset * 0.001)) # vlm motors in mm not um
+        if vlm_move:
+            yield from movr(vlm_motors[i], (offset * 0.001)) # vlm motors in mm not um
         log(f'Offset VLM by {offset:.4f} µm along ' + variables[i] + '-axis.')
 
         # Confirm adjustment
@@ -791,7 +794,8 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
             tot_offset = offset + new_offset
             if (np.abs(new_offset) > np.abs(offset)) and (new_offset > stepsize):
                 raise RuntimeError("Stage correspondence issue. Beam alignment will not converge.")
-            yield from movr(vlm_motors[i], new_offset * 0.001)
+            if vlm_move:
+                yield from movr(vlm_motors[i], new_offset * 0.001)
             log(f'Adjusted offset VLM by {new_offset:.4f} µm along ' + variables[i] + '-axis.')
             log(f'Sample and VLM stage total offset of {tot_offset:.4f} µm along ' + variables[i] + '-axis.')
 
