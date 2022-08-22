@@ -518,7 +518,7 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     p_guess = [0.5 * np.amax(y),
                 15,
                 x[np.argmax(np.abs(np.gradient(y,x)))],
-                np.amin(y),
+                0.5 * (np.amin(y) + np.amax(y)), # Changed from just minimum. This should be correct
                 10
                 ]
     
@@ -571,6 +571,8 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     ax.set_title(f'Scan {id_str} of {beam} along {direction}')
     ax.set_xlabel(pos)
     ax.set_ylabel('ROI Counts')
+    ax.set_ylim(ax.get_ylim()[0] - 0.05 * np.abs(ax.get_ylim()[0] - ax.get_ylim()[1]),
+                ax.get_ylim()[1])
     ax.legend()
     meta_string = (f'Cent = {cent_position:.3f} µm     ' + #\t doesn't work in pyplot??
                    f'FWHM  = {fwhm:.3f} µm     ' +
@@ -591,6 +593,8 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     ax.set_title(f'Derivative of scan {id_str} of {beam} along {direction}')
     ax.set_xlabel(pos)
     ax.set_ylabel('Derivative ROI Counts')
+    ax.set_ylim(ax.get_ylim()[0] - 0.05 * np.abs(ax.get_ylim()[0] - ax.get_ylim()[1]),
+            ax.get_ylim()[1])
     ax.legend()
     ax.annotate(meta_string,
             xy=(0.5, 0.01),
@@ -691,7 +695,7 @@ def plot_beam_alignment(direction, scanid=-1,
         ln1 = axs[i].plot(x, y, '+', label=f'{beam} Data', c=colors[i])
         ln2 = axs[i].plot(x_fit, y_fit, '-', label=f'{beam} Fit', c=colors[i], alpha=0.5)
         lns.append(ln1[0]), lns.append(ln2[0])
-        axs[i].set_ylim(axs[i].get_ylim()[0] - 0.15 * np.abs(axs[i].get_ylim()[0]),
+        axs[i].set_ylim(axs[i].get_ylim()[0] - 0.15 * np.abs(axs[i].get_ylim()[0] - axs[i].get_ylim()[1]),
                         axs[i].get_ylim()[1])
         axs[i].set_ylabel(f'{beam} intensity (cts)', color=colors[i])
         axs[i].tick_params(axis='y', colors=colors[i])
@@ -708,7 +712,7 @@ def plot_beam_alignment(direction, scanid=-1,
 
     # Adding text to plot
     ax1.legend(handles=lns, loc=6)
-    ax1.set_xlim(ax1.get_xlim()[0] - 0.15 * np.abs(ax1.get_xlim()[0]),
+    ax1.set_xlim(ax1.get_xlim()[0] - 0.05 * np.abs(ax1.get_xlim()[0] - ax1.get_xlim()[1]),
                  ax1.get_xlim()[1])
     ax1.set_xlabel(f'{direction} coordinates (µm)')
 
