@@ -519,10 +519,10 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
                 15,
                 x[np.argmax(np.abs(np.gradient(y,x)))],
                 0.5 * (np.amin(y) + np.amax(y)), # Changed from just minimum. This should be correct
-                10
-                ]
+                0,
+                0]
     
-    p_guess = p_guess[0:4]
+    #p_guess = p_guess[0:4]
     
     if np.mean(y[:3]) > np.mean(y[-3:]):
         p_guess[0] = -0.5 * np.amax(y)
@@ -532,7 +532,7 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     # Fitting and useful information
     try:
         print(f'Guess coeffcients are {p_guess}')
-        popt, pcov = curve_fit(f_offset_erf, x, y, p0=p_guess)
+        popt, pcov = curve_fit(f_edge, x, y, p0=p_guess)
     except:
         log('Raw fit failed.')
         popt, pcov = p_guess, p_guess
@@ -566,8 +566,8 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     ax.cla()
     ax.plot(x, y, '+', label='Raw Data', c='k')
     if plot_guess:
-        ax.plot(x_plot, f_offset_erf(x_plot, *p_guess), '--', label='Guess Fit', c='0.5')
-    ax.plot(x_plot, f_offset_erf(x_plot, *popt), '-', label='Erf Fit', c='r')
+        ax.plot(x_plot, f_edge(x_plot, *p_guess), '--', label='Guess Fit', c='0.5')
+    ax.plot(x_plot, f_edge(x_plot, *popt), '-', label='Erf Fit', c='r')
     ax.set_title(f'Scan {id_str} of {beam} along {direction}')
     ax.set_xlabel(pos)
     ax.set_ylabel('ROI Counts')
@@ -588,8 +588,8 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     ax.cla()
     ax.plot(x, np.gradient(y, x), '+', label='Derivative Data', c='k')
     if plot_guess:
-        ax.plot(x_plot, np.gradient(f_offset_erf(x_plot, *p_guess), x_plot), '--', label='Guess Fit', c='0.5')
-    ax.plot(x_plot, np.gradient(f_offset_erf(x_plot, *popt), x_plot), '-', label='Gauss Fit', c='r')
+        ax.plot(x_plot, np.gradient(f_edge(x_plot, *p_guess), x_plot), '--', label='Guess Fit', c='0.5')
+    ax.plot(x_plot, np.gradient(f_edge(x_plot, *popt), x_plot), '-', label='Gauss Fit', c='r')
     ax.set_title(f'Derivative of scan {id_str} of {beam} along {direction}')
     ax.set_xlabel(pos)
     ax.set_ylabel('Derivative ROI Counts')
@@ -686,7 +686,10 @@ def plot_beam_alignment(direction, scanid=-1,
         y = [float(d) for d in data[1]]
         popt = [float(d) for d in data[2]]
         x_fit = np.linspace(np.amin(x), np.amax(x), num=100)
-        y_fit = f_offset_erf(x_fit, *popt)
+        if len(popt == 4):
+            y_fit = f_offset_erf(x_fit, *popt)
+        elif len(popt == 6):
+            y_fit = f_edge(x_fit, *popt)
 
         # Plot the data
         ax1.set_title(f'Scan {id_str} Alignemnt along {direction}')
