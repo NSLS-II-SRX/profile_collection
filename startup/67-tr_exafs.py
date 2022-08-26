@@ -316,7 +316,7 @@ def laser_off():
 
 
 def beam_knife_edge_scan(beam, direction, edge, distance, stepsize, 
-                         acqtime=1.0, check = False, shutter=True):
+                         acqtime=1.0, shutter=True):
 
     '''
     beam        (str)   'x-ray', 'laser', or 'both' Specifies appropriate detectors
@@ -325,7 +325,6 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
     distance    (float) Distance in µm to either side of feature to scan across
     stepsize    (float) Step size in µm of scans
     acqtime     (float) Acquisition time of detectors
-    check       (bool)  Passed from auto_beam_alignment() to plot_beam_alignment()
     shutter     (bool)  Use X-rays or not
     '''
     
@@ -410,7 +409,6 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
 
         if beam_1 == 'x-ray':
             if (beam != 'x-ray') and (beam != 'both'):
-                log('Checking laser scan...')
                 continue
             elif not shutter:
                 log('No x-rays to properly perform knife edge scan.')
@@ -446,7 +444,7 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
 
         # Plot beam alignment
         if beam == 'both':
-            yield from plot_beam_alignment(direction, check=check)
+            yield from plot_beam_alignment(laserid=-1, xrayid=-1)
 
     return beam_param # Cent_position then fwhm. Laser parameters first if 'both'
 
@@ -467,9 +465,9 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     h = db[int(scanid)]
     start_doc = h.start
     id_str = start_doc['scan_id']
-    scan_ext = start_doc['scan']['scan_input'][0:1]
+    scan_ext = start_doc['scan']['scan_input'][0:2]
     scan_cent = np.mean(scan_ext)
-    log(f'Trying to determine {beam} beam parameters from {id_str} scan.')
+    log(f'Trying to determine {beam} beam parameters from scan {id_str}.')
 
     pos = start_doc['scan']['fast_axis']['motor_name']
     direction = pos[-1]
@@ -477,7 +475,7 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     # Make a new directory if necessary
     dir = '/home/xf05id1/current_user_data/alignments/'
     os.makedirs(dir, exist_ok=True)
-    os.makedirs(dir + 'raw_data/', exis_ok=True)
+    os.makedirs(dir + 'raw_data/', exist_ok=True)
 
     # Get the information from the previous scan
     haz_data = False
@@ -486,7 +484,7 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     print('Waiting for data...', end='', flush=True)
     while (loop_counter < MAX_LOOP_COUNTER):
         try:
-            tbl = db[-1].table('stream0', fill=True)
+            tbl = db[int(scanid)].table('stream0', fill=True)
             haz_data = True
             log('done')
             break
@@ -509,14 +507,14 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     xstart = start_doc['scan']['scan_input'][0]
     xstop = start_doc['scan']['scan_input'][1]
     xnum = start_doc['scan']['scan_input'][2]
-    distance = np.abs(xstop - xstart)
+    distance = np.abs(xstop - xstart) / 2
     x = np.linspace(xstart, xstop, int(xnum))
     x, y = x.astype(np.float64), y.astype(np.float64)
     log(f'Raw data acquired and saved for {beam}! Now fitting...')
 
     # Guessing the function and fitting the raw data
     p_guess = [0.5 * np.amax(y),
-                15,
+                10,
                 x[np.argmax(np.abs(np.gradient(y,x)))],
                 0.5 * (np.amin(y) + np.amax(y)), # Changed from just minimum. This should be correct
                 0,
@@ -581,6 +579,7 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
             xy=(0.5, 0.01),
             xycoords='axes fraction',
             ha='center')
+    yield from bps.sleep(0.1) # gives it some time to think
     ax.figure.figure.savefig(f'{dir}{id_str}_erf_{beam}_{direction}.png',
                              transparent=False)
 
@@ -600,6 +599,7 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
             xy=(0.5, 0.01),
             xycoords='axes fraction',
             ha='center')
+    yield from bps.sleep(0.1) # gives it some time to think
     ax.figure.figure.savefig(f'{dir}{id_str}_gauss_{beam}_{direction}.png',
                              transparent=False)
     plt.close()
@@ -607,15 +607,17 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     # Check the quality of the fit and to see if the edge is mostly within range
     # For the failure, rerun the scan outside of this function
     # After plotting, so there is way to guage fit quality visually
+    #print([scan_cent, cent_position])
+    #print([scan_cent-cent_position, 0.8*distance])
     if any([d >= 1 for d in frac_err[0:3]]):
         log('Poor fitting. Coefficient error exceeds predicted values.')
         yield from bps.sleep(1)
         raise RuntimeError()
-    if np.abs(scan_cent - cent_position) > 0.8*np.abs(distance):
+    if np.abs(scan_cent - cent_position) > 0.8 * np.abs(distance):
         log('Edge position barely within FOV.')
         yield from bps.sleep(1)
         raise RuntimeError()
-    if (np.abs(2 * popt[0]) < 0.2 * np.amax(y)):
+    if (np.abs(2 * popt[0]) < 0.15 * np.amax(y)):
         log('No edge detected!')
         yield from bps.sleep(1)
         raise RuntimeError()
@@ -623,23 +625,25 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     return cent_position, fwhm
 
 
-def plot_beam_alignment(direction, scanid=-1, 
-                        arrow=True, plotme=None, check=False):
+def plot_beam_alignment(laserid=-1, xrayid=0,
+                        arrow=True, plotme=None):
 
     '''
     Only when performing knife edge scans measuring both beams
-    direction   (str)   'x' or 'y'
-    scanid      (int)   id of alignment scan. Must have both signals, or check.
-                        If check, then use laser check scan id  
+    laserid     (int)   id of laser scan. Defaults to previous
+    xrayid      (int)   id of x-ray scan. Defaults to same as laser
     arrow       (bool)  Plots alignment arrows
     plotme      (ax)    Pyplot axis. Creates one if None
-    check       (bool)  Staggers scan ids when checking laser alignment
     '''
 
-    # Checking direction inputs
-    poss_direct = ['x', 'y']
-    if not any(direction in poss_direct for direction in poss_direct):
-        raise ValueError("Incorrect direction assignment. Please specify 'x' or 'y' for direction.")
+    # TODO
+    # Add check to make sure they are within the same scan range...
+        # start and stop coordinates should be the same
+
+    # Defualt xrayid to laserid
+    if xrayid == 0:
+        xrayid = laserid
+    #print(laserid), print(xrayid)
 
     # Define some useful variables
     dir = '/home/xf05id1/current_user_data/alignments/'
@@ -647,16 +651,28 @@ def plot_beam_alignment(direction, scanid=-1,
     colors = ['k', 'r']
     sides = ['left', 'right']
 
-    # Check if the file(s) exist
-    if not os.path.exists(data_dir + f'scan_{id_str}_{beam}_{direction}.txt'):
-        raise ValueError("Specified scan data does not exist. Scan may not exist or has not yet been fitted.")
-    if check and (not os.path.exists(data_dir + f'scan_{float(id_str) - 1}_{beam}_{direction}.txt')):
-        raise ValueError("Specified x-ray scan data does not exist for indicated laser scan. Double check scan id input.")
+    # Building data information
+    ids = [laserid, xrayid]
+    id_str = []
+    directions = []
+    start_docs = []
+    for i, beam in enumerate(['laser', 'x-ray']):
+        h = db[int(ids[i])]
+        start_docs.append(h.start)
+        id_str.append(start_docs[i]['scan_id'])
+        directions.append(start_docs[i]['scan']['fast_axis']['motor_name'][-1])
+    
+    # Check scan directions
+    if directions[0] != directions[1]:
+        raise ValueError("Specified scans are along different directions!")
+    else:
+        direction = directions[0] # just use the one value for ease
 
-    # Get proper scan id
-    h = db[int(scanid)]
-    start_doc = h.start
-    id_str = start_doc['scan_id']
+    # Check if the file(s) exist
+    for i, beam in enumerate(['laser', 'x-ray']):
+        if not os.path.exists(data_dir + f'scan_{id_str[i]}_{beam}_{direction}.txt'):
+            print(data_dir + f'scan_{id_str[i]}_{beam}_{direction}.txt', end='', flush=True)
+            raise ValueError(f"Specified {beam} scan data does not exist. Scan may not exist or has not yet been fitted.")
 
     # Set up the initial plots
     if (plotme is None):
@@ -668,33 +684,27 @@ def plot_beam_alignment(direction, scanid=-1,
     lns, meta_string, centers, y0s = [], [], [], []
 
     # Work thorugh each scanning beam
-    for i, beam in enumerate['x-ray', 'laser']:
+    for i, beam in enumerate(['laser', 'x-ray']):
+        #print(i), print(beam)
         # Load the data
-        if check and beam == 'x-ray':
-            with open(data_dir + f'scan_{float(id_str) - 1}_{beam}_{direction}.txt', newline='\n') as f:
-                reader = csv.reader(f)
-                data = list(reader)
-                f.close()
-        else:
-            with open(data_dir + f'scan_{id_str}_{beam}_{direction}.txt', newline='\n') as f:
-                reader = csv.reader(f)
-                data = list(reader)
-                f.close()
+        with open(data_dir + f'scan_{id_str[i]}_{beam}_{direction}.txt', newline='\n') as f:
+            reader = csv.reader(f)
+            data = list(reader)
+            f.close()
 
         # Format the data
         x = [float(d) for d in data[0]]
         y = [float(d) for d in data[1]]
         popt = [float(d) for d in data[2]]
         x_fit = np.linspace(np.amin(x), np.amax(x), num=100)
-        if len(popt == 4):
+        #print(popt)
+        if (len(popt) == 4):
             y_fit = f_offset_erf(x_fit, *popt)
-        elif len(popt == 6):
+        elif (len(popt) == 6):
             y_fit = f_edge(x_fit, *popt)
 
         # Plot the data
-        ax1.set_title(f'Scan {id_str} Alignemnt along {direction}')
-        if check:
-            ax1.set_title(f'Scans {float(id_str) - 1}:{id_str} Alignemnt along {direction}')
+        ax1.set_title(f'Scans {id_str[1]}:{id_str[0]} Alignemnt along {direction}')
         ln1 = axs[i].plot(x, y, '+', label=f'{beam} Data', c=colors[i])
         ln2 = axs[i].plot(x_fit, y_fit, '-', label=f'{beam} Fit', c=colors[i], alpha=0.5)
         lns.append(ln1[0]), lns.append(ln2[0])
@@ -737,11 +747,10 @@ def plot_beam_alignment(direction, scanid=-1,
                     ha='center')
     
     # Save the figure
-    save_str = id_str
-    if check:
-        save_str = f'{float(id_str) - 1}_{id_str}'
-    ax1.figure.figure.savefig(dir + f'{save_str}_alignemnt_{direction}.png',
+    ax1.figure.figure.savefig(dir + f'{id_str[1]}_{id_str[0]}_alignemnt_{direction}.png',
                              transparent=False)
+    
+    plt.close()
 
 
 def auto_beam_alignment(v_edge, h_edge, distance, stepsize, 
@@ -1051,7 +1060,8 @@ def tr_xanes_plan(xye_pos, power, hold,
                   v_edge, h_edge, distance, stepsize,
                   N_start=0, z_pos=[], ramp=5,
                   dets=[xs, merlin], acqtime=0.001,
-                  waittime=5, peakup_N=15, align_N=15, shutter=True):
+                  waittime=5, peakup_N=15, align_N=15,
+                  no_data = False, shutter=True):
 
     '''
     xye_pos     (list)  x and y positions and energies to to acquire time series
@@ -1069,6 +1079,7 @@ def tr_xanes_plan(xye_pos, power, hold,
     waittime    (float) Wait time between collecting times series
     peakup_N    (int)   Run a peakup every peakup_N time series. Consider the number of replicate energies
     align_N     (int)   Run auto beam alignment align_N time series
+    no_data     (bool)  Laser without collecting time series data
     shutter     (bool)  Use X-rays or not
     '''
 
@@ -1168,7 +1179,11 @@ def tr_xanes_plan(xye_pos, power, hold,
                        energy, xye_pos[i][2])
 
         # Trigger laser and collect time series data
-        yield from laser_time_series(power, hold, ramp, xye_pos[i][2], dets=dets, total_time=total_time, acqtime=acqtime, shutter=shutter)
+        if no_data:
+            yield from laser_on(power, hold, ramp)
+        else:
+            yield from laser_time_series(power, hold, ramp, xye_pos[i][2], dets=dets, total_time=total_time, acqtime=acqtime, shutter=shutter)
+        
 
         # Time estimates
         t_elap_e += ttime.time() - t0_e
