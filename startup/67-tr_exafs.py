@@ -15,10 +15,15 @@ from bluesky.log import logger, config_bluesky_logging, LogFormatter
 
 ### TODO ###
 # Find a way to add XAS_TIME to logscan_detailed file
-# Add leaky relu for better knife edge fitting?
 # Batch script of beam alignments with progressively smaller steps
 #   A run and forget alignment procedure?
 # Find a better way to deal with fractional error for qualifying curve fitting
+#   I'm thinking r-squared
+# Single edge or wire double edge better for fitting?
+#   Single wire edge is better than scapel edge...
+# Add appropriate scan counting to for alignment plotting of multiple scans
+# Set up batch procedure to be able to handle no peakups or alignments
+#   Make it capable of batched laser crystllization events
 
 
 # Setting up a logging file
@@ -34,29 +39,36 @@ def start_logging():
 
     # How log file messages appear
     file_log = logging.FileHandler(logdir+logfile)
+    file_log.setLevel(logging.INFO)
     file_formatter = logging.Formatter('[%(levelname)s| %(asctime)s] %(message)s', '%Y-%m-%d %H:%M:%S')
     file_log.setFormatter(file_formatter)
     logger.addHandler(file_log)
 
     # How console message appears. Only for info
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    format = '%(color)s[%(asctime)s]%(end_color)s %(message)s'
-    datefmt = '%Y-%m-%d %H:%M:%S'
-    console.setFormatter(LogFormatter(format, datefmt=datefmt))
-    logger.addHandler(console)
+    #console = logging.StreamHandler()
+    #console.setLevel(logging.INFO)
+    #format = '%(color)s[%(asctime)s]%(end_color)s %(message)s'
+    #datefmt = '%Y-%m-%d %H:%M:%S'
+    #console.setFormatter(LogFormatter(format, datefmt=datefmt))
+    #logger.addHandler(console)
 
     log('Log file start.')
     global debug_logging
     debug_logging = True
 
 
+def stop_logging():
+    global debug_logging
+    debug_logging = False
+
+
 # Log function to print to console and log file. Replaces print function.
 def log(message):
     if debug_logging:
         logger.info(message)
-    else:
-        print(message)
+    #else:
+    #    print(message)
+    print(message)
 
 
 # More generalized functions for knife edge fitting
@@ -233,7 +245,7 @@ def gen_xye_pos(erange = [11817, 11862, 11917, 12267],
 
     # Map out points for each event
     x_ind = np.arange(start[0], end[0]+spacing, spacing)
-    y_ind = np.arange(start[0], end[0]+spacing, spacing)
+    y_ind = np.arange(start[1], end[1]+spacing, spacing)
     xy_pos = np.array(list(product(x_ind, y_ind))) #numpy meshgrid may also work??
 
     # Are there enough points for the energies of interest?
@@ -249,7 +261,7 @@ def gen_xye_pos(erange = [11817, 11862, 11917, 12267],
 
     # Save the positions and energies with 
     np.savetxt(filedir+filename, xye_pos, delimiter=',', fmt='%1.4f')
-    log('xye_pos saved to ' + filedir+filename)
+    log(f'{len(xye_pos)} xye positions saved to ' + filedir+filename)
 
 
 def read_xye_pos(filedir='', filename=''):
@@ -392,6 +404,7 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
 
     # Perform the actual scan
     yield from _plan(distance_1=distance)
+    log('Knife edge scaqn complete!')
 
     # Plot and process the data
     beam_param = []
@@ -417,7 +430,6 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
         
         # Try to find edge
         try:
-            log('Fitting...')
             cent_position, fwhm = yield from beam_knife_edge_plot(beam=beam_1, plotme=plotme)
             #print(f'{cent_position=}')
             #print(f'{fwhm=}')
@@ -486,7 +498,7 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
         try:
             tbl = db[int(scanid)].table('stream0', fill=True)
             haz_data = True
-            log('done')
+            print('done')
             break
         except:
             loop_counter += 1
@@ -513,8 +525,8 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     log(f'Raw data acquired and saved for {beam}! Now fitting...')
 
     # Guessing the function and fitting the raw data
-    p_guess = [0.5 * np.amax(y),
-                10,
+    p_guess = [0.5 * (np.amax(y) - np.amin(y)),
+                5,
                 x[np.argmax(np.abs(np.gradient(y,x)))],
                 0.5 * (np.amin(y) + np.amax(y)), # Changed from just minimum. This should be correct
                 0,
@@ -523,23 +535,23 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     #p_guess = p_guess[0:4]
     
     if np.mean(y[:3]) > np.mean(y[-3:]):
-        p_guess[0] = -0.5 * np.amax(y)
+        p_guess[0] = -p_guess[0]
     if beam == 'x-ray':
-        p_guess[1] = 10
+        p_guess[1] = 5
 
     # Fitting and useful information
     try:
-        print(f'Guess coeffcients are {p_guess}')
+        log(f'Guess coeffcients are {p_guess}')
         popt, pcov = curve_fit(f_edge, x, y, p0=p_guess)
     except:
         log('Raw fit failed.')
         popt, pcov = p_guess, p_guess
-    print(f'Fit coefficients are {popt}')
+    log(f'Fit coefficients are {popt:.3E}')
     cent_position = popt[2]
     fwhm = 2 * np.sqrt(2 * np.log(2)) * popt[1]
     perr = np.sqrt(np.diag(pcov))
     frac_err = np.abs(np.array(perr) / np.array(popt))
-    print(f'{frac_err[:3]=}')
+    print(f'{frac_err[:3]=:.3E}')
 
     # Save the raw data and fitting parameters for access later
     with open(f'{dir}raw_data/scan_{id_str}_{beam}_{direction}.txt', 'w+') as f:
@@ -581,7 +593,7 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
             ha='center')
     yield from bps.sleep(0.1) # gives it some time to think
     ax.figure.figure.savefig(f'{dir}{id_str}_erf_{beam}_{direction}.png',
-                             transparent=False)
+                             transparent=False, bbox_inches='tight')
 
     # Display the fit derivative
     ax.cla()
@@ -601,7 +613,7 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
             ha='center')
     yield from bps.sleep(0.1) # gives it some time to think
     ax.figure.figure.savefig(f'{dir}{id_str}_gauss_{beam}_{direction}.png',
-                             transparent=False)
+                             transparent=False, bbox_inches='tight')
     plt.close()
     
     # Check the quality of the fit and to see if the edge is mostly within range
@@ -748,7 +760,7 @@ def plot_beam_alignment(laserid=-1, xrayid=0,
     
     # Save the figure
     ax1.figure.figure.savefig(dir + f'{id_str[1]}_{id_str[0]}_alignemnt_{direction}.png',
-                             transparent=False)
+                             transparent=False, bbox_inches='tight')
     
     plt.close()
 
@@ -882,13 +894,13 @@ def laser_time_series(power, hold, ramp=5, wait = 0,
     scan_md['scan']['timings'] = [acqtime, ramp, hold, total_time]
     scan_md['scan']['detectors'] = [sclr1.name] + [d.name for d in extra_dets]
     scan_md['scan']['energy'] = energy.get()
-    scan_md['scan']['stage_positions'] = {'x' : nano_stage.x.get(),
-                                        'y' : nano_stage.y.get(),
-                                        'z' : nano_stage.z.get(),
+    scan_md['scan']['stage_positions'] = {'x' : nano_stage.x.user_readback.get(),
+                                        'y' : nano_stage.y.user_readback.get(),
+                                        'z' : nano_stage.z.user_readback.get(),
                                         'th' : nanostage.th.user_readback.get()}
-    scan_md['scan']['vlm_positions'] = {'x' : nano_vlm_stage.x.get(),
-                                        'y' : nano_vlm_stage.y.get(),
-                                        'z' : nano_vlm_stage.z.get()}
+    scan_md['scan']['vlm_positions'] = {'x' : nano_vlm_stage.x.user_readback.get(),
+                                        'y' : nano_vlm_stage.y.user_readback.get(),
+                                        'z' : nano_vlm_stage.z.user_readback.get()}
     scan_md['scan']['laser'] = {'manufacturer': 'ThorLabs',
                                 'product_id' : 'LP637-SF70',
                                 'type' : 'continuous wave',
@@ -1057,11 +1069,11 @@ def laser_time_series(power, hold, ramp=5, wait = 0,
     # that to get a scan ID
 
 def tr_xanes_plan(xye_pos, power, hold,
-                  v_edge, h_edge, distance, stepsize,
+                  v_edge=None, h_edge=None, distance=25, stepsize=0.5,
                   N_start=0, z_pos=[], ramp=5,
                   dets=[xs, merlin], acqtime=0.001,
                   waittime=5, peakup_N=15, align_N=15,
-                  no_data = False, shutter=True):
+                  no_data=False, shutter=True):
 
     '''
     xye_pos     (list)  x and y positions and energies to to acquire time series
@@ -1077,8 +1089,8 @@ def tr_xanes_plan(xye_pos, power, hold,
     dets        (list)  detectors used to collect time-resolved data
     acqtime     (float) Acquisition/integration time. Defualt is 0.001 seconds
     waittime    (float) Wait time between collecting times series
-    peakup_N    (int)   Run a peakup every peakup_N time series. Consider the number of replicate energies
-    align_N     (int)   Run auto beam alignment align_N time series
+    peakup_N    (int)   Run a peakup every peakup_N time series. None if zero
+    align_N     (int)   Run auto beam alignment align_N time series. None if zero
     no_data     (bool)  Laser without collecting time series data
     shutter     (bool)  Use X-rays or not
     '''
@@ -1091,12 +1103,17 @@ def tr_xanes_plan(xye_pos, power, hold,
     N = len(xye_pos)
 
     # Check N_start
-    if any((N_start < 0), (N_start <= N), (not isinstance(erange, int))):
+    if (N_start < 0) or (N_start >= N):
         raise ValueError("N_start must be a positive integer within the number of events.")
     
     # Checking for improper hold time input
     if hold < 0:
         raise ValueError("Hold times cannot be negative nor indefinite for batched time series collection.")
+    
+    # Checking for edge positions if beam alignements are expected
+    if align_N !=0:
+        if (v_edge == None) or (h_edge == None):
+            raise ValueError("Edge positions must be provided for beam alignment.")
 
     # Define total_time from laser parameters
     total_time = ramp + hold
@@ -1124,14 +1141,18 @@ def tr_xanes_plan(xye_pos, power, hold,
         yield from mov(nano_stage.z, z_pos)
     else:
         log('No z-coordinate given. Assuming position already at sample plane.') #how to record current z_pos
-        log(f'Current z_pos is {z_pos:.3f}.')
+        log(f'Current z_pos is {nano_stage.z.user_readback.get():.3f}.')
 
     # Timing statistics
     N_time = N - N_start
-    num_peakup = int((N_time + peakup_N - 1) / peakup_N)
+    num_peakup = 0
     peakup_count = 0
-    num_align = int((N_time + align_N - 1) / align_N)
+    if peakup_N != 0:
+        num_peakup = int((N_time + peakup_N - 1) / peakup_N)
+    num_align = 0
     align_count = 0
+    if align_N != 0:
+        num_align = int((N_time + align_N - 1) / align_N)
     t_elap_p, t_elap_a, t_elap_e = 0, 0, 0
 
     # Loop through xye_pos positions and energies
@@ -1141,14 +1162,14 @@ def tr_xanes_plan(xye_pos, power, hold,
             continue
 
         # Periodically perform peakup to maximize signal
-        if (i % peakup_N == 0) or (i == N_start):
+        if ((i % peakup_N == 0) or (i == N_start)) and (peakup_N != 0):
             t0_p = ttime.time()
             log('Performing peakup...')
             yield from peakup_fine(shutter=shutter) #shutter=shutter necessary?
             t_elap_p += ttime.time() - t0_p
 
         # Periodically perform auto_align to confirm laser and x-ray coincidence
-        if (i % align_N == 0) or (i == N_start):
+        if ((i % align_N == 0) or (i == N_start)) and (align_N != 0):
             t0_a = ttime.time()
             log('Performing auto beam alignment...')
             xray_pos, laser_pos, xray_size, laser_size, offsets = yield from auto_beam_alignment(v_edge, h_edge, distance, 
@@ -1173,22 +1194,30 @@ def tr_xanes_plan(xye_pos, power, hold,
         log('Moving to:')
         log(f'\tx = {xye_pos[i][0]:.3f}')
         log(f'\ty = {xye_pos[i][1]:.3f}')
-        log(f'\te = {xye_pos[i][2]}')
         yield from mov(nano_stage.x, xye_pos[i][0],
-                       nano_stage.y, xye_pos[i][1],
-                       energy, xye_pos[i][2])
+                       nano_stage.y, xye_pos[i][1])
+        if not no_data:
+            log(f'\te = {xye_pos[i][2]}')
+            yield from move(energy, xye_pos[i][2])
+        else:
+            log('Collecting no data. No energy moves since irrelvant.')
 
         # Trigger laser and collect time series data
         if no_data:
             yield from laser_on(power, hold, ramp)
+            yield from bps.sleep(hold)
+            yield from laser_off()
         else:
             yield from laser_time_series(power, hold, ramp, xye_pos[i][2], dets=dets, total_time=total_time, acqtime=acqtime, shutter=shutter)
         
 
         # Time estimates
         t_elap_e += ttime.time() - t0_e
-        t_rem_p = (num_peakup - peakup_count) * (t_elap_p / num_peakup)
-        t_rem_a = (num_align - align_count) * (t_elap_a / num_align)
+        t_rem_p, t_rem_a = 0
+        if peakup_N != 0:
+            t_rem_p = (num_peakup - peakup_count) * (t_elap_p / num_peakup)
+        if align_N != 0:
+            t_rem_a = (num_align - align_count) * (t_elap_a / num_align)
         t_rem_e = (N_time - i + 1) * (t_elap_e / N_time)
         t_rem_tot = np.sum(t_rem_p, t_rem_a, t_rem_e)
         if t_rem_tot < 86400:
