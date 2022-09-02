@@ -85,6 +85,13 @@ def f_edge(x, A, sigma, x0, y0, m1, m2):
     return (f_offset_erf(x, A, sigma, x0, y0) +
            f_bent_line(x, x0, m1, m2))
 
+#def f_edge(x, A1, sigma1, x1, y1,
+#                  A2, sigma2, x2, y2):
+#    return (f_two_erfs(x, A1, sigma1, x1, y1,
+#                      A2, sigma2, x2, y2))
+
+
+# Convenience function for setting up detectors
 def set_tr_flyer_stage_sigs(flyer, divs=[1, 3, 10, 100]):
     if divs == []:
         raise ValueError('Need to define the divisions for appropriate detectors!')
@@ -404,7 +411,7 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
 
     # Perform the actual scan
     yield from _plan(distance_1=distance)
-    log('Knife edge scaqn complete!')
+    log('Knife edge scan complete!')
 
     # Plot and process the data
     beam_param = []
@@ -532,10 +539,19 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
                 0,
                 0]
     
-    #p_guess = p_guess[0:4]
+    #p_guess = [0.5 * (np.amax(y) - np.amin(y)),
+    #           5,
+    #           x[np.argmax((np.gradient(y,x)))],
+    #           0.5 * (np.amin(y) + np.amax(y)),
+    #           -0.5 * (np.amax(y) - np.amin(y)),
+    #           -5,
+    #           x[np.argmin((np.gradient(y,x)))],
+    #           0.5 * (np.amin(y) + np.amax(y))]
+    
     
     if np.mean(y[:3]) > np.mean(y[-3:]):
         p_guess[0] = -p_guess[0]
+        #p_guess = -p_guess
     if beam == 'x-ray':
         p_guess[1] = 5
 
@@ -546,12 +562,28 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     except:
         log('Raw fit failed.')
         popt, pcov = p_guess, p_guess
-    log(f'Fit coefficients are {popt:.3E}')
+    log(f'Fit coefficients are {popt}')
+    C = 2 * np.sqrt(2 * np.log(2))
+    
+    left_edge = popt[2]
+    right_edge = popt[6]
+    left_fwhm = C * popt[1]
+    right_fwhm = C * popt[5]
+    cent_position = (left_edge + right_edge) / 2
+    fwhm = np.mean(np.abs([left_edge, right_edge]))
+
     cent_position = popt[2]
-    fwhm = 2 * np.sqrt(2 * np.log(2)) * popt[1]
+    fwhm = C * popt[1]
+
+    # Report quality of fit
+    residuals = y - f_edge(x, *popt)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((y - np.mean(y)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+    log(f'Fit R-squared is {r_squared:.4f}')
     perr = np.sqrt(np.diag(pcov))
     frac_err = np.abs(np.array(perr) / np.array(popt))
-    print(f'{frac_err[:3]=:.3E}')
+    #print(f'{frac_err[:3]=:.3E}')
 
     # Save the raw data and fitting parameters for access later
     with open(f'{dir}raw_data/scan_{id_str}_{beam}_{direction}.txt', 'w+') as f:
@@ -561,7 +593,9 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
 
     # Report useful data
     log(f'{beam} beam center is at {cent_position:.4f} µm along {direction}.')
-    log(f'{beam} beam fwhm is {fwhm:.4f} µm along {direction}.')
+    log(f'\tleft edge at {left_edge:.4f} µm, right edge at {right_edge:.4f} µm.')
+    log(f'{beam} beam average fwhm is {fwhm:.4f} µm along {direction}.')
+    log(f'\tleft edge width {left_fwhm:.4f} µm, right edge width {right_fwhm:.4f} µm.')
 
     # Set plotting variables
     x_plot = np.linspace(np.amin(x), np.amax(x), num=100)
@@ -625,6 +659,10 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
         log('Poor fitting. Coefficient error exceeds predicted values.')
         yield from bps.sleep(1)
         raise RuntimeError()
+    #if r_squared < 0.95:
+    #    log('Poor fitting. Coefficient error exceeds predicted values.')
+    #    yield from bps.sleep(1)
+    #    raise RuntimeError()
     if np.abs(scan_cent - cent_position) > 0.8 * np.abs(distance):
         log('Edge position barely within FOV.')
         yield from bps.sleep(1)
@@ -816,16 +854,16 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
             log("Trying to adjust VLM stage by more than 50% of FOV. Retry beam alignment.")
             raise RuntimeError()
         log(f'Previous VLM stage coordinates at:\n' +
-            f'x = {nano_vlm_stage.x.get()}\n' +
-            f'y = {nano_vlm_stage.y.get()}\n' +
-            f'z = {nano_vlm_stage.z.get()}')
+            f'\tx = {nano_vlm_stage.x.get()}\n' +
+            f'\ty = {nano_vlm_stage.y.get()}\n' +
+            f'\tz = {nano_vlm_stage.z.get()}')
         if vlm_move:
             yield from movr(vlm_motors[i], (offset * 0.001)) # vlm motors in mm not um
         log(f'Offset VLM by {offset:.4f} µm along ' + variables[i] + '-axis.')
         log(f'New VLM stage coordinates at:\n' +
-            f'x = {nano_vlm_stage.x.get()}\n' +
-            f'y = {nano_vlm_stage.y.get()}\n' +
-            f'z = {nano_vlm_stage.z.get()}')
+            f'\tx = {nano_vlm_stage.x.get()}\n' +
+            f'\ty = {nano_vlm_stage.y.get()}\n' +
+            f'\tz = {nano_vlm_stage.z.get()}')
 
         # Confirm adjustment
         tot_offset = offset
@@ -844,16 +882,16 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
             if (np.abs(new_offset) > np.abs(offset)) and (new_offset > stepsize):
                 raise RuntimeError("Stage correspondence issue. Beam alignment will not converge.")
             log(f'Previous VLM stage coordinates at:\n' +
-            f'x = {nano_vlm_stage.x.get()}\n' +
-            f'y = {nano_vlm_stage.y.get()}\n' +
-            f'z = {nano_vlm_stage.z.get()}')
+            f'\tx = {nano_vlm_stage.x.get()}\n' +
+            f'\ty = {nano_vlm_stage.y.get()}\n' +
+            f'\tz = {nano_vlm_stage.z.get()}')
             if vlm_move:
                 yield from movr(vlm_motors[i], new_offset * 0.001)
             log(f'Adjusted offset VLM by {new_offset:.4f} µm along ' + variables[i] + '-axis.')
             log(f'New VLM stage coordinates at:\n' +
-            f'x = {nano_vlm_stage.x.get()}\n' +
-            f'y = {nano_vlm_stage.y.get()}\n' +
-            f'z = {nano_vlm_stage.z.get()}')
+            f'\tx = {nano_vlm_stage.x.get()}\n' +
+            f'\ty = {nano_vlm_stage.y.get()}\n' +
+            f'\tz = {nano_vlm_stage.z.get()}')
             log(f'Sample and VLM stage total offset of {tot_offset:.4f} µm along ' + variables[i] + '-axis.')
 
         # Record information
@@ -1070,7 +1108,7 @@ def laser_time_series(power, hold, ramp=5, wait = 0,
 
 def tr_xanes_plan(xye_pos, power, hold,
                   v_edge=None, h_edge=None, distance=25, stepsize=0.5,
-                  N_start=0, z_pos=[], ramp=5,
+                  N_start=1, z_pos=[], ramp=5,
                   dets=[xs, merlin], acqtime=0.001,
                   waittime=5, peakup_N=15, align_N=15,
                   no_data=False, shutter=True):
@@ -1087,8 +1125,8 @@ def tr_xanes_plan(xye_pos, power, hold,
     z_pos       (float) z position for focused laser (i.e., sample plane)
     ramp        (float) Time for ramp up to target laser power
     dets        (list)  detectors used to collect time-resolved data
-    acqtime     (float) Acquisition/integration time. Defualt is 0.001 seconds
-    waittime    (float) Wait time between collecting times series
+    acqtime     (float) Acquisition/integration time. Default is 0.001 seconds
+    waittime    (float) Wait time between collecting times series in seconds
     peakup_N    (int)   Run a peakup every peakup_N time series. None if zero
     align_N     (int)   Run auto beam alignment align_N time series. None if zero
     no_data     (bool)  Laser without collecting time series data
@@ -1103,7 +1141,7 @@ def tr_xanes_plan(xye_pos, power, hold,
     N = len(xye_pos)
 
     # Check N_start
-    if (N_start < 0) or (N_start >= N):
+    if (N_start < 1) or (N_start >= N):
         raise ValueError("N_start must be a positive integer within the number of events.")
     
     # Checking for improper hold time input
@@ -1122,6 +1160,7 @@ def tr_xanes_plan(xye_pos, power, hold,
     xray_pos_lst, laser_pos_lst = [], []
     xray_size_lst, laser_size_lst = [], []
     offsets_lst, time_lst = [], []
+    scanid_lst = []
 
     # Log batch information...
     if N_start == 0:
@@ -1144,7 +1183,7 @@ def tr_xanes_plan(xye_pos, power, hold,
         log(f'Current z_pos is {nano_stage.z.user_readback.get():.3f}.')
 
     # Timing statistics
-    N_time = N - N_start
+    N_time = N - N_start + 1
     num_peakup = 0
     peakup_count = 0
     if peakup_N != 0:
@@ -1158,18 +1197,18 @@ def tr_xanes_plan(xye_pos, power, hold,
     # Loop through xye_pos positions and energies
     for i in range(N):
         # Skipping any previouly performed events
-        if i < N_start:
+        if (i + 1) < N_start:
             continue
 
         # Periodically perform peakup to maximize signal
-        if ((i % peakup_N == 0) or (i == N_start)) and (peakup_N != 0):
+        if (peakup_N != 0) and ((i % peakup_N == 0) or (i == N_start)):
             t0_p = ttime.time()
             log('Performing peakup...')
             yield from peakup_fine(shutter=shutter) #shutter=shutter necessary?
             t_elap_p += ttime.time() - t0_p
 
         # Periodically perform auto_align to confirm laser and x-ray coincidence
-        if ((i % align_N == 0) or (i == N_start)) and (align_N != 0):
+        if (align_N != 0) and ((i % align_N == 0) or (i == N_start)):
             t0_a = ttime.time()
             log('Performing auto beam alignment...')
             xray_pos, laser_pos, xray_size, laser_size, offsets = yield from auto_beam_alignment(v_edge, h_edge, distance, 
@@ -1190,7 +1229,7 @@ def tr_xanes_plan(xye_pos, power, hold,
         
         # Move to positions and energy
         t0_e = ttime.time()
-        log(f'Scanning though event {i} of {N} events.')
+        log(f'Scanning though event {i + 1} of {N} events.')
         log('Moving to:')
         log(f'\tx = {xye_pos[i][0]:.3f}')
         log(f'\ty = {xye_pos[i][1]:.3f}')
@@ -1205,37 +1244,51 @@ def tr_xanes_plan(xye_pos, power, hold,
         # Trigger laser and collect time series data
         if no_data:
             yield from laser_on(power, hold, ramp)
-            yield from bps.sleep(hold)
+            yield from bps.sleep(total_time)
             yield from laser_off()
         else:
             yield from laser_time_series(power, hold, ramp, xye_pos[i][2], dets=dets, total_time=total_time, acqtime=acqtime, shutter=shutter)
         
-
-        # Time estimates
-        t_elap_e += ttime.time() - t0_e
-        t_rem_p, t_rem_a = 0
-        if peakup_N != 0:
-            t_rem_p = (num_peakup - peakup_count) * (t_elap_p / num_peakup)
-        if align_N != 0:
-            t_rem_a = (num_align - align_count) * (t_elap_a / num_align)
-        t_rem_e = (N_time - i + 1) * (t_elap_e / N_time)
-        t_rem_tot = np.sum(t_rem_p, t_rem_a, t_rem_e)
-        if t_rem_tot < 86400:
-            str_rem = ttime.strftime("%#H:%M:%S", ttime.gmtime(t_rem_tot))
-        elif t_rem_tot >= 86400:
-            str_rem = ttime.strftime("%-d day and %#H:%M:%S",ttime.gmtime(t_rem_tot))
-        elif t_rem_tot > 86400 * 2: #this really is just to have pural days...
-            str_rem = ttime.strftime("%-d days and %#H:%M:%S",ttime.gmtime(t_rem_tot))
-        str_comp = ttime.strftime("%a %b %#d %#H:%M:%S",ttime.localtime(ttime.time() + t_rem_tot))
-
-        log(f'Finished event {i} of {N}.')
-        log(f'Estimated {str_rem} remaining.')
-        log(f'Predicted completion at {str_comp}.')
+        # Recorded batch scan information
+        h = db[-1]
+        id_str = h.start['scan_id']
+        if no_data:
+            id_str = None
+        scanid_lst.append(id_str)
+        log(f'Finished event {i + 1} of {N} as scan {id_str}.')
+        t_elap_e += ttime.time() - t0_e + waittime #included waittime into estimates
         
-        # Wait
+        # Bathc progress updates
         if (i != (N-1)):
+            # Time estimate math
+            log('Estimating batch time completion...')
+            t_rem_p, t_rem_a = 0, 0
+            if peakup_N != 0:
+                t_rem_p = (num_peakup - peakup_count) * (t_elap_p / peakup_count)
+            if align_N != 0:
+                t_rem_a = (num_align - align_count) * (t_elap_a / align_count)
+            print(f'Estimates based on {N_time - i} events.')
+            t_rem_e = (N_time - (i)) * (t_elap_e / (i + 1))
+            t_rem_tot = np.sum([t_rem_p, t_rem_a, t_rem_e])
+
+            # Time estimate strings
+            if t_rem_tot < 86400:
+                str_rem = ttime.strftime("%#H:%M:%S", ttime.gmtime(t_rem_tot))
+            elif t_rem_tot >= 86400:
+                str_rem = ttime.strftime("%-d day and %#H:%M:%S",ttime.gmtime(t_rem_tot))
+            elif t_rem_tot > 86400 * 2: #this really is just to have pural days...
+                str_rem = ttime.strftime("%-d days and %#H:%M:%S",ttime.gmtime(t_rem_tot))
+            str_comp = ttime.strftime("%a %b %#d %#H:%M:%S",ttime.localtime(ttime.time() + t_rem_tot))
+
+            log(f'Estimated {str_rem} remaining.')
+            log(f'Predicted completion at {str_comp}.')
+
+            # Wait
             log(f'Waiting {waittime} seconds until next event starts.')
             yield from bps.sleep(waittime)
+            log(72 * '#')
 
     # Log end of batch
     log('Batch is complete!!!')
+    if not no_data:
+        log(f'Batched {i + 1} events for scans {scanid_lst[0]}:{scanid_lst[-1]}.')
