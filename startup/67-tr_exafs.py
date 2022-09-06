@@ -81,14 +81,17 @@ def f_bent_line(x, x0, m1, m2):
             y.append(m2 * (x - x0))
     return y
 
-def f_edge(x, A, sigma, x0, y0, m1, m2):
+def f_bent_erf(x, A, sigma, x0, y0, m1, m2):
     return (f_offset_erf(x, A, sigma, x0, y0) +
            f_bent_line(x, x0, m1, m2))
 
-#def f_edge(x, A1, sigma1, x1, y1,
-#                  A2, sigma2, x2, y2):
-#    return (f_two_erfs(x, A1, sigma1, x1, y1,
-#                      A2, sigma2, x2, y2))
+def f_edge(x, A, sigma, x0, y0, m1, m2):
+    return f_bent_erf(x, A, sigma, x0, y0, m1, m2)
+
+def f_edge(x, A1, sigma1, x1, y1,
+                  A2, sigma2, x2, y2):
+    return (f_two_erfs(x, A1, sigma1, x1, y1,
+                      A2, sigma2, x2, y2))
 
 
 # Convenience function for setting up detectors
@@ -468,13 +471,14 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
     return beam_param # Cent_position then fwhm. Laser parameters first if 'both'
 
 
-def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True, 
+def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True, edges=1,
                          bin_low=795, bin_high=815, plotme=None):
 
     '''
     beam        (str)   'x-ray' or 'laser' Specifies appropriate detectors, motors, and curve shape
     scanid      (int)   ID of previous scan. Default is -1
     plot_guess  (bool)  If true, plot guess function. Helps if curve fitting is poor
+    edges       (int)   1 for simple edge. 2 for wire/two edges
     bin_low     (int)   Start bin of table data #number for foil of interest
     bin_high    (int)   End bin of table data
     plotme      (ax)    Pyplot axis. Creates one if None.
@@ -531,32 +535,46 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     x, y = x.astype(np.float64), y.astype(np.float64)
     log(f'Raw data acquired and saved for {beam}! Now fitting...')
 
-    # Guessing the function and fitting the raw data
-    p_guess = [0.5 * (np.amax(y) - np.amin(y)),
-                5,
-                x[np.argmax(np.abs(np.gradient(y,x)))],
-                0.5 * (np.amin(y) + np.amax(y)), # Changed from just minimum. This should be correct
-                0,
-                0]
-    
-    #p_guess = [0.5 * (np.amax(y) - np.amin(y)),
-    #           5,
-    #           x[np.argmax((np.gradient(y,x)))],
-    #           0.5 * (np.amin(y) + np.amax(y)),
-    #           -0.5 * (np.amax(y) - np.amin(y)),
-    #           -5,
-    #           x[np.argmin((np.gradient(y,x)))],
-    #           0.5 * (np.amin(y) + np.amax(y))]
-    
-    
-    if np.mean(y[:3]) > np.mean(y[-3:]):
-        p_guess[0] = -p_guess[0]
-        #p_guess = -p_guess
+    guess_size = 5
     if beam == 'x-ray':
-        p_guess[1] = 5
+        guess_size = 5
 
+    # Guessing the functions
+    if (edges == 1):
+        p_guess = [0.5 * (np.amax(y) - np.amin(y)),
+                    guess_size,
+                    x[np.argmax(np.abs(np.gradient(y,x)))],
+                    0.5 * (np.amin(y) + np.amax(y)), # Changed from just minimum. This should be correct
+                    0,
+                    0]
+        
+        if np.mean(y[:3]) > np.mean(y[-3:]):
+            p_guess[0] = -p_guess[0]
+        if beam == 'x-ray':
+            p_guess[1] = 5
+    
+    elif (edges == 2):
+        p_guess = [0.5 * (np.amax(y) - np.amin(y)),
+                   guess_size,
+                   x[np.argmax((np.gradient(y,x)))],
+                   0.5 * (np.amin(y) + np.amax(y)),
+                   # Second edge
+                   -0.5 * (np.amax(y) - np.amin(y)),
+                   guess_size,
+                   x[np.argmin((np.gradient(y,x)))],
+                   0.5 * (np.amin(y) - np.amax(y))]
+        
+        cent_ind = int(len(y) / 2)
+        if np.mean([y[:3], y[-3:]]) > np.mean(y[cent_ind - 3:cent_ind + 3]):
+            p_guess[7] = -p_guess[7]
+        
+    else:
+        raise ValueError("Number of edges to fit can only be 1 or 2!")
+    
+    
     # Fitting and useful information
     try:
+        log(f'Fit attempt for {edges} edge(s).')
         log(f'Guess coeffcients are {p_guess}')
         popt, pcov = curve_fit(f_edge, x, y, p0=p_guess)
     except:
@@ -565,15 +583,20 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     log(f'Fit coefficients are {popt}')
     C = 2 * np.sqrt(2 * np.log(2))
     
-    left_edge = popt[2]
-    right_edge = popt[6]
-    left_fwhm = C * popt[1]
-    right_fwhm = C * popt[5]
-    cent_position = (left_edge + right_edge) / 2
-    fwhm = np.mean(np.abs([left_edge, right_edge]))
-
-    cent_position = popt[2]
-    fwhm = C * popt[1]
+    if edges == 1:
+        cent_position = popt[2]
+        fwhm = C * popt[1]
+    else:
+        left_edge = np.min([popt[2], popt[6]])
+        right_edge = np.max([popt[2], popt[6]])
+        if left_edge == popt[2]:
+            left_fwhm = C * popt[1]
+            right_fwhm = C * popt[5]
+        else:
+            left_fwhm = C * popt[5]
+            right_fwhm = C * popt[1]
+        cent_position = (left_edge + right_edge) / 2
+        fwhm = (left_fwhm + right_fwhm) / 2
 
     # Report quality of fit
     residuals = y - f_edge(x, *popt)
@@ -593,9 +616,11 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
 
     # Report useful data
     log(f'{beam} beam center is at {cent_position:.4f} µm along {direction}.')
-    log(f'\tleft edge at {left_edge:.4f} µm, right edge at {right_edge:.4f} µm.')
+    if edges == 2:
+        log(f'\tleft edge at {left_edge:.4f} µm\n\tright edge at {right_edge:.4f} µm.')
     log(f'{beam} beam average fwhm is {fwhm:.4f} µm along {direction}.')
-    log(f'\tleft edge width {left_fwhm:.4f} µm, right edge width {right_fwhm:.4f} µm.')
+    if edges == 2:
+        log(f'\tleft FWHM {left_fwhm:.4f} µm\n\tright FWHM {right_fwhm:.4f} µm.')
 
     # Set plotting variables
     x_plot = np.linspace(np.amin(x), np.amax(x), num=100)
@@ -617,7 +642,9 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     ax.set_ylabel('ROI Counts')
     ax.set_ylim(ax.get_ylim()[0] - 0.05 * np.abs(ax.get_ylim()[0] - ax.get_ylim()[1]),
                 ax.get_ylim()[1])
-    ax.legend()
+    ax.set_xlim(ax.get_xlim()[0] - 0.05 * np.abs(ax.get_xlim()[0] - ax.get_xlim()[1]),
+                ax.get_xlim()[1])
+    ax.legend(loc=6)
     meta_string = (f'Cent = {cent_position:.3f} µm     ' + #\t doesn't work in pyplot??
                    f'FWHM  = {fwhm:.3f} µm     ' +
                    f'Step = {x[1]-x[0]:.1f} µm')
@@ -640,7 +667,9 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     ax.set_ylabel('Derivative ROI Counts')
     ax.set_ylim(ax.get_ylim()[0] - 0.05 * np.abs(ax.get_ylim()[0] - ax.get_ylim()[1]),
             ax.get_ylim()[1])
-    ax.legend()
+    ax.set_xlim(ax.get_xlim()[0] - 0.05 * np.abs(ax.get_xlim()[0] - ax.get_xlim()[1]),
+                ax.get_xlim()[1])
+    ax.legend(loc=6)
     ax.annotate(meta_string,
             xy=(0.5, 0.01),
             xycoords='axes fraction',
@@ -651,18 +680,16 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True,
     plt.close()
     
     # Check the quality of the fit and to see if the edge is mostly within range
-    # For the failure, rerun the scan outside of this function
-    # After plotting, so there is way to guage fit quality visually
     #print([scan_cent, cent_position])
     #print([scan_cent-cent_position, 0.8*distance])
-    if any([d >= 1 for d in frac_err[0:3]]):
-        log('Poor fitting. Coefficient error exceeds predicted values.')
-        yield from bps.sleep(1)
-        raise RuntimeError()
-    #if r_squared < 0.95:
+    #if any([d >= 1 for d in frac_err[0:3]]):
     #    log('Poor fitting. Coefficient error exceeds predicted values.')
     #    yield from bps.sleep(1)
     #    raise RuntimeError()
+    if r_squared < 0.95:
+        log('Poor fitting. Coefficient error exceeds predicted values.')
+        yield from bps.sleep(1)
+        raise RuntimeError()
     if np.abs(scan_cent - cent_position) > 0.8 * np.abs(distance):
         log('Edge position barely within FOV.')
         yield from bps.sleep(1)
@@ -689,6 +716,7 @@ def plot_beam_alignment(laserid=-1, xrayid=0,
     # TODO
     # Add check to make sure they are within the same scan range...
         # start and stop coordinates should be the same
+    # Allow for fitting of 2 edges as well...
 
     # Defualt xrayid to laserid
     if xrayid == 0:
@@ -751,7 +779,9 @@ def plot_beam_alignment(laserid=-1, xrayid=0,
         if (len(popt) == 4):
             y_fit = f_offset_erf(x_fit, *popt)
         elif (len(popt) == 6):
-            y_fit = f_edge(x_fit, *popt)
+            y_fit = f_bent_erf(x_fit, *popt)
+        elif (len(popt) == 7):
+            y_fit = f_two_erfs(x_fit, *popt)
 
         # Plot the data
         ax1.set_title(f'Scans {id_str[1]}:{id_str[0]} Alignemnt along {direction}')
@@ -765,8 +795,12 @@ def plot_beam_alignment(laserid=-1, xrayid=0,
         axs[i].spines[sides[i]].set_color(colors[i])
 
         # Meta data as text
+        C = 2 * np.sqrt(2 * np.log(2))
         cent_position = popt[2]
-        fwhm = 2 * np.sqrt(2 * np.log(2)) * popt[1]
+        fwhm = C * popt[1]
+        if (len(popt) == 7):
+            cent_position = (popt[2] + popt[6]) / 2
+            fwhm = C * (popt[1] + popt[5]) / 2
         centers.append(cent_position)
         y0s.append(popt[3])
         meta_string.append(f'Cent = {cent_position:.3f} µm     ' + #\t doesn't work in pyplot??
@@ -799,7 +833,6 @@ def plot_beam_alignment(laserid=-1, xrayid=0,
     # Save the figure
     ax1.figure.figure.savefig(dir + f'{id_str[1]}_{id_str[0]}_alignemnt_{direction}.png',
                              transparent=False, bbox_inches='tight')
-    
     plt.close()
 
 
@@ -1163,7 +1196,7 @@ def tr_xanes_plan(xye_pos, power, hold,
     scanid_lst = []
 
     # Log batch information...
-    if N_start == 0:
+    if N_start == 1:
         log('Starting TR_XANES batch...')
     else:
         log('Re-starting TR_XANES batch...')
@@ -1183,7 +1216,7 @@ def tr_xanes_plan(xye_pos, power, hold,
         log(f'Current z_pos is {nano_stage.z.user_readback.get():.3f}.')
 
     # Timing statistics
-    N_time = N - N_start + 1
+    N_time = N - N_start
     num_peakup = 0
     peakup_count = 0
     if peakup_N != 0:
@@ -1193,6 +1226,8 @@ def tr_xanes_plan(xye_pos, power, hold,
     if align_N != 0:
         num_align = int((N_time + align_N - 1) / align_N)
     t_elap_p, t_elap_a, t_elap_e = 0, 0, 0
+
+    log(72 * '#')
 
     # Loop through xye_pos positions and energies
     for i in range(N):
@@ -1267,8 +1302,8 @@ def tr_xanes_plan(xye_pos, power, hold,
                 t_rem_p = (num_peakup - peakup_count) * (t_elap_p / peakup_count)
             if align_N != 0:
                 t_rem_a = (num_align - align_count) * (t_elap_a / align_count)
-            print(f'Estimates based on {N_time - i} events.')
-            t_rem_e = (N_time - (i)) * (t_elap_e / (i + 1))
+            print(f'Estimates based on {N - i - 1} remaining events.')
+            t_rem_e = (N - i - 1) * (t_elap_e / (i - N_start + 2))
             t_rem_tot = np.sum([t_rem_p, t_rem_a, t_rem_e])
 
             # Time estimate strings
@@ -1292,3 +1327,5 @@ def tr_xanes_plan(xye_pos, power, hold,
     log('Batch is complete!!!')
     if not no_data:
         log(f'Batched {i + 1} events for scans {scanid_lst[0]}:{scanid_lst[-1]}.')
+    fin_time = ttime.strftime("%a %b %#d %#H:%M:%S",ttime.localtime(ttime.time()))
+    log(f'Finished at {fin_time}.')
