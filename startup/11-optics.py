@@ -13,6 +13,34 @@ shut_fe = TwoButtonShutter("XF:05ID-PPS{Sh:WB}", name="shut_fe")
 shut_a = TwoButtonShutter("XF:05IDA-PPS:1{PSh:2}", name="shut_a")
 shut_b = TwoButtonShutter("XF:05IDB-PPS:1{PSh:4}", name="shut_b")
 
+class SRXFastShutter(Device):
+    # Based on HXN Fast Shutter code
+    request_open = Cpt(EpicsSignal, "")
+    _verbosity = 1
+
+    def __init__(self, prefix, **kwargs):
+        super().__init__(prefix, **kwargs)
+        self.stage_sigs[self.request_open] = 1
+
+    def open(self):
+        self.request_open.set(1)
+
+    def close(self):
+        self.request_open.set(0)
+
+    def stage(self):
+        if self._verbosity > 0:
+            banner("Opening fast shutter")
+        super().stage()
+
+    def unstage(self):
+        if self._verbosity > 0:
+            banner("Closing fast shutter")
+        super().unstage()
+
+shut_d = SRXFastShutter("XF:05IDD-ES:1{Dev:Zebra1}:SOFT_IN:B0",
+                        name="shut_d")
+
 
 class ShutterOpeningException(Exception):
     pass
@@ -36,26 +64,24 @@ def check_shutters(check, status):
 
     if check is False:
         banner("WARNING: Shutters are not controlled in this scan.")
-        # print_warning_message("WARNING: Shutters are not controlled in this scan.")
     else:
         if status == 'Open':
             if shut_b.status.get() == 'Not Open':
                 print('Opening B-hutch shutter..')
                 yield from mov(shut_b, "Open")
             print('Opening D-hutch shutter...')
-            # yield from mov(shut_d, 0)
-            yield from abs_set(shut_d, 0)
+            yield from abs_set(shut_d.request_open, 1)
             i = 0
-            while (shut_d.read()['attenuators_Mo_shutter']['value'] == 1):
+            while (shut_d.read()['shut_d_request_open']['value'] == 0):
                 yield from bps.sleep(1)
-                abs_set(shut_d, 0)
+                yield from abs_set(shut_d.request_open, 1)
                 i = i + 1
                 if (i > 10):
                     # print('Error opening D-shutter!')
                     raise ShutterOpeningException(f'Error opening D-shutter after {i} attempts!')
         else:
             print('Closing D-hutch shutter...')
-            yield from mov(shut_d, 1)
+            yield from mov(shut_d.request_open, 0)
 
 
 # Setup white/pink beam slits
