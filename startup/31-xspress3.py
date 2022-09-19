@@ -21,7 +21,7 @@ from nslsii.detectors.xspress3 import (
 
 # this is the community IOC package
 from nslsii.areadetector.xspress3 import (
-    build_detector_class
+    build_xspress3_class
 )
 
 # JL
@@ -298,7 +298,7 @@ class SrxXSP3Handler:
             return np.asarray(f[self.XRF_DATA_KEY])
 
 # build a community IOC xspress3 class with 4 channels
-CommunityXspress3_8Channel = build_detector_class(
+CommunityXspress3_8Channel = build_xspress3_class(
     channel_numbers=(1, 2, 3, 4, 5, 6, 7, 8),
     mcaroi_numbers=(1, 2, 3, 4)
 )
