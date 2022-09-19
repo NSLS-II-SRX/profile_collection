@@ -362,22 +362,14 @@ class Energy(PseudoPositioner):
         self.move(self.energy.get()[0])
 
 
-# # Recalibrated 2022-01-21
-# cal_data_2022cycle1 = {
-#     "d_111": 3.123326224082623,
-#     "delta_bragg": 0.2388390658976345,
-#     "C2Xcal": 3.6,
-#     "T2cal": 15.0347755916,
-#     "xoffset": 24.65,
-# }
-# Recalibrated 2022-05-20
-cal_data_2022cycle2 = {
-    "d_111": 3.1295617552530355,
-    "delta_bragg": 0.21281683808460292,
+cal_data_2022cycle3 = {
+    "d_111": 3.14034339223485,
+    "delta_bragg": 0.18899059694989445,
     "C2Xcal": 3.6,
     "T2cal": 15.0347755916,
     "xoffset": 24.65,
 }
+
 
 
 
