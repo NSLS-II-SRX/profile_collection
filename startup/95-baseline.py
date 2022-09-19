@@ -7,7 +7,7 @@ sd = SupplementalData()
 
 sd.baseline = [ring_current, fe, energy, dcm, hfm,                # Front-end slits, Undulator/Bragg, HDCM, HFM
                slt_wb, slt_pb, slt_ssa,                           # White-, Pink-Beam slits, SSA
-               jjslits, attenuators, dt_correction,               # JJ slits, Attenuator Box, deadtime correction on/off
+               jjslits, attenuators,               # JJ slits, Attenuator Box, deadtime correction on/off
                nanoKB, nano_vlm_stage, nano_det, temp_nanoKB,     # nanoKBs, VLM, Detector, Temperatures
                nano_stage,                                        # coarse/fine sample stages
                nanoKB_interferometer, nano_stage_interferometer]  # nanoKB interferometer, sample interferometer
