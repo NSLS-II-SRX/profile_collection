@@ -10,7 +10,8 @@ sd.baseline = [ring_current, fe, energy, dcm, hfm,                # Front-end sl
                jjslits, attenuators,                              # JJ slits, Attenuator Box
                nanoKB, nano_vlm_stage, nano_det, temp_nanoKB,     # nanoKBs, VLM, Detector, Temperatures
                nano_stage,                                        # coarse/fine sample stages
-               nanoKB_interferometer, nano_stage_interferometer]  # nanoKB interferometer, sample interferometer
+               nanoKB_interferometer, nano_stage_interferometer,  # nanoKB interferometer, sample interferometer
+               xs.cam.ctrl_dtc]                                   # X3X DTC enabled
 
 RE.preprocessors.append(sd)
 
