@@ -198,7 +198,12 @@ def slit_nanoflyscan(scan_motor, scan_start, scan_stop, scan_stepsize, acqtime,
     slit_orig_gap = slitgap_motor.user_readback.get()
     slit_orig_pos = slit_motor.user_readback.get()
 
+    # always move the slit to a more negative position to avoid backlash
+    
+    yield from mov(slitgap_motor, 0)
+    yield from mov(slit_motor, slit_start-0.2)
     # close the gap for scan
+
     yield from mov(slitgap_motor, slit_gap)
 
     # Need to convert stepsize to number of points
@@ -288,7 +293,8 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
     theta_v = 3 # mrad
     theta_h = 3 # mrad
     L_h = 100 # mm  Length of horizontal mirror
-    conversion_factor_orth = np.array([-1.6581375e-4, 5.89e-4]) #unit: p/urad (V x H)
+#    conversion_factor_orth = np.array([-1.6581375e-4, 5.89e-4]) #unit: p/urad (V x H)
+    conversion_factor_orth = np.array([-0.000165824, 5.89e-4]) #unit: p/urad (V x H)
     pitch_motion_conversion = np.array([225, 100]) # unit: mm (V x H)
     delta_fine_pitch = 0.0 # unit: um
  
@@ -331,9 +337,9 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
             return
 
         if bin_low is None:
-            bin_low = xs.channels.channel01.mcarois.mcaroi01.bin_low.get()
+            bin_low = xs.channel01.mcaroi01.min_x.get()
         if bin_high is None:
-           bin_high = xs.channels.channel01.mcarois.mcaroi01.bin_high.get()
+            bin_high = xs.channel01.mcaroi01.max_x.get()
         if (d.ndim == 1):
             d = np.array(tbl[fluor_key])
         d = np.stack(d)
@@ -568,10 +574,234 @@ def plot_slit_scans(start_id, N):
         d = np.squeeze(d)
         d = np.sum(d[:, :, 934:954], axis=(-1, -2))
         d = np.squeeze(d)
-        dd = d / np.squeeze(d_i0.T)
+        dd = d #/ np.squeeze(d_i0.T)
 
         ax.plot(dd, label=f"{scanid}")
         print('done')
 
     ax.legend()
+
+
+def orth_slit_nanoflyscan_cal(scan_id_list=[], slit_range=[], from_RE=[], orthogonality=False, interp_range=None,                               bin_low=934, bin_high=954, normalize=True):
+   
+    """
+    this function takes a list of scan_id, process them one by one, then analyzes the optical abberations.
+    scan_id          list    a list of slitscan ids
+    slit_range       list    a list of slit motor positions
+    from_RE          list    plot handle
+    orthogonality    bool    calculate the spherical abb or the astigmatism
+    interp_range     list    list of the fitting range, can drop some bad points
+    bin_low          integer the lower limit of ROI (usually Pt or Au), by default it's taking roi1
+    bin_high         integer uppper limit of ROI
+    """
+
+    scan_id_list = np.array(scan_id_list)
+    slit_range = np.array(slit_range)
+    numline = scan_id_list.shape[0]
+    line_pos_seq = np.zeros (int(numline))
+    i = 0
+    # Mirror parameters
+    f_v = 295*1e+3  # um
+    f_h = 125*1e+3
+    theta_v = 3 #mrad
+    theta_h = 3 #mrad
+    conversion_factor_orth = np.array([-1.6581375e-4, 5.89e-4]) #unit: p/urad (V x H)
+    pitch_motion_conversion = np.array([225, 100]) # unit: mm (V x H)
+    delta_fine_pitch = 0.0 # unit: um
+
+    for idx, scan_id in enumerate(scan_id_list):
+        h = db[int(scan_id)]
+        scan_id = h.start['scan_id']
+
+        # Get the information from the previous scan
+        haz_data = False
+        loop_counter = 0
+        MAX_LOOP_COUNTER = 15
+        print(f'Scan ID: {int(scan_id):d}\nWaiting for data...', end='', flush=True)
+        while (loop_counter < MAX_LOOP_COUNTER):
+            try:
+                tbl = h.table('stream0', fill=True)
+                haz_data = True
+                print('done')
+                break
+            except:
+                loop_counter += 1
+                time.sleep(1)
+
+        # Check if we haz data
+        if (not haz_data):
+            print('Data collection timed out!')
+            return
+ 
+       
+        fluor_key = 'fluor'
+        d = np.array(tbl[fluor_key])[0]
+        if 'nano_stage_sx' in h.start['scan']['fast_axis']['motor_name']:
+            flag_dir = 'HOR'
+            pos = 'enc1'
+        elif 'nano_stage_sy' in h.start['scan']['fast_axis']['motor_name']:
+            flag_dir = 'VER'
+            pos = 'enc2'
+        else:
+            print('Unknown motor')
+            return
+
+        if bin_low is None:
+            bin_low = xs.channel01.mcaroi01.min_x.get()
+        if bin_high is None:
+            bin_high = xs.channel01.mcaroi01.max_x.get()
+        if (d.ndim == 1):
+            d = np.array(tbl[fluor_key])
+        d = np.stack(d)
+        if (d.ndim == 2):
+            d = np.sum(d[:, bin_low:bin_high], axis=1)
+        elif (d.ndim == 3):
+            d = np.sum(d[:, :, bin_low:bin_high], axis=(1, 2))
+        try:
+            I0 = np.array(tbl['i0'])[0]
+        except KeyError:
+            I0 = np.array(tbl['sclr_i0'])
+        if (normalize):
+            y = d / I0
+        else:
+            y = d
+        x = np.array(tbl[pos])[0]
+        if (x.size == 1):
+            x = np.array(tbl[pos])
+        x = x.astype(np.float64) # position data
+        y = y.astype(np.float64) # fluo data
+       
+        numpts = x.shape
+       
+    #ind_line = np.linspace(0, len(cts), numline, endpoint=False, dtype=np.int)
+    
+    # numline_array = np.arange(len(cts)/numpts)
+    #line_seq = np.zeros((int(numline), int(numpts)))
+    #pos_seq = np.zeros((int(numline), int(numpts)))
+    #I0_seq = np.zeros((int(numline), int(numpts)))
+    #slit_pos_seq = np.zeros(int(numline))
+    
+    #for i in range(int(numline)):
+    #    line_seq[i,:] = cts[ind_line[i]:ind_line[i] + int(numpts)]
+    #    pos_seq[i,:] = pos[ind_line[i]:ind_line[i] + int(numpts)]
+    #    I0_seq[i,:] = I0[ind_line[i]:ind_line[i] + int(numpts)]
+    #    slit_pos_seq[i] = slit_pos[ind_line[i] + 1]
+    
+    #pos_seq_plt = pos_seq[0, :]
+    #norm_line_seq = line_seq / I0_seq
+    # At this point, i haz data and full variables so now itz timez to plot
+
+        #if from_RE == []:
+        #    _, ax = plt.subplots()
+        #else:
+        #    ax = from_RE[0].ax
+        ##for i in range(numline):
+        #ax.plot(x, y, label=f'y = {i+1}')
+        #ax.set_ylabel('Slit position')
+        #ax.set_ylabel('Normalized Signal')
+        #ax.set_title(f'Scan {scan_id}')
+        #ax.legend(loc='upper left')
+
+        #if from_RE == []:
+        #    _, ax = plt.subplots()
+        #else:
+        #    ax = from_RE[1].ax
+        ##for i in range(numline):
+        #ax.plot(x, y, label=f'y = {i+1}')
+        #ax.set_ylabel('Slit position')
+        #ax.set_ylabel('Raw Signal')
+        #ax.set_title(f'Scan {scan_id}')
+        #ax.legend(loc='upper left')
+
+        #line fit
+        # Error function with offset
+        def f_offset_erf(x, A, sigma, x0, y0):
+            x_star = (x - x0) / sigma
+            return A * erf(x_star / np.sqrt(2)) + y0
+        
+        def f_two_erfs(x, A1, sigma1, x1, y1, A2, sigma2, x2, y2):
+            x1_star = (x - x1) / sigma1
+            x2_star = (x - x2) / sigma2
+        
+            f_combo = f_offset_erf(x, A1, sigma1, x1, y1) + f_offset_erf(x, A2, sigma2, x2, y2)
+            return f_combo
+        
+        def line_fit(x,y):
+            p_guess = [0.5*np.amax(y),1.000,0.5*(x[0] + x[-1]) - 2.5,np.amin(y) + 0.5*np.amax(y),-0.5*np.amax(y),1.000,0.5*(x[0] + x[-1]) + 2.5,np.amin(y) + 0.5*np.amax(y)]       
+            try:
+                    # popt, _ = curve_fit(f_offset_erf, x, y, p0=p_guess)
+                popt, _ = curve_fit(f_two_erfs, x, y, p0=p_guess)
+            except:
+                print('Raw fit failed.')
+                popt = p_guess
+        
+            C = 2 * np.sqrt(2 * np.log(2))
+            line_pos = (popt[2]+popt[6])/2
+            print('\nThe center beam position is %f um' % ((popt[2]+popt[6])/2))
+            return line_pos
+        
+        #line_pos_seq[i] = line_fit(pos_seq_plt, norm_line_seq[i,:])   
+        line_pos_seq[i] = line_fit(x, y)  
+        i=i+1 
+
+    if interp_range is None:
+        #if flag_dir == 'VER':
+        #    interp_range = np.arange(numline)[:]
+        #else:
+        interp_range = np.arange(numline)
+
+    calpoly_fit = np.polyfit(slit_range[interp_range], line_pos_seq[interp_range]/1000, orthogonality+1, full=True)
+    p = np.poly1d(calpoly_fit[0])
+    line_plt = p(slit_range[interp_range])
+    p2v_line_pos = np.max(line_pos_seq[interp_range])-np.min(line_pos_seq[interp_range])
+   
+    if flag_dir == 'VER':
+        C_f = f_v
+        C_theta = theta_v
+        conversion_factor_orth = conversion_factor_orth[0]
+        pitch_motion_conversion = pitch_motion_conversion[0] 
+    else:
+        C_f = f_h
+        C_theta = theta_h
+        conversion_factor_orth = conversion_factor_orth[1]
+        pitch_motion_conversion = pitch_motion_conversion[1] 
+
+
+    print(f'p is {calpoly_fit[0]}')
+    #print(f'residual is {calpoly_fit[1]*1e+6} nm')
+    print(f'P2V of line position is {p2v_line_pos} um')
+    defocus = -calpoly_fit[0][0] * C_f
+    delta_theta = calpoly_fit[0][0] * C_theta
+    line_move_h = -2 * delta_theta * C_f * 1e-3
+    print('defocus is ' '{:7.3f}'.format(defocus), 'um. Vkb correct by this amount.')
+    print('equivalent to ' '{:7.6f}'.format(delta_theta), 'mrad. Hkb correct by this amount.')
+    #print('actuator should move by' '{:7.3f}'.format(actuator_move), 'um.')
+    print('Line feature should move' '{:7.3f}'.format(line_move_h), 'um for h mirror pitch correction')
+
+    if orthogonality == 1:
+        delta_fine_pitch = calpoly_fit[0][0]/conversion_factor_orth*1e-3*pitch_motion_conversion
+        delta_theta_quad = calpoly_fit[0][0]/conversion_factor_orth
+        delta_focal_plane_z = delta_theta_quad*1e-3/C_theta*C_f
+        print('quadratic term corresponds to pitch angle' '{:7.3f}'.format(delta_theta_quad), 'urad.')
+        print('quadratic term corresponds to fine pitch move' '{:7.3f}'.format(delta_fine_pitch), 'um.')
+        print('quadratic term corresponds to coarse Z ' '{:7.3f}'.format(delta_focal_plane_z), 'um.')
+
+
+    #if from_RE == []:
+    #    _, ax = plt.subplots()
+    #else:
+    #    ax = from_RE[2].ax
+    fig, ax = plt.subplots()
+    ax.plot(slit_range, line_pos_seq/1000, 'ro', slit_range[interp_range], line_plt)
+    ax.set_title(f'scan {scan_id}')
+    ax.set_xlabel(f'Slit Pos (mm)')
+    ax.set_ylabel(f'Line Pos (mm)')
+
+    fname = f'slitscan_{scan_id_list[0]}.png'
+    root = '/home/xf05id1/current_user_data/'
+    try:
+        os.makedirs(root, exist_ok=True)
+        plt.savefig(root + fname, dpi=300)
+    except:
+        print('Could not save plot.')
 
