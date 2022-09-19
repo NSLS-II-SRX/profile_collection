@@ -76,20 +76,20 @@ def scan_all_foils(el_list = ['V', 'Cr', 'Fe', 'Cu', 'Zn', 'Se']):
     for el in el_list:
         yield from mv(slt_ssa.h_gap, pos[el][2]) 
         if pos[el][3] == 2:
-            yield from mv(mov(attenuators.Cu_shutter, 1)
+            yield from mv(attenuators.Cu_shutter, 1)
         elif pos[el][3] == 3:
-            yield from mv(mov(attenuators.Si_shutter, 1)
+            yield from mv(attenuators.Si_shutter, 1)
         elif pos[el][3] == 5:
-            yield from mv(mov(attenuators.Cu_shutter, 1)
-            yield from mv(mov(attenuators.Si_shutter, 1)
+            yield from mv(attenuators.Cu_shutter, 1)
+            yield from mv(attenuators.Si_shutter, 1)
          
 
         yield from bps.sleep(2)
         yield from mov(nano_stage.x, pos[el][0], nano_stage.y, pos[el][1])
         yield from mono_calib(el, peakup=True, peakup_calib=False)
         ## just open up all the shutters
-        yield from mv(mov(attenuators.Cu_shutter, 0)
-        yield from mv(mov(attenuators.Si_shutter, 0)
+        yield from mv(attenuators.Cu_shutter, 0)
+        yield from mv(attenuators.Si_shutter, 0)
         
 
 
