@@ -1,5 +1,6 @@
 print(f'Loading {__file__}...')
 
+from http.client import MOVED_PERMANENTLY
 import numpy as np
 import time as ttime
 import matplotlib.pyplot as plt
@@ -17,13 +18,6 @@ from bluesky.log import logger, config_bluesky_logging, LogFormatter
 # Find a way to add XAS_TIME to logscan_detailed file
 # Batch script of beam alignments with progressively smaller steps
 #   A run and forget alignment procedure?
-# Find a better way to deal with fractional error for qualifying curve fitting
-#   I'm thinking r-squared
-# Single edge or wire double edge better for fitting?
-#   Single wire edge is better than scapel edge...
-# Add appropriate scan counting to for alignment plotting of multiple scans
-# Set up batch procedure to be able to handle no peakups or alignments
-#   Make it capable of batched laser crystllization events
 
 
 # Setting up a logging file
@@ -85,10 +79,10 @@ def f_bent_erf(x, A, sigma, x0, y0, m1, m2):
     return (f_offset_erf(x, A, sigma, x0, y0) +
            f_bent_line(x, x0, m1, m2))
 
-def f_edge(x, A, sigma, x0, y0, m1, m2):
+def f_1edge(x, A, sigma, x0, y0, m1, m2):
     return f_bent_erf(x, A, sigma, x0, y0, m1, m2)
 
-def f_edge(x, A1, sigma1, x1, y1,
+def f_2edge(x, A1, sigma1, x1, y1,
                   A2, sigma2, x2, y2):
     return (f_two_erfs(x, A1, sigma1, x1, y1,
                       A2, sigma2, x2, y2))
@@ -417,7 +411,7 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
     log('Knife edge scan complete!')
 
     # Plot and process the data
-    beam_param = []
+    beam_param, scan_ids = [], []
     ext_scan = False 
     first_fit = True
     for beam_1 in ['laser', 'x-ray']:
@@ -440,7 +434,7 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
         
         # Try to find edge
         try:
-            cent_position, fwhm = yield from beam_knife_edge_plot(beam=beam_1, plotme=plotme)
+            cent_position, fwhm, scanid = yield from beam_knife_edge_plot(beam=beam_1, plotme=plotme)
             #print(f'{cent_position=}')
             #print(f'{fwhm=}')
 
@@ -451,8 +445,8 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
                     log('Doubling scan range.')
                     yield from _plan(distance_1 = 2 * distance)
                     ext_scan = True
-                    cent_position, fwhm = yield from beam_knife_edge_plot(beam=beam_1, plotme=plotme)
-            
+                    cent_position, fwhm, scanid = yield from beam_knife_edge_plot(beam=beam_1, plotme=plotme)
+
                 except RuntimeError:
                     log('Knife edge scan failed to find position.')
                     raise RuntimeError()
@@ -463,10 +457,11 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
         
         beam_param.append(cent_position)
         beam_param.append(fwhm)
+        scan_ids.append(scanid)
 
         # Plot beam alignment
         if beam == 'both':
-            yield from plot_beam_alignment(laserid=-1, xrayid=-1)
+            yield from plot_beam_alignment(laserid=scan_ids[0], xrayid=scan_ids[1])
 
     return beam_param # Cent_position then fwhm. Laser parameters first if 'both'
 
@@ -537,7 +532,7 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True, edges=1,
 
     guess_size = 5
     if beam == 'x-ray':
-        guess_size = 5
+        guess_size = 1
 
     # Guessing the functions
     if (edges == 1):
@@ -550,8 +545,9 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True, edges=1,
         
         if np.mean(y[:3]) > np.mean(y[-3:]):
             p_guess[0] = -p_guess[0]
-        if beam == 'x-ray':
-            p_guess[1] = 5
+        
+        def f_edge(*args):
+            return f_1edge(*args)
     
     elif (edges == 2):
         p_guess = [0.5 * (np.amax(y) - np.amin(y)),
@@ -567,6 +563,9 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True, edges=1,
         cent_ind = int(len(y) / 2)
         if np.mean([y[:3], y[-3:]]) > np.mean(y[cent_ind - 3:cent_ind + 3]):
             p_guess[7] = -p_guess[7]
+        
+        def f_edge(*args):
+            return f_2edge(*args)
         
     else:
         raise ValueError("Number of edges to fit can only be 1 or 2!")
@@ -616,10 +615,10 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True, edges=1,
 
     # Report useful data
     log(f'{beam} beam center is at {cent_position:.4f} µm along {direction}.')
-    if edges == 2:
+    if (edges == 2):
         log(f'\tleft edge at {left_edge:.4f} µm\n\tright edge at {right_edge:.4f} µm.')
-    log(f'{beam} beam average fwhm is {fwhm:.4f} µm along {direction}.')
-    if edges == 2:
+    log(f'{beam} beam FWHM is {fwhm:.4f} µm along {direction}.')
+    if (edges == 2):
         log(f'\tleft FWHM {left_fwhm:.4f} µm\n\tright FWHM {right_fwhm:.4f} µm.')
 
     # Set plotting variables
@@ -686,7 +685,7 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True, edges=1,
     #    log('Poor fitting. Coefficient error exceeds predicted values.')
     #    yield from bps.sleep(1)
     #    raise RuntimeError()
-    if r_squared < 0.95:
+    if r_squared < 0.975:
         log('Poor fitting. Coefficient error exceeds predicted values.')
         yield from bps.sleep(1)
         raise RuntimeError()
@@ -699,7 +698,7 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True, edges=1,
         yield from bps.sleep(1)
         raise RuntimeError()
 
-    return cent_position, fwhm
+    return cent_position, fwhm, int(id_str)
 
 
 def plot_beam_alignment(laserid=-1, xrayid=0,
@@ -716,7 +715,6 @@ def plot_beam_alignment(laserid=-1, xrayid=0,
     # TODO
     # Add check to make sure they are within the same scan range...
         # start and stop coordinates should be the same
-    # Allow for fitting of 2 edges as well...
 
     # Defualt xrayid to laserid
     if xrayid == 0:
@@ -988,7 +986,7 @@ def laser_time_series(power, hold, ramp=5, wait = 0,
 
     # Setup scaler
     if (acqtime < 0.001):
-        acqtime = 0.001 #limits the time resolution. Why???
+        acqtime = 0.001 #limits the time resolution
     if (N_tot < 10_000):
         yield from abs_set(sclr1.nuse_all, N_tot + 1)
     else:
@@ -1129,6 +1127,8 @@ def laser_time_series(power, hold, ramp=5, wait = 0,
     #plot each series after they have been acquired??
     h = db[-1]
     id_str = h.start['scan_id']
+
+    #logscan_detailed('XAS_TIME')
 
     log(f'Time series acquired for {id_str} scan!') #How to add scan ID information??
     # One way to do it (probably not the best way) would be to simply
@@ -1272,7 +1272,7 @@ def tr_xanes_plan(xye_pos, power, hold,
                        nano_stage.y, xye_pos[i][1])
         if not no_data:
             log(f'\te = {xye_pos[i][2]}')
-            yield from move(energy, xye_pos[i][2])
+            yield from mov(energy, xye_pos[i][2])
         else:
             log('Collecting no data. No energy moves since irrelvant.')
 
