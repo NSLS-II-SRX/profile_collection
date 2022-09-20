@@ -773,11 +773,11 @@ def plot_beam_alignment(laserid=-1, xrayid=0,
             y_fit = f_offset_erf(x_fit, *popt)
         elif (len(popt) == 6):
             y_fit = f_bent_erf(x_fit, *popt)
-        elif (len(popt) == 7):
+        elif (len(popt) == 8):
             y_fit = f_two_erfs(x_fit, *popt)
 
         # Plot the data
-        ax1.set_title(f'Scans {id_str[1]}:{id_str[0]} Alignemnt along {direction}')
+        ax1.set_title(f'Scans {id_str[1]}:{id_str[0]} Alignment along {direction}')
         ln1 = axs[i].plot(x, y, '+', label=f'{beam} Data', c=colors[i])
         ln2 = axs[i].plot(x_fit, y_fit, '-', label=f'{beam} Fit', c=colors[i], alpha=0.5)
         lns.append(ln1[0]), lns.append(ln2[0])
@@ -791,13 +791,13 @@ def plot_beam_alignment(laserid=-1, xrayid=0,
         C = 2 * np.sqrt(2 * np.log(2))
         cent_position = popt[2]
         fwhm = C * popt[1]
-        if (len(popt) == 7):
+        if (len(popt) == 8):
             cent_position = (popt[2] + popt[6]) / 2
             fwhm = C * (popt[1] + popt[5]) / 2
         centers.append(cent_position)
         y0s.append(popt[3])
-        meta_string.append(f'Cent = {cent_position:.3f} µm     ' + #\t doesn't work in pyplot??
-                           f'FWHM  = {fwhm:.3f} µm     ' +
+        meta_string.append(f'Cent = {cent_position:.3f} µm   ' + #\t doesn't work in pyplot??
+                           f'FWHM  = {fwhm:.3f} µm   ' +
                            f'Step = {x[1]-x[0]:.1f} µm')
 
     # Adding text to plot
