@@ -712,15 +712,10 @@ def plot_beam_alignment(laserid=-1, xrayid=0,
     plotme      (ax)    Pyplot axis. Creates one if None
     '''
 
-    # TODO
-    # Add check to make sure they are within the same scan range...
-        # start and stop coordinates should be the same
-
     # Defualt xrayid to laserid
     if xrayid == 0:
         xrayid = laserid
-    #print(laserid), print(xrayid)
-
+    
     # Define some useful variables
     dir = '/home/xf05id1/current_user_data/alignments/'
     data_dir = dir + 'raw_data/'
