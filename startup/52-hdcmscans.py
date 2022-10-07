@@ -319,7 +319,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
         E = E * 1000
 
     # Define the detector
-    det = [sclr1, bpm4, xbpm1, xbpm2, dcm.c1_roll, dcm.c2_pitch]
+    det = [sclr1, bpm4, bpm5, xbpm1, xbpm2, dcm.c1_roll, dcm.c2_pitch]
     det_names = [d.name for d in det]
 
     # Set dwell for scaler
@@ -498,6 +498,8 @@ def plot_all_peakup(scanid=-1):
         ax.plot(x, normalize_y(tbl['xbpm1_sumT'].values), label='XBPM-1')
     if 'bpm4_total_current' in tbl.keys():
         ax.plot(x, normalize_y(tbl['bpm4_total_current'].values), label='B-hutch XBPM')
+    if 'bpm5_total_current' in tbl.keys():
+        ax.plot(x, normalize_y(tbl['bpm5_total_current'].values), label='B-hutch SSA')
     if 'xbpm2_sumT' in tbl.keys():
         ax.plot(x, normalize_y(tbl['xbpm2_sumT'].values), label='XBPM-2')
     if 'sclr_i0' in tbl.keys():
