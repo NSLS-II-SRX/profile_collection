@@ -59,7 +59,7 @@ def mono_calib(Element, acqtime=1.0, peakup=False,
     setroi(1, Element)
     if peakup:
         yield from bps.sleep(5)
-        yield from peakup_fine(use_calib=peakup_calib)
+        yield from peakup_fine(use_calib=peakup_calib, feedback=False, fix_roll=False)
     yield from xanes_plan(erange=[EnergyX-100,EnergyX+50],
                           estep=[1.0],
                           samplename=f'{Element}Foil',
@@ -70,8 +70,8 @@ def scan_all_foils(el_list = ['V', 'Cr', 'Fe', 'Cu', 'Zn', 'Se']):
     pos = {'V' : (-770, 900, 0.02, 0),#ssa=0.02, no filter
            'Cr': (8230, 900, 0.01, 0),#ssa=0.01, no filter
            'Fe': (26230, 900, 0.05, 2),#ssa=0.05, filter2 in
-           'Cu': (8230, 9900, 0.01, 2),#ssa=0.01, filter2 in
-           'Zn': (17230, 9900, 0.1, 3),#ssa = 0.1, filter3 in
+           'Cu': (8230, 9900, 0.01, 5),#ssa=0.01, filter2 in
+           'Zn': (17230, 9900, 0.1, 5),#ssa = 0.1, filter3 in
            'Se': (26230, 9900, 0.015, 5)}#ssa=0.015, filter2+3 in
     for el in el_list:
         yield from mv(slt_ssa.h_gap, pos[el][2]) 
@@ -90,7 +90,8 @@ def scan_all_foils(el_list = ['V', 'Cr', 'Fe', 'Cu', 'Zn', 'Se']):
         ## just open up all the shutters
         yield from mv(attenuators.Cu_shutter, 0)
         yield from mv(attenuators.Si_shutter, 0)
-        
+        yield from mv(slt_ssa.h_gap, 0.05) 
+       
 
 
 def scanderive(xaxis, yaxis, ax, xlabel='', ylabel='', title=''):
@@ -299,7 +300,7 @@ class PairedCallback(QtAwareCallback):
 
 
 def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
-                fix_roll=True, fix_pitch=True):
+                fix_roll=True, fix_pitch=True, feedback=True):
     """
 
     Scan the HDCM C2 Piezo Motor to optimize the beam.
@@ -356,10 +357,10 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     pitch_num = 51
 
     # Find approximate values
-    # 2022-09-12
-    roll_guess = -0.020
-    # 2022-09-12
-    pitch_guess = 0.070
+    # 2022-10-07
+    roll_guess = 0.000
+    # 2022-10-13
+    pitch_guess = 0.018
 
     # Use calibration
     if (use_calib):
@@ -474,7 +475,8 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # Reset the ePID-I value
     yield from dcm.c2_fine.reset_pid()
     yield from bps.sleep(1.0)
-    yield from bps.mov(dcm.c2_fine.pid_enabled, 1)
+    if feedback:
+        yield from bps.mov(dcm.c2_fine.pid_enabled, 1)
 
     # Plot the results
     if (plot is True):
