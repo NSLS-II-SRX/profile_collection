@@ -215,7 +215,7 @@ def xanes_afterscan_plan(scanid, filename, roinum):
 })
 def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
                det_xs=xs, harmonic=1, detune=0, align=False, align_at=None,
-               roinum=1, shutter=True, per_step=None):
+               roinum=1, shutter=True, per_step=None, reverse=False):
     '''
     erange (list of floats): energy ranges for XANES in eV, e.g. erange = [7112-50, 7112-20, 7112+50, 7112+120]
     estep  (list of floats): energy step size for each energy range in eV, e.g. estep = [2, 1, 5]
@@ -257,6 +257,8 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     for i in range(len(estep)):
         ept = np.append(ept, np.arange(erange[i], erange[i+1], estep[i]))
     ept = np.append(ept, np.array(erange[-1]))
+    if reverse:
+        ept = ept[::-1]
 
     # Record relevant meta data in the Start document, defined in 90-usersetup.py
     # Add user meta data
