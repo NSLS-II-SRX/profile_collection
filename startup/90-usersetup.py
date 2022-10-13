@@ -16,6 +16,11 @@ proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
 saf_num = 309204
 
+# proposal_num = 310178
+# proposal_title = 'X-ray Investigation of the Impact of Transition Metal Dissolution to the Interfacial Stability of Lithium Metal Batteries '
+# PI_lastname = 'Chen'
+# saf_num = 309499
+
 cycle = '2022_cycle3'
 
 # Set user data in bluesky

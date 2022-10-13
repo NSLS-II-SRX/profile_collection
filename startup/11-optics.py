@@ -81,7 +81,11 @@ def check_shutters(check, status):
                     raise ShutterOpeningException(f'Error opening D-shutter after {i} attempts!')
         else:
             print('Closing D-hutch shutter...')
-            yield from mov(shut_d.request_open, 0)
+            try:
+                st = yield from abs_set(shut_d.request_open, 0, timeout=3)
+            except Exception:
+                print('  Error shutting D-shutter!')
+                print(st)
 
 
 # Setup white/pink beam slits

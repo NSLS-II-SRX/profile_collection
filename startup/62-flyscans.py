@@ -211,7 +211,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Set the ROI pv
     xs_ = dets_by_name[flying_zebra.detectors[0].name]
     if hasattr(xs_, 'channel01'):
-        roi_pv = xs.channel01.mcaroi01.ts_total
+        roi_pv = xs_.channel01.mcaroi01.ts_total
         ts_state = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSAcquiring', name='ts_state')
         ## Erase the TS buffer
         # yield from mov(ts_start, 0)  # Start time series collection
@@ -225,9 +225,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             print(e)
         try:
             # This erases the time-series array, otherwise we see the previous scan
-            yield from abs_set(xs.channel01.mcaroi.ts_control, 2, wait=True, timeout=1)  # Stop time series collection
-            yield from abs_set(xs.channel01.mcaroi.ts_control, 0, wait=True, timeout=1)  # Start/erase time series collection
-            yield from abs_set(xs.channel01.mcaroi.ts_control, 2, wait=True, timeout=1)  # Stop time series collection
+            yield from abs_set(xs_.channel01.mcaroi.ts_control, 2, wait=True, timeout=1)  # Stop time series collection
+            yield from abs_set(xs_.channel01.mcaroi.ts_control, 0, wait=True, timeout=1)  # Start/erase time series collection
+            yield from abs_set(xs_.channel01.mcaroi.ts_control, 2, wait=True, timeout=1)  # Stop time series collection
         except Exception as e:
             # Eating the exception
             print('The time-series did not clear correctly. Continuing...')
@@ -526,7 +526,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             yield from bps.mov(xs2.external_trig, True)
 
         # Set TimeSeries to collect correct number of points
-        yield from abs_set(xs.channel01.mcaroi01.ts_num_points, xnum, timeout=10)
+        yield from abs_set(xs.channel01.mcaroi.ts_num_points, xnum, timeout=10)
         
         ystep = 0
         for step in np.linspace(ystart, ystop, ynum):

@@ -561,7 +561,7 @@ def focusKB(direction, **kwargs):
     # Fit the data
     # N = len(uids)
     scanids = np.linspace(-N, -1, num=N)
-    slit_nanoflyscan_cal(scan_id_list=scanids, interp_range=scanids[1:-1].astype('int'), orthogonality=False, plotme=plotme)
+    slit_nanoflyscan_cal(scan_id_list=scanids, interp_range=scanids[2:-2].astype('int'), orthogonality=False, plotme=plotme)
 
 
 def plot_slit_scans(start_id, N):
