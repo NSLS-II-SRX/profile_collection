@@ -765,7 +765,7 @@ class SRXFlyer1Axis(Device):
         while self._encoder.pc.data_in_progress.get() == 1:
             ttime.sleep(0.01)
             if (ttime.monotonic() - t0) > 60:
-                print("{self.name} is behaving badly!")
+                print(f"{self.name} is behaving badly!")
                 self._encoder.pc.disarm.put(1)
                 ttime.sleep(0.100)
                 if self._encoder.pc.data_in_progress.get() == 1:
