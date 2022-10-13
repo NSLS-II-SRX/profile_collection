@@ -212,7 +212,6 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     xs_ = dets_by_name[flying_zebra.detectors[0].name]
     if hasattr(xs_, 'channel01'):
         roi_pv = xs_.channel01.mcaroi01.ts_total
-        ts_state = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSAcquiring', name='ts_state')
         ## Erase the TS buffer
         # yield from mov(ts_start, 0)  # Start time series collection
         # yield from mov(ts_start, 2)  # Stop time series collection
@@ -347,10 +346,10 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 yield from bps.sleep(1)
         # AMK paranoid check
         t0 = ttime.monotonic()
-        while (ts_state.get() != 1 or xs.cam.detector_state.get() != 1):
+        while (xs.channel01.mcaroi.ts_acquiring.get() != 1 or xs.cam.detector_state.get() != 1):
             if verbose:
                 print(f"{ttime.ctime(t0)}\tParanoid check was worth it...")
-            yield from abs_set(ts_state, 1)
+            yield from abs_set(xs.channel01.mcaroi.ts_control, 1)
             # yield from bps.trigger(xs, group=row_str)
             yield from bps.sleep(0.1)
             if (ttime.monotonic() - t0) > 10:
