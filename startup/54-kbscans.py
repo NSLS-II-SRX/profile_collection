@@ -203,10 +203,22 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
         y0 = nano_stage.y.user_readback.get()
         dets = [xs2, sclr1]
         yield from abs_set(xs2.total_points, num)
-        livecallbacks = [LiveTable([motor.name,
-                                    xs2.channel1.rois.roi01.value.name])]
-        livecallbacks.append(LivePlot(xs2.channel1.rois.roi01.value.name,
-                                      motor.name))
+        livecallbacks = [
+            LiveTable(
+                [
+                    motor.name,
+                    xs2.channel1.rois.roi01.value.name
+                ]
+            )    
+        ]
+        
+        livecallbacks.append(
+            LivePlot(
+                xs2.channel1.rois.roi01.value.name,
+                motor.name
+            )
+        )
+
         if (shutter):
             yield from mov(shut_b, 'Open')
         yield from subs_wrapper(scan(dets, motor, start, stop, num),
@@ -245,9 +257,15 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=Tru
     # Get the scanid
     h = db[int(scanid)]
     id_str = h.start['scan_id']
+    if 'FLY' in h.start['scan']['type']:
+        fly = True
+    else:
+        fly = False
+
+    fast_axis = h.start['scan']['fast_axis']['motor_name']
 
     try:
-        if (h.start['scan']['fast_axis']['motor_name']=='nano_stage_sx'):
+        if (fast_axis=='nano_stage_sx'):
             pos = 'enc1'
         else:
             pos = 'enc2'
@@ -283,9 +301,9 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=Tru
         y = tbl['it'].values[0] / tbl['im'].values[0]
     else:
         if bin_low is None:
-            bin_low = xs.channel1.rois.roi01.bin_low.get()
+            bin_low = xs.channel01.mcaroi01.min_x.get()
         if bin_high is None:
-            bin_high = xs.channel1.rois.roi01.bin_high.get()
+            bin_high = xs.channel01.mcaroi01.min_x.get() + xs.channel01.mcaroi01.size_x.get()
         d = np.array(tbl[fluor_key])[0]
         if (d.ndim == 1):
             d = np.array(tbl[fluor_key])
@@ -368,11 +386,11 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=Tru
         ax.plot(x_plot, f_two_erfs(x_plot, *p_guess), '--', label='Guess fit')
     ax.plot(x_plot, y_plot, '-', label='Final fit')
     ax.set_title(f'Scan {id_str}')
-    ax.set_xlabel(motor.name)
+    ax.set_xlabel(fast_axis)
     if (normalize):
         ax.set_ylabel('Normalized ROI Counts')
     else:
         ax.set_ylabel('ROI Counts')
     ax.legend()
 
-    return cent_position 
+    return cent_position

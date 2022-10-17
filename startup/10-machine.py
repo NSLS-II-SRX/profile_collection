@@ -361,26 +361,26 @@ class Energy(PseudoPositioner):
         self.detune.put(0.0)
         self.move(self.energy.get()[0])
 
-
-## # Recalibrated 2021-09-08
-## cal_data_2021cycle3 = {
-##     "d_111": 3.128666195523328,
-##     "delta_bragg": 0.2167556062528753,
+## cal_data_2022cycle3 = {
+##     "d_111": 3.14034339223485,
+##     "delta_bragg": 0.18899059694989445,
 ##     "C2Xcal": 3.6,
 ##     "T2cal": 15.0347755916,
 ##     "xoffset": 24.65,
 ## }
-# Recalibrated 2022-01-21
-cal_data_2022cycle1 = {
-    "d_111": 3.123326224082623,
-    "delta_bragg": 0.2388390658976345,
+## 
+
+cal_data_2022cycle3_b = {
+    "d_111": 3.1303007759937613,
+    "delta_bragg": 0.22176141200666383,
     "C2Xcal": 3.6,
     "T2cal": 15.0347755916,
     "xoffset": 24.65,
 }
 
 
-energy = Energy(prefix="", name="energy", **cal_data_2022cycle1)
+
+energy = Energy(prefix="", name="energy", **cal_data_2022cycle3_b)
 energy.wait_for_connection()
 energy.synch_with_epics()
 energy.value = 1.0

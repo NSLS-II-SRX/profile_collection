@@ -34,7 +34,7 @@ This program provides functionality to calibrate HDCM energy:
 def mono_calib(Element, acqtime=1.0, peakup=False,
                peakup_calib=True):
     """
-    SRX mono_calib(Element)
+    SRX mono_calib(Element, acqtime=1.0, peakup=False, peakup_calib=True)
 
     Go to the edge of the specified element, do a peakup, setroi, and automatic perform a xanes scan (+-50eV) on the specified element
 
@@ -59,13 +59,40 @@ def mono_calib(Element, acqtime=1.0, peakup=False,
     setroi(1, Element)
     if peakup:
         yield from bps.sleep(5)
-        yield from peakup_fine(use_calib=peakup_calib)
-    yield from xanes_plan(erange=[EnergyX-50,EnergyX+50],
+        yield from peakup_fine(use_calib=peakup_calib, feedback=False, fix_roll=False)
+    yield from xanes_plan(erange=[EnergyX-100,EnergyX+50],
                           estep=[1.0],
                           samplename=f'{Element}Foil',
                           filename=f'{Element}Foilstd',
                           acqtime=acqtime,
                           shutter=True)
+def scan_all_foils(el_list = ['V', 'Cr', 'Fe', 'Cu', 'Zn', 'Se']):
+    pos = {'V' : (-770, 900, 0.02, 0),#ssa=0.02, no filter
+           'Cr': (8230, 900, 0.01, 0),#ssa=0.01, no filter
+           'Fe': (26230, 900, 0.05, 2),#ssa=0.05, filter2 in
+           'Cu': (8230, 9900, 0.01, 5),#ssa=0.01, filter2 in
+           'Zn': (17230, 9900, 0.1, 5),#ssa = 0.1, filter3 in
+           'Se': (26230, 9900, 0.015, 5)}#ssa=0.015, filter2+3 in
+    for el in el_list:
+        yield from mv(slt_ssa.h_gap, pos[el][2]) 
+        if pos[el][3] == 2:
+            yield from mv(attenuators.Cu_shutter, 1)
+        elif pos[el][3] == 3:
+            yield from mv(attenuators.Si_shutter, 1)
+        elif pos[el][3] == 5:
+            yield from mv(attenuators.Cu_shutter, 1)
+            yield from mv(attenuators.Si_shutter, 1)
+         
+
+        yield from bps.sleep(2)
+        yield from mov(nano_stage.x, pos[el][0], nano_stage.y, pos[el][1])
+        yield from mono_calib(el, peakup=True, peakup_calib=False)
+        ## just open up all the shutters
+        yield from mv(attenuators.Cu_shutter, 0)
+        yield from mv(attenuators.Si_shutter, 0)
+        yield from mv(slt_ssa.h_gap, 0.05) 
+       
+
 
 def scanderive(xaxis, yaxis, ax, xlabel='', ylabel='', title=''):
     dyaxis = np.gradient(yaxis, xaxis)
@@ -110,14 +137,21 @@ def find_edge(scanid=-1, use_xrf=True, element=''):
                 mu = mu + tbl[ch_name]
                 mu = np.array(mu)
             except Exception:
-                ch_name = 'ROI_01'
+                ch_name = 'xs_channel01_mcaroi01_total_rbv'
                 mu = tbl[ch_name]
-                ch_name = 'ROI_02'
+                ch_name = 'xs_channel02_mcaroi01_total_rbv'
                 mu = mu + tbl[ch_name]
-                ch_name = 'ROI_03'
+                ch_name = 'xs_channel03_mcaroi01_total_rbv'
                 mu = mu + tbl[ch_name]
-                ch_name = 'ROI_04'
+                ch_name = 'xs_channel04_mcaroi01_total_rbv'
                 mu = mu + tbl[ch_name]
+                ch_name = 'xs_channel05_mcaroi01_total_rbv'
+                mu = mu + tbl[ch_name]
+                ch_name = 'xs_channel06_mcaroi01_total_rbv'
+                mu = mu + tbl[ch_name]
+                ch_name = 'xs_channel07_mcaroi01_total_rbv'
+                mu = mu + tbl[ch_name]
+                
                 mu = np.array(mu)
 
     fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
@@ -144,7 +178,7 @@ def braggcalib(scanlogDic={}, use_xrf=True, man_correction={}):
 
     energyDic = {'Cu': 8.979, 'Se': 12.658, 'Zr': 17.998, 'Nb': 18.986,
                  'Ti': 4.966, 'Cr': 5.989, 'Co': 7.709, 'V': 5.465,
-                 'Ni': 8.333, 'Fe': 7.112, 'Mn': 6.539}
+                 'Ni': 8.333, 'Fe': 7.112, 'Mn': 6.539, 'Zn': 9.659}
     BraggRBVDic = {}
     EnergyRBVDic = {}
     fitBragg = []
@@ -206,7 +240,7 @@ def braggcalib(scanlogDic={}, use_xrf=True, man_correction={}):
 
 
 class PairedCallback(QtAwareCallback):
-    def __init__(self, scaler, dcm_c2_pitch_name, pitch_guess, *args, **kwargs):
+    def __init__(self, scaler, dcm_c2_pitch_name, pitch_guess, gauss_height, *args, **kwargs):
         super().__init__(use_teleporter=kwargs.pop('use_teleporter', None))
         self.__setup_lock = threading.Lock()
         self.__setup_event = threading.Event()
@@ -228,7 +262,7 @@ class PairedCallback(QtAwareCallback):
             # Setup LiveFit
             # f_gauss(x, A, sigma, x0, y0, m)
             model = lmfit.Model(f_gauss, ['x'])
-            init_guess = {'A': lmfit.Parameter('A', 100000, min=0),
+            init_guess = {'A': lmfit.Parameter('A', gauss_height, min=0),
                           'sigma': lmfit.Parameter('sigma', 0.001, min=0),
                           'x0': lmfit.Parameter('x0', pitch_guess),
                           'y0': lmfit.Parameter('y0', 0, min=0),
@@ -266,7 +300,7 @@ class PairedCallback(QtAwareCallback):
 
 
 def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
-                fix_roll=True, fix_pitch=True):
+                fix_roll=True, fix_pitch=True, feedback=True):
     """
 
     Scan the HDCM C2 Piezo Motor to optimize the beam.
@@ -286,7 +320,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
         E = E * 1000
 
     # Define the detector
-    det = [sclr1, bpm4, dcm.c1_roll, dcm.c2_pitch]
+    det = [sclr1, bpm4, bpm5, xbpm1, xbpm2, dcm.c1_roll, dcm.c2_pitch]
     det_names = [d.name for d in det]
 
     # Set dwell for scaler
@@ -323,19 +357,10 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     pitch_num = 51
 
     # Find approximate values
-    # 2021-09-08
-    # roll_guess = 0.210
-    # 2021-12-9, temp value after 30s power outage
-    roll_guess = 0.15
-    # 2021-09-09
-    # pitch_guess = -0.078
-    # 2021-12-9, temp value after 30s power outage
-    # pitch_guess = 0
-    # 2022-1-21
-    pitch_guess = 0.072
-    # 2022-03-03
-    pitch_guess = 0.030
-
+    # 2022-10-07
+    roll_guess = 0.000
+    # 2022-10-13
+    pitch_guess = 0.018
 
     # Use calibration
     if (use_calib):
@@ -359,7 +384,17 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     #     yield from bps.mov(shut_b, 'Open')
     yield from check_shutters(shutter, 'Open')
 
-    paired_callback = PairedCallback(scaler, dcm.c2_pitch.name, pitch_guess)
+    if scaler == 'bpm4_total_current':
+        scan_delta = 0.2
+        gauss_height = 2
+    elif scaler == 'xbpm2_sumT':
+        scan_delta = 0.10
+        gauss_height = 0.5
+    else:
+        scan_delta = 10_000
+        gauss_height = 100_000
+
+    paired_callback = PairedCallback(scaler, dcm.c2_pitch.name, pitch_guess, gauss_height)
 
     # Run the C2 pitch fine scan
     # @subs_decorator(livecallbacks)
@@ -377,7 +412,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
             #                          0.01, 0.1, 10000, True, md=scan_md)
             yield from adaptive_scan(det, scaler, dcm.c2_fine,
                                      pitch_lim[0], pitch_lim[1],
-                                     0.01, 0.1, 10000, True, md=scan_md)
+                                     0.01, 0.1, scan_delta, True, md=scan_md)
         )
     uid = yield from myplan()
 
@@ -440,7 +475,8 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     # Reset the ePID-I value
     yield from dcm.c2_fine.reset_pid()
     yield from bps.sleep(1.0)
-    yield from bps.mov(dcm.c2_fine.pid_enabled, 1)
+    if feedback:
+        yield from bps.mov(dcm.c2_fine.pid_enabled, 1)
 
     # Plot the results
     if (plot is True):
@@ -451,6 +487,28 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
         paired_callback.ax.plot((pitch_new, pitch_new), (y_min, y_max), '--k', label='max')
         paired_callback.ax.legend()
 
+
+def plot_all_peakup(scanid=-1):
+    def normalize_y(d):
+        return (d - np.amin(d)) / (np.amax(d) - np.amin(d))
+
+    h = db[int(scanid)]
+    tbl = h.table(fill=True)
+    fig, ax = plt.subplots()
+    x = tbl['dcm_c2_pitch'].values
+    if 'xbpm1_sumT' in tbl.keys():
+        ax.plot(x, normalize_y(tbl['xbpm1_sumT'].values), label='XBPM-1')
+    if 'bpm4_total_current' in tbl.keys():
+        ax.plot(x, normalize_y(tbl['bpm4_total_current'].values), label='B-hutch XBPM')
+    if 'bpm5_total_current' in tbl.keys():
+        ax.plot(x, normalize_y(tbl['bpm5_total_current'].values), label='B-hutch SSA')
+    if 'xbpm2_sumT' in tbl.keys():
+        ax.plot(x, normalize_y(tbl['xbpm2_sumT'].values), label='XBPM-2')
+    if 'sclr_i0' in tbl.keys():
+        ax.plot(x, normalize_y(tbl['sclr_i0'].values), label='I0')
+    ax.set_xlabel('DCM C2 Pitch')
+    ax.set_ylabel('Normalized Counts')
+    ax.legend()
 
 def ic_energy_batch(estart, estop, npts,
                     acqtime=1.0, count_pts=50, outfile=None):

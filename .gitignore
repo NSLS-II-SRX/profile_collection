@@ -70,3 +70,6 @@ zz-dama.py
 
 # VS Code
 .vscode
+
+# Queue Server temporary files
+startup/existing_plans_and_devices.yaml

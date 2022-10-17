@@ -18,6 +18,12 @@ from bluesky.plan_stubs import mv, abs_set
 from bluesky.simulators import plot_raster_path
 
 
+@parameter_annotation_decorator({
+    "parameters": {
+        "xmotor": {"default": "'hf_stage.x'"},
+        "ymotor": {"default": "'hf_stage.y'"},
+    }
+})
 def hf2dxrf(*, xstart, xnumstep, xstepsize,
             ystart, ynumstep, ystepsize, acqtime,
             shutter=True, align=False, xmotor=hf_stage.x, ymotor=hf_stage.y,
@@ -41,6 +47,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
             detune in the unit of keV
 
     '''
+
     # Record relevant metadata in the Start document, defined in 90-usersetup.py
     scan_md = {}
     get_stock_md(scan_md)
@@ -60,7 +67,7 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
     sclr1.preset_time.put(acqtime)
     # XS3
     xs.external_trig.put(False)
-    xs.settings.acquire_time.put(acqtime)
+    xs.cam.acquire_time.put(acqtime)
     xs.total_points.put((xnumstep + 1) * (ynumstep + 1))
 
     if ('merlin' in dets_by_name):
@@ -99,7 +106,9 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
     for roi_idx in range(numrois):
         roi_name = 'roi{:02}'.format(roi_idx+1)
-        roi_key = getattr(xs.channel1.rois, roi_name).value.name
+
+        # roi_key = getattr(xs.channel1.rois, roi_name).value.name
+        roi_key = xs.channel01.get_mcaroi(mcaroi_number=roi_idx).total_rbv.name
         livetableitem.append(roi_key)
         roimap = LiveGrid((ynumstep+1, xnumstep+1), roi_key,
                           clim=None, cmap='viridis',
@@ -290,7 +299,7 @@ def fermat_master_plan(*args, exp_time=None, **kwargs):
     # Synchronize exposure times
     sclr1.preset_time.put(exp_time)
     xs.external_trig.put(False)
-    xs.settings.acquire_time.put(exp_time)
+    xs.cam.acquire_time.put(exp_time)
     merlin.cam.acquire_time.put(exp_time)
     merlin.cam.acquire_period.put(exp_time + 0.005)
 
@@ -380,6 +389,12 @@ def export_merlin2tiff(scanid=-1, wd=None):
     np.savetxt(wd + fn_txt, np.array((x, y, I0)))
 
 
+@parameter_annotation_decorator({
+    "parameters": {
+        "xmotor": {"default": "'hf_stage.sx'"},
+        "ymotor": {"default": "'hf_stage.sy'"},
+    }
+})
 def nano_xrf(xstart, xstop, xstep,
              ystart, ystop, ystep, dwell,
              shutter=True, extra_dets=None,
@@ -417,7 +432,7 @@ def nano_xrf(xstart, xstop, xstep,
     # Set counting time
     sclr1.preset_time.put(dwell)
     xs.external_trig.put(False)
-    xs.settings.acquire_time.put(dwell)
+    xs.cam.acquire_time.put(dwell)
     xs.total_points.put(xnum * ynum)
     if (merlin in dets):
         merlin.cam.acquire_time.put(dwell)
@@ -426,11 +441,15 @@ def nano_xrf(xstart, xstop, xstep,
         scan_md['scan']['merlin'] = {'merlin_exp_time' : dwell,
                                      'merlin_exp_period' : dwell + 0.005}
 
-    # LiveGrid
+    # LiveTable
     livecallbacks = []
-    livecallbacks.append(LiveTable([xmotor.name, ymotor.name]))
-    roi_name = 'roi{:02}'.format(1)
-    roi_key = getattr(xs.channel1.rois, roi_name).value.name
+
+    # roi_key = getattr(xs.channel1.rois, roi_name).value.name
+    roi_key = xs.channel01.get_mcaroi(mcaroi_number=1).total_rbv.name
+    livecallbacks.append(LiveTable([xmotor.name, ymotor.name, roi_key]))
+    # livetableitem.append(roi_key)
+    # roi_name = 'roi{:02}'.format(1)
+
     livecallbacks.append(LiveGrid((ynum, xnum), roi_key,
                                   clim=None, cmap='viridis',
                                   xlabel='x [um]', ylabel='y [um]',
@@ -458,4 +477,3 @@ def nano_xrf(xstart, xstop, xstep,
     yield from check_shutters(shutter, 'Close')
 
     return uid
-

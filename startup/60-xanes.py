@@ -7,12 +7,12 @@ import matplotlib.pyplot as plt
 
 import bluesky.plans as bp
 from bluesky.plans import list_scan
-from bluesky.plan_stubs import (mv, one_1d_step)
+import bluesky.plan_stubs as bps
+from bluesky.plan_stubs import mv
 from bluesky.preprocessors import (finalize_wrapper, subs_wrapper)
 from bluesky.utils import short_uid as _short_uid
 from epics import PV
 # from databroker import DataBroker as db
-from databroker import get_events
 
 
 def xanes_textout(scan=-1, header=[], userheader={}, column=[], usercolumn={},
@@ -30,7 +30,9 @@ def xanes_textout(scan=-1, header=[], userheader={}, column=[], usercolumn={},
         filedir = userdatadir
     h = db[scan]
     # get events using fill=False so it does not look for the metadata in filestorage with reference (hdf5 here)
-    events = list(get_events(h, fill=False, stream_name='primary'))
+    events = [document for name, document
+              in db.get_documents(h, fill=False, stream_name="primary")
+              if name=="event"]
 
     if (filename_add != ''):
         filename = 'scan_' + str(h.start['scan_id']) + '_' + filename_add
@@ -121,13 +123,25 @@ def xanes_afterscan_plan(scanid, filename, roinum):
     if ('xs' in h.start['detectors']):
         if (type(roinum) is not list):
             roinum = [roinum]
+        print(roinum)
         for i in roinum:
+            print(i)
             roi_name = 'roi{:02}'.format(i)
+            # JL is this correct?
             roi_key = []
-            roi_key.append(getattr(xs.channel1.rois, roi_name).value.name)
-            roi_key.append(getattr(xs.channel2.rois, roi_name).value.name)
-            roi_key.append(getattr(xs.channel3.rois, roi_name).value.name)
-            roi_key.append(getattr(xs.channel4.rois, roi_name).value.name)
+            # JL what is .value.name with the community xspress3 IOC?
+            #roi_key.append(getattr(xs.channel1.rois, roi_name).value.name)
+            #roi_key.append(getattr(xs.channel2.rois, roi_name).value.name)
+            #roi_key.append(getattr(xs.channel3.rois, roi_name).value.name)
+            #roi_key.append(getattr(xs.channel4.rois, roi_name).value.name)
+            for xs_channel in xs.iterate_channels():
+                print(xs_channel.name)
+                roi_key.append(
+                    xs_channel.get_mcaroi(mcaroi_number=i).total_rbv.name
+                )
+                # roi_key.append(
+                #     xs_channel.get_mcaroi(mcaroi_number=roi_name).total_rbv.name
+                # )
 
         [columnitem.append(roi) for roi in roi_key]
     if ('xs2' in h.start['detectors']):
@@ -150,6 +164,7 @@ def xanes_afterscan_plan(scanid, filename, roinum):
         datatablenames = datatablenames + [str(roi) for roi in roi_key]
     if ('sclr1' in  h.start['detectors']):
         datatablenames = datatablenames + ['sclr_im', 'sclr_i0', 'sclr_it']
+        print(f"datatablenames: {datatablenames}")
         datatable = h.table(stream_name='primary', fields=datatablenames)
         im_array = np.array(datatable['sclr_im'])
         i0_array = np.array(datatable['sclr_i0'])
@@ -160,10 +175,23 @@ def xanes_afterscan_plan(scanid, filename, roinum):
     if ('xs' in h.start['detectors']):
         for i in roinum:
             roi_name = 'roi{:02}'.format(i)
-            roisum = datatable[getattr(xs.channel1.rois, roi_name).value.name]
-            roisum = roisum + datatable[getattr(xs.channel2.rois, roi_name).value.name]
-            roisum = roisum + datatable[getattr(xs.channel3.rois, roi_name).value.name]
-            roisum = roisum + datatable[getattr(xs.channel4.rois, roi_name).value.name]
+            # JL (again) what is .value.name for the community xspress3 IOC?
+            # roisum = datatable[getattr(xs.channel1.rois, roi_name).value.name]
+            # roisum = roisum + datatable[getattr(xs.channel2.rois, roi_name).value.name]
+            # roisum = roisum + datatable[getattr(xs.channel3.rois, roi_name).value.name]
+            # roisum = roisum + datatable[getattr(xs.channel4.rois, roi_name).value.name]
+            roisum = sum(
+                [
+                    datatable[
+                        xs_channel.get_mcaroi(mcaroi_number=i).total_rbv.name
+                    ]
+                    # datatable[
+                    #     xs_channel.get_mcaroi(mcaroi_number=roinum).total_rbv.name
+                    # ]
+                    for xs_channel
+                    in xs.iterate_channels()
+                ]
+            )
             usercolumnitem['If-{:02}'.format(i)] = roisum
             usercolumnitem['If-{:02}'.format(i)].round(0)
     if ('xs2' in h.start['detectors']):
@@ -180,10 +208,14 @@ def xanes_afterscan_plan(scanid, filename, roinum):
                   output = False, filename_add = filename, filedir=userdatadir)
 
 
+@parameter_annotation_decorator({
+    "parameters": {
+        "det_xs": {"default": "'xs'"},
+    }
+})
 def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
                det_xs=xs, harmonic=1, detune=0, align=False, align_at=None,
-               roinum=1, shutter=True, per_step=None):
-
+               roinum=1, shutter=True, per_step=None, reverse=False):
     '''
     erange (list of floats): energy ranges for XANES in eV, e.g. erange = [7112-50, 7112-20, 7112+50, 7112+120]
     estep  (list of floats): energy step size for each energy range in eV, e.g. estep = [2, 1, 5]
@@ -201,7 +233,6 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     shutter:  instruct the scan to control the B shutter [bool]
     per_step:  use a custom function for each energy point
     '''
-
     # Make sure user provided correct input
     if (erange is []):
         raise AttributeError("An energy range must be provided in a list by means of the 'erange' keyword.")
@@ -226,6 +257,8 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     for i in range(len(estep)):
         ept = np.append(ept, np.arange(erange[i], erange[i+1], estep[i]))
     ept = np.append(ept, np.array(erange[-1]))
+    if reverse:
+        ept = ept[::-1]
 
     # Record relevant meta data in the Start document, defined in 90-usersetup.py
     # Add user meta data
@@ -257,7 +290,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     det = [ring_current, sclr1, xbpm2, det_xs]
     # Setup xspress3
     yield from abs_set(det_xs.external_trig, False)
-    yield from abs_set(det_xs.settings.acquire_time, acqtime)
+    yield from abs_set(get_me_the_cam(det_xs).acquire_time, acqtime)
     yield from abs_set(det_xs.total_points, len(ept))
 
     # Setup the scaler
@@ -288,14 +321,25 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     # Setup Raw data
     livetableitem = ['energy_energy', 'sclr_i0', 'sclr_it']
     roi_name = 'roi{:02}'.format(roinum[0])
-    roi_key = []
-    roi_key.append(getattr(det_xs.channel1.rois, roi_name).value.name)
-    try:
-        roi_key.append(getattr(det_xs.channel2.rois, roi_name).value.name)
-        roi_key.append(getattr(det_xs.channel3.rois, roi_name).value.name)
-        roi_key.append(getattr(det_xs.channel4.rois, roi_name).value.name)
-    except NameError:
-        pass
+
+    if hasattr(det_xs, 'cam'):
+        roi_key = [
+            det_xs_channel.get_mcaroi(mcaroi_number=roinum[0]).total_rbv.name
+            for det_xs_channel
+            in det_xs.iterate_channels()
+        ]
+    else:
+        roi_key = []
+        roi_key.append(getattr(det_xs.channel1.rois, roi_name).value.name)
+        try:
+            roi_key.append(getattr(det_xs.channel2.rois, roi_name).value.name)
+            roi_key.append(getattr(det_xs.channel3.rois, roi_name).value.name)
+            roi_key.append(getattr(det_xs.channel4.rois, roi_name).value.name)
+        except NameError:
+            pass
+    # the following code will fail if det_xs is not a new xspress3 IOC ophyd object
+    print(f"roi_key: {roi_key}")
+
     livetableitem.append(roi_key[0])
     livecallbacks.append(LiveTable(livetableitem))
     liveploty = roi_key[0]
@@ -410,15 +454,15 @@ def xanes_batch_plan(xypos=[], erange=[], estep=[], acqtime=1.0,
         print(f'Moving to:')
         print(f'\tx = {xypos[i][0]}')
         print(f'\ty = {xypos[i][1]}')
-        hf_stage.x.move(xypos[i][0])
-        hf_stage.y.move(xypos[i][1])
+        yield from mov(nano_stage.sx, xypos[i][0])
+        yield from mov(nano_stage.sy, xypos[i][1])
         if (len(xypos[i]) == 3):
             print(f'\tz = {xypos[i][2]}')
-            hf_stage.z.move(xypos[i][2])
+            yield from mov(nano_stage.sz, xypos[i][2])
 
         # Move above edge and peak up
         if (i % peakup_N == 0):
-            yield from mv(energy, peakup_E)
+            yield from mov(energy, peakup_E)
             yield from peakup_fine()
 
         # Run the energy scan
@@ -427,7 +471,7 @@ def xanes_batch_plan(xypos=[], erange=[], estep=[], acqtime=1.0,
         # Wait
         if (i != (N-1)):
             print(f'Scan complete. Waiting {waittime} seconds...')
-            bps.sleep(waittime)
+            yield from bps.sleep(waittime)
 
 
 def hfxanes_ioc(erange=[], estep=[], acqtime=1.0, samplename='', filename='',

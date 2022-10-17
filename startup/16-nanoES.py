@@ -7,7 +7,7 @@ from ophyd import Component as Cpt
 
 
 # nano-KB mirrors
-class SRXNanoKBFine(PVPositionerPC):
+class SRXNanoKBCoarse(PVPositionerPC):
     setpoint = Cpt(EpicsSignal, 'SPOS')  # XF:05IDD-ES:1{Mir:nKBv-Ax:PC}SPOS
     readback = Cpt(EpicsSignalRO, 'RPOS')  # XF:05IDD-ES:1{Mir:nKBh-Ax:PC}RPOS
 
@@ -16,21 +16,31 @@ class SRXNanoKB(Device):
     # XF:05IDD-ES:1{nKB:vert-Ax:Y}Mtr.RBV
     v_y = Cpt(EpicsMotor, 'vert-Ax:Y}Mtr')
     # XF:05IDD-ES:1{nKB:vert-Ax:PC}RPOS
-    v_pitch = Cpt(SRXNanoKBFine,
+    v_pitch = Cpt(SRXNanoKBCoarse,
                   'XF:05IDD-ES:1{nKB:vert-Ax:PC}',
                   name='nanoKB_v_pitch',
                   add_prefix=())  
     # XF:05IDD-ES:1{nKB:horz-Ax:PC}Mtr.RBV
     v_pitch_um = Cpt(EpicsMotor, 'vert-Ax:PC}Mtr')
+    # XF:05IDD-ES:1{nKB:vert-Ax:PFPI}Mtr.RBV
+    v_pitch_fine = Cpt(EpicsMotor,
+                       "XF:05IDD-ES:1{nKB:vert-Ax:PFPI}Mtr",
+                       name="v_pitch_fine",
+                       add_prefix="")
     # XF:05IDD-ES:1{nKB:horz-Ax:X}Mtr.RBV
     h_x = Cpt(EpicsMotor, 'horz-Ax:X}Mtr')
     # XF:05IDD-ES:1{nKB:horz-Ax:PC}RPOS
-    h_pitch = Cpt(SRXNanoKBFine,
+    h_pitch = Cpt(SRXNanoKBCoarse,
                   'XF:05IDD-ES:1{nKB:horz-Ax:PC}',
                   name='nanoKB_h_pitch',
                   add_prefix=())
     # XF:05IDD-ES:1{nKB:vert-Ax:PC}Mtr.RBV
     h_pitch_um = Cpt(EpicsMotor, 'horz-Ax:PC}Mtr')
+    # XF:05IDD-ES:1{nKB:horz-Ax:PFPI}Mtr.RBV
+    h_pitch_fine = Cpt(EpicsMotor,
+                       "XF:05IDD-ES:1{nKB:horz-Ax:PFPI}Mtr",
+                       name="h_pitch_fine",
+                       add_prefix="")
 
 
 nanoKB = SRXNanoKB('XF:05IDD-ES:1{nKB:', name='nanoKB')
@@ -83,15 +93,24 @@ class SRXNanoTemp(Device):
 
 temp_nanoKB = SRXNanoTemp('XF:05IDD-ES{LS:1-Chan:', name='temp_nanoKB')
 
+# NanoKB inteferometer monitors
+class SRXNanoKBInterferometer(Device):
+    posX = Cpt(EpicsSignalRO, 'Chan0}Pos-I')
+    posY = Cpt(EpicsSignalRO, 'Chan1}Pos-I')
+    posZ = Cpt(EpicsSignalRO, 'Chan2}Pos-I')
 
-# Lakeshore temperature monitors
-class SRXNanoInterferometer(Device):
+
+nanoKB_interferometer = SRXNanoKBInterferometer('XF:05IDD-ES:1{FPS:1-', name='nanoKB_interferometer')
+
+
+# Nanostage inteferometer monitors
+class SRXNanoStageInterferometer(Device):
     posX = Cpt(EpicsSignalRO, 'POS_0')
     posY = Cpt(EpicsSignalRO, 'POS_1')
     posZ = Cpt(EpicsSignalRO, 'POS_2')
 
 
-nanoKB_interferometer = SRXNanoInterferometer('XF:05IDD-ES:1{PICOSCALE:1}', name='nanoKB_interferometer')
+nano_stage_interferometer = SRXNanoStageInterferometer('XF:05IDD-ES:1{PICOSCALE:1}', name='nano_stage_interferometer')
 
 
 # Center scanner
@@ -136,5 +155,5 @@ def mv_along_axis(z_end):
 
 def reset_scanner_velocity():
     for d in [nano_stage.sx, nano_stage.sy, nano_stage.sz]:
-        d.velocity.set(30)
+        d.velocity.set(100)
 

@@ -186,6 +186,11 @@ def collect_xrd_map(xstart, xstop, xnum,
     update_scan_id()
 
 
+@parameter_annotation_decorator({
+    "parameters": {
+        "extra_dets": {"default": "['dexela']"},
+    }
+})
 def xrd_fly(*args, extra_dets=[dexela], **kwargs):
     kwargs.setdefault('xmotor', nano_stage.sx)
     kwargs.setdefault('ymotor', nano_stage.sy)
@@ -234,4 +239,3 @@ def make_tiff(scanid, *, scantype='', fn=''):
         io.imsave(fn, d.astype('uint16'))
     except:
         print(f'Error writing file!')
-

@@ -10,7 +10,7 @@ import time as ttime
 from numpy.lib.function_base import msort
 from ophyd import Device, Signal, EpicsSignal, EpicsSignalRO
 from ophyd import Component as Cpt
-# from hxntools.detectors.zebra import Zebra, EpicsSignalWithRBV
+from ophyd import FormattedComponent as FC
 from nslsii.detectors.zebra import Zebra, EpicsSignalWithRBV
 
 
@@ -125,6 +125,12 @@ class ZebraPositionCaptureData(Device):
     cap_div3_bool = Cpt(EpicsSignal, "PC_BIT_CAP:B8")
     cap_div4_bool = Cpt(EpicsSignal, "PC_BIT_CAP:B9")
 
+    def stage(self):
+        super().stage()
+
+    def unstage(self):
+        super().unstage()
+
 
 class ZebraPositionCapture(Device):
     """
@@ -192,6 +198,54 @@ class SRXZebraOR(Device):
     invert3 = Cpt(EpicsSignal, '_INV:B2')
     invert4 = Cpt(EpicsSignal, '_INV:B3')
 
+    def stage(self):
+        super().stage()
+
+    def unstage(self):
+        super().unstage()
+
+
+
+class ZebraPulse(Device):
+    width = Cpt(EpicsSignalWithRBV, 'WID')
+    input_addr = Cpt(EpicsSignalWithRBV, 'INP')
+    input_str = Cpt(EpicsSignalRO, 'INP:STR', string=True)
+    input_status = Cpt(EpicsSignalRO, 'INP:STA')
+    delay = Cpt(EpicsSignalWithRBV, 'DLY')
+    delay_sync = Cpt(EpicsSignal, 'DLY:SYNC')
+    time_units = Cpt(EpicsSignalWithRBV, 'PRE', string=True)
+    output = Cpt(EpicsSignal, 'OUT')
+
+    input_edge = FC(EpicsSignal,
+                    '{self._zebra_prefix}POLARITY:{self._edge_addr}')
+
+    _edge_addrs = {1: 'BC',
+                   2: 'BD',
+                   3: 'BE',
+                   4: 'BF',
+                   }
+
+    def stage(self):
+        super().stage()
+
+    def unstage(self):
+        super().unstage()
+
+    def __init__(self, prefix, *, index=None, parent=None,
+                 configuration_attrs=None, read_attrs=None, **kwargs):
+        if read_attrs is None:
+            read_attrs = ['input_addr', 'input_edge', 'delay', 'width', 'time_units']
+        if configuration_attrs is None:
+            configuration_attrs = []
+
+        zebra = parent
+        self.index = index
+        self._zebra_prefix = zebra.prefix
+        self._edge_addr = self._edge_addrs[index]
+
+        super().__init__(prefix, configuration_attrs=configuration_attrs,
+                         read_attrs=read_attrs, parent=parent, **kwargs)
+
 
 class SRXZebra(Zebra):
     """
@@ -200,9 +254,19 @@ class SRXZebra(Zebra):
 
     pc = Cpt(ZebraPositionCapture, "")
     or1 = Cpt(SRXZebraOR, "OR1")  # XF:05IDD-ES:1{Dev:Zebra2}:OR1_INV:B0
-    or2 = Cpt(SRXZebraOR, "OR2")  # XF:05IDD-ES:1{Dev:Zebra2}:OR1_INV:B0
-    or3 = Cpt(SRXZebraOR, "OR3")  # XF:05IDD-ES:1{Dev:Zebra2}:OR1_INV:B0
-    or4 = Cpt(SRXZebraOR, "OR4")  # XF:05IDD-ES:1{Dev:Zebra2}:OR1_INV:B0
+    or2 = Cpt(SRXZebraOR, "OR2")
+    or3 = Cpt(SRXZebraOR, "OR3")
+    or4 = Cpt(SRXZebraOR, "OR4")
+    pulse1 = Cpt(ZebraPulse, "PULSE1_", index=1)  # XF:05IDD-ES:1{Dev:Zebra2}:PULSE1_INP
+    pulse2 = Cpt(ZebraPulse, "PULSE2_", index=2)
+    pulse3 = Cpt(ZebraPulse, "PULSE3_", index=3)
+    pulse4 = Cpt(ZebraPulse, "PULSE4_", index=4)
+
+    def stage(self):
+        super().stage()
+
+    def unstage(self):
+        super().unstage()
 
     def __init__(
         self, prefix, *,
@@ -221,46 +285,155 @@ class SRXZebra(Zebra):
         )
 
 
-# zebra = SRXZebra("XF:05IDD-ES:1{Dev:Zebra1}:", name="zebra")
-# zebra.read_attrs = ["pc.data.enc1", "pc.data.enc2", "pc.data.time"]
+def set_flyer_zebra_stage_sigs(flyer, method):
+    # Common stage_sigs
+    ## PC Tab
+    # Setup
+    flyer.stage_sigs[flyer._encoder.pc.data.cap_enc1_bool] = 1
+    flyer.stage_sigs[flyer._encoder.pc.data.cap_enc2_bool] = 1
+    flyer.stage_sigs[flyer._encoder.pc.data.cap_enc3_bool] = 1
+    flyer.stage_sigs[flyer._encoder.pc.data.cap_enc4_bool] = 0
+    # flyer.stage_sigs[flyer._encoder.pc.enc] = 0
+    # flyer.stage_sigs[flyer._encoder.pc.dir] = 0
+    # flyer.stage_sigs[flyer._encoder.pc.tspre] = 1
+    ## ENC tab
+    flyer.stage_sigs[flyer._encoder.pc.enc_pos1_sync] = 1
+    flyer.stage_sigs[flyer._encoder.pc.enc_pos2_sync] = 1
+    flyer.stage_sigs[flyer._encoder.pc.enc_pos3_sync] = 1
+    flyer.stage_sigs[flyer._encoder.pc.enc_pos4_sync] = 1
+    ## SYS tab
+    flyer.stage_sigs[flyer._encoder.output1.ttl.addr] = 31  # PC_PULSE --> TTL1 --> xs
+    flyer.stage_sigs[flyer._encoder.output2.ttl.addr] = 31  # PC_PULSE --> TTL2 --> merlin
+    flyer.stage_sigs[flyer._encoder.output3.ttl.addr] = 36  # OR1 --> TTL3 --> scaler
+    flyer.stage_sigs[flyer._encoder.output4.ttl.addr] = 31  # PC_PULSE --> TTL4 --> dexela
 
+    if method == 'position':
+        flyer.mode.set('position')
+        ## Specific stage sigs for Zebra - position
+        # PC Tab
+        # Arm
+        flyer.stage_sigs[flyer._encoder.pc.trig_source] = 0
+        # Gate
+        flyer.stage_sigs[flyer._encoder.pc.gate_source] = 0  # 0 = Position, 1 = Time
+        # flyer.stage_sigs[flyer._encoder.pc.gate_start] = 0
+        # flyer.stage_sigs[flyer._encoder.pc.gate_width] = 10
+        # flyer.stage_sigs[flyer._encoder.pc.gate_step] = 10.1
+        flyer.stage_sigs[flyer._encoder.pc.gate_num] = 1
+        # Pulse
+        flyer.stage_sigs[flyer._encoder.pc.pulse_source] = 0  # 0 = Position, 1 = Time
+        # flyer.stage_sigs[flyer._encoder.pc.pulse_start] = 0
+        # flyer.stage_sigs[flyer._encoder.pc.pulse_width] = 0.9
+        # flyer.stage_sigs[flyer._encoder.pc.pulse_step] = 1
+        # flyer.stage_sigs[flyer._encoder.pc.pulse_max] = 10
+        ## OR Tab
+        flyer.stage_sigs[flyer._encoder.or1.use1] = 1  # 0 = No, 1 = Yes
+        flyer.stage_sigs[flyer._encoder.or1.use2] = 1
+        flyer.stage_sigs[flyer._encoder.or1.use3] = 1
+        flyer.stage_sigs[flyer._encoder.or1.use4] = 0
+        flyer.stage_sigs[flyer._encoder.or1.input_source1] = 54
+        flyer.stage_sigs[flyer._encoder.or1.input_source2] = 55
+        flyer.stage_sigs[flyer._encoder.or1.input_source3] = 53
+        flyer.stage_sigs[flyer._encoder.or1.input_source4] = 0
+        flyer.stage_sigs[flyer._encoder.or1.invert1] = 0  # 0 = No, 1 = Yes
+        flyer.stage_sigs[flyer._encoder.or1.invert2] = 0
+        flyer.stage_sigs[flyer._encoder.or1.invert3] = 0
+        flyer.stage_sigs[flyer._encoder.or1.invert4] = 0
+        ## PULSE Tab
+        # flyer.stage_sigs[flyer._encoder.pulse1.input_addr] = 31
+        # flyer.stage_sigs[flyer._encoder.pulse1.input_edge] = 1  # 0 = rising, 1 = falling
+        # flyer.stage_sigs[flyer._encoder.pulse1.delay] = 0.2
+        # flyer.stage_sigs[flyer._encoder.pulse1.width] = 0.1
+        # flyer.stage_sigs[flyer._encoder.pulse1.time_units] = 0
+        flyer.stage_sigs[flyer._encoder.pulse2.input_addr] = 30
+        flyer.stage_sigs[flyer._encoder.pulse2.input_edge] = 0  # 0 = rising, 1 = falling
+        flyer.stage_sigs[flyer._encoder.pulse2.delay] = 0
+        flyer.stage_sigs[flyer._encoder.pulse2.width] = 0.1
+        flyer.stage_sigs[flyer._encoder.pulse2.time_units] = 0
+        flyer.stage_sigs[flyer._encoder.pulse3.input_addr] = 31
+        flyer.stage_sigs[flyer._encoder.pulse3.input_edge] = 1  # 0 = rising, 1 = falling
+        flyer.stage_sigs[flyer._encoder.pulse3.delay] = 0.2
+        flyer.stage_sigs[flyer._encoder.pulse3.width] = 0.1
+        flyer.stage_sigs[flyer._encoder.pulse3.time_units] = 0
+        flyer.stage_sigs[flyer._encoder.pulse4.input_addr] = 31
+        flyer.stage_sigs[flyer._encoder.pulse4.input_edge] = 1  # 0 = rising, 1 = falling
+        flyer.stage_sigs[flyer._encoder.pulse4.delay] = 0
+        flyer.stage_sigs[flyer._encoder.pulse4.width] = 0.1
+        flyer.stage_sigs[flyer._encoder.pulse4.time_units] = 0
+    elif method == 'time':
+        ## Specific stage sigs for Zebra - time
+        flyer.mode.set('time')
+        # PC Tab
+        # Arm
+        flyer.stage_sigs[flyer._encoder.pc.trig_source] = 0
+        # Gate
+        flyer.stage_sigs[flyer._encoder.pc.gate_source] = 1  # 0 = Position, 1 = Time
+        # flyer.stage_sigs[flyer._encoder.pc.gate_start] = 0
+        # flyer.stage_sigs[flyer._encoder.pc.gate_width] = 10
+        # flyer.stage_sigs[flyer._encoder.pc.gate_step] = 10.1
+        flyer.stage_sigs[flyer._encoder.pc.gate_num] = 1
+        # Pulse
+        flyer.stage_sigs[flyer._encoder.pc.pulse_source] = 1  # 0 = Position, 1 = Time
+        # flyer.stage_sigs[flyer._encoder.pc.pulse_start] = 0
+        # flyer.stage_sigs[flyer._encoder.pc.pulse_width] = 0.9
+        # flyer.stage_sigs[flyer._encoder.pc.pulse_step] = 1
+        # flyer.stage_sigs[flyer._encoder.pc.pulse_max] = 10
+        ## OR Tab
+        flyer.stage_sigs[flyer._encoder.or1.use1] = 1  # 0 = No, 1 = Yes
+        flyer.stage_sigs[flyer._encoder.or1.use2] = 1
+        flyer.stage_sigs[flyer._encoder.or1.use3] = 0
+        flyer.stage_sigs[flyer._encoder.or1.use4] = 0
+        flyer.stage_sigs[flyer._encoder.or1.input_source1] = 54
+        flyer.stage_sigs[flyer._encoder.or1.input_source2] = 55
+        flyer.stage_sigs[flyer._encoder.or1.input_source3] = 53
+        flyer.stage_sigs[flyer._encoder.or1.input_source4] = 0
+        flyer.stage_sigs[flyer._encoder.or1.invert1] = 0  # 0 = No, 1 = Yes
+        flyer.stage_sigs[flyer._encoder.or1.invert2] = 0
+        flyer.stage_sigs[flyer._encoder.or1.invert3] = 0
+        flyer.stage_sigs[flyer._encoder.or1.invert4] = 0
+        ## PULSE Tab
+        # flyer.stage_sigs[flyer._encoder.pulse1.input_addr] = 31
+        # flyer.stage_sigs[flyer._encoder.pulse1.input_edge] = 1  # 0 = rising, 1 = falling
+        # flyer.stage_sigs[flyer._encoder.pulse1.delay] = 0.2
+        # flyer.stage_sigs[flyer._encoder.pulse1.width] = 0.1
+        # flyer.stage_sigs[flyer._encoder.pulse1.time_units] = 0
+        # flyer.stage_sigs[flyer._encoder.pulse2.input_addr] = 30
+        # flyer.stage_sigs[flyer._encoder.pulse2.input_edge] = 0  # 0 = rising, 1 = falling
+        # flyer.stage_sigs[flyer._encoder.pulse2.delay] = 0
+        # flyer.stage_sigs[flyer._encoder.pulse2.width] = 0.1
+        # flyer.stage_sigs[flyer._encoder.pulse2.time_units] = 0
+        flyer.stage_sigs[flyer._encoder.pulse3.input_addr] = 31
+        flyer.stage_sigs[flyer._encoder.pulse3.input_edge] = 0  # 0 = rising, 1 = falling
+        flyer.stage_sigs[flyer._encoder.pulse3.delay] = 0.0
+        flyer.stage_sigs[flyer._encoder.pulse3.width] = 0.1
+        flyer.stage_sigs[flyer._encoder.pulse3.time_units] = 0
+        flyer.stage_sigs[flyer._encoder.pulse4.input_addr] = 31
+        flyer.stage_sigs[flyer._encoder.pulse4.input_edge] = 1  # 0 = rising, 1 = falling
+        flyer.stage_sigs[flyer._encoder.pulse4.delay] = 0
+        flyer.stage_sigs[flyer._encoder.pulse4.width] = 0.1
+        flyer.stage_sigs[flyer._encoder.pulse4.time_units] = 0
+    else:
+        print('i don\'t know what to do')
 
 class SRXFlyer1Axis(Device):
     """
-    This is the Zebra.
+    This is the flyer object for the Zebra.
+    This is the position based flyer.
     """
 
-    # LARGE_FILE_DIRECTORY_WRITE_PATH = (
-    #     "/nsls2/xf05id1/XF05ID1/data/2021-2/fly_scan_ancillary/"
-    # )
-    # LARGE_FILE_DIRECTORY_READ_PATH = (
-    #     "/nsls2/xf05id1/XF05ID1/data/2021-2/fly_scan_ancillary/"
-    # )
     LARGE_FILE_DIRECTORY_WRITE_PATH = (
-        "/nsls2/data/srx/assets/zebra/2021/2021-3/"
+        "/nsls2/data/srx/assets/zebra/2022/2022-2/"
     )
     LARGE_FILE_DIRECTORY_READ_PATH = (
-        "/nsls2/data/srx/assets/zebra/2021/2021-3/"
+        "/nsls2/data/srx/assets/zebra/2022/2022-2/"
     )
-    KNOWN_DETS = {"xs", "xs2", "merlin", "dexela"}
+    KNOWN_DETS = {"xs", "xs2", "xs4", "merlin", "dexela"}
     fast_axis = Cpt(Signal, value="HOR", kind="config")
     slow_axis = Cpt(Signal, value="VER", kind="config")
-    scan_md = {}
+    # scan_md = {}
+    mode = Cpt(Signal, value='position', kind='config')
 
-    # _encoder = Cpt(
-    #     SRXZebra,
-    #     "XF:05IDD-ES:1{Dev:Zebra1}:",
-    #     name="zebra",
-    #     add_prefix=(),
-    #     read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
-    # )
-    # _encoder = Cpt(
-    #     SRXZebra,
-    #     self._zebra_pvname,
-    #     name="zebra",
-    #     add_prefix=(),
-    #     read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
-    # )
+    _staging_delay = 0.010
+
     @property
     def encoder(self):
         return self._encoder
@@ -284,8 +457,6 @@ class SRXFlyer1Axis(Device):
     def sclr(self):
         return self._sis
 
-    # def __init__(self, encoder, dets, sclr1, fast_axis, *,
-    #              reg=db.reg, **kwargs):
     def __init__(self, dets, sclr1, zebra, *, reg=db.reg, **kwargs):
         super().__init__("", parent=None, **kwargs)
         self._mode = "idle"
@@ -293,39 +464,6 @@ class SRXFlyer1Axis(Device):
         self._sis = sclr1
         self._filestore_resource = None
         self._encoder = zebra
-        self._triggering = "position"
-        # self._fast_axis = self.fast_axis
-        # _encoder = Cpt(
-        #     SRXZebra,
-        #     zebra_pvname,
-        #     name="zebra",
-        #     add_prefix=(),
-        #     read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
-        # )
-        # print(zebra_pvname)
-
-        # Gating info for encoder capture
-        self.stage_sigs[self._encoder.pc.gate_num] = 1
-        self.stage_sigs[self._encoder.pc.pulse_start] = 0
-
-        self.stage_sigs[self._encoder.pulse3.width] = 0.1
-        self.stage_sigs[self._encoder.pulse4.width] = 0.1
-
-        # PC gate output is 31 for zebra. Use it to trigger xspress3 and I0
-        self.stage_sigs[self._encoder.output1.ttl.addr] = 31
-        self.stage_sigs[self._encoder.output3.ttl.addr] = 31
-        # This is for the merlin
-        self.stage_sigs[self._encoder.output2.ttl.addr] = 31
-        # self.stage_sigs[self._encoder.output2.ttl.addr] = 53
-        # This is for the dexela
-        self.stage_sigs[self._encoder.output4.ttl.addr] = 31
-        # This is for the xs2
-        # self.stage_sigs[self._encoder.output4.ttl.addr] = 31
-
-        self.stage_sigs[self._encoder.pc.enc_pos1_sync] = 1
-        self.stage_sigs[self._encoder.pc.enc_pos2_sync] = 1
-        self.stage_sigs[self._encoder.pc.enc_pos3_sync] = 1
-        self.stage_sigs[self._encoder.pc.enc_pos4_sync] = 1
 
         # Put SIS3820 into single count (not autocount) mode
         self.stage_sigs[self._sis.count_mode] = 0
@@ -338,44 +476,158 @@ class SRXFlyer1Axis(Device):
         self._document_cache = []
         self._last_bulk = None
 
-    # def ver_fly_plan():
-    #    yield from mv(zebra.fast_axis, 'VER')
-    #    yield from _real_fly_scan()
-    # def hor_fly_plan():
-    #     yield from mv(zebar.fast_axis, 'HOR')
-    #     yield from _read_fly_scan()
     def stage(self):
         dir = self.fast_axis.get()
         if dir == "HOR":
             self.stage_sigs[self._encoder.pc.enc] = "Enc2"
             self.stage_sigs[self._encoder.pc.dir] = "Positive"
-            self.stage_sigs[self._encoder.pc.enc_res2] = 5e-6
         elif dir == "VER":
             self.stage_sigs[self._encoder.pc.enc] = "Enc1"
             self.stage_sigs[self._encoder.pc.dir] = "Positive"
-            self.stage_sigs[self._encoder.pc.enc_res1] = 5e-6
         elif dir == "DET2HOR":
             self.stage_sigs[self._encoder.pc.enc] = "Enc3"
             self.stage_sigs[self._encoder.pc.dir] = "Positive"
-            self.stage_sigs[self._encoder.pc.enc_res1] = 5e-5
         elif dir == "DET2VER":
             self.stage_sigs[self._encoder.pc.enc] = "Enc4"
             self.stage_sigs[self._encoder.pc.dir] = "Positive"
-            self.stage_sigs[self._encoder.pc.enc_res1] = 5e-5
         elif dir == "NANOHOR":
             self.stage_sigs[self._encoder.pc.enc] = "Enc1"
             self.stage_sigs[self._encoder.pc.dir] = "Positive"
-            self.stage_sigs[self._encoder.pc.enc_res2] = 9.5368e-05
         elif dir == "NANOVER":
             self.stage_sigs[self._encoder.pc.enc] = "Enc2"
             self.stage_sigs[self._encoder.pc.dir] = "Positive"
-            self.stage_sigs[self._encoder.pc.enc_res2] = 9.5368e-05
         elif dir == "NANOZ":
             self.stage_sigs[self._encoder.pc.enc] = "Enc3"
             self.stage_sigs[self._encoder.pc.dir] = "Positive"
-            self.stage_sigs[self._encoder.pc.enc_res2] = 9.5368e-05
 
-        super().stage()
+        self._stage_with_delay()
+
+    def _stage_with_delay(self):
+        # Staging taken from https://github.com/bluesky/ophyd/blob/master/ophyd/device.py
+        # Device - BlueskyInterface
+        """Stage the device for data collection.
+        This method is expected to put the device into a state where
+        repeated calls to :meth:`~BlueskyInterface.trigger` and
+        :meth:`~BlueskyInterface.read` will 'do the right thing'.
+        Staging not idempotent and should raise
+        :obj:`RedundantStaging` if staged twice without an
+        intermediate :meth:`~BlueskyInterface.unstage`.
+        This method should be as fast as is feasible as it does not return
+        a status object.
+        The return value of this is a list of all of the (sub) devices
+        stage, including it's self.  This is used to ensure devices
+        are not staged twice by the :obj:`~bluesky.run_engine.RunEngine`.
+        This is an optional method, if the device does not need
+        staging behavior it should not implement `stage` (or
+        `unstage`).
+        Returns
+        -------
+        devices : list
+            list including self and all child devices staged
+        """
+        if self._staged == Staged.no:
+            pass  # to short-circuit checking individual cases
+        elif self._staged == Staged.yes:
+            raise RedundantStaging("Device {!r} is already staged. "
+                                   "Unstage it first.".format(self))
+        elif self._staged == Staged.partially:
+            raise RedundantStaging("Device {!r} has been partially staged. "
+                                   "Maybe the most recent unstaging "
+                                   "encountered an error before finishing. "
+                                   "Try unstaging again.".format(self))
+        self.log.debug("Staging %s", self.name)
+        self._staged = Staged.partially
+
+        # Resolve any stage_sigs keys given as strings: 'a.b' -> self.a.b
+        stage_sigs = OrderedDict()
+        for k, v in self.stage_sigs.items():
+            if isinstance(k, str):
+                # Device.__getattr__ handles nested attr lookup
+                stage_sigs[getattr(self, k)] = v
+            else:
+                stage_sigs[k] = v
+
+        # Read current values, to be restored by unstage()
+        original_vals = {sig: sig.get() for sig in stage_sigs}
+
+        # We will add signals and values from original_vals to
+        # self._original_vals one at a time so that
+        # we can undo our partial work in the event of an error.
+
+        # Apply settings.
+        devices_staged = []
+        try:
+            for sig, val in stage_sigs.items():
+                self.log.debug("Setting %s to %r (original value: %r)",
+                               self.name,
+                               val, original_vals[sig])
+                sig.set(val, timeout=10).wait()
+                ttime.sleep(self._staging_delay)
+                # It worked -- now add it to this list of sigs to unstage.
+                self._original_vals[sig] = original_vals[sig]
+            devices_staged.append(self)
+
+            # Call stage() on child devices.
+            for attr in self._sub_devices:
+                device = getattr(self, attr)
+                if hasattr(device, 'stage'):
+                    device.stage()
+                    devices_staged.append(device)
+        except Exception:
+            self.log.debug("An exception was raised while staging %s or "
+                           "one of its children. Attempting to restore "
+                           "original settings before re-raising the "
+                           "exception.", self.name)
+            self.unstage()
+            raise
+        else:
+            self._staged = Staged.yes
+        return devices_staged
+
+
+    def unstage(self):
+        self._unstage_with_delay()
+
+
+    def _unstage_with_delay(self):
+        # Staging taken from https://github.com/bluesky/ophyd/blob/master/ophyd/device.py
+        # Device - BlueskyInterface
+        """Unstage the device.
+        This method returns the device to the state it was prior to the
+        last `stage` call.
+        This method should be as fast as feasible as it does not
+        return a status object.
+        This method must be idempotent, multiple calls (without a new
+        call to 'stage') have no effect.
+        Returns
+        -------
+        devices : list
+            list including self and all child devices unstaged
+        """
+        self.log.debug("Unstaging %s", self.name)
+        self._staged = Staged.partially
+        devices_unstaged = []
+
+        # Call unstage() on child devices.
+        for attr in self._sub_devices[::-1]:
+            device = getattr(self, attr)
+            if hasattr(device, 'unstage'):
+                device.unstage()
+                devices_unstaged.append(device)
+
+        # Restore original values.
+        for sig, val in reversed(list(self._original_vals.items())):
+            self.log.debug("Setting %s back to its original value: %r)",
+                           self.name,
+                           val)
+            sig.set(val, timeout=10).wait()
+            ttime.sleep(self._staging_delay)
+            self._original_vals.pop(sig)
+        devices_unstaged.append(self)
+
+        self._staged = Staged.no
+        return devices_unstaged
+
 
     def describe_collect(self):
 
@@ -409,84 +661,63 @@ class SRXFlyer1Axis(Device):
 
         return {"stream0": desc}
 
-    def _kickoff_pos(self, xstart, xstop, xnum, dwell):
+    def kickoff(self, *, xstart, xstop, xnum, dwell, tacc):
         dets_by_name = {d.name: d for d in self.detectors}
+        t_delay = 0.010  # delay after each write/put to zebra, this value is taken from _stage_with_delay
+
+        mode = self.mode.get()
+        # print(f'{mode=}')
 
         self._encoder.pc.arm.put(0)
+        ttime.sleep(t_delay)
         self._mode = "kicked off"
         self._npts = int(xnum)
-        
-        ## TODO: This should probably be done at the beginning of the scan instead of for each line
-        # self._encoder.or1.use1.put(1)
-        # self._encoder.or1.input_source1.put(54)  # Pulse 3
-        # self._encoder.or1.invert1.put(0)
-        # self._encoder.or1.use2.put(1)
-        # self._encoder.or1.input_source2.put(55)  # Pulse 4
-        # self._encoder.or1.invert1.put(0)
-        # self._encoder.or1.use3.put(1)
-        # self._encoder.or1.input_source1.put(53)  # Pulse 2
-        # self._encoder.or1.invert1.put(0)
-        # self._encoder.or1.use4.put(0)
-        # self._encoder.or1.input_source1.put(0)  # Disconnect
-        # self._encoder.or1.invert1.put(0)
-
-        # self._encoder.pulse2.input_addr.put(30)  # PC Gate
-        # self._encoder.pulse2.input_edge.put(0)  # 0 = rising, 1 = falling
-        # self._encoder.pulse2.time_units.put("ms")
-        # self._encoder.pulse2.delay.put(0.0)
-        # self._encoder.pulse2.width.put(0.1)
-
-        # self._encoder.pulse3.input_addr.put(52)  # PC Pulse
-        # self._encoder.pulse3.input_edge.set(1)  # 0 = rising, 1 = falling
-        # print(self._encoder.pulse3.input_edge.get())
-        # self._encoder.pulse3.time_units.put("ms")
-        # print(self._encoder.pulse3.input_edge.get())
-        # self._encoder.pulse3.delay.put(0.2)
-        # print(self._encoder.pulse3.input_edge.get())
-        # self._encoder.pulse3.width.put(0.1)
-        # print(self._encoder.pulse3.input_edge.get())
-
-        # self._encoder.pulse4.input_addr.put(52)  # PC Pulse
-        # self._encoder.pulse4.input_edge.put(1)  # 0 = rising, 1 = falling
-        # self._encoder.pulse4.time_units.put("ms")
-        # self._encoder.pulse4.delay.put(0.0)
-        # self._encoder.pulse4.width.put(0.1)
-        # print(self._encoder.pulse3.input_edge.get())
-
-        print(self._triggering)
-        if self._triggering == 'position':
-            print('Im in position')
-        elif self._triggering == 'time':
-            # Set PC settings
-            print('Im in time')
-            self._encoder.pc.gate_source.put(1)  # 0 = Position, 1 = Time
-            self._encoder.pc.pulse_source.put(1)  # 0 = Position, 1 = Time
-        else:
-            print('im nothing')
-
         if xstart < xstop:
             direction = 1
         else:
             direction = -1
         pxsize = np.abs(xstop - xstart) / (xnum - 1)
         extent = np.abs(xstop - xstart) + pxsize
-        # 1 ms delay between pulses
-        decrement = (pxsize / dwell) * 0.0010
-        if decrement < 1e-5:
-            # print('Changing the pulse width')
-            decrement = 1e-5
+        v = pxsize / dwell
 
-        self._encoder.pc.gate_start.put(xstart - direction * (pxsize / 2))
-        self._encoder.pc.gate_step.put(extent + 0.011)
-        self._encoder.pc.gate_width.put(extent + 0.010)
+        if mode == 'position':
+            # 0.1 ms delay between pulses
+            decrement = (pxsize / dwell) * 0.0001
+            if decrement < 1e-5:
+                print('Warning: Changing the pulse width!')
+                decrement = 1e-5
+        elif mode == 'time':
+            decrement = 0.0002
+
+        if mode == 'position':
+            self._encoder.pc.gate_start.put(xstart - direction * (pxsize / 2))
+            ttime.sleep(t_delay)
+            self._encoder.pc.gate_step.put(extent + 0.051)
+            ttime.sleep(t_delay)
+            self._encoder.pc.gate_width.put(extent + 0.050)
+            ttime.sleep(t_delay)
+        elif mode == 'time':
+            self._encoder.pc.gate_start.put(tacc + t_delay)
+            ttime.sleep(t_delay)
+            self._encoder.pc.gate_step.put(extent / v)
+            ttime.sleep(t_delay)
+            self._encoder.pc.gate_width.put(extent / v + 0.050)
+            ttime.sleep(t_delay)
 
         self._encoder.pc.pulse_start.put(0.0)
+        ttime.sleep(t_delay)
         self._encoder.pc.pulse_max.put(xnum)
-        self._encoder.pc.pulse_step.put(pxsize)
-        self._encoder.pc.pulse_width.put(pxsize - decrement)
-        # If decrement is too small, then zebra will not send individual pulses
-        # but integrate over the entire line
-        # Hopefully taken care of with decrement check above
+        ttime.sleep(t_delay)
+        if mode == 'position':
+            self._encoder.pc.pulse_step.put(pxsize)
+            ttime.sleep(t_delay)
+            self._encoder.pc.pulse_width.put(pxsize - decrement)
+            ttime.sleep(t_delay)
+        elif mode == 'time':
+            self._encoder.pc.pulse_step.put(dwell)
+            ttime.sleep(t_delay)
+            self._encoder.pc.pulse_width.put(dwell - decrement)
+            ttime.sleep(t_delay)
 
         # For dexela, we will use time triggering in a pixel, not position
         # if "dexela" in dets_by_name:
@@ -500,18 +731,13 @@ class SRXFlyer1Axis(Device):
         #     self._encoder.pulse3.input_addr.put(31)
         #     self._encoder.pulse4.input_addr.put(31)
 
-        self._encoder.output1.ttl.addr.put(31)
-        self._encoder.output3.ttl.addr.put(36)
-        self._encoder.pulse3.input_addr.put(31)
-        self._encoder.pulse4.input_addr.put(31)
-
         self._encoder.pc.enc_pos1_sync.put(1)  # Scanner X
+        ttime.sleep(t_delay)
         self._encoder.pc.enc_pos2_sync.put(1)  # Scanner Y
+        ttime.sleep(t_delay)
         self._encoder.pc.enc_pos3_sync.put(1)  # Scanner Z
+        ttime.sleep(t_delay)
         # self._encoder.pc.enc_pos4_sync.put(1)  # None
-
-        # Arm the zebra
-        self._encoder.pc.arm.put(1)
 
         st = (
             NullStatus()
@@ -632,8 +858,16 @@ class SRXFlyer1Axis(Device):
         scan_md = self.scan_md
         # print(scan_settings)
         # Our acquisition complete PV is: XF:05IDD-ES:1{Dev:Zebra1}:ARRAY_ACQ
+        t0 = ttime.monotonic()
         while self._encoder.pc.data_in_progress.get() == 1:
             ttime.sleep(0.01)
+            if (ttime.monotonic() - t0) > 60:
+                print(f"{self.name} is behaving badly!")
+                self._encoder.pc.disarm.put(1)
+                ttime.sleep(0.100)
+                if self._encoder.pc.data_in_progress.get() == 1:
+                    raise TimeoutError
+
         # ttime.sleep(.1)
         self._mode = "complete"
         self._encoder.pc.block_state_reset.put(1)
@@ -809,34 +1043,64 @@ class SRXFlyer1Axis(Device):
 
 # For microES
 try:
-    # flying_zebra = SRXFlyer1Axis(
-    #     list(xs for xs in [xs] if xs is not None), sclr1, name="flying_zebra"
-    # )
-    # raise Exception
     microZebra = SRXZebra("XF:05IDD-ES:1{Dev:Zebra1}:", name="microZebra",
         read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.time"],
     )
-    flying_zebra = SRXFlyer1Axis(
-        list(xs for xs in [xs] if xs is not None), sclr1, microZebra, name="flying_zebra"
-    )
-    # print('huge success!')
+    # There is no flyer attached to Zebra1.
+    # Leaving object as none until it is confirmed that it can be removed.
+    flying_zebra = None
+    # flying_zebra = SRXFlyer1Axis(
+    #     list(xs for xs in [xs] if xs is not None), sclr1, microZebra, name="flying_zebra"
+    # )
 except Exception as ex:
     print("Cannot connect to microZebra. Continuing without device.\n", ex)
+    raise ex
     flying_zebra = None
 
 
 # For nanoES
 try:
+    # Setup nanoZebra
     nanoZebra = SRXZebra("XF:05IDD-ES:1{Dev:Zebra2}:", name="nanoZebra",
         read_attrs=["pc.data.enc1", "pc.data.enc2", "pc.data.enc3", "pc.data.time"],
     )
+    
+    if os.getenv("TOUCHBEAMLINE", "0") == "1":
+        print('  Touching nanoZebra...', end='')
+        # Set encoder resolution on startup
+        nanoZebra.pc.enc_res1.put(-9.5368e-05)
+        nanoZebra.pc.enc_res2.put(9.5368e-05)
+        nanoZebra.pc.enc_res3.put(9.5368e-05)
+        print('done')
+
     nano_flying_zebra = SRXFlyer1Axis(
         list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="nano_flying_zebra"
     )
-    # print('huge success!')
+    set_flyer_zebra_stage_sigs(nano_flying_zebra, 'position')
+
+    nano_flying_zebra_coarse = SRXFlyer1Axis(
+        list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="nano_flying_zebra_coarse"
+    )
+    set_flyer_zebra_stage_sigs(nano_flying_zebra_coarse, 'time')
+
+    # Temporary flyer for ME4 until ME7 is commissioned
+    # nano_flying_zebra_me4 = SRXFlyer1Axis(
+    #     list(xs4 for xs4 in [xs4] if xs4 is not None), sclr1, nanoZebra, name="nano_flying_zebra_me4"
+    # )
+    # set_flyer_zebra_stage_sigs(nano_flying_zebra_me4, 'position')
+    nano_flying_zebra_me4 = None
+
+    # Temporary flyer for ME4 until ME7 is commissioned
+    # nano_flying_zebra_coarse_me4 = SRXFlyer1Axis(
+    #     list(xs4 for xs4 in [xs4] if xs4 is not None), sclr1, nanoZebra, name="nano_flying_zebra_coarse_me4"
+    # )
+    # set_flyer_zebra_stage_sigs(nano_flying_zebra_coarse_me4, 'time')
+    nano_flying_zebra_coarse_me4 = None
 except Exception as ex:
     print("Cannot connect to nanoZebra. Continuing without device.\n", ex)
     nano_flying_zebra = None
+    nano_flying_zebra_coarse = None
+    nano_flying_zebra_me4 = None
 
 
 # For confocal
