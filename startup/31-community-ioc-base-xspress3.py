@@ -29,7 +29,7 @@ class CommunityXspress3FileStore(FileStorePluginBase, HDF5Plugin):
         #self.settings = det.settings
 
         # Use the EpicsSignal file_template from the detector
-        self.stage_sigs[self.blocking_callbacks] = 0
+        self.stage_sigs[self.blocking_callbacks] = 1  # 0 is nonblocking, 1 is blocking
         self.stage_sigs[self.enable] = 1
         self.stage_sigs[self.compression] = 'zlib'
         self.stage_sigs[self.file_template] = '%s%s_%6.6d.h5'
