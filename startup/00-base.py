@@ -1,6 +1,9 @@
 print(f"Loading {__file__}...")
 
 import os
+from datetime import datetime
+from ophyd.signal import EpicsSignalBase, EpicsSignal, DEFAULT_CONNECTION_TIMEOUT
+from bluesky_queueserver import is_re_worker_active, parameter_annotation_decorator
 
 def if_touch_beamline(envvar="TOUCHBEAMLINE"):
     value = os.environ.get(envvar, "false").lower()
@@ -10,12 +13,6 @@ def if_touch_beamline(envvar="TOUCHBEAMLINE"):
         return True
     else:
         raise ValueError(f"Unknown value: {value}")
-
-###############################################################################
-# TODO: remove this block once https://github.com/bluesky/ophyd/pull/959 is
-# merged/released.
-from datetime import datetime
-from ophyd.signal import EpicsSignalBase, EpicsSignal, DEFAULT_CONNECTION_TIMEOUT
 
 def print_now():
     return datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S.%f')
@@ -188,6 +185,8 @@ except ImportError:
             self._cache = dict(super().items())
 
 
+# using appdirs line for xspress3 development on xf05id2-ws1
+# do not commit this
 # runengine_metadata_dir = appdirs.user_data_dir(appname="bluesky") / Path("runengine-metadata")
 # runengine_metadata_dir = Path('/nsls2/xf05id1/shared/config/runengine-metadata-new')
 runengine_metadata_dir = Path('/nsls2/data/srx/legacy/xf05id1/shared/config/runengine-metadata-new')
@@ -198,5 +197,10 @@ RE.md = PersistentDict(runengine_metadata_dir)
 RE.md["beamline_id"] = "SRX"
 RE.md["md_version"] = "1.0"
 
-from bluesky.utils import ts_msg_hook
-RE.msg_hook = ts_msg_hook
+# from bluesky.utils import ts_msg_hook
+# RE.msg_hook = ts_msg_hook
+
+# The following plan stubs are automatically imported in global namespace by 'nslsii.configure_base', 
+# but have signatures that are not compatible with the Queue Server. They should not exist in the global
+# namespace, but can be accessed as 'bps.one_1d_step' etc. from other plans.
+del one_1d_step, one_nd_step, one_shot

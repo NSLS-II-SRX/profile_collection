@@ -1,7 +1,6 @@
 print(f'Loading {__file__}...')
 
 import os
-# import os.path
 import time as ttime
 import shutil
 
@@ -12,18 +11,12 @@ import shutil
 # PI_lastname = None
 # saf_num = None
 
-# proposal_num = 308774
-# proposal_title = 'SRX Beamline Commissioning'
-# PI_lastname = 'Kiss'
-# saf_num = 307307
+proposal_num = 310663
+proposal_title = 'SRX Beamline Commissioning'
+PI_lastname = 'Kiss'
+saf_num = 309204
 
-proposal_num = 309915
-proposal_title = 'Quantifying thermodynamically induced reaction non-uniformity in thick battery electrodes'
-PI_lastname = 'Tang'
-saf_num = 308662
-
-
-cycle = '2022_cycle1'
+cycle = '2022_cycle3'
 
 # Set user data in bluesky
 RE.md['proposal']  = {'proposal_num': str(proposal_num),
@@ -37,9 +30,7 @@ if if_touch_beamline():
     scanrecord.update_metadata()
 
 # User data directory and simple scripts
-# userdatadir = '/nsls2/xf05id1/experiments/' + str(cycle) + '/' + str(saf_num) + '_' + str(PI_lastname) + '/'
 userdatadir = '/nsls2/data/srx/legacy/xf05id1/experiments/' + str(cycle) + '/' + str(saf_num) + '_' + str(PI_lastname) + '/'
-# scriptdir = '/nsls2/xf05id1/shared/src/bluesky_scripts/'
 scriptdir = '/nsls2/data/srx/legacy/xf05id1/shared/src/bluesky_scripts/'
 
 # Create the user directory
@@ -52,8 +43,8 @@ except Exception as e:
 # Create the log file
 userlogfile = userdatadir + 'logfile' + str(saf_num) + '.txt'
 if not os.path.exists(userlogfile):
-    userlogf = open(userlogfile, 'w')
-    userlogf.close()
+    with open(userlogfile, 'w'):
+        ...
 
 # Copy over the example scripts
 for f in ['simple_batch.py','fly_batch.py']:
@@ -70,22 +61,6 @@ os.symlink(userdatadir, '/nsls2/data/srx/legacy/xf05id1/shared/current_user_data
 
 
 def get_stock_md(scan_md):
-    # Should this be ChainMap(scan_md, {...})?
-    # This should also be put into baseline, and not start document
-    # scan_md['beamline_status']  = {'energy':  energy.energy.position}
-    # scan_md['initial_sample_position'] = {'hf_stage_x': hf_stage.x.position,
-    #                                       'hf_stage_y': hf_stage.y.position,
-    #                                       'hf_stage_z': hf_stage.z.position}
-    # scan_md['wb_slits'] = {'v_gap' : slt_wb.v_gap.position,
-    #                        'h_gap' : slt_wb.h_gap.position,
-    #                        'v_cen' : slt_wb.v_cen.position,
-    #                        'h_cen' : slt_wb.h_cen.position}
-    # scan_md['hfm'] = {'y' : hfm.y.position,
-    #                   'bend' : hfm.bend.position}
-    # scan_md['ssa_slits'] = {'v_gap' : slt_ssa.v_gap.position,
-    #                         'h_gap' : slt_ssa.h_gap.position,
-    #                         'v_cen' : slt_ssa.v_cen.position,
-    #                         'h_cen' : slt_ssa.h_cen.position}
     scan_md['time_str'] =  ttime.ctime(ttime.time())
     scan_md['proposal'] = {'proposal_num': str(proposal_num),
                            'proposal_title': str(proposal_title),
@@ -97,16 +72,15 @@ def get_stock_md(scan_md):
     scan_md['scan']['energy'] = np.round(energy.energy.readback.get(), decimals=4)
 
     return scan_md
-    
+
 
 def logscan(scantype):
     h = db[-1]
     scan_id = h.start['scan_id']
     uid = h.start['uid']
 
-    userlogf = open(userlogfile, 'a')
-    userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype + '\n')
-    userlogf.close()
+    with open(userlogfile, 'a') as userlogf:
+        userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype + '\n')
 
 
 def logscan_event0info(scantype, event0info = []):
@@ -114,24 +88,27 @@ def logscan_event0info(scantype, event0info = []):
     scan_id = h.start['scan_id']
     uid = h.start['uid']
 
-    userlogf = open(userlogfile, 'a')
-    userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype)
-    events = list(db.get_events(h, stream_name='primary'))
+    with open(userlogfile, 'a') as userlogf:
+        userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype)
+        events = list(db.get_events(h, stream_name='primary'))
 
-    for item in event0info:
-        userlogf.write('\t' + item + '=' + str(events[0]['data'][item]) + '\t')
-    userlogf.write('\n')
-    userlogf.close()
+        for item in event0info:
+            userlogf.write('\t' + item + '=' + str(events[0]['data'][item]) + '\t')
+        userlogf.write('\n')
+
 
 
 def logscan_detailed(scantype):
-    h = db[-1]
-    scan_id = h.start['scan_id']
-    uid = h.start['uid']
+    try:
+        h = db[-1]
+        scan_id = h.start['scan_id']
+        uid = h.start['uid']
 
-    userlogf = open(userlogfile, 'a')
-    userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype + '\t' + str(h['start']['scan']['scan_input']) + '\n')
-    userlogf.close()
+        with open(userlogfile, 'a') as userlogf:
+            userlogf.write(str(scan_id) + '\t' + uid + '\t' + scantype + '\t' + str(h['start']['scan']['scan_input']) + '\n')
+
+    except Exception:
+        banner('Error writing to log file!')
 
 
 def scantime(scanid, printresults=True):

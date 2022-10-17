@@ -111,7 +111,8 @@ def export_sis_data(ion, filepath, zebra):
         if len(i) != N:
             print(f'Nope. Only received {len(i)}/{N} points.')
 
-    correct_length = zebra.pc.data.num_down.get()
+    correct_length = N // 2
+    # correct_length = zebra.pc.data.num_down.get()
     # Only consider even points
     t = t[1::2]
     i = i[1::2]
@@ -124,6 +125,8 @@ def export_sis_data(ion, filepath, zebra):
     with h5py.File(filepath, "w") as f:
         if len(t) != correct_length:
             correction_factor = correct_length - len(t)
+            print(f"Adding {correction_factor} points to scaler!")
+            print(f"t is not the correct length. {t} != {correct_length}")
             correction_list = [1e10 for _ in range(0, int(correction_factor))]
             new_t = [k for k in t] + correction_list
             new_i = [k for k in i] + correction_list
@@ -154,6 +157,11 @@ class SISHDF5Handler(HandlerBase):
 
     def __call__(self, *, column):
         return self._handle[column][:]
+
+    def close(self):
+        self._handle.close()
+        self._handle = None
+        super().close()
 
 
 db.reg.register_handler("SIS_HDF51", SISHDF5Handler, overwrite=True)

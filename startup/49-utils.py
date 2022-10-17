@@ -76,16 +76,18 @@ def mv_position(pos=[]):
     elif (pos == 3):
         print('Will go to Simens Star position.')
         pos = [30.114, 22.464, 53.874]
-    elif (len(pos) > 2):
-        print('You will move to the defined positions now.')
+    elif (len(pos)>1):
+        print(f'You will move to the defined positions: {pos} now.')
+        if len(pos <3):
+            yield from mv(nano_stage.x, pos[0],
+                          nano_stage.y, pos[1])
+        else:
+            yield from mv(nano_stage.x, pos[0],
+                          nano_stage.y, pos[1],
+                          nano_stage.z, pos[2])
     else:
         print('Not a position, exiting...')
         return
-
-    yield from mv(nano_stage.x, pos[0],
-                  nano_stage.y, pos[1],
-                  nano_stage.z, pos[2])
-
 
 def copyscanparam(src_num, dest_num):
     '''
@@ -117,7 +119,7 @@ def banner(str_list, border="-"):
 
     N = 2
     for str in str_list:
-        N = max(len(str), 2)
+        N = max(len(str), N)
 
     print(border * (N + 2))
     for str in str_list:
@@ -142,7 +144,7 @@ def print_baseline(scanid=-1, key_filter=None):
     scanid = int(scanid)
     h = db[scanid]
     tbl = h.table('baseline')
-    pd.set_option('max_rows', 999)
+    pd.set_option('display.max_rows', 999)
     if (key_filter is not None):
         all_keys = tbl.keys()
         filtered_list = []
@@ -151,7 +153,7 @@ def print_baseline(scanid=-1, key_filter=None):
                 filtered_list.append(key)
         tbl = tbl[filtered_list]
     print(tbl.T)
-    pd.reset_option('max_rows')
+    pd.reset_option('display.max_rows')
 
 
 def estimate_scan_duration(fastaxis_num, slowaxis_num, dwell, scantype='XRF_FLY', event_delay=None):
