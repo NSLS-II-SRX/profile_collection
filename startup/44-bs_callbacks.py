@@ -63,6 +63,8 @@ class LivePlotFlyingXAS(QtAwareCallback):
         self._xind = 0
         self._xlabel = xlabel
         self._y_norm = y_norm
+        self._y_norm_val = 1
+        print(f'{self._y_norm_val=}')
         if e_pts is None:
             raise RuntimeError("Energy points are required")
         self._epts = e_pts
@@ -140,10 +142,15 @@ class LivePlotFlyingXAS(QtAwareCallback):
         # This outer try/except block is needed because multiple event
         # streams will be emitted by the RunEngine and not all event
         # streams will have the keys we want.
+        if flyer_id_mono.flying_dev.control.control.get() != 5:
+            return
+        flag_use_data = False
         try:
             # This inner try/except block handles seq_num and time, which could
             # be keys in the data or accessing the standard entries in every
             # event.
+            if 'descriptor' not in doc:
+                return
             try:
                 new_x = doc['data'][self.x]
             except KeyError:
@@ -151,40 +158,62 @@ class LivePlotFlyingXAS(QtAwareCallback):
                     new_x = doc[self.x]
                 else:
                     raise
-            new_y = doc['data'][self.y]
-            # I don't like this
-            # not sure how to go across documents
-            # new_y_norm = doc['data'][self._y_norm]
-            new_y_norm = xs.channel1.rois.roi02.value.get()
-            # print(f'new y norm = {new_y_norm}')
+            # try:
+            #     new_y = doc['data'][self.y]
+            #     print(f'{new_y=}')
+            # except KeyError:
+            #     pass
+            if self.y in doc['data']:
+                flag_use_data = True
+                new_y = doc['data'][self.y]
+                print(f'1\t{new_x=}\t{new_y=}')
+            if self._y_norm in doc['data']:
+                self._y_norm_val = doc['data'][self._y_norm]
+                print(f'{self._y_norm_val=}')
+            # try:
+            #     self._y_norm_val = doc['data'][self._y_norm]
+            #     # new_y_norm = xs_id_mono_fly.channel01.mcaroi02.total_rbv.get()
+            #     print(f'{self._y_norm_val=}')
+            # except KeyError:
+            #     pass
         except KeyError:
             # wrong event stream, skip it
             return
 
+        if flag_use_data is False:
+            return
         # Special-case 'time' to plot against against experiment epoch, not
         # UNIX epoch.
+        print('  I made it out!')
         if self.x == 'time' and self._epoch == 'run':
             new_x -= self._epoch_offset
 
+        print(f'{self._xind=}\t{self._epts[self._xind]=}')
         #overright the x value
         new_x = self._epts[self._xind]
         self._xind = self._xind + 1
 
+        print(f'{self._xind=}\t{new_x=}')
         # overwrite the y value
-        if new_y_norm == 0:
-            new_x = 0
-        new_y = new_y / new_y_norm
+        # if new_y_norm == 0:
+        #     new_x = 0
+        print(f'3: {new_y=}\t{self._y_norm_val=}')
+        new_y = new_y / self._y_norm_val
         
+        print(f"2\t{new_x=}\t{new_y=}")
         self.update_caches(new_x, new_y)
         self.update_plot()
         super().event(doc)
 
     def update_caches(self, x, y):
+        print('in update_caches')
         if (x > 0):
+            print('x>0')
             self.x_data.append(x)
             self.y_data.append(y)
 
     def update_plot(self):
+        print('in update plot')
         self.current_line.set_data(self.x_data, self.y_data)
         # Rescale and redraw.
         self.ax.relim(visible_only=True)

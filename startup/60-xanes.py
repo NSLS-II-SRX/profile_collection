@@ -609,12 +609,12 @@ class FlyerIDMono:
         total_points = self.num_triggers
 
         for xs_det in self.xs_detectors:
-            xs_det.hdf5.file_write_mode.put('Stream')
+            xs_det.hdf5.file_write_mode.put('Capture')
             xs_det.external_trig.put(True)
             xs_det.total_points.put(total_points)
             xs_det.spectra_per_point.put(1)
             xs_det.stage()
-            xs_det.settings.acquire.put(1)
+            xs_det.cam.acquire.put(1)
 
         # Scaler config
         # self.scaler.count_mode.put(0)  # put SIS3820 into single count (not autocount) mode
@@ -625,9 +625,9 @@ class FlyerIDMono:
 
     def unstage(self):
         for xs_det in self.xs_detectors:
-            xs_det.settings.acquire.put(0)
+            xs_det.cam.acquire.put(0)
             xs_det.hdf5.capture.put(0)  # this is to save the file is the number of collected frames is less than expected
-            xs_det.settings.trigger_mode.put('Internal')
+            xs_det.cam.trigger_mode.put('Internal')
             xs_det.unstage()
 
         print(f"{print_now()}: before unstaging scaler")
@@ -637,6 +637,7 @@ class FlyerIDMono:
 
     def kickoff(self, *args, **kwargs):
 
+        print('In kickoff...')
         # Reset zebra to clear the data entries.
         self.zebra.pc.block_state_reset.put(1)
 
@@ -684,6 +685,7 @@ class FlyerIDMono:
             'energy_stop': self.flying_dev.parameters.last_trigger.get(),
             })
 
+        print('Staging...')
         self.stage()
 
         # Convert to eV/s.
@@ -699,7 +701,7 @@ class FlyerIDMono:
         self.flying_dev.parameters.trigger_count_reset.put(1)
         self.flying_dev.parameters.current_scan_reset.put(1)
 
-        ttime.sleep(0.5)
+        ttime.sleep(1.0)  # Wait 1 second because the control PV updates at 1 Hz
 
         # Main RUN command:
         self.flying_dev.control.run.put(1)
@@ -731,9 +733,9 @@ class FlyerIDMono:
             print(f"{print_now()} run 'complete' on detectors.")
             # ttime.sleep(0.5)
             for xs_det in self.xs_detectors:
-                print(f"{print_now()} before erase in '_complete_detectors'.")
-                xs_det.erase.put(1)
-                print(f"{print_now()} after erase in '_complete_detectors'.")
+                # print(f"{print_now()} before erase in '_complete_detectors'.")
+                # xs_det.cam.erase.put(1)
+                # print(f"{print_now()} after erase in '_complete_detectors'.")
                 xs_det.complete()
             print(f"{print_now()} done with 'complete' on detectors.")
 
@@ -801,8 +803,9 @@ class FlyerIDMono:
                 }
 
             for xs_det in self.xs_detectors:
-                for channel in xs_det.channels.keys():
-                    return_dict[formatted_scan_num][f'{xs_det.name}_ch{channel}'] = {'source': 'xspress3',
+                # for channel in xs_det.channels.keys():
+                for channel in xs_det.iterate_channels():
+                    return_dict[formatted_scan_num][f'{xs_det.name}_channel{channel.channel_number:02}'] = {'source': 'xspress3',
                                                                         'dtype': 'array',
                                                                         # The shape will correspond to a 1-D array of 4096 bins from xspress3.
                                                                         'shape': [
@@ -927,10 +930,11 @@ class FlyerIDMono:
                     'it': now,
                 }
                 filled = {}
-                for jj, channel in enumerate(xs_det.channels.keys()):
-                    key = f'{xs_det.name}_ch{channel}'
-                    idx = jj + ii * len(xs_det.channels.keys())
+                for jj, channel in enumerate(xs_det.iterate_channels()):
+                    key = channel.name
+                    idx = jj + ii * len(xs_det.channel_numbers)
                     try:
+                        # print(f"{xs_det._datum_ids=}")
                         data[key] = xs_det._datum_ids[idx]
                     except IndexError:
                         print('Waiting 10 seconds for data...')
@@ -1019,7 +1023,7 @@ def plot_flyer_id_mono_data(uid_or_scanid, e_min=None, e_max=None, fname=None, r
 
         d = []
         for i in range(num_channels):
-            d.append(np.array(list(hdr.data(f'xs_id_mono_fly_ch{i + 1}', stream_name=stream)))[:, e_min:e_max].sum(axis=1))
+            d.append(np.array(list(hdr.data(f'xs_id_mono_fly_channel{i+1:02}', stream_name=stream)))[:, e_min:e_max].sum(axis=1))
         d = np.array(d)
 
         i0 = np.array(tbl['i0'])
@@ -1116,14 +1120,20 @@ def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
                      plot_epts = np.concatenate((plot_epts, unit_epts))
          plot_epts = np.concatenate((plot_epts, -1*np.ones((1,))))
 
-         livepopup = [LivePlotFlyingXAS(xs.channel1.rois.roi01.value.name,
-                                        y_norm=xs.channel1.rois.roi02.value.name,
+         # roi_key = [
+         #     det_xs_channel.get_mcaroi(mcaroi_number=roinum[0]).total_rbv.name
+         #     for det_xs_channel
+         #     in det_xs.iterate_channels()
+         # ]
+         livepopup = [LivePlotFlyingXAS(xs_id_mono_fly.channel01.mcaroi01.total_rbv.name,
+                                        # y_norm=xs_id_mono_fly.channel01.mcaroi02.total_rbv.name,
+                                        # x='time',
                                         e_pts=plot_epts,
                                         xlabel='Energy [eV]')]
 
 
     @subs_decorator(livepopup)
-    @monitor_during_decorator([xs.channel1.rois.roi01.value, xs.channel1.rois.roi02.value])
+    @monitor_during_decorator([xs_id_mono_fly.channel01.mcaroi01.total_rbv, xs_id_mono_fly.channel01.mcaroi02.total_rbv, xs_id_mono_fly.cam.array_counter])
     def plan():
         yield from check_shutters(shutter, 'Open')
         uid = yield from bps.open_run(md)
