@@ -553,7 +553,7 @@ def fast_shutter_per_step(detectors, motor, step):
     yield from mv(Mo_shutter, 1)
 
 
-class FlyerIDMono:
+class FlyerIDMono(Device):
     def __init__(self, flying_dev, zebra, xs_detectors, scaler, pulse_cpt=None, pulse_width=0.01, paused_timeout=120):
         """Instantiate a flyer based on ID-Mono coordinated motion.
 
@@ -580,12 +580,13 @@ class FlyerIDMono:
         paused_timeout : float
             the timeout to wait between the steps until the scan is interrupted if the "unpause" button is not pressed.
         """
-        self.name = 'FlyerIDMono'
+        super().__init__("", parent=None, name="flyer_id_mono")
 
         self.flying_dev = flying_dev
         self.zebra = zebra
         self.xs_detectors = xs_detectors
         self.scaler = scaler
+        self._staging_delay = 0.010
 
         # The pulse width has to be set both in Zebra and the Scan Engine.
         if pulse_cpt is None:
@@ -606,6 +607,9 @@ class FlyerIDMono:
 
     def stage(self):
         # total_points = self.num_scans * self.num_triggers
+        if self.num_triggers is None:
+            print(f'You must set {self.name}.num_triggers before staging!')
+            raise Exception
         total_points = self.num_triggers
 
         for xs_det in self.xs_detectors:
@@ -621,9 +625,94 @@ class FlyerIDMono:
         self.scaler.stop_all.put(1)  # stop scaler
         self.scaler.nuse_all.put(2*total_points)
         self.scaler.erase_start.put(1)
+        self._stage_with_delay()
+
+    def _stage_with_delay(self):
+        # Staging taken from https://github.com/bluesky/ophyd/blob/master/ophyd/device.py
+        # Device - BlueskyInterface
+        """Stage the device for data collection.
+        This method is expected to put the device into a state where
+        repeated calls to :meth:`~BlueskyInterface.trigger` and
+        :meth:`~BlueskyInterface.read` will 'do the right thing'.
+        Staging not idempotent and should raise
+        :obj:`RedundantStaging` if staged twice without an
+        intermediate :meth:`~BlueskyInterface.unstage`.
+        This method should be as fast as is feasible as it does not return
+        a status object.
+        The return value of this is a list of all of the (sub) devices
+        stage, including it's self.  This is used to ensure devices
+        are not staged twice by the :obj:`~bluesky.run_engine.RunEngine`.
+        This is an optional method, if the device does not need
+        staging behavior it should not implement `stage` (or
+        `unstage`).
+        Returns
+        -------
+        devices : list
+            list including self and all child devices staged
+        """
+        if self._staged == Staged.no:
+            pass  # to short-circuit checking individual cases
+        elif self._staged == Staged.yes:
+            raise RedundantStaging("Device {!r} is already staged. "
+                                   "Unstage it first.".format(self))
+        elif self._staged == Staged.partially:
+            raise RedundantStaging("Device {!r} has been partially staged. "
+                                   "Maybe the most recent unstaging "
+                                   "encountered an error before finishing. "
+                                   "Try unstaging again.".format(self))
+        self.log.debug("Staging %s", self.name)
+        self._staged = Staged.partially
+
+        # Resolve any stage_sigs keys given as strings: 'a.b' -> self.a.b
+        stage_sigs = OrderedDict()
+        for k, v in self.stage_sigs.items():
+            if isinstance(k, str):
+                # Device.__getattr__ handles nested attr lookup
+                stage_sigs[getattr(self, k)] = v
+            else:
+                stage_sigs[k] = v
+
+        # Read current values, to be restored by unstage()
+        original_vals = {sig: sig.get() for sig in stage_sigs}
+
+        # We will add signals and values from original_vals to
+        # self._original_vals one at a time so that
+        # we can undo our partial work in the event of an error.
+
+        # Apply settings.
+        devices_staged = []
+        try:
+            for sig, val in stage_sigs.items():
+                self.log.debug("Setting %s to %r (original value: %r)",
+                               self.name,
+                               val, original_vals[sig])
+                sig.set(val, timeout=10).wait()
+                ttime.sleep(self._staging_delay)
+                # It worked -- now add it to this list of sigs to unstage.
+                self._original_vals[sig] = original_vals[sig]
+            devices_staged.append(self)
+
+            # Call stage() on child devices.
+            for attr in self._sub_devices:
+                device = getattr(self, attr)
+                if hasattr(device, 'stage'):
+                    device.stage()
+                    devices_staged.append(device)
+        except Exception:
+            self.log.debug("An exception was raised while staging %s or "
+                           "one of its children. Attempting to restore "
+                           "original settings before re-raising the "
+                           "exception.", self.name)
+            self.unstage()
+            raise
+        else:
+            self._staged = Staged.yes
+        return devices_staged
+
 
 
     def unstage(self):
+        self._unstage_with_delay()
         for xs_det in self.xs_detectors:
             xs_det.cam.acquire.put(0)
             xs_det.hdf5.capture.put(0)  # this is to save the file is the number of collected frames is less than expected
@@ -634,6 +723,45 @@ class FlyerIDMono:
         self.scaler.stop_all.put(1)
         # self.scaler.count_mode.put(1)  # return SIS3820 into autocount (not single count) mode
         print(f"{print_now()}: after unstaging scaler")
+
+    def _unstage_with_delay(self):
+        # Staging taken from https://github.com/bluesky/ophyd/blob/master/ophyd/device.py
+        # Device - BlueskyInterface
+        """Unstage the device.
+        This method returns the device to the state it was prior to the
+        last `stage` call.
+        This method should be as fast as feasible as it does not
+        return a status object.
+        This method must be idempotent, multiple calls (without a new
+        call to 'stage') have no effect.
+        Returns
+        -------
+        devices : list
+            list including self and all child devices unstaged
+        """
+        self.log.debug("Unstaging %s", self.name)
+        self._staged = Staged.partially
+        devices_unstaged = []
+
+        # Call unstage() on child devices.
+        for attr in self._sub_devices[::-1]:
+            device = getattr(self, attr)
+            if hasattr(device, 'unstage'):
+                device.unstage()
+                devices_unstaged.append(device)
+
+        # Restore original values.
+        for sig, val in reversed(list(self._original_vals.items())):
+            self.log.debug("Setting %s back to its original value: %r)",
+                           self.name,
+                           val)
+            sig.set(val, timeout=10).wait()
+            ttime.sleep(self._staging_delay)
+            self._original_vals.pop(sig)
+        devices_unstaged.append(self)
+
+        self._staged = Staged.no
+        return devices_unstaged
 
     def kickoff(self, *args, **kwargs):
 
@@ -988,6 +1116,78 @@ class FlyerIDMono:
         pass
 
 
+def setup_zebra_for_xas(flyer):
+    # Common stage_sigs
+    ## PC Tab
+    # Setup
+    flyer.stage_sigs[flyer.zebra.pc.data.cap_enc1_bool] = 1
+    flyer.stage_sigs[flyer.zebra.pc.data.cap_enc2_bool] = 1
+    flyer.stage_sigs[flyer.zebra.pc.data.cap_enc3_bool] = 1
+    flyer.stage_sigs[flyer.zebra.pc.data.cap_enc4_bool] = 0
+    # flyer.stage_sigs[flyer.zebra.pc.enc] = 0
+    # flyer.stage_sigs[flyer.zebra.pc.dir] = 0
+    # flyer.stage_sigs[flyer.zebra.pc.tspre] = 1
+    ## ENC tab
+    flyer.stage_sigs[flyer.zebra.pc.enc_pos1_sync] = 1
+    flyer.stage_sigs[flyer.zebra.pc.enc_pos2_sync] = 1
+    flyer.stage_sigs[flyer.zebra.pc.enc_pos3_sync] = 1
+    flyer.stage_sigs[flyer.zebra.pc.enc_pos4_sync] = 1
+    ## SYS tab
+    flyer.stage_sigs[flyer.zebra.output1.ttl.addr] = 52  # PULSE_1 --> TTL1 --> xs
+    flyer.stage_sigs[flyer.zebra.output2.ttl.addr] = 52  # PULSE_1 --> TTL2 --> merlin
+    flyer.stage_sigs[flyer.zebra.output3.ttl.addr] = 36  # OR1 --> TTL3 --> scaler
+    flyer.stage_sigs[flyer.zebra.output4.ttl.addr] = 52  # PULSE_1 --> TTL4 --> dexela
+
+    ## Specific stage sigs for Zebra - XAS_FLY
+    # PC Tab
+    # Arm
+    flyer.stage_sigs[flyer.zebra.pc.trig_source] = 0
+    # Gate
+    flyer.stage_sigs[flyer.zebra.pc.gate_source] = 1  # 0 = Position, 1 = Time
+    # flyer.stage_sigs[flyer.zebra.pc.gate_start] = 0
+    # flyer.stage_sigs[flyer.zebra.pc.gate_width] = 10
+    # flyer.stage_sigs[flyer.zebra.pc.gate_step] = 10.1
+    flyer.stage_sigs[flyer.zebra.pc.gate_num] = 1
+    # Pulse
+    flyer.stage_sigs[flyer.zebra.pc.pulse_source] = 0  # 0 = Position, 1 = Time
+    # flyer.stage_sigs[flyer.zebra.pc.pulse_start] = 0
+    # flyer.stage_sigs[flyer.zebra.pc.pulse_width] = 0.9
+    # flyer.stage_sigs[flyer.zebra.pc.pulse_step] = 1
+    # flyer.stage_sigs[flyer.zebra.pc.pulse_max] = 10
+    ## OR Tab
+    flyer.stage_sigs[flyer.zebra.or1.use1] = 1  # 0 = No, 1 = Yes
+    flyer.stage_sigs[flyer.zebra.or1.use2] = 1
+    flyer.stage_sigs[flyer.zebra.or1.use3] = 0
+    flyer.stage_sigs[flyer.zebra.or1.use4] = 0
+    flyer.stage_sigs[flyer.zebra.or1.input_source1] = 54
+    flyer.stage_sigs[flyer.zebra.or1.input_source2] = 55
+    flyer.stage_sigs[flyer.zebra.or1.input_source3] = 53
+    flyer.stage_sigs[flyer.zebra.or1.input_source4] = 0
+    flyer.stage_sigs[flyer.zebra.or1.invert1] = 0  # 0 = No, 1 = Yes
+    flyer.stage_sigs[flyer.zebra.or1.invert2] = 0
+    flyer.stage_sigs[flyer.zebra.or1.invert3] = 0
+    flyer.stage_sigs[flyer.zebra.or1.invert4] = 0
+    ## PULSE Tab
+    flyer.stage_sigs[flyer.zebra.pulse1.input_addr] = 1
+    flyer.stage_sigs[flyer.zebra.pulse1.input_edge] = 0  # 0 = rising, 1 = falling
+    flyer.stage_sigs[flyer.zebra.pulse1.delay] = 0.0
+    # flyer.stage_sigs[flyer.zebra.pulse1.width] = 0.1  # Written by plan
+    flyer.stage_sigs[flyer.zebra.pulse1.time_units] = 1
+    # flyer.stage_sigs[flyer.zebra.pulse2.input_addr] = 30
+    # flyer.stage_sigs[flyer.zebra.pulse2.input_edge] = 0  # 0 = rising, 1 = falling
+    # flyer.stage_sigs[flyer.zebra.pulse2.delay] = 0
+    # flyer.stage_sigs[flyer.zebra.pulse2.width] = 0.1
+    # flyer.stage_sigs[flyer.zebra.pulse2.time_units] = 0
+    flyer.stage_sigs[flyer.zebra.pulse3.input_addr] = 52
+    flyer.stage_sigs[flyer.zebra.pulse3.input_edge] = 0  # 0 = rising, 1 = falling
+    flyer.stage_sigs[flyer.zebra.pulse3.delay] = 0.2
+    flyer.stage_sigs[flyer.zebra.pulse3.width] = 0.1
+    flyer.stage_sigs[flyer.zebra.pulse3.time_units] = 0
+    flyer.stage_sigs[flyer.zebra.pulse4.input_addr] = 52
+    flyer.stage_sigs[flyer.zebra.pulse4.input_edge] = 1  # 0 = rising, 1 = falling
+    flyer.stage_sigs[flyer.zebra.pulse4.delay] = 0
+    flyer.stage_sigs[flyer.zebra.pulse4.width] = 0.1
+    flyer.stage_sigs[flyer.zebra.pulse4.time_units] = 0
 
 
 flyer_id_mono = FlyerIDMono(flying_dev=id_fly_device,
@@ -996,6 +1196,7 @@ flyer_id_mono = FlyerIDMono(flying_dev=id_fly_device,
                             scaler=sclr1,
                             pulse_cpt='pulse1',
                             pulse_width=0.05)
+setup_zebra_for_xas(flyer_id_mono)
 
 
 # Helper functions for quick vis:
@@ -1120,20 +1321,14 @@ def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
                      plot_epts = np.concatenate((plot_epts, unit_epts))
          plot_epts = np.concatenate((plot_epts, -1*np.ones((1,))))
 
-         # roi_key = [
-         #     det_xs_channel.get_mcaroi(mcaroi_number=roinum[0]).total_rbv.name
-         #     for det_xs_channel
-         #     in det_xs.iterate_channels()
-         # ]
          livepopup = [LivePlotFlyingXAS(xs_id_mono_fly.channel01.mcaroi01.total_rbv.name,
-                                        # y_norm=xs_id_mono_fly.channel01.mcaroi02.total_rbv.name,
-                                        # x='time',
+                                        y_norm=xbpm2.sumT.name,
                                         e_pts=plot_epts,
                                         xlabel='Energy [eV]')]
 
 
     @subs_decorator(livepopup)
-    @monitor_during_decorator([xs_id_mono_fly.channel01.mcaroi01.total_rbv, xs_id_mono_fly.channel01.mcaroi02.total_rbv, xs_id_mono_fly.cam.array_counter])
+    @monitor_during_decorator([xs_id_mono_fly.channel01.mcaroi01.total_rbv, xbpm2.sumT])
     def plan():
         yield from check_shutters(shutter, 'Open')
         uid = yield from bps.open_run(md)
@@ -1187,7 +1382,6 @@ TODO: setup stage_sigs for scaler
 TODO: Monitor and LivePlot of data
         need to cleanup LivePlot code
         need to label each pass with different line (and color)
-        normalization with argon is not ideal(doesn't always work well), doing a get instead of using monitor
 TODO: Unstage the detectors (xs, scaler) on RE.abort()
 TODO: Compare number of triggers from Zebra's data collected table with actual number of emitted pulses.
 TODO: Use timestamps from Zebra's data collected table to generate the events.

@@ -158,24 +158,13 @@ class LivePlotFlyingXAS(QtAwareCallback):
                     new_x = doc[self.x]
                 else:
                     raise
-            # try:
-            #     new_y = doc['data'][self.y]
-            #     print(f'{new_y=}')
-            # except KeyError:
-            #     pass
             if self.y in doc['data']:
                 flag_use_data = True
                 new_y = doc['data'][self.y]
-                print(f'1\t{new_x=}\t{new_y=}')
+                # print(f'1\t{new_x=}\t{new_y=}')
             if self._y_norm in doc['data']:
                 self._y_norm_val = doc['data'][self._y_norm]
-                print(f'{self._y_norm_val=}')
-            # try:
-            #     self._y_norm_val = doc['data'][self._y_norm]
-            #     # new_y_norm = xs_id_mono_fly.channel01.mcaroi02.total_rbv.get()
-            #     print(f'{self._y_norm_val=}')
-            # except KeyError:
-            #     pass
+                # print(f'{self._y_norm_val=}')
         except KeyError:
             # wrong event stream, skip it
             return
@@ -184,36 +173,28 @@ class LivePlotFlyingXAS(QtAwareCallback):
             return
         # Special-case 'time' to plot against against experiment epoch, not
         # UNIX epoch.
-        print('  I made it out!')
         if self.x == 'time' and self._epoch == 'run':
             new_x -= self._epoch_offset
 
-        print(f'{self._xind=}\t{self._epts[self._xind]=}')
         #overright the x value
         new_x = self._epts[self._xind]
         self._xind = self._xind + 1
 
-        print(f'{self._xind=}\t{new_x=}')
         # overwrite the y value
         # if new_y_norm == 0:
         #     new_x = 0
-        print(f'3: {new_y=}\t{self._y_norm_val=}')
         new_y = new_y / self._y_norm_val
         
-        print(f"2\t{new_x=}\t{new_y=}")
         self.update_caches(new_x, new_y)
         self.update_plot()
         super().event(doc)
 
     def update_caches(self, x, y):
-        print('in update_caches')
         if (x > 0):
-            print('x>0')
             self.x_data.append(x)
             self.y_data.append(y)
 
     def update_plot(self):
-        print('in update plot')
         self.current_line.set_data(self.x_data, self.y_data)
         # Rescale and redraw.
         self.ax.relim(visible_only=True)
