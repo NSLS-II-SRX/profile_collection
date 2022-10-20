@@ -721,6 +721,8 @@ class FlyerIDMono(Device):
 
         print(f"{print_now()}: before unstaging scaler")
         self.scaler.stop_all.put(1)
+        self.scaler.count_mode.put(1)
+        self.scaler.read_attrs = ["channels.chan2", "channels.chan3", "channels.chan4"]
         # self.scaler.count_mode.put(1)  # return SIS3820 into autocount (not single count) mode
         print(f"{print_now()}: after unstaging scaler")
 
@@ -770,34 +772,34 @@ class FlyerIDMono(Device):
         self.zebra.pc.block_state_reset.put(1)
 
         # Arm zebra.
-        self.zebra.pc.arm.put(1)
+        # self.zebra.pc.arm.put(1)  # is this necessary? we don't use PC
 
         # PULSE tab of the Zebra CSS:
-        getattr(self.zebra, self.pulse_cpt).input_addr.put(1)            # 'Input' in CSS, 1=IN1_TTL
-        getattr(self.zebra, self.pulse_cpt).input_edge.put(0)            # 'Trigger on' in CSS, 0=Rising, 1=Falling
-        getattr(self.zebra, self.pulse_cpt).delay.put(0.0)               # 'Delay before' in CSS
+        # getattr(self.zebra, self.pulse_cpt).input_addr.put(1)            # 'Input' in CSS, 1=IN1_TTL
+        # getattr(self.zebra, self.pulse_cpt).input_edge.put(0)            # 'Trigger on' in CSS, 0=Rising, 1=Falling
+        # getattr(self.zebra, self.pulse_cpt).delay.put(0.0)               # 'Delay before' in CSS
         getattr(self.zebra, self.pulse_cpt).width.put(self.pulse_width)  # 'First Pulse' in CSS
-        getattr(self.zebra, self.pulse_cpt).time_units.put('s')          # 'Time Units' in CSS
+        # getattr(self.zebra, self.pulse_cpt).time_units.put('s')          # 'Time Units' in CSS
 
         # SYS tab of the Zebra CSS
         # for out in [1, 2, 3, 4]:
-        for out in [1, 2, 4]:
-            getattr(self.zebra, f'output{out}').ttl.addr.put(52)          # 'OUTx TTL' in CSS
+        # for out in [1, 2, 4]:
+        #     getattr(self.zebra, f'output{out}').ttl.addr.put(52)          # 'OUTx TTL' in CSS
 
         # TESTING
-        self.zebra.output3.ttl.addr.put(36)
+        # self.zebra.output3.ttl.addr.put(36)
 
-        self.zebra.pulse3.input_addr.put(52)
-        self.zebra.pulse3.input_edge.put(0)
-        self.zebra.pulse3.time_units.put('ms')
-        self.zebra.pulse3.width.put(0.100)
-        self.zebra.pulse3.delay.put(0.0)
+        # self.zebra.pulse3.input_addr.put(52)
+        # self.zebra.pulse3.input_edge.put(0)
+        # self.zebra.pulse3.time_units.put('ms')
+        # self.zebra.pulse3.width.put(0.100)
+        # self.zebra.pulse3.delay.put(0.0)
 
-        self.zebra.pulse4.input_addr.put(52)
-        self.zebra.pulse4.input_edge.put(1)
-        self.zebra.pulse4.time_units.put('ms')
-        self.zebra.pulse4.width.put(0.100)
-        self.zebra.pulse4.delay.put(0.0)
+        # self.zebra.pulse4.input_addr.put(52)
+        # self.zebra.pulse4.input_edge.put(1)
+        # self.zebra.pulse4.time_units.put('ms')
+        # self.zebra.pulse4.width.put(0.100)
+        # self.zebra.pulse4.delay.put(0.0)
 
         width_s = self.pulse_width
         speed = self.flying_dev.parameters.speed.get()
@@ -1172,7 +1174,7 @@ def setup_zebra_for_xas(flyer):
     flyer.stage_sigs[flyer.zebra.pulse1.input_edge] = 0  # 0 = rising, 1 = falling
     flyer.stage_sigs[flyer.zebra.pulse1.delay] = 0.0
     # flyer.stage_sigs[flyer.zebra.pulse1.width] = 0.1  # Written by plan
-    flyer.stage_sigs[flyer.zebra.pulse1.time_units] = 1
+    flyer.stage_sigs[flyer.zebra.pulse1.time_units] = 's'
     # flyer.stage_sigs[flyer.zebra.pulse2.input_addr] = 30
     # flyer.stage_sigs[flyer.zebra.pulse2.input_edge] = 0  # 0 = rising, 1 = falling
     # flyer.stage_sigs[flyer.zebra.pulse2.delay] = 0
@@ -1180,14 +1182,15 @@ def setup_zebra_for_xas(flyer):
     # flyer.stage_sigs[flyer.zebra.pulse2.time_units] = 0
     flyer.stage_sigs[flyer.zebra.pulse3.input_addr] = 52
     flyer.stage_sigs[flyer.zebra.pulse3.input_edge] = 0  # 0 = rising, 1 = falling
-    flyer.stage_sigs[flyer.zebra.pulse3.delay] = 0.2
+    flyer.stage_sigs[flyer.zebra.pulse3.delay] = 0.0
     flyer.stage_sigs[flyer.zebra.pulse3.width] = 0.1
-    flyer.stage_sigs[flyer.zebra.pulse3.time_units] = 0
+    flyer.stage_sigs[flyer.zebra.pulse3.time_units] = 'ms'
+
     flyer.stage_sigs[flyer.zebra.pulse4.input_addr] = 52
     flyer.stage_sigs[flyer.zebra.pulse4.input_edge] = 1  # 0 = rising, 1 = falling
     flyer.stage_sigs[flyer.zebra.pulse4.delay] = 0
     flyer.stage_sigs[flyer.zebra.pulse4.width] = 0.1
-    flyer.stage_sigs[flyer.zebra.pulse4.time_units] = 0
+    flyer.stage_sigs[flyer.zebra.pulse4.time_units] = 'ms'
 
 
 flyer_id_mono = FlyerIDMono(flying_dev=id_fly_device,
