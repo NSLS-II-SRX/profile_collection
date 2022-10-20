@@ -1261,7 +1261,7 @@ def flying_xas(num_passes=1, shutter=True, md=None):
 
 def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
                         num_scans=1, scan_type='uni',shutter=True, plot=True,
-                        flyers=[flyer_id_mono], md=None):
+                        flyers=[flyer_id_mono], harmonic=1, md=None):
     """This is a modified version of bp.fly to support multiple passes of the flyer."""
 
     flyer_id_mono.flying_dev.parameters.first_trigger.put(e_start)
@@ -1290,6 +1290,19 @@ def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
     if (abs(e_step) <= e_width):
         raise ValueError('Cannot have energy collection widths larger than energy step!')
 
+    # Get a harmonic value (assuming no detuning)
+    if harmonic < 3:
+        harmonic = 3
+        _, _, ugap = energy.energy_to_positions(e_start/1000, harmonic, 0)
+        while True:
+            _, _, ugap = energy.energy_to_positions(e_start/1000, harmonic+2, 0)
+            if ugap < energy.u_gap.low_limit:
+                break
+            harmonic += 2
+
+    # set harmonic
+    flyer_id_mono.flying_dev.parameters.harmonic.put(harmonic)
+
     if md is None:
         md = {}
     md = get_stock_md(md)
@@ -1300,6 +1313,7 @@ def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
     md['scan']['sample_name'] = ''
     md['scan']['dwell'] = dwell
     md['scan']['num_scans'] = num_scans
+    md['scan']['harmonic'] = harmonic
 
     d = []
     for fly in flyers:
