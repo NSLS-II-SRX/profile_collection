@@ -1247,6 +1247,53 @@ def plot_flyer_id_mono_data(uid_or_scanid, e_min=None, e_max=None, fname=None, r
         ax.legend()
     return res
 
+# Export data function
+def export_flyer_id_mono_data(uid_or_scanid, e_min=None, e_max=None, fname=None, root='/home/xf05id1/current_user_data/', flyer=flyer_id_mono):
+    hdr = db[uid_or_scanid]
+    stream_names = hdr.stream_names
+    stream_names.remove('baseline')
+
+    # Assuming first detector in the xs_detectors list has the correct ROI in ROI1
+    if (e_min is None):
+        e_min = flyer.xs_detectors[0].channel01.mcaroi01.min_x.get()
+        # e_min = xs.channel1.rois.roi01.bin_low.get()
+    if (e_max is None):
+        e_max = flyer.xs_detectors[0].channel01.mcaroi01.min_x.get() + flyer.xs_detectors[0].channel01.mcaroi01.size_x.get()
+        # e_max = xs.channel1.rois.roi01.bin_high.get()
+
+    for stream in sorted(stream_names):
+        if 'monitor' in stream:
+            continue
+        tbl = hdr.table(stream_name=stream, fill=True)
+
+        fname = f"scan{hdr.start['scan_id']}_{stream}.txt"
+        fname = root + fname
+
+        # d = tbl[[f'{flyer_id_mono.xs_detectors[0].name}_channel{i:02}' for i in flyer_id_mono.xs_detectors[0].channel_numbers]].values
+        # d_sum = d.sum()
+        d = []
+        for i in flyer.xs_detectors[0].channel_numbers:
+            d.append(np.array(list(hdr.data(f'{flyer.xs_detectors[0].name}_channel{i:02}', stream_name=stream)))[:, e_min:e_max].sum(axis=1))
+        d = np.array(d)
+        print(f'{d.shape=}')
+
+        i0 = np.array(tbl['i0'])
+        im = np.array(tbl['im'])
+        it = np.array(tbl['it'])
+        energy = np.array(tbl['energy'])
+
+        spectrum_unnormalized = d.sum(axis=0)
+        print(f'{spectrum_unnormalized.shape=}')
+        spectrum = spectrum_unnormalized / i0
+
+        res = np.vstack((energy, i0, im, it, d, spectrum_unnormalized, spectrum))
+
+        file_hdr = 'Energy\ti0\tim\tit\t' + 'ch1' + 'sum_ch' + 'normalized'
+        fmt = ['.3f'] + ['.2f']*3 + ['.2f']*flyer.xs_detectors[0].channel_numbers[-1] + ['.2f'] + ['.4f']
+        np.savetxt(fname, res.T, header=file_hdr)
+
+    return res
+
 def flying_xas(num_passes=1, shutter=True, md=None):
     v = flyer_id_mono.flying_dev.parameters.speed.get()
     w = flyer_id_mono.flying_dev.parameters.trigger_width.get()
