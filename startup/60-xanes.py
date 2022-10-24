@@ -1126,6 +1126,9 @@ class FlyerIDMono(Device):
         sclr1.read_attrs = ["channels.chan2", "channels.chan3", "channels.chan4"]
         pass
 
+    def abort(self):
+        self.stop()
+
 
 def setup_zebra_for_xas(flyer):
     # Common stage_sigs
@@ -1270,38 +1273,59 @@ def export_flyer_id_mono_data(uid_or_scanid, e_min=None, e_max=None, fname=None,
         e_max = flyer.xs_detectors[0].channel01.mcaroi01.min_x.get() + flyer.xs_detectors[0].channel01.mcaroi01.size_x.get()
         # e_max = xs.channel1.rois.roi01.bin_high.get()
 
+    ring_current_start = f"{list(hdr.data('ring_current', stream_name='baseline'))[0]:.2f}"
+
+    staticheader = '# XDI/1.0 MX/2.0\n' \
+                 + '# Beamline.name: ' + hdr.start['beamline_id'] + '\n' \
+                 + '# Facility.name: NSLS-II\n' \
+                 + '# Facility.ring_current:' + ring_current_start + '\n' \
+                 + '# Scan.start.uid: ' + hdr.start['uid'] + '\n' \
+                 + '# Scan.start.time: '+ str(hdr.start['time']) + '\n' \
+                 + '# Scan.start.ctime: ' + ttime.ctime(hdr.start['time']) + '\n' \
+                 + '# Mono.name: Si 111\n\n'
+
     for stream in sorted(stream_names):
         if 'monitor' in stream:
             continue
         tbl = hdr.table(stream_name=stream, fill=True)
 
-        fname = f"scan{hdr.start['scan_id']}_{stream}.txt"
+        fname = f"scan_{hdr.start['scan_id']}_{stream}.txt"
         fname = root + fname
 
-        # d = tbl[[f'{flyer_id_mono.xs_detectors[0].name}_channel{i:02}' for i in flyer_id_mono.xs_detectors[0].channel_numbers]].values
-        # d_sum = d.sum()
+        print(f'{stream}')
+        print(f'  Collecting data...')
         d = []
         for i in flyer.xs_detectors[0].channel_numbers:
             d.append(np.array(list(hdr.data(f'{flyer.xs_detectors[0].name}_channel{i:02}', stream_name=stream)))[:, e_min:e_max].sum(axis=1))
         d = np.array(d)
-        print(f'{d.shape=}')
 
         i0 = np.array(tbl['i0'])
         im = np.array(tbl['im'])
         it = np.array(tbl['it'])
         energy = np.array(tbl['energy'])
 
-        spectrum_unnormalized = d.sum(axis=0)
-        print(f'{spectrum_unnormalized.shape=}')
-        spectrum = spectrum_unnormalized / i0
+        print(f'  Processing data...')
+        spectrum_raw = d.sum(axis=0)
+        spectrum = spectrum_raw / i0
 
-        res = np.vstack((energy, i0, im, it, d, spectrum_unnormalized, spectrum))
+        res = np.vstack((energy, i0, im, it, d, spectrum_raw, spectrum))
 
-        file_hdr = 'Energy\ti0\tim\tit\t' + 'ch1' + 'sum_ch' + 'normalized'
+        data_hdr = 'Energy\ti0\tim\tit\t' + 'ch1\t' + 'sum_chi\t' + 'normalized'
         fmt = ['.3f'] + ['.2f']*3 + ['.2f']*flyer.xs_detectors[0].channel_numbers[-1] + ['.2f'] + ['.4f']
-        np.savetxt(fname, res.T, header=file_hdr)
+        print('  Writing data...')
+        np.savetxt(root+f"scan_{hdr.start['scan_id']}_{stream}_fast.txt", res.T, header=staticheader+data_hdr)
 
-    return res
+        data = [['Energy' , "%.3f", energy],
+                ['i0'     , "%.3f", i0],
+                ['ch_sum' , "%.3f", spectrum_raw],
+                ['norm'   , "%.6f", spectrum]]
+
+        with open(fname, 'w') as f:
+            f.write(staticheader)
+            f.write(data_hdr + '\n')
+            for i in range(len(energy)):
+                f.write(f"{energy[i]:.3f}\t{i0[i]:.2f}\t{im[i]:.2f}\t{spectrum_raw[i]:.2f}\t{spectrum[i]:.4f}\n")
+        print('  Complete!')
 
 def flying_xas(num_passes=1, shutter=True, md=None):
     v = flyer_id_mono.flying_dev.parameters.speed.get()
@@ -1316,8 +1340,8 @@ def flying_xas(num_passes=1, shutter=True, md=None):
 
 
 def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
-                        num_scans=1, scan_type='uni',shutter=True, plot=True,
-                        flyers=[flyer_id_mono], harmonic=1, md=None):
+                        num_scans=1, scan_type='uni', shutter=True, plot=True,
+                        flyers=[flyer_id_mono], harmonic=1, roi_num=1, md=None):
     """This is a modified version of bp.fly to support multiple passes of the flyer."""
 
     flyer_id_mono.flying_dev.parameters.first_trigger.put(e_start)
