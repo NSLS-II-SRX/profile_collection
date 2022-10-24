@@ -557,7 +557,7 @@ class SrxXspress3DetectorIDMonoFly(CommunitySrxXspress3Detector):
     def complete(self, *args, **kwargs):
         # print(f'In {self.name}.complete()...')
         for resource in self.hdf5._asset_docs_cache:
-            print(f'  resource in "complete": {resource}')
+            # print(f'  resource in "complete": {resource}')
             self._asset_docs_cache.append(('resource', resource[1]))
         # print(f'\ncomplete in {self.name}: {self._asset_docs_cache}')
 
@@ -569,7 +569,7 @@ class SrxXspress3DetectorIDMonoFly(CommunitySrxXspress3Detector):
 
         # print(f"{num_frames=}") 
         for frame_num in range(num_frames):
-            print(f'  frame_num in "complete": {frame_num + 1} / {num_frames}')
+            # print(f'  frame_num in "complete": {frame_num + 1} / {num_frames}')
             for channel in self.iterate_channels():
                 datum_id = '{}/{}'.format(self.hdf5._resource_uid, next(self._datum_counter))
                 datum = {'resource': self.hdf5._resource_uid,
@@ -585,7 +585,7 @@ class SrxXspress3DetectorIDMonoFly(CommunitySrxXspress3Detector):
     def collect(self):
         collected_frames = self.hdf5.num_captured.get()
         for frame_num in range(collected_frames):
-            print(f'  frame_num in "collect": {frame_num + 1} / {collected_frames}')
+            # print(f'  frame_num in "collect": {frame_num + 1} / {collected_frames}')
 
             datum_id = self._datum_ids[frame_num]
             ts = ttime.time()

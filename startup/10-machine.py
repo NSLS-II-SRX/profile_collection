@@ -414,7 +414,7 @@ class FlyScanControl(Device):
 
         if command == "enable":
             def enable_callback(value, old_value, **kwargs):
-                print(f'{print_now()} in {self.name}/{command}: {old_value} ---> {value}')
+                # print(f'{print_now()} in {self.name}/{command}: {old_value} ---> {value}')
                 value = _int_round(value)
                 old_value = _int_round(old_value)
                 if value == ENABLED_VALUE:
@@ -426,7 +426,7 @@ class FlyScanControl(Device):
 
         elif command == "disable":
             def disable_callback(value, old_value, **kwargs):
-                print(f'{print_now()} in {self.name}/{command}: {old_value} ---> {value}')
+                # print(f'{print_now()} in {self.name}/{command}: {old_value} ---> {value}')
                 value = _int_round(value)
                 old_value = _int_round(old_value)
                 if value == DISABLED_VALUE:

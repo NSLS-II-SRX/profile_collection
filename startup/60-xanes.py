@@ -719,12 +719,12 @@ class FlyerIDMono(Device):
             xs_det.cam.trigger_mode.put('Internal')
             xs_det.unstage()
 
-        print(f"{print_now()}: before unstaging scaler")
+        # print(f"{print_now()}: before unstaging scaler")
         self.scaler.stop_all.put(1)
         self.scaler.count_mode.put(1)
         self.scaler.read_attrs = ["channels.chan2", "channels.chan3", "channels.chan4"]
         # self.scaler.count_mode.put(1)  # return SIS3820 into autocount (not single count) mode
-        print(f"{print_now()}: after unstaging scaler")
+        # print(f"{print_now()}: after unstaging scaler")
 
     def _unstage_with_delay(self):
         # Staging taken from https://github.com/bluesky/ophyd/blob/master/ophyd/device.py
@@ -767,7 +767,7 @@ class FlyerIDMono(Device):
 
     def kickoff(self, *args, **kwargs):
 
-        print('In kickoff...')
+        # print('In kickoff...')
         # Reset zebra to clear the data entries.
         self.zebra.pc.block_state_reset.put(1)
 
@@ -815,14 +815,14 @@ class FlyerIDMono(Device):
             'energy_stop': self.flying_dev.parameters.last_trigger.get(),
             })
 
-        print('Staging...')
+        # print('Staging...')
         self.stage()
 
         # Convert to eV/s.
         # width_ev = width_s * speed
         # self.flying_dev.parameters.trigger_width.put(width_ev)
 
-        print(f'Enabling fly scan')
+        # print(f'Enabling fly scan')
         st = self.flying_dev.control.set("enable")
         while not st.done:
             ttime.sleep(0.1)
@@ -839,7 +839,7 @@ class FlyerIDMono(Device):
         self.status = self.flying_dev.control.scan_in_progress
 
         def callback(value, old_value, **kwargs):
-            print(f'{print_now()} in kickoff: {old_value} ---> {value}')
+            # print(f'{print_now()} in kickoff: {old_value} ---> {value}')
             if int(round(old_value)) == 0 and int(round(value)) == 1:
                 return True
             return False
@@ -860,17 +860,17 @@ class FlyerIDMono(Device):
                 self.flying_dev.parameters.scan_paused.put(0)
 
         def _complete_detectors():
-            print(f"{print_now()} run 'complete' on detectors.")
+            # print(f"{print_now()} run 'complete' on detectors.")
             # ttime.sleep(0.5)
             for xs_det in self.xs_detectors:
                 # print(f"{print_now()} before erase in '_complete_detectors'.")
                 # xs_det.cam.erase.put(1)
                 # print(f"{print_now()} after erase in '_complete_detectors'.")
                 xs_det.complete()
-            print(f"{print_now()} done with 'complete' on detectors.")
+            # print(f"{print_now()} done with 'complete' on detectors.")
 
         def callback_paused(value, old_value, **kwargs):
-            print(f"{print_now()} 'callback_paused' in complete:  scan_paused: {old_value} ---> {value}")
+            # print(f"{print_now()} 'callback_paused' in complete:  scan_paused: {old_value} ---> {value}")
              # 1=Paused, 0=Not Paused
             if int(round(old_value)) == 0 and int(round(value)) == 1:
                 _complete_detectors()
@@ -878,7 +878,7 @@ class FlyerIDMono(Device):
             return False
 
         def callback_all_scans_done(value, old_value, **kwargs):
-            print(f"{print_now()} 'callback_all_scans_done' in complete:  current_scan: {old_value} ---> {value}")
+            # print(f"{print_now()} 'callback_all_scans_done' in complete:  current_scan: {old_value} ---> {value}")
             if value == self.flying_dev.parameters.num_scans.get():  # last scan in the series, no pausing happens
                 _complete_detectors()
                 self.zebra.pc.disarm.put(1)
@@ -905,13 +905,13 @@ class FlyerIDMono(Device):
     #     return ret
 
     def describe_collect(self, *args, **kwargs):
-        print(f"\n\n{print_now()}: describe_collect started")
+        # print(f"\n\n{print_now()}: describe_collect started")
         return_dict = {}
         if True:
         # for scan_num in range(self.num_scans):
             current_scan = self.flying_dev.parameters.current_scan.get()
 
-            print(f"{print_now()}: current_scan: ")
+            # print(f"{print_now()}: current_scan: ")
 
             formatted_scan_num = f"scan_{current_scan:03d}"
             return_dict[formatted_scan_num] = \
@@ -948,9 +948,9 @@ class FlyerIDMono(Device):
                                                                                   xs_det.hdf5.array_size.width.get()],
                                                                         'external': 'FILESTORE:'}
         import pprint
-        pprint.pprint(return_dict)
+        # pprint.pprint(return_dict)
 
-        print(f"\n\n{print_now()}: describe_collect ended")
+        # print(f"\n\n{print_now()}: describe_collect ended")
 
         return return_dict
 
@@ -972,11 +972,11 @@ class FlyerIDMono(Device):
 
         orig_read_attrs = self.scaler.read_attrs
         self.scaler.read_attrs = ['mca1', 'mca2', 'mca3', 'mca4']
-        print(orig_read_attrs)
+        # print(orig_read_attrs)
 
         total_points = self.num_scans * self.num_triggers
 
-        print(f"{print_now()}: before while loop in collect")
+        # print(f"{print_now()}: before while loop in collect")
         flag_collecting_data = 0
         while (flag_collecting_data < 5):
             scaler_mca_data = self.scaler.read()
@@ -1033,13 +1033,13 @@ class FlyerIDMono(Device):
 
         scan_type = self.flying_dev.control.scan_type.get(as_string=True)
         current_scan = self.flying_dev.parameters.current_scan.get()
-        print(f"{print_now()} the scan is {scan_type}; current scan: {current_scan}")
+        # print(f"{print_now()} the scan is {scan_type}; current scan: {current_scan}")
 
         direction = even_direction
         if scan_type == "Bidirectional":
             if (current_scan + 1) % 2 == 1:  # at this point the current scan number is already incremented
                 direction = odd_direction
-                print(f"{print_now()} reversing the energy axis: {direction[0]} --> {direction[-1]}")
+                # print(f"{print_now()} reversing the energy axis: {direction[0]} --> {direction[-1]}")
 
         for ii, energy in enumerate(direction):
             for xs_det in self.xs_detectors:
@@ -1082,14 +1082,14 @@ class FlyerIDMono(Device):
                 'descriptor': 'scan_000',
             }
 
-        print(f"{print_now()}: after docs emitted in collect")
+        # print(f"{print_now()}: after docs emitted in collect")
 
 
     def collect_asset_docs(self):
-        print(f"{print_now()}: before collecting asset docs from xs in collect_asset_docs")
+        # print(f"{print_now()}: before collecting asset docs from xs in collect_asset_docs")
         for xs_det in self.xs_detectors:
             yield from xs_det.collect_asset_docs()
-        print(f"{print_now()}: after collecting asset docs from xs in collect_asset_docs")
+        # print(f"{print_now()}: after collecting asset docs from xs in collect_asset_docs")
 
     def stop(self):
         # I don't think this is running on stop :-(
