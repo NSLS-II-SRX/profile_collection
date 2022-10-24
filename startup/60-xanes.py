@@ -985,41 +985,45 @@ class FlyerIDMono(Device):
             im = scaler_mca_data[f"{self.scaler.name}_mca3"]['value']
             it = scaler_mca_data[f"{self.scaler.name}_mca4"]['value']
 
-            print(f'{i0_time.shape[0]}\t?=\t{2*self.num_triggers}')
+            # print(f'{i0_time.shape[0]}\t?=\t{2*self.num_triggers}')
             if i0_time.shape[0] == 2*self.num_triggers:
                 break
             flag_collecting_data += 1
             ttime.sleep(0.2)
-            print(f'({flag_collecting_data+1}/5) Waiting to collect all scaler data...')
-        print(f"{print_now()}: after while loop in collect")
+            # print(f'({flag_collecting_data+1}/5) Waiting to collect all scaler data...')
+        # print(f"{print_now()}: after while loop in collect")
 
         self.scaler.read_attrs = orig_read_attrs
-        print(self.scaler.read_attrs)
+        # print(self.scaler.read_attrs)
 
-        print(f"Length of 'i0_time': {len(i0_time)}")
-        print(f"Length of 'i0'     : {len(i0)}")
-        print(f"Length of 'im'     : {len(im)}")
-        print(f"Length of 'it'     : {len(it)}")
+        # print(f"Length of 'i0_time': {len(i0_time)}")
+        # print(f"Length of 'i0'     : {len(i0)}")
+        # print(f"Length of 'im'     : {len(im)}")
+        # print(f"Length of 'it'     : {len(it)}")
 
         i0_time = i0_time[1::2]
         i0 = i0[1::2]
         im = im[1::2]
         it = it[1::2]
 
-        print(f"Truncated length of 'i0_time': {len(i0_time)}")
-        print(f"Truncated length of 'i0'     : {len(i0)}")
-        print(f"Truncated length of 'im'     : {len(im)}")
-        print(f"Truncated length of 'it'     : {len(it)}")
+        # print(f"Truncated length of 'i0_time': {len(i0_time)}")
+        # print(f"Truncated length of 'i0'     : {len(i0)}")
+        # print(f"Truncated length of 'im'     : {len(im)}")
+        # print(f"Truncated length of 'it'     : {len(it)}")
 
         if len(i0_time) != len(i0) != len(im) != len(it):
             raise RuntimeError(f"Lengths of the collected arrays are not equal")
+        if len(i0_time) != num_triggers:
+            for d in [i0_time, i0, im, it]:
+                d = np.concatenate((d, np.ones((num_triggers-len(d),))))
+        print(f'{len(i0_time)=}')
 
-        print(f"{print_now()}: before unstage of xs in collect")
+        # print(f"{print_now()}: before unstage of xs in collect")
 
         # Unstage xspress3 detector(s).
         self.unstage()
 
-        print(f"{print_now()}: after unstage of xs in collect")
+        # print(f"{print_now()}: after unstage of xs in collect")
 
         # Deal with the direction of energies for bi-directional scan.
         # BlueSky@SRX [27]: id_fly_device.control.scan_type.get(as_string=True)
@@ -1063,15 +1067,20 @@ class FlyerIDMono(Device):
                 for jj, channel in enumerate(xs_det.iterate_channels()):
                     key = channel.name
                     idx = jj + ii * len(xs_det.channel_numbers)
+                    timestamps[key] = now
+                    filled[key] = False
                     try:
                         # print(f"{xs_det._datum_ids=}")
                         data[key] = xs_det._datum_ids[idx]
                     except IndexError:
-                        print('Waiting 10 seconds for data...')
+                        print('Waiting 10 seconds for data from X3X...')
                         ttime.sleep(10)
-                        data[key] = xs_det._datum_ids[idx]
-                    timestamps[key] = now
-                    filled[key] = False
+                        try:
+                            data[key] = xs_det._datum_ids[idx]
+                        except IndexError:
+                            print('WARNING! X3X did not receive all the pulses!')
+                            print('         Continuing...')
+                            break  # It won't find anymore data so might as well break
 
             yield {
                 'data': data,
@@ -1361,6 +1370,15 @@ def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
     md['scan']['dwell'] = dwell
     md['scan']['num_scans'] = num_scans
     md['scan']['harmonic'] = harmonic
+    md['scan']['roi_num'] = roi_num
+    md['scan']['direction'] = scan_type
+    # put in try-except since this will not work with QD IOC
+    try:
+        ch = flyers[0].xs_detectors[0].channel01
+        md['scan']['roi_names'] = [ch.get_mcaroi(mcaroi_number=i+1).roi_name.get()
+                                   for i in range(ch.get_mcaroi_count())]
+    except:
+        pass
 
     d = []
     for fly in flyers:
