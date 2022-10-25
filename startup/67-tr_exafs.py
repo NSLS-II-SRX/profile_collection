@@ -18,8 +18,6 @@ from bluesky.log import logger, config_bluesky_logging, LogFormatter
 # Find a way to add XAS_TIME to logscan_detailed file
 # Batch script of beam alignments with progressively smaller steps
 #   A run and forget alignment procedure?
-# Add delay before time series collection
-#   Will need to pass variable with tr_exafs_batch
 
 
 # Setting up a logging file
@@ -1171,7 +1169,7 @@ def laser_time_series(power, hold, ramp=5, wait=0,
 
 def tr_xanes_plan(xyze_pos, power, hold,
                   v_edge=None, h_edge=None, distance=25, stepsize=0.5,
-                  N_start=1, ramp=5,
+                  N_start=1, ramp=5, wait=0,
                   dets=[xs, merlin], acqtime=0.001,
                   waittime=5, peakup_N=15, align_N=15,
                   no_data=False, shutter=True):
@@ -1186,6 +1184,7 @@ def tr_xanes_plan(xyze_pos, power, hold,
     stepsize    (float) Step size in µm of scans
     n_start     (int)   Start index of batch. Used to pick up failed batches.
     ramp        (float) Time for ramp up to target laser power
+    wait        (float) Time after laser on to start data collection
     dets        (list)  detectors used to collect time-resolved data
     acqtime     (float) Acquisition/integration time. Default is 0.001 seconds
     waittime    (float) Wait time between collecting times series in seconds
@@ -1307,7 +1306,9 @@ def tr_xanes_plan(xyze_pos, power, hold,
             yield from bps.sleep(total_time)
             yield from laser_off()
         else:
-            yield from laser_time_series(power, hold, ramp=ramp, extra_dets=dets, shutter=shutter)
+            yield from laser_time_series(power, hold, ramp=ramp,
+                                         wait=wait, extra_dets=dets,
+                                         shutter=shutter)
         
         # Recorded batch scan information
         h = db[-1]
