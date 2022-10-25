@@ -18,10 +18,8 @@ from bluesky.log import logger, config_bluesky_logging, LogFormatter
 # Find a way to add XAS_TIME to logscan_detailed file
 # Batch script of beam alignments with progressively smaller steps
 #   A run and forget alignment procedure?
-# Add z to generate coordinates function
-#   Allow for a rotated plane of sample points (sqrt2 * spacing)
-# Add z moves to tr_exafs_batch plan
-# Add z moves to edge positions for alignments
+# Add delay before time series collection
+#   Will need to pass variable with tr_exafs_batch
 
 
 # Setting up a logging file
@@ -194,6 +192,27 @@ im = sclr2.channels.chan3
 vp = sclr2.channels.chan5'''
 
 
+def check_input_coords(*args):
+
+    '''
+    coords  (list)  List of input coordinates
+    '''
+
+    coords = [*args]
+    if len(np.unique([len(d) for d in coords])) > 1:
+        raise ValueError("Input coordinates do not have the same length!")
+    if len(coords[0]) == 2:
+        z_coord = nano_stage.z.user_readback.get()
+        print(f'No z-coordinates given. Assuming no sample rotation.\n\tz-coordinate set at {z_coord}')
+        for coord in coords:
+            coord.append(z_coord)
+    if len(coords) == 1:
+        coords = coords[0]
+
+    return coords
+
+
+
 #######################################
 ###     Main Utitiity Functions     ###
 #######################################
@@ -237,12 +256,9 @@ def gen_xyze_pos(erange = [11817, 11862, 11917, 12267],
         os.makedirs(filedir, exist_ok=True)
     if (start is []) or (end is []):
         raise AttributeError("Please make sure start and end positions are defined!")
-    if len(start) != len(end):
-        raise ValueError("Start and end coordinates do not have the same length!")
-    if (len(start) == 2) or (len(end) == 2):
-        z_coord = nano_stage.z.user_readback.get()
-        print(f'No z-coordinate given. Assuming no sample rotation.\n\tz-coordinates = {z_coord}')
-        start.append(z_coord), end.append(z_coord)
+
+    # Make sure correct form of input coordinates
+    start, end = check_input_coords(start, end)
 
     # Convert erange and estep to numpy array
     ept = np.array([])
@@ -347,7 +363,7 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
     '''
     beam        (str)   'x-ray', 'laser', or 'both' Specifies appropriate detectors
     direction   (str)   Scan direction. x for vertical edge, y for horizontal.
-    edge        (list)  [x,y,z] location of edge
+    edge        (list)  [x, y, z] location of edge
     distance    (float) Distance in µm to either side of feature to scan across
     stepsize    (float) Step size in µm of scans
     acqtime     (float) Acquisition time of detectors
@@ -363,6 +379,9 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
     poss_beams = ['x-ray', 'laser', 'both']
     if not any(beam in poss_beams for beam in poss_beams):
         raise ValueError("Incorrect beam assignment. Please specify 'x-ray', 'laser', or 'both' for direction.")
+
+    # Make sure correct form of input coordinates
+    edge = check_input_coords(edge)
 
     # Defining up the motors
     motors = [nano_stage.x, nano_stage.y, nano_stage.z]
@@ -382,10 +401,10 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
     num = np.round(((2 * distance) / stepsize) + 1)
 
     # Move sample stage to center position of features
+    log(f'Moving motors to {edge} coordinates.')
     yield from mov(motors[2], edge[2])
     yield from mov(motors[0], edge[0],
                    motors[1], edge[1])
-    log(f'Moving motors to {edge} coordinates.')
 
     # Perform scan with stage to be adjusted
     #yield from rel_scan(det, scan_motor, -distance, distance, num) #depricated
@@ -427,8 +446,6 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
     for beam_1 in ['laser', 'x-ray']:
 
         # If laser was not used, skips to checking x-ray signal
-        #print(f'{beam=}')
-        #print(f'{beam_1=}')
         if (beam not in ['laser', 'both']) and (first_fit): #seeing if the original beam used the laser
             log('Checking x-ray scan...')
             first_fit = False
@@ -445,8 +462,6 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
         # Try to find edge
         try:
             cent_position, fwhm, scanid = yield from beam_knife_edge_plot(beam=beam_1, plotme=plotme)
-            #print(f'{cent_position=}')
-            #print(f'{fwhm=}')
 
         # RuntimeErrors for nonideal fitting. Trying to fix by extended scan range    
         except RuntimeError: 
@@ -845,8 +860,8 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
                         vlm_move=True):
 
     '''
-    v_edge          (list)  [x,y,z] location of vertical line/edge. Scan across for x position
-    h_edge          (list)  [x,y,z] location of horizontal line/edge. Scan across fory position
+    v_edge          (list)  [x,y, z] location of vertical line/edge. Scan across for x position
+    h_edge          (list)  [x,y, z] location of horizontal line/edge. Scan across fory position
     distance        (float) Distance in µm to either side of feature to scan across
     stepsize        (float) Step size in µm of scans
     acqtime         (float) Acquisition time of detectors
@@ -860,6 +875,9 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
     poss_direct = ['x', 'y', 'both']
     if not any(direction in poss_direct for direction in poss_direct):
         raise ValueError("Incorrect direction assignment. Please specify 'x', 'y', or 'both' for direction.")
+
+    # Make sure correct form of input coordinates
+    v_edge, h_edge = check_input_coords(v_edge, h_edge)
 
     # Setting up label variables
     motors = [nano_stage.x, nano_stage.y, nano_stage.z]
@@ -946,7 +964,7 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
     return xray_pos, xray_sizes, laser_pos, laser_sizes, off_adj
 
 
-def laser_time_series(power, hold, ramp=5, wait = 0,
+def laser_time_series(power, hold, ramp=5, wait=0,
                       extra_dets=[xs, merlin], shutter=True):
     
     '''
@@ -1153,7 +1171,7 @@ def laser_time_series(power, hold, ramp=5, wait = 0,
 
 def tr_xanes_plan(xyze_pos, power, hold,
                   v_edge=None, h_edge=None, distance=25, stepsize=0.5,
-                  N_start=1, z_pos=[], ramp=5,
+                  N_start=1, ramp=5,
                   dets=[xs, merlin], acqtime=0.001,
                   waittime=5, peakup_N=15, align_N=15,
                   no_data=False, shutter=True):
@@ -1162,12 +1180,11 @@ def tr_xanes_plan(xyze_pos, power, hold,
     xyze_pos    (list)  x, y, z positions and energies to to acquire time series
     power       (float) Target laser power. Controlled by calibration curve
     hold        (float) Hold time at target laser power. If -1, then holds indefinitely
-    v_edge      (list)  [x, y] location of vertical line/edge. Scan across for X-ray x position
-    h_edge      (list)  [x, y] location of horizontal line/edge. Scan across for X-ray y position
+    v_edge      (list)  [x, y, z] location of vertical line/edge. Scan across for X-ray x position
+    h_edge      (list)  [x, y, z] location of horizontal line/edge. Scan across for X-ray y position
     distance    (float) Distance in µm to either side of feature to scan across
     stepsize    (float) Step size in µm of scans
     n_start     (int)   Start index of batch. Used to pick up failed batches.
-    z_pos       (float) z position for focused laser (i.e., sample plane)
     ramp        (float) Time for ramp up to target laser power
     dets        (list)  detectors used to collect time-resolved data
     acqtime     (float) Acquisition/integration time. Default is 0.001 seconds
@@ -1179,11 +1196,11 @@ def tr_xanes_plan(xyze_pos, power, hold,
     '''
 
     # Check positions
-    if (xye_pos == []):
+    if (xyze_pos == []):
         raise AttributeError("You need to enter spatial and energy positions.")
 
     #Number of total events
-    N = len(xye_pos)
+    N = len(xyze_pos)
 
     # Check N_start
     if (N_start < 1) or (N_start >= N):
@@ -1197,6 +1214,9 @@ def tr_xanes_plan(xyze_pos, power, hold,
     if align_N !=0:
         if (v_edge == None) or (h_edge == None):
             raise ValueError("Edge positions must be provided for beam alignment.")
+
+    # Make sure correct form of input coordinates
+    v_edge, h_edge = check_input_coords(v_edge, h_edge)
 
     # Define total_time from laser parameters
     total_time = ramp + hold
@@ -1217,15 +1237,6 @@ def tr_xanes_plan(xyze_pos, power, hold,
     log(f'{power} mW laser power. {ramp} sec ramp with {hold} sec hold.')
     log(f'Alignment every {align_N} events. Peakup every {peakup_N} events.')
     log(f'Edges at: vertical {v_edge}, horizontal {h_edge}')
-
-    # Move z-stage to sample plane if given
-    if (z_pos != []):
-        log(f'Moving to:')
-        log(f'\tz = {z_pos}')
-        yield from mov(nano_stage.z, z_pos)
-    else:
-        log('No z-coordinate given. Assuming position already at sample plane.') #how to record current z_pos
-        log(f'Current z_pos is {nano_stage.z.user_readback.get():.3f}.')
 
     # Timing statistics
     N_time = N - N_start
@@ -1278,23 +1289,25 @@ def tr_xanes_plan(xyze_pos, power, hold,
         t0_e = ttime.time()
         log(f'Scanning though event {i + 1} of {N} events.')
         log('Moving to:')
-        log(f'\tx = {xye_pos[i][0]:.3f}')
-        log(f'\ty = {xye_pos[i][1]:.3f}')
-        yield from mov(nano_stage.x, xye_pos[i][0],
-                       nano_stage.y, xye_pos[i][1])
+        log(f'\tx = {xyze_pos[i][0]:.3f}')
+        log(f'\ty = {xyze_pos[i][1]:.3f}')
+        log(f'\tz = {xyze_pos[i][2]:.3f}')
+        yield from mov(nano_stage.x, xyze_pos[i][0],
+                       nano_stage.y, xyze_pos[i][1],
+                       nano_stage.z, xyze_pos[i][2])
         if not no_data:
-            log(f'\te = {xye_pos[i][2]}')
-            yield from mov(energy, xye_pos[i][2])
+            log(f'\te = {xyze_pos[i][2]}')
+            yield from mov(energy, xyze_pos[i][3])
         else:
             log('Collecting no data. No energy moves since irrelvant.')
 
         # Trigger laser and collect time series data
         if no_data:
-            yield from laser_on(power, hold, ramp)
+            yield from laser_on(power, hold, ramp=ramp)
             yield from bps.sleep(total_time)
             yield from laser_off()
         else:
-            yield from laser_time_series(power, hold, ramp, xye_pos[i][2], dets=dets, total_time=total_time, acqtime=acqtime, shutter=shutter)
+            yield from laser_time_series(power, hold, ramp=ramp, extra_dets=dets, shutter=shutter)
         
         # Recorded batch scan information
         h = db[-1]
