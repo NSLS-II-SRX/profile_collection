@@ -349,7 +349,10 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         while (xs.channel01.mcaroi.ts_acquiring.get() != 1 or xs.cam.detector_state.get() != 1):
             if verbose:
                 print(f"{ttime.ctime(t0)}\tParanoid check was worth it...")
-            yield from abs_set(xs.channel01.mcaroi.ts_control, 1)
+            try:
+                yield from abs_set(xs.channel01.mcaroi.ts_control, 1, timeout=1)
+            except Exception as e:
+                print('  Timeout on time-series. Continuing...')
             # yield from bps.trigger(xs, group=row_str)
             yield from bps.sleep(0.1)
             if (ttime.monotonic() - t0) > 10:
