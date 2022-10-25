@@ -1,6 +1,5 @@
 print(f'Loading {__file__}...')
 
-from http.client import MOVED_PERMANENTLY
 import numpy as np
 import time as ttime
 import matplotlib.pyplot as plt
@@ -372,7 +371,6 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
     variables = ['x', 'y']
     if not any(direction in variables for direction in variables):
         raise ValueError("Incorrect direction assignment. Please specify 'x' or 'y' for direction.")
-
     # Checking beam inputs
     poss_beams = ['x-ray', 'laser', 'both']
     if not any(beam in poss_beams for beam in poss_beams):
@@ -628,7 +626,6 @@ def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True, edges=1,
     log(f'Fit R-squared is {r_squared:.4f}')
     perr = np.sqrt(np.diag(pcov))
     frac_err = np.abs(np.array(perr) / np.array(popt))
-    #print(f'{frac_err[:3]=:.3E}')
 
     # Save the raw data and fitting parameters for access later
     with open(f'{dir}raw_data/scan_{id_str}_{beam}_{direction}.txt', 'w+') as f:
@@ -1197,18 +1194,14 @@ def tr_xanes_plan(xyze_pos, power, hold,
     # Check positions
     if (xyze_pos == []):
         raise AttributeError("You need to enter spatial and energy positions.")
-
     #Number of total events
     N = len(xyze_pos)
-
     # Check N_start
     if (N_start < 1) or (N_start >= N):
         raise ValueError("N_start must be a positive integer within the number of events.")
-    
     # Checking for improper hold time input
     if hold < 0:
         raise ValueError("Hold times cannot be negative nor indefinite for batched time series collection.")
-    
     # Checking for edge positions if beam alignements are expected
     if align_N !=0:
         if (v_edge == None) or (h_edge == None):
