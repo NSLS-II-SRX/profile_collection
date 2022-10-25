@@ -237,6 +237,12 @@ def gen_xyze_pos(erange = [11817, 11862, 11917, 12267],
         os.makedirs(filedir, exist_ok=True)
     if (start is []) or (end is []):
         raise AttributeError("Please make sure start and end positions are defined!")
+    if len(start) != len(end):
+        raise ValueError("Start and end coordinates do not have the same length!")
+    if (len(start) == 2) or (len(end) == 2):
+        z_coord = nano_stage.z.user_readback.get()
+        print(f'No z-coordinate given. Assuming no sample rotation.\n\tz-coordinates = {z_coord}')
+        start.append(z_coord), end.append(z_coord)
 
     # Convert erange and estep to numpy array
     ept = np.array([])
