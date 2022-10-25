@@ -11,12 +11,12 @@ import shutil
 # PI_lastname = None
 # saf_num = None
 
-proposal_num = 311145
-proposal_title = 'Observation of glass structure'
+proposal_num = 311000
+proposal_title = 'In situ observation of glass structure evolution preceding crystallization'
 PI_lastname = 'Musterman'
-saf_num = 309482
+saf_num = 309482 #???
 
-cycle = '2022_cycle2'
+cycle = '2022_cycle3'
 
 # Set user data in bluesky
 RE.md['proposal']  = {'proposal_num': str(proposal_num),

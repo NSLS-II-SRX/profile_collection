@@ -854,7 +854,7 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
     # Setting up label variables
     motors = [nano_stage.x, nano_stage.y, nano_stage.z]
     variables = ['x','y']
-    FOV = [500, 500] # FOV of VLM in um. What is this? Laser spot should start within VLM image.
+    FOV = [500, 500] # FOV of VLM in um. Laser spot should start within VLM image.
     vlm_motors = [nano_vlm_stage.x, nano_vlm_stage.y, nano_vlm_stage.z]
     xray_pos, xray_sizes = [], []
     laser_pos, laser_sizes = [], []
@@ -875,8 +875,8 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
                                                                 acqtime=acqtime, shutter=shutter, check=False)
         
         # Adjust VLM position
-        offset = beam_param[2] - beam_param[0]
-        if np.abs(offset) > 0.5*FOV[i]:
+        offset = beam_param[3] - beam_param[0]
+        if np.abs(offset) > 0.5 * FOV[i]:
             log("Trying to adjust VLM stage by more than 50% of FOV. Retry beam alignment.")
             raise RuntimeError()
         log(f'Previous VLM stage coordinates at:\n' +
@@ -901,9 +901,10 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
             laser_beam = yield from beam_knife_edge_scan('laser', variables[i], j, distance=distance, stepsize=stepsize, 
                                                                   acqtime=acqtime, shutter=shutter, check=True)
             new_laser_pos, new_laser_size = laser_beam[0], laser_beam[1]
+            beam_param[2] = laser_beam[2] # redefining laser scan id
             
             # Adjust VLM position
-            new_offset = beam_param[2] - new_laser_pos
+            new_offset = beam_param[3] - new_laser_pos
             tot_offset = offset + new_offset
             if (np.abs(new_offset) > np.abs(offset)) and (new_offset > stepsize):
                 raise RuntimeError("Stage correspondence issue. Beam alignment will not converge.")
@@ -923,8 +924,14 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
         # Record information
         log('Recording useful alignment parameters.')
         laser_pos.append(new_laser_pos), laser_sizes.append(new_laser_size)
-        xray_pos.append(beam_param[2]), xray_sizes.append(beam_param[3])
+        xray_pos.append(beam_param[3]), xray_sizes.append(beam_param[4])
         off_adj.append(offset), off_adj.append(tot_offset)
+
+        # Plotting beam alignments
+        log(f'Plotting beam alignments along {direction} for scans:\n' +
+        f'\tlaser = {beam_param[2]}\n' +
+        f'\tx-ray = {beam_param[5]}')
+        plot_beam_alignment(laserid=beam_param[2], xrayid=beam_param[5])
 
     return xray_pos, xray_sizes, laser_pos, laser_sizes, off_adj
 
