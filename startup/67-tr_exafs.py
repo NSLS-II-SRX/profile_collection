@@ -18,6 +18,10 @@ from bluesky.log import logger, config_bluesky_logging, LogFormatter
 # Find a way to add XAS_TIME to logscan_detailed file
 # Batch script of beam alignments with progressively smaller steps
 #   A run and forget alignment procedure?
+# Add z to generate coordinates function
+#   Allow for a rotated plane of sample points (sqrt2 * spacing)
+# Add z moves to tr_exafs_batch plan
+# Add z moves to edge positions for alignments
 
 
 # Setting up a logging file
@@ -60,8 +64,6 @@ def stop_logging():
 def log(message):
     if debug_logging:
         logger.info(message)
-    #else:
-    #    print(message)
     print(message)
 
 
@@ -197,7 +199,7 @@ vp = sclr2.channels.chan5'''
 #######################################
 
 
-def gen_xye_pos(erange = [11817, 11862, 11917, 12267],
+def gen_xyze_pos(erange = [11817, 11862, 11917, 12267],
                 estep = [2, 0.5, 5],
                 filedir='',
                 filename='',
@@ -209,10 +211,10 @@ def gen_xye_pos(erange = [11817, 11862, 11917, 12267],
     '''
     erange      (array) energy range for XANES/EXAFS in eV. e.g., [11867-50, 11867-20, 11867+50, 11867+400]
     estep       (array) energy step size for each energy range in eV. e.g., = [2, 0.5, 5]
-    filedir     (str)   file directory for where to save xye position data
-    filename    (str)   file name for where to save xye position data
-    start       (array) [x, y] coordinates for starting corner of rectangular ROI. nano_stage_x
-    end         (array) [x, y] coordinates for ending corner of rectangular ROI. nano_stage_y
+    filedir     (str)   file directory for where to save xyze position data
+    filename    (str)   file name for where to save xyze position data
+    start       (array) [x, y, z] coordinates for starting corner of rectangular ROI
+    end         (array) [x, y, z] coordinates for ending corner of rectangular ROI
     spacing     (float) Spacing in microns between individual event coordinates. Large enough to avoid overlap
     replicates  (int)   Number of replicates at each energy of interest
     '''
@@ -231,7 +233,7 @@ def gen_xye_pos(erange = [11817, 11862, 11917, 12267],
         log("File name and directory blank. Generating defaults.")
         # Setting up a logging file
         filename = ttime.strftime("%y-%m-%d_T%H%M%S",ttime.localtime(ttime.time())) + '_coordinates.txt'
-        filedir = '/home/xf05id1/current_user_data/xye_data/'
+        filedir = '/home/xf05id1/current_user_data/xyze_data/'
         os.makedirs(filedir, exist_ok=True)
     if (start is []) or (end is []):
         raise AttributeError("Please make sure start and end positions are defined!")
@@ -248,45 +250,47 @@ def gen_xye_pos(erange = [11817, 11862, 11917, 12267],
     ept = np.repeat(ept, replicates)
 
     # Map out points for each event
-    x_ind = np.arange(start[0], end[0]+spacing, spacing)
-    y_ind = np.arange(start[1], end[1]+spacing, spacing)
-    xy_pos = np.array(list(product(x_ind, y_ind))) #numpy meshgrid may also work??
+    x_ind = np.arange(start[0], end[0] + spacing, spacing)
+    y_ind = np.arange(start[1], end[1] + spacing, spacing)
+    z_ind = np.repeat(np.linspace(start[2], end[2], len(y_ind)), len(x_ind))
+    #xyz_mesh = np.vstack([np.flip(np.array(np.meshgrid(y_ind, x_ind)).reshape(2, len(x_ind) * len(y_ind)).T, axis=1).T, z_ind]).T
+    xyz_pos = np.vstack([np.array(list(product(x_ind, y_ind))).T, z_ind]).T
 
     # Are there enough points for the energies of interest?
-    if len(ept) > len(xy_pos):
-        print(f"{len(ept)=}\n{len(xy_pos)=}")
+    if len(ept) > len(xyz_pos):
+        print(f"{len(ept)=}\n{len(xyz_pos)=}")
         raise ValueError("Not enough points for the number of events desired. Refine spacing or select a larger area.")
 
     # Combine first points with energies of interest
-    xye_pos = []
+    xyze_pos = []
     for i in range(len(ept)):
-        xye_pos.append([xy_pos[i][0], xy_pos[i][1], ept[i]])
-    xye_pos = np.asarray(xye_pos)
+        xyze_pos.append([*xyz_pos[i], ept[i]])
+    xyze_pos = np.asarray(xyze_pos)
 
     # Save the positions and energies with 
-    np.savetxt(filedir+filename, xye_pos, delimiter=',', fmt='%1.4f')
-    log(f'{len(xye_pos)} xye positions saved to ' + filedir+filename)
+    np.savetxt(filedir + filename, xyze_pos, delimiter=',', fmt='%1.4f')
+    log(f'{len(xyze_pos)} xyze positions saved to ' + filedir + filename)
 
 
-def read_xye_pos(filedir='', filename=''):
+def read_xyze_pos(filedir='', filename=''):
 
     '''
-    filedir     (str)   file directory for where to load xye position data
-    filename    (str)   file name for where to load xye position data
+    filedir     (str)   file directory for where to load xyze position data
+    filename    (str)   file name for where to load xyze position data
     '''
 
     # Checking for filedir and filename. Loading most recent if not
     if (filedir == '') or (filename == ''):
         log("No file location information given. Loading most recent.")
         # Setting up a logging file
-        filedir = '/home/xf05id1/current_user_data/xye_data/'
+        filedir = '/home/xf05id1/current_user_data/xyze_data/'
         filenames = os.listdir(filedir)
         filenames.sort()
         filename =  filenames[-1]
 
     # Reading data into an array
-    xye_pos = np.genfromtxt(filedir+filename, delimiter=',')
-    return xye_pos
+    xyze_pos = np.genfromtxt(filedir + filename, delimiter=',')
+    return xyze_pos
 
 
 def laser_on(power, hold, ramp=5, delay=0):
@@ -1141,7 +1145,7 @@ def laser_time_series(power, hold, ramp=5, wait = 0,
     # received. The stop document only has the UUID, but you can use
     # that to get a scan ID
 
-def tr_xanes_plan(xye_pos, power, hold,
+def tr_xanes_plan(xyze_pos, power, hold,
                   v_edge=None, h_edge=None, distance=25, stepsize=0.5,
                   N_start=1, z_pos=[], ramp=5,
                   dets=[xs, merlin], acqtime=0.001,
@@ -1149,11 +1153,11 @@ def tr_xanes_plan(xye_pos, power, hold,
                   no_data=False, shutter=True):
 
     '''
-    xye_pos     (list)  x and y positions and energies to to acquire time series
+    xyze_pos    (list)  x, y, z positions and energies to to acquire time series
     power       (float) Target laser power. Controlled by calibration curve
     hold        (float) Hold time at target laser power. If -1, then holds indefinitely
-    v_edge      (list)  [x,y] location of vertical line/edge. Scan across for X-ray x position
-    h_edge      (list)  [x,y] location of horizontal line/edge. Scan across for X-ray y position
+    v_edge      (list)  [x, y] location of vertical line/edge. Scan across for X-ray x position
+    h_edge      (list)  [x, y] location of horizontal line/edge. Scan across for X-ray y position
     distance    (float) Distance in µm to either side of feature to scan across
     stepsize    (float) Step size in µm of scans
     n_start     (int)   Start index of batch. Used to pick up failed batches.
@@ -1312,10 +1316,10 @@ def tr_xanes_plan(xye_pos, power, hold,
             if t_rem_tot < 86400:
                 str_rem = ttime.strftime("%#H:%M:%S", ttime.gmtime(t_rem_tot))
             elif t_rem_tot >= 86400:
-                str_rem = ttime.strftime("%-d day and %#H:%M:%S",ttime.gmtime(t_rem_tot))
+                str_rem = ttime.strftime("%-d day and %#H:%M:%S", ttime.gmtime(t_rem_tot))
             elif t_rem_tot > 86400 * 2: #this really is just to have pural days...
-                str_rem = ttime.strftime("%-d days and %#H:%M:%S",ttime.gmtime(t_rem_tot))
-            str_comp = ttime.strftime("%a %b %#d %#H:%M:%S",ttime.localtime(ttime.time() + t_rem_tot))
+                str_rem = ttime.strftime("%-d days and %#H:%M:%S", ttime.gmtime(t_rem_tot))
+            str_comp = ttime.strftime("%a %b %#d %#H:%M:%S", ttime.localtime(ttime.time() + t_rem_tot))
 
             log(f'Estimated {str_rem} remaining.')
             log(f'Predicted completion at {str_comp}.')
@@ -1329,5 +1333,5 @@ def tr_xanes_plan(xye_pos, power, hold,
     log('Batch is complete!!!')
     if not no_data:
         log(f'Batched {i + 1} events for scans {scanid_lst[0]}:{scanid_lst[-1]}.')
-    fin_time = ttime.strftime("%a %b %#d %#H:%M:%S",ttime.localtime(ttime.time()))
+    fin_time = ttime.strftime("%a %b %#d %#H:%M:%S", ttime.localtime(ttime.time()))
     log(f'Finished at {fin_time}.')
