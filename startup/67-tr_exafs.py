@@ -1153,7 +1153,7 @@ def laser_time_series(power, hold, ramp=5, wait=0,
     h = db[-1]
     id_str = h.start['scan_id']
 
-    #logscan_detailed('XAS_TIME')
+    logscan_detailed('LASER_TIME')
 
     log(f'Time series acquired for {id_str} scan!') #How to add scan ID information??
     # One way to do it (probably not the best way) would be to simply
