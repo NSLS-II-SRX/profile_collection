@@ -96,6 +96,9 @@ class BPM_TetrAMM(Device):
 
 
 bpm4 = BPM_TetrAMM('XF:05IDA-BI{BPM:4}', name='bpm4')
+bpm5 = BPM_TetrAMM('XF:05IDA-BI{BPM:05}AH501:', name='bpm5')
+for ch in [bpm5.channel1, bpm5.channel2, bpm5.channel3, bpm5.channel4]:
+    ch.kind = bpm5.channel1.kind.normal
 
 # Diamond XBPM in D-hutch
 class SRX_NSLS_EM(NSLS_EM):

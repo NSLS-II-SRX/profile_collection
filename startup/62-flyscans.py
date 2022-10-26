@@ -211,10 +211,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Set the ROI pv
     xs_ = dets_by_name[flying_zebra.detectors[0].name]
     if hasattr(xs_, 'channel01'):
-        roi_pv = EpicsSignalRO('XF:05IDD-ES{Xsp:3}:MCA1ROI:1:TSTotal', name=xs_.channel01.mcaroi01.roi_name.get())
-        ts_start = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSControl', name='ts_start')
-        ts_N = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSNumPoints', name='ts_N')
-        ts_state = EpicsSignal('XF:05IDD-ES{Xsp:3}:MCA1ROI:TSAcquiring', name='ts_state')
+        roi_pv = xs_.channel01.mcaroi01.ts_total
         ## Erase the TS buffer
         # yield from mov(ts_start, 0)  # Start time series collection
         # yield from mov(ts_start, 2)  # Stop time series collection
@@ -227,9 +224,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             print(e)
         try:
             # This erases the time-series array, otherwise we see the previous scan
-            yield from abs_set(ts_start, 2, wait=True, timeout=1)  # Stop time series collection
-            yield from abs_set(ts_start, 0, wait=True, timeout=1)  # Start/erase time series collection
-            yield from abs_set(ts_start, 2, wait=True, timeout=1)  # Stop time series collection
+            yield from abs_set(xs_.channel01.mcaroi.ts_control, 2, wait=True, timeout=1)  # Stop time series collection
+            yield from abs_set(xs_.channel01.mcaroi.ts_control, 0, wait=True, timeout=1)  # Start/erase time series collection
+            yield from abs_set(xs_.channel01.mcaroi.ts_control, 2, wait=True, timeout=1)  # Stop time series collection
         except Exception as e:
             # Eating the exception
             print('The time-series did not clear correctly. Continuing...')
@@ -349,10 +346,13 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 yield from bps.sleep(1)
         # AMK paranoid check
         t0 = ttime.monotonic()
-        while (ts_state.get() != 1 or xs.cam.detector_state.get() != 1):
+        while (xs.channel01.mcaroi.ts_acquiring.get() != 1 or xs.cam.detector_state.get() != 1):
             if verbose:
                 print(f"{ttime.ctime(t0)}\tParanoid check was worth it...")
-            yield from abs_set(ts_state, 1)
+            try:
+                yield from abs_set(xs.channel01.mcaroi.ts_control, 1, timeout=1)
+            except Exception as e:
+                print('  Timeout on time-series. Continuing...')
             # yield from bps.trigger(xs, group=row_str)
             yield from bps.sleep(0.1)
             if (ttime.monotonic() - t0) > 10:
@@ -528,7 +528,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             yield from bps.mov(xs2.external_trig, True)
 
         # Set TimeSeries to collect correct number of points
-        yield from abs_set(ts_N, xnum, timeout=10)
+        yield from abs_set(xs.channel01.mcaroi.ts_num_points, xnum, timeout=10)
         
         ystep = 0
         for step in np.linspace(ystart, ystop, ynum):
@@ -559,7 +559,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             #     print(f'Stop  = {stop}')
             # print(' x3x time-series erase-start...\n')
             try:
-                yield from abs_set(ts_start, 0, timeout=3, wait=True)
+                yield from abs_set(xs.channel01.mcaroi.ts_control, 0, timeout=3, wait=True)
                 # print(' x3x time-series erase-start...done\n')
             except Exception as e:
                 print('Timeout on starting time-series! Continuing...')
@@ -606,7 +606,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
     # Stop TimeSeries collection
     try:
-        yield from abs_set(ts_start, 2, wait=True, timeout=1)
+        yield from abs_set(xs.channel01.mcaroi.ts_control, 2, wait=True, timeout=1)
     except Exception:
         print('Timeout stopping time series at end of scan.')
 

@@ -26,7 +26,7 @@ class SRXAttenuators(Device):
     Mo_shutter = Cpt(EpicsSignal, '4-Cmd')
 
 attenuators = SRXAttenuators('XF:05IDD-ES{IO:2}DO:', name='attenuators')
-shut_d = attenuators.Mo_shutter
+# shut_d = attenuators.Mo_shutter
 
 
 # micro-KB mirrors from XFM
