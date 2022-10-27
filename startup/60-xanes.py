@@ -1260,71 +1260,74 @@ def plot_flyer_id_mono_data(uid_or_scanid, e_min=None, e_max=None, fname=None, r
     return res
 
 # Export data function
-def export_flyer_id_mono_data(uid_or_scanid, e_min=None, e_max=None, fname=None, root='/home/xf05id1/current_user_data/', flyer=flyer_id_mono):
+def export_flyer_id_mono_data(uid_or_scanid, roi=1, e_min=None, e_max=None, fname=None, root='/home/xf05id1/current_user_data/', flyer=flyer_id_mono):
     hdr = db[uid_or_scanid]
     stream_names = hdr.stream_names
     stream_names.remove('baseline')
 
     # Assuming first detector in the xs_detectors list has the correct ROI in ROI1
     if (e_min is None):
-        e_min = flyer.xs_detectors[0].channel01.mcaroi01.min_x.get()
-        # e_min = xs.channel1.rois.roi01.bin_low.get()
+        e_min = getattr(flyer.xs_detectors[0].channel01, f"mcaroi{roi:02}").min_x.get()
+        # e_min = flyer.xs_detectors[0].channel01.mcaroi01.min_x.get()
     if (e_max is None):
-        e_max = flyer.xs_detectors[0].channel01.mcaroi01.min_x.get() + flyer.xs_detectors[0].channel01.mcaroi01.size_x.get()
-        # e_max = xs.channel1.rois.roi01.bin_high.get()
+        e_max = getattr(flyer.xs_detectors[0].channel01, f"mcaroi{roi:02}").min_x.get() + getattr(flyer.xs_detectors[0].channel01, f"mcaroi{roi:02}").size_x.get()
+        # e_max = flyer.xs_detectors[0].channel01.mcaroi01.min_x.get() + flyer.xs_detectors[0].channel01.mcaroi01.size_x.get()
 
     ring_current_start = f"{list(hdr.data('ring_current', stream_name='baseline'))[0]:.2f}"
 
-    staticheader = '# XDI/1.0 MX/2.0\n' \
-                 + '# Beamline.name: ' + hdr.start['beamline_id'] + '\n' \
-                 + '# Facility.name: NSLS-II\n' \
-                 + '# Facility.ring_current:' + ring_current_start + '\n' \
-                 + '# Scan.start.uid: ' + hdr.start['uid'] + '\n' \
-                 + '# Scan.start.time: '+ str(hdr.start['time']) + '\n' \
-                 + '# Scan.start.ctime: ' + ttime.ctime(hdr.start['time']) + '\n' \
-                 + '# Mono.name: Si 111\n\n'
+    staticheader = f"# XDI/1.0 MX/2.0\n" \
+                 + f"# Beamline.name: {hdr.start['beamline_id']}\n" \
+                 + f"# Facility.name: NSLS-II\n" \
+                 + f"# Facility.ring_current: {ring_current_start}\n" \
+                 + f"# IVU.harmonic: {hdr.start['scan']['harmonic']}\n" \
+                 + f"# Mono.name: Si 111\n" \
+                 + f"# Scan.start.uid: {hdr.start['uid']}\n" \
+                 + f"# Scan.start.scanid: {hdr.start['scan_id']}\n" \
+                 + f"# Scan.start.time: {hdr.start['time']}\n" \
+                 + f"# Scan.start.ctime: {ttime.ctime(hdr.start['time'])}\n" \
+                 + f"# Scan.ROI.name: {hdr.start['scan']['roi_names'][roi-1]}\n" \
+                 + f"# Scan.ROI.number: {roi}\n" \
+                 + f"# Scan.ROI.range: {f'[{e_min}:{e_max}]'}\n" \
+                 + f"# \n"
 
     for stream in sorted(stream_names):
         if 'monitor' in stream:
             continue
-        tbl = hdr.table(stream_name=stream, fill=True)
 
         fname = f"scan_{hdr.start['scan_id']}_{stream}.txt"
         fname = root + fname
 
         print(f'{stream}')
         print(f'  Collecting data...')
-        d = []
-        for i in flyer.xs_detectors[0].channel_numbers:
-            d.append(np.array(list(hdr.data(f'{flyer.xs_detectors[0].name}_channel{i:02}', stream_name=stream)))[:, e_min:e_max].sum(axis=1))
-        d = np.array(d)
-
-        i0 = np.array(tbl['i0'])
-        im = np.array(tbl['im'])
-        it = np.array(tbl['it'])
-        energy = np.array(tbl['energy'])
+        # Get the full table
+        tbl = hdr.table(stream_name=stream, fill=True)
 
         print(f'  Processing data...')
-        spectrum_raw = d.sum(axis=0)
-        spectrum = spectrum_raw / i0
+        # Set energy as the axis/index
+        tbl.set_index('energy', drop=True, inplace=True)
+        # Remove unnecessary columns
+        tbl.drop(columns=['time', 'i0_time'], inplace=True)
+        # Apply ROI to each xs column and rename the column
+        ch_names = [_ for _ in tbl.keys() if 'xs' in _]
+        for ch in ch_names:
+            tbl[ch] = tbl[ch].apply(lambda row : np.sum(row[e_min:e_max]))
+            tbl.rename(columns={ch : ch.split('_')[-1]}, inplace=True)
+        # Sum the ROIs
+        ch_names = [_ for _ in tbl.keys() if 'ch' in _]
+        tbl['ch_sum'] = tbl[ch_names].sum(axis=1)
 
-        res = np.vstack((energy, i0, im, it, d, spectrum_raw, spectrum))
+        # Prepare for export
+        col_names = [tbl.index.name] + list(tbl.columns)
+        for i, col in enumerate(col_names):
+            staticheader += f"# Column {i+1:02}: {col}\n"
+        staticheader += "# \n# "
 
-        data_hdr = 'Energy\ti0\tim\tit\t' + 'ch1\t' + 'sum_chi\t' + 'normalized'
-        fmt = ['.3f'] + ['.2f']*3 + ['.2f']*flyer.xs_detectors[0].channel_numbers[-1] + ['.2f'] + ['.4f']
-        print('  Writing data...')
-        np.savetxt(root+f"scan_{hdr.start['scan_id']}_{stream}_fast.txt", res.T, header=staticheader+data_hdr)
-
-        data = [['Energy' , "%.3f", energy],
-                ['i0'     , "%.3f", i0],
-                ['ch_sum' , "%.3f", spectrum_raw],
-                ['norm'   , "%.6f", spectrum]]
-
+        print('  Exporting data...')
+        # Export data to file
         with open(fname, 'w') as f:
             f.write(staticheader)
-            f.write(data_hdr + '\n')
-            for i in range(len(energy)):
-                f.write(f"{energy[i]:.3f}\t{i0[i]:.2f}\t{im[i]:.2f}\t{spectrum_raw[i]:.2f}\t{spectrum[i]:.4f}\n")
+        tbl.to_csv(fname, float_format="%.3f", sep=' ', mode='a')
+
         print('  Complete!')
 
 def flying_xas(num_passes=1, shutter=True, md=None):
