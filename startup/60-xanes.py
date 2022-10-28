@@ -1014,11 +1014,17 @@ class FlyerIDMono(Device):
         # print(f"Truncated length of 'it'     : {len(it)}")
 
         if len(i0_time) != len(i0) != len(im) != len(it):
+            print(f'{len(i0_time)=}')
             raise RuntimeError(f"Lengths of the collected arrays are not equal")
         if len(i0_time) != num_triggers:
-            for d in [i0_time, i0, im, it]:
-                d = np.concatenate((d, np.ones((num_triggers-len(d),))))
-        print(f'{len(i0_time)=}')
+            # I don't understand why I can't do this in a for-loop with a list
+            # for d in [i0_time, i0, im, it]:
+            #     d = np.concatenate((d, np.ones((num_triggers-len(d),))))
+            i0_time = np.concatenate((i0_time, np.ones((num_triggers-len(i0_time),))))
+            i0 = np.concatenate((i0, np.ones((num_triggers-len(i0),))))
+            im = np.concatenate((im, np.ones((num_triggers-len(im),))))
+            it = np.concatenate((it, np.ones((num_triggers-len(it),))))
+            print(f'{len(i0_time)=}')
 
         # print(f"{print_now()}: before unstage of xs in collect")
 
