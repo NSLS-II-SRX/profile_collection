@@ -623,7 +623,9 @@ class FlyerIDMono(Device):
         # Scaler config
         # self.scaler.count_mode.put(0)  # put SIS3820 into single count (not autocount) mode
         self.scaler.stop_all.put(1)  # stop scaler
+        ttime.sleep(0.050)
         self.scaler.nuse_all.put(2*total_points)
+        ttime.sleep(0.050)
         self.scaler.erase_start.put(1)
         self._stage_with_delay()
 
