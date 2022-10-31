@@ -23,6 +23,10 @@ from numpy.lib.stride_tricks import as_strided
 from ophyd.status import SubscriptionStatus
 from ophyd.sim import NullStatus
 
+# Kafka can throw a warning if the document is too large
+# Adding this is an attempt to prevent the document (really long) being output to screen
+warnings.filterwarnings(action="ignore", message="MSG_SIZE_TOO_LARGE")
+
 
 def xanes_textout(scan=-1, header=[], userheader={}, column=[], usercolumn={},
                   usercolumnname=[], output=True, filename_add='', filedir=None):
