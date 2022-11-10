@@ -86,7 +86,7 @@ def f_2edge(x, A1, sigma1, x1, y1,
 
 
 # Convenience function for setting up detectors
-def set_tr_flyer_stage_sigs(flyer, divs=[1, 3, 10, 100]):
+def set_tr_flyer_stage_sigs(flyer, divs=[3, 3, 10, 100]):
     if divs == []:
         raise ValueError('Need to define the divisions for appropriate detectors!')
 
@@ -134,7 +134,7 @@ def set_tr_flyer_stage_sigs(flyer, divs=[1, 3, 10, 100]):
     flyer.stage_sigs[flyer._encoder.div4.first_pulse] = 0
     
     ## PULSE tab
-    flyer.stage_sigs[flyer._encoder.pulse1.width] = 0.5 # change to 0.9??
+    flyer.stage_sigs[flyer._encoder.pulse1.width] = 2.75 # change to 0.9??
     flyer.stage_sigs[flyer._encoder.pulse1.input_addr] = 32
     flyer.stage_sigs[flyer._encoder.pulse1.delay] = 0
     flyer.stage_sigs[flyer._encoder.pulse1.time_units] = "ms"
@@ -149,7 +149,7 @@ def set_tr_flyer_stage_sigs(flyer, divs=[1, 3, 10, 100]):
 
 
 class SRXLaser(Device):
-    signal = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:SOFT_IN:B0')
+    signal = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:SOFT_IN:B3')
     power = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:PC_GATE_START')
     hold = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:PC_GATE_STEP')
     ramp = Cpt(EpicsSignal, 'XF:05IDD-ES:1{Dev:Zebra1}:PC_GATE_WID')
