@@ -1,25 +1,18 @@
 print(f"Loading {__file__}...")
 
-## Debugging
-# $ TOUCHBEAMLINE=1 bsui
-# use str below
-#
-# import os
-# if 'TOUCHBEAMLINE' in os.environ and os.environ['TOUCHBEAMLINE'] == 1:
-#     print('int')
-#
-# if os.getenv("TOUCHBEAMLINE", "0") == "1":
-#     print('str')
-#
-# raise Exception
-
-
-###############################################################################
-# TODO: remove this block once https://github.com/bluesky/ophyd/pull/959 is
-# merged/released.
+import os
 from datetime import datetime
 from ophyd.signal import EpicsSignalBase, EpicsSignal, DEFAULT_CONNECTION_TIMEOUT
 from bluesky_queueserver import is_re_worker_active, parameter_annotation_decorator
+
+def if_touch_beamline(envvar="TOUCHBEAMLINE"):
+    value = os.environ.get(envvar, "false").lower()
+    if value in ("", "n", "no", "f", "false", "off", "0"):
+        return False
+    elif value in ("y", "yes", "t", "true", "on", "1"):
+        return True
+    else:
+        raise ValueError(f"Unknown value: {value}")
 
 def print_now():
     return datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S.%f')
@@ -51,9 +44,25 @@ EpicsSignalBase.wait_for_connection = wait_for_connection_base
 EpicsSignal.wait_for_connection = wait_for_connection
 ###############################################################################
 
+if if_touch_beamline():
+    # Case of real beamline:
+    timeout = 2  # seconds
+    going = "Going"
+else:
+    # Case of CI:
+    timeout = 10  # seconds
+    going = "NOT going"
+
+print(f'\nEpicsSignalBase timeout is {timeout} [seconds]. {going} to touch beamline hardware.\n')
+
 from ophyd.signal import EpicsSignalBase
-# EpicsSignalBase.set_default_timeout(timeout=10, connection_timeout=10)  # old style
-EpicsSignalBase.set_defaults(timeout=10, connection_timeout=10)  # new style
+# EpicsSignalBase.set_default_timeout(timeout=timeout, connection_timeout=timeout)  # old style
+EpicsSignalBase.set_defaults(timeout=timeout, connection_timeout=timeout)  # new style
+
+import datetime
+
+def print_now():
+    return datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S.%f')
 
 import nslsii
 import matplotlib as mpl
@@ -188,6 +197,8 @@ RE.md = PersistentDict(runengine_metadata_dir)
 RE.md["beamline_id"] = "SRX"
 RE.md["md_version"] = "1.0"
 
+# from bluesky.utils import ts_msg_hook
+# RE.msg_hook = ts_msg_hook
 
 # The following plan stubs are automatically imported in global namespace by 'nslsii.configure_base', 
 # but have signatures that are not compatible with the Queue Server. They should not exist in the global

@@ -260,13 +260,14 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         DEADBAND = 0.050  # retry deadband of nPoint scanner
         while (np.abs(x_set - x_dial) > DEADBAND):
             if (i == 0):
-                print('Waiting for motor to reach starting position...',
-                      end='', flush=True)
+                if verbose:
+                    print('Waiting for motor to reach starting position...',
+                          end='', flush=True)
             i = i + 1
             yield from mv(xmotor, row_start)
             yield from bps.sleep(0.1)
             x_dial = xmotor.user_readback.get()
-        if (i != 0):
+        if (i != 0 and verbose):
             print('done')
 
         if ('xs2' in dets_by_name):
@@ -350,7 +351,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             if verbose:
                 print(f"{ttime.ctime(t0)}\tParanoid check was worth it...")
             try:
-                yield from abs_set(xs.channel01.mcaroi.ts_control, 1, timeout=1)
+                yield from abs_set(xs.channel01.mcaroi.ts_control, 1, wait=True, timeout=1)
             except Exception as e:
                 print('  Timeout on time-series. Continuing...')
             # yield from bps.trigger(xs, group=row_str)
