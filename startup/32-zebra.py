@@ -740,9 +740,9 @@ class SRXFlyer1Axis(Device):
         ttime.sleep(t_delay)
         # self._encoder.pc.enc_pos4_sync.put(1)  # None
 
-        # Arm the zebra
-        # Moved to be in 62-flyscans so the timing can be more refined
-        # self._encoder.pc.arm.put(1)
+        # Do a block reset on the zebra
+        self._encoder.pc.block_state_reset.put(1)
+        ttime.sleep(t_delay)
 
         st = (
             NullStatus()

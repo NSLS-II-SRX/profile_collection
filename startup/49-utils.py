@@ -55,7 +55,7 @@ def mv_position(pos=[]):
                    [x, y, z] # any positions defined
     """
     print('To go to position 1,2,3; '
-          'Assuming topx, topz at 0; rotation at 45 deg.')
+          'Assuming topx, topz at 0; rotation at 0 deg.')
 
     # Check current positions
     if (pos == []):
@@ -78,7 +78,7 @@ def mv_position(pos=[]):
         pos = [30.114, 22.464, 53.874]
     elif (len(pos)>1):
         print(f'You will move to the defined positions: {pos} now.')
-        if len(pos <3):
+        if len(pos) <3:
             yield from mv(nano_stage.x, pos[0],
                           nano_stage.y, pos[1])
         else:

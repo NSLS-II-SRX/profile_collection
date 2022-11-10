@@ -5,12 +5,15 @@ import h5py
 import sys
 import numpy as np
 import time as ttime
+import itertools
+
 from ophyd.areadetector.plugins import PluginBase
 from ophyd import Signal, DeviceStatus
 from ophyd import Component as Cpt
 from ophyd.areadetector.filestore_mixins import FileStorePluginBase
 from ophyd.device import Staged
 from enum import Enum
+from collections import deque, OrderedDict
 
 from nslsii.detectors.xspress3 import (
     XspressTrigger,
@@ -413,8 +416,6 @@ class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
         return ret
 
 
-# replace Xspress3Detector with CommunityXspress3_4Channel
-#class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
 class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3_8Channel):
     # provided by CommunityXspress3_4Channel
     #roi_data = Cpt(PluginBase, "ROIDATA:")
@@ -537,100 +538,132 @@ class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3
         return ret
 
 
-# try:
-#     print('Setting up xs4...')
-#     raise Exception
-#     # JL replaced {Xsp:1}: with {Xsp:3}:det1:
-#     xs4 = SrxXspress3Detector("XF:05IDD-ES{Xsp:1}:", name="xs4")
-#     # xs = CommunitySrxXspress3Detector("XF:05IDD-ES{Xsp:3}:", name="xs")
-#     # JL commented the next 4 statements
-#     xs4.channel1.rois.read_attrs = ["roi{:02}".format(j)
-#                                    for j in [1, 2, 3, 4]]
-#     xs4.channel2.rois.read_attrs = ["roi{:02}".format(j)
-#                                    for j in [1, 2, 3, 4]]
-#     xs4.channel3.rois.read_attrs = ["roi{:02}".format(j)
-#                                    for j in [1, 2, 3, 4]]
-#     xs4.channel4.rois.read_attrs = ["roi{:02}".format(j)
-#                                    for j in [1, 2, 3, 4]]
-# 
-#     # the next line worked!
-#     # xs.read_attrs = ["channels.channel01.mcarois.mcaroi01.total_rbv"]    
-#     # but putting all channels, all mcarois in one list did not work
-# 
-#     # add all channel.channelNN to xs.read_attrs 
-#     # read_channel_attrs = [f"channels.channel{ch:02}" for ch in xs.channel_numbers]
-#     # read_channel_attrs.append("hdf5")
-#     # print(f"read_channel_attrs: {read_channel_attrs}")
-#     # xs.read_attrs = read_channel_attrs
-#     # print(f"xs.read_attrs: {xs.read_attrs}")
-# 
-#     # # add all mcarois.mcaroiNN.total_rbv to each channelMM.read_attrs
-#     # for xs_channel in xs.iterate_channels():
-#     #     mcaroi_read_attrs = []
-#     #     for xs_mcaroi in xs_channel.iterate_mcarois():
-#     #         mcaroi_read_attrs = [f"mcarois.mcaroi{m:02}.total_rbv" for m in range(1, 5)]
-#     #     xs_channel.read_attrs = mcaroi_read_attrs
-# 
-#     if os.getenv("TOUCHBEAMLINE", "0") == "1":
-#         print('  Touching xs4...')
-#         # JL replaced settings with cam
-#         xs4.settings.num_channels.put(4) #4 for ME4 detector
-#         # xs.cam.num_channels.put(xs.get_channel_count()) #4 for ME4 detector
-#         # JL commented out the next 4 lines
-#         xs4.channel1.vis_enabled.put(1)
-#         xs4.channel2.vis_enabled.put(1)
-#         xs4.channel3.vis_enabled.put(1)
-#         xs4.channel4.vis_enabled.put(1)
-#         xs4.hdf5.num_extra_dims.put(0)
-# 
-#         # JL replaced settings with cam
-#         #xs.settings.configuration_attrs = [
-#         xs4.settings.configuration_attrs = [
-#             "acquire_period",
-#             "acquire_time",
-#             "gain",
-#             "image_mode",
-#             "manufacturer",
-#             "model",
-#             "num_exposures",
-#             "num_images",
-#             "temperature",
-#             "temperature_actual",
-#             "trigger_mode",
-#             "config_path",
-#             "config_save_path",
-#             "invert_f0",
-#             "invert_veto",
-#             "xsp_name",
-#             "num_channels",
-#             "num_frames_config",
-#             "run_flags",
-#             "trigger_signal",
-#         ]
-# 
-#         # This is necessary for when the IOC restarts
-#         # We have to trigger one image for the hdf5 plugin to work correctly
-#         # else, we get file writing errors
-#         xs4.hdf5.warmup()
-# 
-#         # Rename the ROIs
-#         # JL commented this loop out
-#         #   revisit this
-#         for i in range(1, 4):
-#             ch = getattr(xs4.channel1.rois, "roi{:02}.value".format(i))
-#             ch.name = "ROI_{:02}".format(i)
-# except TimeoutError as te:
-#     # JL don't set xs = None during development, it is often unavailable but I want to look at it anyway
-#     xs4 = None
-#     print("\nCannot connect to xs4. Continuing without device.\n")
-#     # JL added this raise to help diagnose connection failures
-#     # raise te
-# except Exception as ex:
-#     xs4 = None
-#     print("\nUnexpected error connecting to xs4.\n")
-#     print(ex, end="\n\n")
-#     # JL added this raise to help diagnose errors while developing community ioc code
-#     # raise ex
+class SrxXspress3DetectorIDMonoFly(CommunitySrxXspress3Detector):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._asset_docs_cache = deque()
+        self._datum_counter = None
+        self._datum_ids = []
+
+    def stage(self):
+        super().stage()
+        self._datum_counter = itertools.count()
+
+    def unstage(self):
+        self.hdf5.capture.put(0)
+        super().unstage()
+        self._datum_counter = None
+
+    def complete(self, *args, **kwargs):
+        # print(f'In {self.name}.complete()...')
+        for resource in self.hdf5._asset_docs_cache:
+            # print(f'  resource in "complete": {resource}')
+            self._asset_docs_cache.append(('resource', resource[1]))
+        # print(f'\ncomplete in {self.name}: {self._asset_docs_cache}')
+
+        self._datum_ids = []
+
+        # ttime.sleep(1.0)
+        # num_frames = self.hdf5.num_captured.get()
+        num_frames = self.cam.array_counter.get()
+
+        # print(f"{num_frames=}") 
+        for frame_num in range(num_frames):
+            # print(f'  frame_num in "complete": {frame_num + 1} / {num_frames}')
+            for channel in self.iterate_channels():
+                datum_id = '{}/{}'.format(self.hdf5._resource_uid, next(self._datum_counter))
+                datum = {'resource': self.hdf5._resource_uid,
+                         'datum_kwargs': {'frame': frame_num, 'channel': channel.channel_number},
+                         'datum_id': datum_id}
+                self._asset_docs_cache.append(('datum', datum))
+                self._datum_ids.append(datum_id)
+
+        # print(f'\nasset_docs_cache with datums:\n{self._asset_docs_cache}\n')
+
+        return NullStatus()
+
+    def collect(self):
+        collected_frames = self.hdf5.num_captured.get()
+        for frame_num in range(collected_frames):
+            # print(f'  frame_num in "collect": {frame_num + 1} / {collected_frames}')
+
+            datum_id = self._datum_ids[frame_num]
+            ts = ttime.time()
+
+            data = {self.name: datum_id}
+            ts = float(ts)
+            yield {'data': data,
+                   'timestamps': {key: ts for key in data},
+                   'time': ts,  # TODO: use the proper timestamps from the ID/mono start and stop times
+                   'filled': {key: False for key in data}}
+
+    def collect_asset_docs(self):
+        items = list(self._asset_docs_cache)
+        self._asset_docs_cache.clear()
+        for item in items:
+            yield item
+
+
+
+try:
+    xs_id_mono_fly = SrxXspress3DetectorIDMonoFly("XF:05IDD-ES{Xsp:3}:", name="xs_id_mono_fly")
+    # add all channel.channelNN to xs.read_attrs 
+    read_channel_attrs = [f"channel{ch:02}" for ch in xs_id_mono_fly.channel_numbers]
+    read_channel_attrs.append("hdf5")
+    # print(f"read_channel_attrs: {read_channel_attrs}")
+    xs_id_mono_fly.read_attrs = read_channel_attrs
+    # print(f"xs_id_mono_fly.read_attrs: {xs_id_mono_fly.read_attrs}")
+
+    # add all mcarois.mcaroiNN.total_rbv to each channelMM.read_attrs
+    for xs_channel in xs_id_mono_fly.iterate_channels():
+        mcaroi_read_attrs = []
+        for xs_mcaroi in xs_channel.iterate_mcarois():
+            mcaroi_read_attrs = [f"mcaroi{m:02}.total_rbv" for m in range(1, 5)]
+        xs_channel.read_attrs = mcaroi_read_attrs
+
+    if os.getenv("TOUCHBEAMLINE", "0") == "1":
+        print('  Touching xs_id_mono_fly...')
+        # TODO add cam function
+        xs_id_mono_fly.cam.num_channels.put(xs_id_mono_fly.get_channel_count())  # 4 for ME4 detector
+        xs_id_mono_fly.hdf5.num_extra_dims.put(0)
+
+        # JL replaced settings with cam
+        #xs_id_mono_fly.settings.configuration_attrs = [
+        xs_id_mono_fly.cam.configuration_attrs = [
+            "acquire_period",
+            "acquire_time",
+            # "gain",
+            "image_mode",
+            "manufacturer",
+            "model",
+            "num_exposures",
+            "num_images",
+            "temperature",
+            "temperature_actual",
+            "trigger_mode",
+            "config_path",
+            "config_save_path",
+            "invert_f0",
+            "invert_veto",
+            "xsp_name",
+            "num_channels",
+            "num_frames_config",
+            "run_flags",
+            "trigger_signal",
+        ]
+
+        # This is necessary for when the IOC restarts
+        # We have to trigger one image for the hdf5 plugin to work correctly
+        # else, we get file writing errors
+        xs_id_mono_fly.hdf5.warmup()
+except TimeoutError as te:
+    xs_id_mono_fly = None
+    print(te)
+    print("\nCannot connect to xs_id_mono_fly. Continuing without device.\n")
+except Exception as ex:
+    xs_id_mono_fly = None
+    print("\nUnexpected error connecting to xs_id_mono_fly.\n")
+    print(ex, end="\n\n")
 
 
 # Working xs2 detector
