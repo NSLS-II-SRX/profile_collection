@@ -614,7 +614,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     return uid
 
 
-def nano_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
+def nano_scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *, extra_dets=None, center=True, **kwargs):
     kwargs.setdefault('xmotor', nano_stage.sx)
     kwargs.setdefault('ymotor', nano_stage.sy)
     kwargs.setdefault('flying_zebra', nano_flying_zebra)
@@ -628,7 +628,7 @@ def nano_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
 
     if center:
         yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
-    yield from scan_and_fly_base(dets, *args, **kwargs)
+    yield from scan_and_fly_base(dets, xstart, xstop, xnum, ystart, ystop, ynum, dwell, **kwargs)
     if center:
         yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
 
