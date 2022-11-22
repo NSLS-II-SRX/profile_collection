@@ -542,10 +542,10 @@ def focusKB(direction, **kwargs):
     else:
         print("This is for vertical or horizontal scans. Please choose one of these directions\n")
 
-    kwargs.setdefault('scan_start', -10)
-    kwargs.setdefault('scan_stop', 10)
-    kwargs.setdefault('scan_stepsize', 0.10)
-    kwargs.setdefault('acqtime', 0.100)
+    kwargs.setdefault('scan_start', -8)
+    kwargs.setdefault('scan_stop', 8)
+    kwargs.setdefault('scan_stepsize', 0.20)
+    kwargs.setdefault('acqtime', 0.200)
     
     slit_center = kwargs['slit_motor'].user_readback.get()
     kwargs.setdefault('slit_start', slit_center - 0.5 * slit_range)
