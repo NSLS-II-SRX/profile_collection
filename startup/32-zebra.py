@@ -351,7 +351,7 @@ def set_flyer_zebra_stage_sigs(flyer, method):
     flyer.stage_sigs[flyer._encoder.output1.ttl.addr] = 31  # PC_PULSE --> TTL1 --> xs
     flyer.stage_sigs[flyer._encoder.output2.ttl.addr] = 31  # PC_PULSE --> TTL2 --> merlin
     flyer.stage_sigs[flyer._encoder.output3.ttl.addr] = 36  # OR1 --> TTL3 --> scaler
-    flyer.stage_sigs[flyer._encoder.output4.ttl.addr] = 31  # PC_PULSE --> TTL4 --> dexela
+    flyer.stage_sigs[flyer._encoder.output4.ttl.addr] = 53  # PC_PULSE --> PULSE2 --> TTL4 --> dexela
 
     if method == 'position':
         flyer.mode.set('position')
@@ -390,7 +390,7 @@ def set_flyer_zebra_stage_sigs(flyer, method):
         # flyer.stage_sigs[flyer._encoder.pulse1.delay] = 0.2
         # flyer.stage_sigs[flyer._encoder.pulse1.width] = 0.1
         # flyer.stage_sigs[flyer._encoder.pulse1.time_units] = 0
-        flyer.stage_sigs[flyer._encoder.pulse2.input_addr] = 30
+        flyer.stage_sigs[flyer._encoder.pulse2.input_addr] = 31
         flyer.stage_sigs[flyer._encoder.pulse2.input_edge] = 0  # 0 = rising, 1 = falling
         flyer.stage_sigs[flyer._encoder.pulse2.delay] = 0
         flyer.stage_sigs[flyer._encoder.pulse2.width] = 0.1
@@ -442,11 +442,11 @@ def set_flyer_zebra_stage_sigs(flyer, method):
         # flyer.stage_sigs[flyer._encoder.pulse1.delay] = 0.2
         # flyer.stage_sigs[flyer._encoder.pulse1.width] = 0.1
         # flyer.stage_sigs[flyer._encoder.pulse1.time_units] = 0
-        # flyer.stage_sigs[flyer._encoder.pulse2.input_addr] = 30
-        # flyer.stage_sigs[flyer._encoder.pulse2.input_edge] = 0  # 0 = rising, 1 = falling
-        # flyer.stage_sigs[flyer._encoder.pulse2.delay] = 0
-        # flyer.stage_sigs[flyer._encoder.pulse2.width] = 0.1
-        # flyer.stage_sigs[flyer._encoder.pulse2.time_units] = 0
+        flyer.stage_sigs[flyer._encoder.pulse2.input_addr] = 31
+        flyer.stage_sigs[flyer._encoder.pulse2.input_edge] = 0  # 0 = rising, 1 = falling
+        flyer.stage_sigs[flyer._encoder.pulse2.delay] = 0
+        flyer.stage_sigs[flyer._encoder.pulse2.width] = 0.45
+        flyer.stage_sigs[flyer._encoder.pulse2.time_units] = 1
         flyer.stage_sigs[flyer._encoder.pulse3.input_addr] = 31
         flyer.stage_sigs[flyer._encoder.pulse3.input_edge] = 0  # 0 = rising, 1 = falling
         flyer.stage_sigs[flyer._encoder.pulse3.delay] = 0.0
