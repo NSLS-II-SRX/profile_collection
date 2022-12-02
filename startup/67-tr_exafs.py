@@ -86,7 +86,7 @@ def f_2edge(x, A1, sigma1, x1, y1,
 
 
 # Convenience function for setting up detectors
-def set_tr_flyer_stage_sigs(flyer, divs=[3, 3, 10, 100]):
+def set_tr_flyer_stage_sigs(flyer, divs=[3, 3, 3, 100]):
     if divs == []:
         raise ValueError('Need to define the divisions for appropriate detectors!')
 
@@ -124,7 +124,7 @@ def set_tr_flyer_stage_sigs(flyer, divs=[3, 3, 10, 100]):
     flyer.stage_sigs[flyer._encoder.div2.trigger_on] = 0
     flyer.stage_sigs[flyer._encoder.div3.trigger_on] = 0
     flyer.stage_sigs[flyer._encoder.div4.trigger_on] = 0
-    flyer.stage_sigs[flyer._encoder.div1.div] = divs[0]
+    flyer.stage_sigs[flyer._encoder.div1.div] = divs[0]# useless
     flyer.stage_sigs[flyer._encoder.div2.div] = divs[1]
     flyer.stage_sigs[flyer._encoder.div3.div] = divs[2]
     flyer.stage_sigs[flyer._encoder.div4.div] = divs[3]
@@ -134,7 +134,8 @@ def set_tr_flyer_stage_sigs(flyer, divs=[3, 3, 10, 100]):
     flyer.stage_sigs[flyer._encoder.div4.first_pulse] = 0
     
     ## PULSE tab
-    flyer.stage_sigs[flyer._encoder.pulse1.width] = 2.75 # change to 0.9??
+    #flyer.stage_sigs[flyer._encoder.pulse1.width] = 2.75 # change to 0.9??
+    flyer.stage_sigs[flyer._encoder.pulse1.width] = divs[0] - 0.25
     flyer.stage_sigs[flyer._encoder.pulse1.input_addr] = 32
     flyer.stage_sigs[flyer._encoder.pulse1.delay] = 0
     flyer.stage_sigs[flyer._encoder.pulse1.time_units] = "ms"
@@ -166,7 +167,8 @@ laser.ramp.set(0)
 nano_flying_zebra_laser = SRXFlyer1Axis(
     list(xs for xs in [xs] if xs is not None), sclr1, nanoZebra, name="nano_flying_zebra_laser"
 )
-set_tr_flyer_stage_sigs(nano_flying_zebra_laser, divs=[1, 3, 1, 100])
+set_tr_flyer_stage_sigs(nano_flying_zebra_laser, divs=[5, 5, 5, 100])
+nano_flying_zebra_laser._staging_delay = 0.025
 
 
 # Defining a new scaler (sclr2) with photodiode channel included
@@ -271,7 +273,7 @@ def gen_xyze_pos(erange = [11817, 11862, 11917, 12267],
     # Map out points for each event
     x_ind = np.arange(start[0], end[0] + spacing, spacing)
     y_ind = np.arange(start[1], end[1] + spacing, spacing)
-    z_ind = np.repeat(np.linspace(start[2], end[2], len(y_ind)), len(x_ind))
+    z_ind = np.repeat(np.linspace(start[2], end[2], len(x_ind)), len(y_ind))
     #xyz_mesh = np.vstack([np.flip(np.array(np.meshgrid(y_ind, x_ind)).reshape(2, len(x_ind) * len(y_ind)).T, axis=1).T, z_ind]).T
     xyz_pos = np.vstack([np.array(list(product(x_ind, y_ind))).T, z_ind]).T
 
@@ -480,11 +482,11 @@ def beam_knife_edge_scan(beam, direction, edge, distance, stepsize,
         beam_param.append(fwhm)
         scan_ids.append(scanid)
 
-        # Plot beam alignment
-        if beam == 'both':
-            yield from plot_beam_alignment(laserid=scan_ids[0], xrayid=scan_ids[1])
+    # Plot beam alignment
+    if beam == 'both':
+        plot_beam_alignment(laserid=scan_ids[0], xrayid=scan_ids[1])
 
-    return beam_param # Cent_position then fwhm. Laser parameters first if 'both'
+    return beam_param, scan_ids # Cent_position then fwhm. Laser parameters first if 'both'
 
 
 def beam_knife_edge_plot(beam, scanid=-1, plot_guess=True, edges=1,
@@ -893,26 +895,27 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
             continue
 
         # Determine beam positions along variable
-        log(f'Performing edge scan along {variables[i]} centered at {j:.4f}.')
-        beam_param = yield from beam_knife_edge_scan('both', variables[i], j, distance=distance, stepsize=stepsize, 
-                                                                acqtime=acqtime, shutter=shutter, check=False)
+        log(f'Performing edge scan along {variables[i]} centered at {j}.')
+        #log(f'Performing edge scan along {variables[i]} centered at {j:.4f}.') #doesnt like the .4f
+        beam_param, scan_ids = yield from beam_knife_edge_scan('both', variables[i], j, distance=distance, stepsize=stepsize, 
+                                                                acqtime=acqtime, shutter=shutter)
         
         # Adjust VLM position
-        offset = beam_param[3] - beam_param[0]
+        offset = beam_param[2] - beam_param[0]
         if np.abs(offset) > 0.5 * FOV[i]:
             log("Trying to adjust VLM stage by more than 50% of FOV. Retry beam alignment.")
             raise RuntimeError()
         log(f'Previous VLM stage coordinates at:\n' +
-            f'\tx = {nano_vlm_stage.x.get()}\n' +
-            f'\ty = {nano_vlm_stage.y.get()}\n' +
-            f'\tz = {nano_vlm_stage.z.get()}')
+            f'\tx = {nano_vlm_stage.x.user_readback.get()}\n' +
+            f'\ty = {nano_vlm_stage.y.user_readback.get()}\n' +
+            f'\tz = {nano_vlm_stage.z.user_readback.get()}')
         if vlm_move:
             yield from movr(vlm_motors[i], (offset * 0.001)) # vlm motors in mm not um
         log(f'Offset VLM by {offset:.4f} µm along ' + variables[i] + '-axis.')
         log(f'New VLM stage coordinates at:\n' +
-            f'\tx = {nano_vlm_stage.x.get()}\n' +
-            f'\ty = {nano_vlm_stage.y.get()}\n' +
-            f'\tz = {nano_vlm_stage.z.get()}')
+            f'\tx = {nano_vlm_stage.x.user_readback.get()}\n' +
+            f'\ty = {nano_vlm_stage.y.user_readback.get()}\n' +
+            f'\tz = {nano_vlm_stage.z.user_readback.get()}')
 
         # Confirm adjustment
         tot_offset = offset
@@ -921,40 +924,40 @@ def auto_beam_alignment(v_edge, h_edge, distance, stepsize,
             log('Checking VLM stage correspondence. Determining new laser position.')
 
             # Re-determine laser position along variable
-            laser_beam = yield from beam_knife_edge_scan('laser', variables[i], j, distance=distance, stepsize=stepsize, 
-                                                                  acqtime=acqtime, shutter=shutter, check=True)
+            laser_beam, scan_ids[0] = yield from beam_knife_edge_scan('laser', variables[i], j, distance=distance, stepsize=stepsize, 
+                                                                  acqtime=acqtime, shutter=shutter)
             new_laser_pos, new_laser_size = laser_beam[0], laser_beam[1]
             beam_param[2] = laser_beam[2] # redefining laser scan id
             
             # Adjust VLM position
-            new_offset = beam_param[3] - new_laser_pos
+            new_offset = beam_param[2] - new_laser_pos
             tot_offset = offset + new_offset
             if (np.abs(new_offset) > np.abs(offset)) and (new_offset > stepsize):
                 raise RuntimeError("Stage correspondence issue. Beam alignment will not converge.")
             log(f'Previous VLM stage coordinates at:\n' +
-            f'\tx = {nano_vlm_stage.x.get()}\n' +
-            f'\ty = {nano_vlm_stage.y.get()}\n' +
-            f'\tz = {nano_vlm_stage.z.get()}')
+            f'\tx = {nano_vlm_stage.x.user_readback.get()}\n' +
+            f'\ty = {nano_vlm_stage.y.user_readback.get()}\n' +
+            f'\tz = {nano_vlm_stage.z.user_readback.get()}')
             if vlm_move:
                 yield from movr(vlm_motors[i], new_offset * 0.001)
             log(f'Adjusted offset VLM by {new_offset:.4f} µm along ' + variables[i] + '-axis.')
             log(f'New VLM stage coordinates at:\n' +
-            f'\tx = {nano_vlm_stage.x.get()}\n' +
-            f'\ty = {nano_vlm_stage.y.get()}\n' +
-            f'\tz = {nano_vlm_stage.z.get()}')
+            f'\tx = {nano_vlm_stage.x.user_readback.get()}\n' +
+            f'\ty = {nano_vlm_stage.y.user_readback.get()}\n' +
+            f'\tz = {nano_vlm_stage.z.user_readback.get()}')
             log(f'Sample and VLM stage total offset of {tot_offset:.4f} µm along ' + variables[i] + '-axis.')
 
         # Record information
         log('Recording useful alignment parameters.')
         laser_pos.append(new_laser_pos), laser_sizes.append(new_laser_size)
-        xray_pos.append(beam_param[3]), xray_sizes.append(beam_param[4])
+        xray_pos.append(beam_param[2]), xray_sizes.append(beam_param[3])
         off_adj.append(offset), off_adj.append(tot_offset)
 
         # Plotting beam alignments
         log(f'Plotting beam alignments along {direction} for scans:\n' +
-        f'\tlaser = {beam_param[2]}\n' +
-        f'\tx-ray = {beam_param[5]}')
-        plot_beam_alignment(laserid=beam_param[2], xrayid=beam_param[5])
+        f'\tlaser = {scan_ids[0]}\n' +
+        f'\tx-ray = {scan_ids[1]}')
+        plot_beam_alignment(laserid=scan_ids[0], xrayid=scan_ids[1])
 
     return xray_pos, xray_sizes, laser_pos, laser_sizes, off_adj
 
@@ -974,24 +977,24 @@ def laser_time_series(power, hold, ramp=5, wait=0,
     '''
 
     # Timings and data points
-    acqtime = 0.001
-    total_time = hold + ramp
-    N_tot = total_time / acqtime
+    acqtime = 0.005
+    total_time = hold + ramp - wait
+    N_tot = int(total_time / acqtime)
 
 
     # Meta data
     log('Setting up time series collection...')
     scan_md = {}
     get_stock_md(scan_md)
-    scan_md['scan']['type'] = 'XAS_TIME' #Should this be something different?
-    scan_md['scan']['scan_input'] = [power, hold, ramp, extra_dets, shutter]
+    scan_md['scan']['type'] = 'LASER_TIME' #Should this be something different?
+    scan_md['scan']['scan_input'] = [power, hold, ramp, wait, f'{energy.energy.position:.5f}']
     scan_md['scan']['timings'] = [acqtime, ramp, hold, total_time]
     scan_md['scan']['detectors'] = [sclr1.name] + [d.name for d in extra_dets]
-    scan_md['scan']['energy'] = energy.get()
+    scan_md['scan']['energy'] = f'{energy.energy.position:.5f}'
     scan_md['scan']['stage_positions'] = {'x' : nano_stage.x.user_readback.get(),
                                         'y' : nano_stage.y.user_readback.get(),
                                         'z' : nano_stage.z.user_readback.get(),
-                                        'th' : nanostage.th.user_readback.get()}
+                                        'th' : nano_stage.th.user_readback.get()}
     scan_md['scan']['vlm_positions'] = {'x' : nano_vlm_stage.x.user_readback.get(),
                                         'y' : nano_vlm_stage.y.user_readback.get(),
                                         'z' : nano_vlm_stage.z.user_readback.get()}
@@ -1012,6 +1015,7 @@ def laser_time_series(power, hold, ramp=5, wait=0,
     # Setup scaler
     if (acqtime < 0.001):
         acqtime = 0.001 #limits the time resolution
+
     if (N_tot < 10_000):
         yield from abs_set(sclr1.nuse_all, N_tot + 1)
     else:
@@ -1024,9 +1028,9 @@ def laser_time_series(power, hold, ramp=5, wait=0,
     if 'xs' in dets_by_name:
         yield from bps.mov(xs.total_points, N_tot)
     if 'merlin' in dets_by_name:
-        yield from bps.mov(merlin.total_points, N_tot // 3)
-    if 'nano_vlm' in dets_by_name:
-        yield from bps.mov(nano_vlm.total_points, N_tot // 100)
+        yield from bps.mov(merlin.total_points, N_tot)
+    #if 'nano_vlm' in dets_by_name:
+    #    yield from bps.mov(nano_vlm.total_points, N_tot // 100)
 
     if ('xs' in dets_by_name):
         # xs.stage_sigs['total_points'] = N_tot
@@ -1038,11 +1042,11 @@ def laser_time_series(power, hold, ramp=5, wait=0,
     # Setup Merlin area detector
     if ('merlin' in dets_by_name):
         merlin.cam.stage_sigs['trigger_mode'] = 2 # may be redundant
-        merlin.cam.stage_sigs['acquire_time'] = 0.0010
+        merlin.cam.stage_sigs['acquire_time'] = 0.0030 # acqtime - 0.002
         merlin.cam.stage_sigs['acquire_period'] = 0.002 #can I implement binning via the stage_sigs??
-        merlin.cam.stage_sigs['num_images'] = N_tot // 3 #this is not supposed to be one
-        merlin.stage_sigs['total_points'] = N_tot // 3
-        merlin.hdf5.stage_sigs['num_capture'] = N_tot // 3
+        merlin.cam.stage_sigs['num_images'] = N_tot #this is not supposed to be one
+        merlin.stage_sigs['total_points'] = N_tot
+        merlin.hdf5.stage_sigs['num_capture'] = N_tot
         # merlin._mode = SRXMode.step #what does this do???
 
     # Setup VLM camera
@@ -1073,13 +1077,17 @@ def laser_time_series(power, hold, ramp=5, wait=0,
     @stage_decorator([nano_flying_zebra_laser])  # Below, 'scan' stage ymotor.
     @stage_decorator(nano_flying_zebra_laser.detectors)
     def plan():
+        #print("I'm planning!")
         # Setup zebra
-        yield from abs_set(nano_flying_zebra_laser._encoder.pc.gate_start, 0, settle_time=0.010, wait=True, timeout=10)
-        yield from abs_set(nano_flying_zebra_laser._encoder.pc.gate_width, total_time, settle_time=0.010, wait=True, timeout=10)
-        yield from abs_set(nano_flying_zebra_laser._encoder.pc.gate_step, total_time+0.001, settle_time=0.010, wait=True, timeout=10)
+        yield from abs_set(nano_flying_zebra_laser._encoder.pc.gate_start, 0, settle_time=0.010,
+                            wait=True, timeout=10)
+        yield from abs_set(nano_flying_zebra_laser._encoder.pc.gate_width, total_time + acqtime,
+                            settle_time=0.010, wait=True, timeout=10)
+        yield from abs_set(nano_flying_zebra_laser._encoder.pc.gate_step, total_time + acqtime + 0.001,
+                            settle_time=0.010, wait=True, timeout=10)
 
         nano_flying_zebra_laser._mode = "kicked off"
-        nano_flying_zebra_laser._npts = int(N_tot)
+        nano_flying_zebra_laser._npts = N_tot
 
         yield from abs_set(sclr1.erase_start, 1, wait=True, settle_time=0.5, timeout=10)
         # st = yield from bps.trigger(xs)
@@ -1138,6 +1146,7 @@ def laser_time_series(power, hold, ramp=5, wait=0,
     # Check shutter
     yield from check_shutters(shutter, 'Open')
 
+    #print(scan_md)
     # Collect time series
     yield from plan()
 
@@ -1167,7 +1176,7 @@ def laser_time_series(power, hold, ramp=5, wait=0,
 def tr_xanes_plan(xyze_pos, power, hold,
                   v_edge=None, h_edge=None, distance=25, stepsize=0.5,
                   N_start=1, ramp=5, wait=0,
-                  dets=[xs, merlin], acqtime=0.001,
+                  dets=[xs, merlin], acqtime=0.003,
                   waittime=5, peakup_N=15, align_N=15,
                   no_data=False, shutter=True):
 
@@ -1190,6 +1199,8 @@ def tr_xanes_plan(xyze_pos, power, hold,
     no_data     (bool)  Laser without collecting time series data
     shutter     (bool)  Use X-rays or not
     '''
+    # Gaurantee logging
+    start_logging()
 
     # Check positions
     if (xyze_pos == []):
@@ -1207,8 +1218,8 @@ def tr_xanes_plan(xyze_pos, power, hold,
         if (v_edge == None) or (h_edge == None):
             raise ValueError("Edge positions must be provided for beam alignment.")
 
-    # Make sure correct form of input coordinates
-    v_edge, h_edge = check_input_coords(v_edge, h_edge)
+        # Make sure correct form of input coordinates
+        v_edge, h_edge = check_input_coords(v_edge, h_edge)
 
     # Define total_time from laser parameters
     total_time = ramp + hold
@@ -1219,13 +1230,40 @@ def tr_xanes_plan(xyze_pos, power, hold,
     offsets_lst, time_lst = [], []
     scanid_lst = []
 
+    # Useful move function
+    def cautious_move(coords):
+        z0 = nano_stage.z.user_readback.get()
+        if z0 < coords[2]:
+            yield from mov(nano_stage.z, coords[2])
+            yield from mov(nano_stage.x, coords[0],
+                           nano_stage.y, coords[1])
+        else:
+            yield from mov(nano_stage.x, coords[0],
+                           nano_stage.y, coords[1])
+            yield from mov(nano_stage.z, coords[2])
+
+    def attenuate_beam(filters):
+        yield from mov(attenuators.Fe_shutter, filters[0],
+                       attenuators.Cu_shutter, filters[1],
+                       attenuators.Si_shutter, filters[2],
+                       attenuators.Mo_shutter, filters[3])
+
+    def check_staging(flyer):
+        yield from abs_set(flyer._encoder.pc.block_state_reset, 1,
+                               wait=True, timeout=3)
+        if flyer._staged is Staged.yes:
+                flyer.unstage()
+        for d in flyer.detectors:
+            if d._staged is Staged.yes:
+                d.unstage()
+
     # Log batch information...
     if N_start == 1:
         log('Starting TR_XANES batch...')
     else:
         log('Re-starting TR_XANES batch...')
     log('Target paramters are:')
-    log(f'{N} events. {total_time} sec acquire periods. {acqtime} sec acquisition rate.')
+    log(f'{N} events. {total_time - wait} sec acquire periods. {acqtime} sec acquisition rate.')
     log(f'{power} mW laser power. {ramp} sec ramp with {hold} sec hold.')
     log(f'Alignment every {align_N} events. Peakup every {peakup_N} events.')
     log(f'Edges at: vertical {v_edge}, horizontal {h_edge}')
@@ -1251,19 +1289,28 @@ def tr_xanes_plan(xyze_pos, power, hold,
             continue
 
         # Periodically perform peakup to maximize signal
-        if (peakup_N != 0) and ((i % peakup_N == 0) or (i == N_start)):
+        if (peakup_N != 0) and ((i % peakup_N == 0) or (i + 1 == N_start)):
             t0_p = ttime.time()
-            log('Performing peakup...')
+            peakup_count += 1
+            log(f'Performing peakup {peakup_count} of {num_peakup}')
+            yield from attenuate_beam([0, 0, 0, 0])
+            yield from check_staging(nano_flying_zebra_laser)
             yield from peakup_fine(shutter=shutter) #shutter=shutter necessary?
             t_elap_p += ttime.time() - t0_p
+            
 
         # Periodically perform auto_align to confirm laser and x-ray coincidence
-        if (align_N != 0) and ((i % align_N == 0) or (i == N_start)):
+        if (align_N != 0) and ((i % align_N == 0) or (i + 1 == N_start)):
             t0_a = ttime.time()
-            log('Performing auto beam alignment...')
+            align_count += 1
+            log(f'Performing auto beam alignment {align_count} of {num_align}')
+            yield from cautious_move(np.mean([v_edge, h_edge], axis=0))
+            yield from attenuate_beam([0, 1, 1, 0]) # Change this as necessary!!!
+            yield from check_staging(nano_flying_zebra_laser)
             xray_pos, laser_pos, xray_size, laser_size, offsets = yield from auto_beam_alignment(v_edge, h_edge, distance, 
-                                                                                                 stepsize, acqtime=1.0, shutter=shutter)
-            
+                                                                                                 stepsize, acqtime=0.1, shutter=shutter)
+            yield from attenuate_beam([0, 0, 0, 0])
+
             # Append quality variables/write to scan log file
             xray_pos_lst.append(xray_pos), laser_pos_lst.append(laser_pos)
             xray_size_lst.append(xray_size), laser_size_lst.append(laser_size)
@@ -1272,10 +1319,11 @@ def tr_xanes_plan(xyze_pos, power, hold,
 
             # Update the v_edge and h_edge positions
             # Will these positions drift along direction of edge??
-            v_edge = [xray_pos[0], v_edge[1]] #update x-position
-            h_edge = [h_edge[0], xray_pos[1]] #updated y-position
+            v_edge = [xray_pos[0], v_edge[1], v_edge[2]] #update x-position
+            h_edge = [h_edge[0], xray_pos[1], h_edge[2]] #updated y-position
             log(f'New edge positions: vertical {v_edge} and horizontal {h_edge}')
             t_elap_a += ttime.time() - t0_a
+            
         
         # Move to positions and energy
         t0_e = ttime.time()
@@ -1284,11 +1332,12 @@ def tr_xanes_plan(xyze_pos, power, hold,
         log(f'\tx = {xyze_pos[i][0]:.3f}')
         log(f'\ty = {xyze_pos[i][1]:.3f}')
         log(f'\tz = {xyze_pos[i][2]:.3f}')
-        yield from mov(nano_stage.x, xyze_pos[i][0],
-                       nano_stage.y, xyze_pos[i][1],
-                       nano_stage.z, xyze_pos[i][2])
+        yield from cautious_move(xyze_pos[i])
+        #yield from mov(nano_stage.x, xyze_pos[i][0],
+        #               nano_stage.y, xyze_pos[i][1],
+        #               nano_stage.z, xyze_pos[i][2])
         if not no_data:
-            log(f'\te = {xyze_pos[i][2]}')
+            log(f'\te = {xyze_pos[i][3]}')
             yield from mov(energy, xyze_pos[i][3])
         else:
             log('Collecting no data. No energy moves since irrelvant.')
@@ -1299,6 +1348,7 @@ def tr_xanes_plan(xyze_pos, power, hold,
             yield from bps.sleep(total_time)
             yield from laser_off()
         else:
+            yield from check_staging(nano_flying_zebra_laser)
             yield from laser_time_series(power, hold, ramp=ramp,
                                          wait=wait, extra_dets=dets,
                                          shutter=shutter)
@@ -1312,7 +1362,7 @@ def tr_xanes_plan(xyze_pos, power, hold,
         log(f'Finished event {i + 1} of {N} as scan {id_str}.')
         t_elap_e += ttime.time() - t0_e + waittime #included waittime into estimates
         
-        # Bathc progress updates
+        # Batch progress updates
         if (i != (N-1)):
             # Time estimate math
             log('Estimating batch time completion...')
@@ -1334,6 +1384,11 @@ def tr_xanes_plan(xyze_pos, power, hold,
                 str_rem = ttime.strftime("%-d days and %#H:%M:%S", ttime.gmtime(t_rem_tot))
             str_comp = ttime.strftime("%a %b %#d %#H:%M:%S", ttime.localtime(ttime.time() + t_rem_tot))
 
+            # Broadcast and print time remaining
+            try:
+                yield from abs_set(scanrecord.time_remaining, t_rem_tot / 3600, timeout=1)
+            except TimeoutError:
+                pass
             log(f'Estimated {str_rem} remaining.')
             log(f'Predicted completion at {str_comp}.')
 
