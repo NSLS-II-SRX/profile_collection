@@ -383,9 +383,9 @@ def smart_peakup(start=None,
 
         threshold = 8.979
         if E > threshold and foil == 'Ti':
-            banner('Warning! BPM4 foil is not optimized for the incident energy.')
+            banner('WARNING! BPM4 foil is not optimized for the incident energy.')
         elif E < threshold and foil == 'Cu':
-            banner('Warning! BPM4 foil is not optimized for the incident energy.')
+            banner('WARNING! BPM4 foil is not optimized for the incident energy.')
 
     # We do not need the fast shutter open, so we will only check the B-shutter
     if shutter is True:
@@ -397,7 +397,6 @@ def smart_peakup(start=None,
             except Exception as ex:
                 print(st)
                 raise ex
-
 
     # Add metadata
     _md = {'detectors': [det.name for det in detectors],
@@ -419,9 +418,15 @@ def smart_peakup(start=None,
     else:
         _md['hints'].setdefault('dimensions', dimensions)
 
+    # Visualization
+    livecb = []
+    if verbose is False:
+        livecb.append(LiveTable([motor.readback.name] + target_fields))
+
     # Need to add LivePlot, or LiveTable
     @bpp.stage_decorator(list(detectors) + [motor])
     @bpp.run_decorator(md=_md)
+    @bpp.subs_decorator(livecb)
     def smart_max_core(x0):
         # Optimize on a given detector
         def optimize_on_det(target_field, x0):
@@ -487,6 +492,9 @@ def smart_peakup(start=None,
     return (yield from smart_max_core(start))
 
 
+# Setup alias/synonym
+peakup = smart_peakup
+
 
 def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
                 fix_roll=True, fix_pitch=True, feedback=True):
@@ -531,10 +539,10 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     yield from bps.mov(dcm.c2_fine.pid_enabled, 0)
     yield from dcm.c2_fine.reset_pid()
 
-    # Set the pitch piezo to its default value (3.0)
+    # Set the pitch piezo to its default value (5.0)
     # and return the pitch to its original value
     # print('before moving c2 fine to default')
-    pf2_default = 3.0
+    pf2_default = 5.0
     total_pitch = dcm.c2_pitch.position
     yield from bps.mov(dcm.c2_fine, pf2_default)
     yield from bps.mov(dcm.c2_pitch, total_pitch)
