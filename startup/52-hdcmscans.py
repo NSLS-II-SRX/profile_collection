@@ -410,7 +410,11 @@ def smart_peakup(start=None,
            'plan_name': 'smart_peakup',
            'hints': {},
            }
+    _md = get_stock_md(_md)
+    _md['scan']['type'] = 'PEAKUP'
+    _md['scan']['detectors'] = [det.name for det in detectors]
     _md.update(md or {})
+
     try:
         dimensions = [(motor.hints['fields'], 'primary')]
     except (AttributeError, KeyError):
