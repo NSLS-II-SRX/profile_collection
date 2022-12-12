@@ -554,7 +554,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     yield from bps.mov(dcm.c2_pitch_kill, 1.0)
 
     # Set limits
-    pitch_lim = (2.0, 4.0)
+    pitch_lim = (4.0, 6.0)
     pitch_num = 51
 
     # Find approximate values
