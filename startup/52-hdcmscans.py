@@ -305,7 +305,7 @@ class PairedCallback(QtAwareCallback):
 
 
 def smart_peakup(start=None,
-                 min_step=0.01,
+                 min_step=0.005,
                  max_step=0.50,
                  *,
                  shutter=True,
@@ -446,7 +446,7 @@ def smart_peakup(start=None,
                 if verbose:
                     print(f'Moving {motor.name} to {next_pos:.4f}')
                 yield from bps.mv(motor, next_pos)
-                yield from bps.sleep(0.2)
+                yield from bps.sleep(0.200)
                 yield Msg('create', None, name='primary')
                 for det in detectors:
                     yield Msg('trigger', det, group='B')

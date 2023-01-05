@@ -95,6 +95,7 @@ class BPM_TetrAMM(Device):
     total_current = Cpt(EpicsSignalRO, 'SumAll:MeanValue_RBV')
 
 
+bpm3 = BPM_TetrAMM('XF:05IDA-BI{BPM:3}', name='bpm3')
 bpm4 = BPM_TetrAMM('XF:05IDA-BI{BPM:4}', name='bpm4')
 bpm5 = BPM_TetrAMM('XF:05IDA-BI{BPM:05}AH501:', name='bpm5')
 for ch in [bpm5.channel1, bpm5.channel2, bpm5.channel3, bpm5.channel4]:

@@ -16,10 +16,6 @@ proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
 saf_num = 309204
 
-proposal_num = 311000
-proposal_title = 'In situ observation of glass structure evolution preceding crystallization'
-PI_lastname = 'Musterman'
-saf_num = 310262
 
 cycle = '2022_cycle3'
 
