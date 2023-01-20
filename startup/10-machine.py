@@ -10,6 +10,7 @@ from ophyd import (
     PseudoPositioner,
     PseudoSingle,
 )
+from ophyd.utils import ReadOnlyError
 from ophyd.utils.epics_pvs import set_and_wait
 from ophyd.pseudopos import pseudo_position_argument, real_position_argument
 from ophyd.positioner import PositionerBase
@@ -381,10 +382,12 @@ cal_data_2022cycle3_b = {
 
 
 
+# print('Connecting to energy PVs...')
 energy = Energy(prefix="", name="energy", **cal_data_2022cycle3_b)
 energy.wait_for_connection()
 energy.synch_with_epics()
 energy.value = 1.0
+
 
 
 # Setup front end slits (primary slits)
@@ -394,7 +397,7 @@ class SRXSlitsFE(Device):
     inb = Cpt(EpicsMotor, "3-Ax:I}Mtr")
     out = Cpt(EpicsMotor, "4-Ax:O}Mtr")
 
-
+# print('Connecting to FE slit PVs...')
 fe = SRXSlitsFE("FE:C05A-OP{Slt:", name="fe")
 
 
@@ -496,9 +499,17 @@ class IDFlyDevice(Device):
     id_energy = Cpt(EpicsSignal, 'FlyEnergyID-RB')
 
 
-id_fly_device = IDFlyDevice('SR:C5-ID:G1{IVU21:1}', name='id_fly_device')
-id_fly_device.hdcm_parameters.d111.put(energy._d_111)
-id_fly_device.hdcm_parameters.delta_bragg.put(energy._delta_bragg)
-id_fly_device.hdcm_parameters.c2x_cal.put(energy._c2xcal)
-id_fly_device.hdcm_parameters.t2_cal.put(energy._t2cal)
-id_fly_device.hdcm_parameters.x_offset.put(energy._xoffset)
+try:
+    id_fly_device = IDFlyDevice('SR:C5-ID:G1{IVU21:1}', name='id_fly_device')
+    id_fly_device.hdcm_parameters.d111.put(energy._d_111)
+    id_fly_device.hdcm_parameters.delta_bragg.put(energy._delta_bragg)
+    id_fly_device.hdcm_parameters.c2x_cal.put(energy._c2xcal)
+    id_fly_device.hdcm_parameters.t2_cal.put(energy._t2cal)
+    id_fly_device.hdcm_parameters.x_offset.put(energy._xoffset)
+except ReadOnlyError as e:
+    print('Connecting to ID flyer...')
+    print('  Read only error connecting to flying ID PVs!')
+    print('  Continuing...')
+except Exception as e:
+    print(e)
+    raise(e)
