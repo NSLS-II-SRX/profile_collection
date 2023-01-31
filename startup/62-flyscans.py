@@ -529,7 +529,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             yield from bps.mov(xs2.external_trig, True)
 
         # Set TimeSeries to collect correct number of points
-        yield from abs_set(xs.channel01.mcaroi.ts_num_points, xnum, timeout=10)
+        yield from abs_set(xs.channel01.mcaroi.ts_num_points, xnum, wait=True, timeout=10)
         
         ystep = 0
         for step in np.linspace(ystart, ystop, ynum):
