@@ -11,7 +11,7 @@ from ophyd import (
     PseudoSingle,
 )
 from ophyd.utils import ReadOnlyError
-from ophyd.utils.epics_pvs import set_and_wait
+# from ophyd.utils.epics_pvs import set_and_wait  // deprecated
 from ophyd.pseudopos import pseudo_position_argument, real_position_argument
 from ophyd.positioner import PositionerBase
 from ophyd import Component as Cpt
@@ -55,7 +55,8 @@ class InsertionDevice(Device, PositionerBase):
     elev_u = Cpt(EpicsSignalRO, "-Ax:E}-Mtr.RBV", kind="omitted")
 
     def set(self, *args, **kwargs):
-        set_and_wait(self.brake, 1)
+        # set_and_wait(self.brake, 1) // deprecated
+        self.brake.set(1).wait()
         return self.gap.set(*args, **kwargs)
 
     def stop(self, *, success=False):
