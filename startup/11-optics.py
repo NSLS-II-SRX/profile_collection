@@ -205,8 +205,9 @@ class SRXBPM(Device):
     diode_y = Cpt(EpicsMotor, "YDiode}Mtr")
 
 
-bpm1_pos = SRXBPM("XF:05IDA-BI:1{BPM:1-Ax:", name="bpm1_pos")
-bpm2_pos = SRXBPM("XF:05IDB-BI:1{BPM:2-Ax:", name="bpm2_pos")
+# These are the positioners for the backscattering diodes for bpm3/4
+bpm3_pos = SRXBPM("XF:05IDA-BI:1{BPM:1-Ax:", name="bpm3_pos")
+bpm4_pos = SRXBPM("XF:05IDB-BI:1{BPM:2-Ax:", name="bpm4_pos")
 
 
 # Setup SSA
