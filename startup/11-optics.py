@@ -174,14 +174,14 @@ class SRXDCM(Device):
     c1_roll = Cpt(EpicsMotor, "R1}Mtr")
     c1_fine = Cpt(
         HDCMPiezoRoll,
-        "XF:05ID-BI{EM:BPM1}DAC0", name="c1_fine",
+        "XF:05IDA-BI{BEST:1}PreDAC0:OutCh2", name="c1_fine",
         add_prefix=()
     )
     c2_x = energy.c2_x
     c2_pitch = Cpt(EpicsMotor, "P2}Mtr")
     c2_fine = Cpt(
         HDCMPiezoPitch,
-        "XF:05ID-BI{EM:BPM1}DAC1",
+        "XF:05IDA-BI{BEST:1}PreDAC0:OutCh1",
         name="c2_fine",
         add_prefix=()
     )

@@ -244,7 +244,8 @@ class Energy(PseudoPositioner):
         # calib_path = '/nfs/xf05id1/UndulatorCalibration/'
         calib_path = Path(__file__).parent
         # calib_file = "../data/SRXUgapCalibration20170612.txt"
-        calib_file = "../data/20210912_SRXUgapCalibration.txt"
+        # calib_file = "../data/20210912_SRXUgapCalibration.txt"
+        calib_file = "../data/20230221_SRXUgapCalibration.txt"
 
         # with open(os.path.join(calib_path, calib_file), 'r') as f:
         with open(calib_path / calib_file, "r") as f:
@@ -364,18 +365,9 @@ class Energy(PseudoPositioner):
         self.detune.put(0.0)
         self.move(self.energy.get()[0])
 
-## cal_data_2022cycle3 = {
-##     "d_111": 3.14034339223485,
-##     "delta_bragg": 0.18899059694989445,
-##     "C2Xcal": 3.6,
-##     "T2cal": 15.0347755916,
-##     "xoffset": 24.65,
-## }
-## 
-
-cal_data_2022cycle3_b = {
-    "d_111": 3.1303007759937613,
-    "delta_bragg": 0.22176141200666383,
+cal_data_2023cycle1 = {
+    "d_111": 3.129481698903565,
+    "delta_bragg": 0.21761809604296511,
     "C2Xcal": 3.6,
     "T2cal": 15.0347755916,
     "xoffset": 24.65,
@@ -384,7 +376,7 @@ cal_data_2022cycle3_b = {
 
 
 # print('Connecting to energy PVs...')
-energy = Energy(prefix="", name="energy", **cal_data_2022cycle3_b)
+energy = Energy(prefix="", name="energy", **cal_data_2023cycle1)
 energy.wait_for_connection()
 energy.synch_with_epics()
 energy.value = 1.0

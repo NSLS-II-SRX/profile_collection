@@ -54,7 +54,7 @@ def undulator_calibration(
 
     # Bragg scan setup default
     energy_res = 0.002     # keV
-    bragg_scanwidth = 0.2  # keV +/- this value
+    bragg_scanwidth = 0.25  # keV +/- this value
     bragg_scanpoint = (np.floor((2 * bragg_scanwidth) / (energy_res)) + 1).astype('int')
 
     harmonic = 3
@@ -80,9 +80,9 @@ def undulator_calibration(
         # Setup LiveCallbacks
         # liveplotfig1 = plt.figure()
         liveplotx = energy.energy.name
-        liveploty = xbpm1.sumT.name
-        livetableitem = [energy.energy.name, ring_current.name, xbpm1.sumT.name]
-        ps = PeakStats(energy.energy.name, xbpm1.sumT.name)
+        liveploty = bpm3.total_current.name
+        livetableitem = [energy.energy.name, ring_current.name, bpm3.total_current.name]
+        ps = PeakStats(energy.energy.name, bpm3.total_current.name)
         livecallbacks = [LiveTable(livetableitem),
                          LivePlot(liveploty, x=liveplotx),
                          ps]
@@ -90,7 +90,7 @@ def undulator_calibration(
         # Setup the scan
         @subs_decorator(livecallbacks)
         def braggscan():
-            yield from scan([xbpm1, ring_current],
+            yield from scan([bpm3, bpm4, ring_current],
                             energy,
                             energy_setpoint - bragg_scanwidth,
                             energy_setpoint + bragg_scanwidth,
@@ -107,7 +107,7 @@ def undulator_calibration(
         print('Fundemental energy:\t', maxenergy / harmonic)
 
         with open(UCalibDir + outfile, 'a') as f:
-            f.write(f"{energy.u_gap.position:.3f}\t{(maxenergy / harmonic):.8f}\n")
+            f.write(f"{energy.u_gap.position / 1000:.6f}\t{(maxenergy / harmonic):.8f}\n")
     
     # Return moving u_gap
     energy.move_u_gap.put(True)

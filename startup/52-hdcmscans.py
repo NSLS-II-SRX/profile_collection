@@ -310,7 +310,7 @@ def smart_peakup(start=None,
                  *,
                  shutter=True,
                  motor=dcm.c2_fine,
-                 detectors=[xbpm1, bpm4, xbpm2],
+                 detectors=[bpm3, bpm4, xbpm2],
                  target_fields=['bpm4_total_current', 'xbpm2_sumT'],
                  MAX_ITERS=100,
                  md=None,
@@ -368,7 +368,7 @@ def smart_peakup(start=None,
     # Check foils
     if 'bpm4_total_current' in target_fields:
         E = energy.energy.readback.get()  # keV
-        y = bpm2_pos.y.user_readback.get()  # Cu: y=0, Ti: y=25
+        y = bpm4_pos.y.user_readback.get()  # Cu: y=0, Ti: y=25
         if np.abs(y-25) < 5:
             foil = 'Ti'
         elif np.abs(y) < 5:
@@ -446,7 +446,7 @@ def smart_peakup(start=None,
                 if verbose:
                     print(f'Moving {motor.name} to {next_pos:.4f}')
                 yield from bps.mv(motor, next_pos)
-                yield from bps.sleep(0.200)
+                yield from bps.sleep(0.500)
                 yield Msg('create', None, name='primary')
                 for det in detectors:
                     yield Msg('trigger', det, group='B')
