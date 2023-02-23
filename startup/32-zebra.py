@@ -206,6 +206,29 @@ class SRXZebraOR(Device):
         super().unstage()
 
 
+class SRXZebraAND(Device):
+    # I really appreciate the different indexing for input source
+    # Thank you for that
+    use1 = Cpt(EpicsSignal, '_ENA:B0')
+    use2 = Cpt(EpicsSignal, '_ENA:B1')
+    use3 = Cpt(EpicsSignal, '_ENA:B2')
+    use4 = Cpt(EpicsSignal, '_ENA:B3')
+    input_source1 = Cpt(EpicsSignal, '_INP1')
+    input_source2 = Cpt(EpicsSignal, '_INP2')
+    input_source3 = Cpt(EpicsSignal, '_INP3')
+    input_source4 = Cpt(EpicsSignal, '_INP4')
+    invert1 = Cpt(EpicsSignal, '_INV:B0')
+    invert2 = Cpt(EpicsSignal, '_INV:B1')
+    invert3 = Cpt(EpicsSignal, '_INV:B2')
+    invert4 = Cpt(EpicsSignal, '_INV:B3')
+
+    def stage(self):
+        super().stage()
+
+    def unstage(self):
+        super().unstage()
+
+
 
 class ZebraPulse(Device):
     width = Cpt(EpicsSignalWithRBV, 'WID')
@@ -259,6 +282,10 @@ class SRXZebra(Zebra):
     or2 = Cpt(SRXZebraOR, "OR2")
     or3 = Cpt(SRXZebraOR, "OR3")
     or4 = Cpt(SRXZebraOR, "OR4")
+    and1 = Cpt(SRXZebraAND, "AND1")  # XF:05IDD-ES:1{Dev:Zebra2}:AND1_ENA:B0
+    and2 = Cpt(SRXZebraAND, "AND2")
+    and3 = Cpt(SRXZebraAND, "AND3")
+    and4 = Cpt(SRXZebraAND, "AND4")
     pulse1 = Cpt(ZebraPulse, "PULSE1_", index=1)  # XF:05IDD-ES:1{Dev:Zebra2}:PULSE1_INP
     pulse2 = Cpt(ZebraPulse, "PULSE2_", index=2)
     pulse3 = Cpt(ZebraPulse, "PULSE3_", index=3)
@@ -298,6 +325,19 @@ def set_flyer_zebra_stage_sigs(flyer, method):
     # flyer.stage_sigs[flyer._encoder.pc.enc] = 0
     # flyer.stage_sigs[flyer._encoder.pc.dir] = 0
     # flyer.stage_sigs[flyer._encoder.pc.tspre] = 1
+    ## AND tab
+    flyer.stage_sigs[flyer._encoder.and1.use1] = 1  # 0 = No, 1 = Yes
+    flyer.stage_sigs[flyer._encoder.and1.use2] = 0
+    flyer.stage_sigs[flyer._encoder.and1.use3] = 0
+    flyer.stage_sigs[flyer._encoder.and1.use4] = 0
+    flyer.stage_sigs[flyer._encoder.and1.input_source1] = 36
+    flyer.stage_sigs[flyer._encoder.and1.input_source2] = 0
+    flyer.stage_sigs[flyer._encoder.and1.input_source3] = 0
+    flyer.stage_sigs[flyer._encoder.and1.input_source4] = 0
+    flyer.stage_sigs[flyer._encoder.and1.invert1] = 1  # 0 = No, 1 = Yes
+    flyer.stage_sigs[flyer._encoder.and1.invert2] = 0
+    flyer.stage_sigs[flyer._encoder.and1.invert3] = 0
+    flyer.stage_sigs[flyer._encoder.and1.invert4] = 0
     ## ENC tab
     flyer.stage_sigs[flyer._encoder.pc.enc_pos1_sync] = 1
     flyer.stage_sigs[flyer._encoder.pc.enc_pos2_sync] = 1
@@ -306,7 +346,7 @@ def set_flyer_zebra_stage_sigs(flyer, method):
     ## SYS tab
     flyer.stage_sigs[flyer._encoder.output1.ttl.addr] = 31  # PC_PULSE --> TTL1 --> xs
     flyer.stage_sigs[flyer._encoder.output2.ttl.addr] = 31  # PC_PULSE --> TTL2 --> merlin
-    flyer.stage_sigs[flyer._encoder.output3.ttl.addr] = 36  # OR1 --> TTL3 --> scaler
+    flyer.stage_sigs[flyer._encoder.output3.ttl.addr] = 32  # OR1 --> AND1 --> TTL3 --> scaler
     flyer.stage_sigs[flyer._encoder.output4.ttl.addr] = 31  # PC_PULSE --> TTL4 --> dexela
 
     if method == 'position':
