@@ -4,7 +4,7 @@ print(f'Loading {__file__}...')
 from ophyd import EpicsSignal, EpicsSignalRO, Device, TetrAMM, Kind
 from ophyd import Component as Cpt
 from ophyd.status import StatusBase, wait
-from ophyd.quadem import NSLS_EM
+from ophyd.quadem import NSLS_EM, QuadEM, QuadEMPort
 
 
 # BPM1 Statistics
@@ -82,7 +82,7 @@ pbs = SlitDrainCurrent('XF:05IDA-BI{BPM:02}AH501:', name='pbs')
 ssa = SlitDrainCurrent('XF:05IDA-BI{BPM:05}AH501:', name='ssa')
 
 
-# TetrAMM BPM in B-hutch
+# TetrAMM BPM
 class BPM_TetrAMM(Device):
     "Beam Position Monitor Foil"
     channel1 = Cpt(EpicsSignalRO, 'Current1:MeanValue_RBV', kind=Kind.omitted)
@@ -95,10 +95,26 @@ class BPM_TetrAMM(Device):
     total_current = Cpt(EpicsSignalRO, 'SumAll:MeanValue_RBV')
 
 
+bpm3 = BPM_TetrAMM('XF:05IDA-BI{BPM:3}', name='bpm3')
 bpm4 = BPM_TetrAMM('XF:05IDA-BI{BPM:4}', name='bpm4')
-bpm5 = BPM_TetrAMM('XF:05IDA-BI{BPM:05}AH501:', name='bpm5')
-for ch in [bpm5.channel1, bpm5.channel2, bpm5.channel3, bpm5.channel4]:
-    ch.kind = bpm5.channel1.kind.normal
+
+
+class SRX_AH501(QuadEM):
+    conf = Cpt(QuadEMPort, port_name="AH501", kind="omitted")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Simplify what is read
+        for d in self.read_attrs:
+            getattr(self, d).kind = "omitted"
+        self.read_attrs = [f'current{i}.mean_value' for i in range(1, 5)]
+        for d in self.read_attrs:
+            getattr(self, d).kind = Kind.normal
+
+bpm2 = SRX_AH501('XF:05IDA-BI{BPM:02}AH501:', name='bpm2')
+bpm5 = SRX_AH501('XF:05IDA-BI{BPM:05}AH501:', name='bpm5')
+
 
 # Diamond XBPM in D-hutch
 class SRX_NSLS_EM(NSLS_EM):

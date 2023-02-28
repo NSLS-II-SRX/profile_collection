@@ -10,7 +10,8 @@ from ophyd import (
     PseudoPositioner,
     PseudoSingle,
 )
-from ophyd.utils.epics_pvs import set_and_wait
+from ophyd.utils import ReadOnlyError
+# from ophyd.utils.epics_pvs import set_and_wait  // deprecated
 from ophyd.pseudopos import pseudo_position_argument, real_position_argument
 from ophyd.positioner import PositionerBase
 from ophyd import Component as Cpt
@@ -54,7 +55,8 @@ class InsertionDevice(Device, PositionerBase):
     elev_u = Cpt(EpicsSignalRO, "-Ax:E}-Mtr.RBV", kind="omitted")
 
     def set(self, *args, **kwargs):
-        set_and_wait(self.brake, 1)
+        # set_and_wait(self.brake, 1) // deprecated
+        self.brake.set(1).wait()
         return self.gap.set(*args, **kwargs)
 
     def stop(self, *, success=False):
@@ -242,7 +244,8 @@ class Energy(PseudoPositioner):
         # calib_path = '/nfs/xf05id1/UndulatorCalibration/'
         calib_path = Path(__file__).parent
         # calib_file = "../data/SRXUgapCalibration20170612.txt"
-        calib_file = "../data/20210912_SRXUgapCalibration.txt"
+        # calib_file = "../data/20210912_SRXUgapCalibration.txt"
+        calib_file = "../data/20230221_SRXUgapCalibration.txt"
 
         # with open(os.path.join(calib_path, calib_file), 'r') as f:
         with open(calib_path / calib_file, "r") as f:
@@ -362,18 +365,9 @@ class Energy(PseudoPositioner):
         self.detune.put(0.0)
         self.move(self.energy.get()[0])
 
-## cal_data_2022cycle3 = {
-##     "d_111": 3.14034339223485,
-##     "delta_bragg": 0.18899059694989445,
-##     "C2Xcal": 3.6,
-##     "T2cal": 15.0347755916,
-##     "xoffset": 24.65,
-## }
-## 
-
-cal_data_2022cycle3_b = {
-    "d_111": 3.1303007759937613,
-    "delta_bragg": 0.22176141200666383,
+cal_data_2023cycle1 = {
+    "d_111": 3.129481698903565,
+    "delta_bragg": 0.21761809604296511,
     "C2Xcal": 3.6,
     "T2cal": 15.0347755916,
     "xoffset": 24.65,
@@ -381,10 +375,12 @@ cal_data_2022cycle3_b = {
 
 
 
-energy = Energy(prefix="", name="energy", **cal_data_2022cycle3_b)
+# print('Connecting to energy PVs...')
+energy = Energy(prefix="", name="energy", **cal_data_2023cycle1)
 energy.wait_for_connection()
 energy.synch_with_epics()
 energy.value = 1.0
+
 
 
 # Setup front end slits (primary slits)
@@ -394,7 +390,7 @@ class SRXSlitsFE(Device):
     inb = Cpt(EpicsMotor, "3-Ax:I}Mtr")
     out = Cpt(EpicsMotor, "4-Ax:O}Mtr")
 
-
+# print('Connecting to FE slit PVs...')
 fe = SRXSlitsFE("FE:C05A-OP{Slt:", name="fe")
 
 
@@ -496,9 +492,17 @@ class IDFlyDevice(Device):
     id_energy = Cpt(EpicsSignal, 'FlyEnergyID-RB')
 
 
-id_fly_device = IDFlyDevice('SR:C5-ID:G1{IVU21:1}', name='id_fly_device')
-id_fly_device.hdcm_parameters.d111.put(energy._d_111)
-id_fly_device.hdcm_parameters.delta_bragg.put(energy._delta_bragg)
-id_fly_device.hdcm_parameters.c2x_cal.put(energy._c2xcal)
-id_fly_device.hdcm_parameters.t2_cal.put(energy._t2cal)
-id_fly_device.hdcm_parameters.x_offset.put(energy._xoffset)
+try:
+    id_fly_device = IDFlyDevice('SR:C5-ID:G1{IVU21:1}', name='id_fly_device')
+    id_fly_device.hdcm_parameters.d111.put(energy._d_111)
+    id_fly_device.hdcm_parameters.delta_bragg.put(energy._delta_bragg)
+    id_fly_device.hdcm_parameters.c2x_cal.put(energy._c2xcal)
+    id_fly_device.hdcm_parameters.t2_cal.put(energy._t2cal)
+    id_fly_device.hdcm_parameters.x_offset.put(energy._xoffset)
+except ReadOnlyError as e:
+    print('Connecting to ID flyer...')
+    print('  Read only error connecting to flying ID PVs!')
+    print('  Continuing...')
+except Exception as e:
+    print(e)
+    raise(e)

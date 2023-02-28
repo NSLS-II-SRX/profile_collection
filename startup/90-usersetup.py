@@ -16,7 +16,8 @@ proposal_title = 'In situ observation of glass structure evolution preceding cry
 PI_lastname = 'Musterman'
 saf_num = 310262
 
-cycle = '2022_cycle3'
+
+cycle = '2023_cycle1'
 
 # Set user data in bluesky
 RE.md['proposal']  = {'proposal_num': str(proposal_num),

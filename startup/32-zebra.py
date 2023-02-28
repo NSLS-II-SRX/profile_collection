@@ -4,11 +4,13 @@ print(f"Loading {__file__}...")
 import os
 import threading
 import h5py
+import datetime
 import numpy as np
 import time as ttime
 from ophyd import Device, EpicsSignal, EpicsSignalRO
 from ophyd import Component as Cpt
 from ophyd import FormattedComponent as FC
+from ophyd.areadetector.filestore_mixins import FileStorePluginBase, FileStoreHDF5
 # from hxntools.detectors.zebra import Zebra, EpicsSignalWithRBV
 from nslsii.detectors.zebra import Zebra, EpicsSignalWithRBV
 
@@ -342,6 +344,19 @@ def set_flyer_zebra_stage_sigs(flyer, method):
     # flyer.stage_sigs[flyer._encoder.pc.enc] = 0
     # flyer.stage_sigs[flyer._encoder.pc.dir] = 0
     # flyer.stage_sigs[flyer._encoder.pc.tspre] = 1
+    ## AND tab
+    flyer.stage_sigs[flyer._encoder.and1.use1] = 1  # 0 = No, 1 = Yes
+    flyer.stage_sigs[flyer._encoder.and1.use2] = 0
+    flyer.stage_sigs[flyer._encoder.and1.use3] = 0
+    flyer.stage_sigs[flyer._encoder.and1.use4] = 0
+    flyer.stage_sigs[flyer._encoder.and1.input_source1] = 36
+    flyer.stage_sigs[flyer._encoder.and1.input_source2] = 0
+    flyer.stage_sigs[flyer._encoder.and1.input_source3] = 0
+    flyer.stage_sigs[flyer._encoder.and1.input_source4] = 0
+    flyer.stage_sigs[flyer._encoder.and1.invert1] = 1  # 0 = No, 1 = Yes
+    flyer.stage_sigs[flyer._encoder.and1.invert2] = 0
+    flyer.stage_sigs[flyer._encoder.and1.invert3] = 0
+    flyer.stage_sigs[flyer._encoder.and1.invert4] = 0
     ## ENC tab
     flyer.stage_sigs[flyer._encoder.pc.enc_pos1_sync] = 1
     flyer.stage_sigs[flyer._encoder.pc.enc_pos2_sync] = 1
@@ -350,8 +365,8 @@ def set_flyer_zebra_stage_sigs(flyer, method):
     ## SYS tab
     flyer.stage_sigs[flyer._encoder.output1.ttl.addr] = 31  # PC_PULSE --> TTL1 --> xs
     flyer.stage_sigs[flyer._encoder.output2.ttl.addr] = 31  # PC_PULSE --> TTL2 --> merlin
-    flyer.stage_sigs[flyer._encoder.output3.ttl.addr] = 36  # OR1 --> TTL3 --> scaler
-    flyer.stage_sigs[flyer._encoder.output4.ttl.addr] = 53  # PC_PULSE --> PULSE2 --> TTL4 --> dexela
+    flyer.stage_sigs[flyer._encoder.output3.ttl.addr] = 32  # OR1 --> AND1 --> TTL3 --> scaler
+    flyer.stage_sigs[flyer._encoder.output4.ttl.addr] = 31  # PC_PULSE --> TTL4 --> dexela
 
     if method == 'position':
         flyer.mode.set('position')
@@ -466,12 +481,31 @@ class SRXFlyer1Axis(Device):
     This is the position based flyer.
     """
 
-    LARGE_FILE_DIRECTORY_WRITE_PATH = (
-        "/nsls2/data/srx/assets/zebra/2022/2022-2/"
-    )
-    LARGE_FILE_DIRECTORY_READ_PATH = (
-        "/nsls2/data/srx/assets/zebra/2022/2022-2/"
-    )
+    root_path='/nsls2/data/srx/assets/' 
+    write_path_template=f'zebra/%Y/%m/%d/'
+    read_path_template=f'zebra/%Y/%m/%d/'
+    reg_root=f'zebra/'
+
+    def make_filename(self):
+        """Make a filename.
+        Taken/Modified from ophyd.areadetector.filestore_mixins
+        This is a hook so that the read and write paths can either be modified
+        or created on disk prior to configuring the areaDetector plugin.
+        Returns
+        -------
+        filename : str
+            The start of the filename
+        read_path : str
+            Path that ophyd can read from
+        write_path : str
+            Path that the IOC can write to
+        """
+        filename = f'{new_short_uid()}.h5'
+        formatter = datetime.datetime.now().strftime
+        write_path = formatter(f'{self.root_path}{self.write_path_template}')
+        read_path = formatter(f'{self.root_path}{self.read_path_template}')
+        return filename, read_path, write_path
+
     KNOWN_DETS = {"xs", "xs2", "xs4", "merlin", "dexela"}
     fast_axis = Cpt(Signal, value="HOR", kind="config")
     slow_axis = Cpt(Signal, value="VER", kind="config")
@@ -509,7 +543,6 @@ class SRXFlyer1Axis(Device):
         self._sis = sclr1
         self._filestore_resource = None
         self._encoder = zebra
-
 
         # Put SIS3820 into single count (not autocount) mode
         self.stage_sigs[self._sis.count_mode] = 0
@@ -826,20 +859,17 @@ class SRXFlyer1Axis(Device):
         for d in self._dets:
             d.stop(success=True)
 
-        self.__filename = "{}.h5".format(uuid.uuid4())
-        self.__filename_sis = "{}.h5".format(uuid.uuid4())
-        self.__read_filepath = os.path.join(
-            self.LARGE_FILE_DIRECTORY_READ_PATH, self.__filename
-        )
-        self.__read_filepath_sis = os.path.join(
-            self.LARGE_FILE_DIRECTORY_READ_PATH, self.__filename_sis
-        )
-        self.__write_filepath = os.path.join(
-            self.LARGE_FILE_DIRECTORY_WRITE_PATH, self.__filename
-        )
-        self.__write_filepath_sis = os.path.join(
-            self.LARGE_FILE_DIRECTORY_WRITE_PATH, self.__filename_sis
-        )
+        # Set filename/path for zebra data
+        f, rp, wp = self.make_filename()
+        self.__filename = f
+        self.__read_filepath = os.path.join(rp, self.__filename)
+        self.__write_filepath = os.path.join(wp, self.__filename)
+        # Set filename/path for scaler data
+        f, rp, wp = self.make_filename()
+        self.__filename_sis = f
+        self.__read_filepath_sis = os.path.join(rp, self.__filename_sis)
+        self.__write_filepath_sis = os.path.join(wp, self.__filename_sis)
+        
 
         self.__filestore_resource, datum_factory_z = resource_factory(
             "ZEBRA_HDF51",

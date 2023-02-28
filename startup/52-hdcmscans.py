@@ -12,6 +12,11 @@ from scipy.optimize import curve_fit
 
 from bluesky.callbacks.mpl_plotting import QtAwareCallback
 
+# For smart_peakup
+import bluesky.plan_stubs as bps
+import bluesky.preprocessors as bpp
+from bluesky.utils import Msg
+from bluesky import utils
 
 '''
 
@@ -299,6 +304,202 @@ class PairedCallback(QtAwareCallback):
         super().stop(doc)
 
 
+def smart_peakup(start=None,
+                 min_step=0.005,
+                 max_step=0.50,
+                 *,
+                 shutter=True,
+                 motor=dcm.c2_fine,
+                 detectors=[bpm3, bpm4, xbpm2],
+                 target_fields=['bpm4_total_current', 'xbpm2_sumT'],
+                 MAX_ITERS=100,
+                 md=None,
+                 verbose=False):
+    """
+    Quickly optimize X-ray flux into the SRX D-hutch based on
+    measurements from two XBPMs.
+
+    Parameters
+    ----------
+    start : float
+        starting position of motor
+    min_step : float
+        smallest step for determining convergence
+    max_step : float
+        largest step for initial scanning
+    motor : object
+        any 'settable' object (motor, temp controller, etc.)
+    detectors : list
+        list of 'readable' objects
+    target_fields : list
+        list of strings with the data field for optimization
+    MAX_ITERS : int, default=100
+        maximum number of iterations for each target field
+    md : dict, optional
+        metadata
+    verbose : boolean, optional
+        print debugging information
+
+    See Also
+    --------
+    :func:`bluesky.plans.adaptive_scan`
+    """
+    # Debugging print
+    if verbose:
+        print('Additional debugging is enabled.')
+
+    # Check min/max steps
+    if not 0 < min_step < max_step:
+        raise ValueError("min_step and max_step must meet condition of "
+                         "max_step > min_step > 0")
+
+    # Grab starting point
+    if start is None:
+        start = motor.readback.get()
+        if verbose:
+            print(f'Starting position: {start:.4}')
+
+    # Check if bpm4 is working
+    if 'bpm4' in [det.name for det in detectors]:
+        # Need to implement
+        # Or, hopefully, new device will not have this issue
+        pass
+
+    # Check foils
+    if 'bpm4_total_current' in target_fields:
+        E = energy.energy.readback.get()  # keV
+        y = bpm4_pos.y.user_readback.get()  # Cu: y=0, Ti: y=25
+        if np.abs(y-25) < 5:
+            foil = 'Ti'
+        elif np.abs(y) < 5:
+            foil = 'Cu'
+        else:
+            foil = ''
+            banner('Unknown foil! Continuing without check!')
+
+        if verbose:
+            print(f'Energy: {E:.4}')
+            print(f'Foil:\n  {y=:.4}\n  {foil=}')
+
+        threshold = 8.979
+        if E > threshold and foil == 'Ti':
+            banner('WARNING! BPM4 foil is not optimized for the incident energy.')
+        elif E < threshold and foil == 'Cu':
+            banner('WARNING! BPM4 foil is not optimized for the incident energy.')
+
+    # We do not need the fast shutter open, so we will only check the B-shutter
+    if shutter is True:
+        if shut_b.status.get() == 'Not Open':
+            print('Opening B-hutch shutter..')
+            try:
+                st = yield from mov(shut_b, "Open")
+            # Need to figure out exception raises when shutter cannot open
+            except Exception as ex:
+                print(st)
+                raise ex
+
+    # Add metadata
+    _md = {'detectors': [det.name for det in detectors],
+           'motors': [motor.name],
+           'plan_args': {'detectors': list(map(repr, detectors)),
+                         'motor': repr(motor),
+                         'start': start,
+                         'min_step': min_step,
+                         'max_step': max_step,
+                         },
+           'plan_name': 'smart_peakup',
+           'hints': {},
+           }
+    _md = get_stock_md(_md)
+    _md['scan']['type'] = 'PEAKUP'
+    _md['scan']['detectors'] = [det.name for det in detectors]
+    _md.update(md or {})
+
+    try:
+        dimensions = [(motor.hints['fields'], 'primary')]
+    except (AttributeError, KeyError):
+        pass
+    else:
+        _md['hints'].setdefault('dimensions', dimensions)
+
+    # Visualization
+    livecb = []
+    if verbose is False:
+        livecb.append(LiveTable([motor.readback.name] + target_fields))
+
+    # Need to add LivePlot, or LiveTable
+    @bpp.stage_decorator(list(detectors) + [motor])
+    @bpp.run_decorator(md=_md)
+    @bpp.subs_decorator(livecb)
+    def smart_max_core(x0):
+        # Optimize on a given detector
+        def optimize_on_det(target_field, x0):
+            past_pos = x0
+            next_pos = x0
+            step = max_step
+            past_I = None
+            cur_I = None
+            cur_det = {}
+
+            for N in range(MAX_ITERS):
+                yield Msg('checkpoint')
+                if verbose:
+                    print(f'Moving {motor.name} to {next_pos:.4f}')
+                yield from bps.mv(motor, next_pos)
+                yield from bps.sleep(0.500)
+                yield Msg('create', None, name='primary')
+                for det in detectors:
+                    yield Msg('trigger', det, group='B')
+                yield Msg('wait', None, 'B')
+                for det in utils.separate_devices(detectors + [motor]):
+                    cur_det = yield Msg('read', det)
+                    if target_field in cur_det:
+                        cur_I = cur_det[target_field]['value']
+                        if verbose:
+                            print(f'New measurement on {target_field}: {cur_I:.4}')
+                yield Msg('save')
+
+                # special case first first loop
+                if past_I is None:
+                    past_I = cur_I
+                    next_pos += step
+                    if verbose:
+                        print(f'past_I is None. Continuing...')
+                    continue
+
+                dI = cur_I - past_I
+                if verbose:
+                    print(f'{dI=:.4f}')
+                if dI < 0:
+                    step = -0.6 * step
+                else:
+                    past_pos = next_pos
+                    past_I = cur_I
+                next_pos = past_pos + step
+                if verbose:
+                    print(f'{next_pos=:.4f}')
+
+                # Maximum found
+                if np.abs(step) < min_step:
+                    if verbose:
+                        print(f'Maximum found for {target_field} at {x0:.4f}!\n  {step=:.4f}')
+                    return next_pos
+            else:
+                raise Exception('Optimization did not converge!')
+
+        # Start optimizing based on each detector field
+        for target_field in target_fields:
+            if verbose:
+                print(f'Optimizing on detector {target_field}')
+            x0 = yield from optimize_on_det(target_field, x0)
+
+    return (yield from smart_max_core(start))
+
+
+# Setup alias/synonym
+peakup = smart_peakup
+
+
 def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
                 fix_roll=True, fix_pitch=True, feedback=True):
     """
@@ -342,10 +543,10 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     yield from bps.mov(dcm.c2_fine.pid_enabled, 0)
     yield from dcm.c2_fine.reset_pid()
 
-    # Set the pitch piezo to its default value (3.0)
+    # Set the pitch piezo to its default value (5.0)
     # and return the pitch to its original value
     # print('before moving c2 fine to default')
-    pf2_default = 3.0
+    pf2_default = 5.0
     total_pitch = dcm.c2_pitch.position
     yield from bps.mov(dcm.c2_fine, pf2_default)
     yield from bps.mov(dcm.c2_pitch, total_pitch)
@@ -353,7 +554,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     yield from bps.mov(dcm.c2_pitch_kill, 1.0)
 
     # Set limits
-    pitch_lim = (2.0, 4.0)
+    pitch_lim = (4.0, 6.0)
     pitch_num = 51
 
     # Find approximate values

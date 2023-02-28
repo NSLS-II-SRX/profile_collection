@@ -138,6 +138,11 @@ def export_sis_data(ion, filepath, zebra):
             new_i = i
             new_im = im
             new_it = it
+        # I want to define the "zero" somewhere
+        # Then if that "zero" is defined based on a 1 second count, ion chambers can be zero'ed better
+        # new = old - (zero_val * (new_t / 50_000_000))
+        # might be good to throw a np.amax(new, 0) in there to prevent negative values
+        # it would be good to save the "zero" value in the scan metadata as well
         dset0 = f.create_dataset("time", (correct_length,), dtype="f")
         dset0[...] = np.array(new_t)
         dset1 = f.create_dataset("i0", (correct_length,), dtype="f")

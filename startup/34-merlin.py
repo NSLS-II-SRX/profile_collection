@@ -28,6 +28,7 @@ from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  )
 
 from hxntools.detectors.merlin import MerlinDetector
+# from nslsii.detectors.merlin import MerlinDetector
 from hxntools.handlers import register
 
 
@@ -102,14 +103,17 @@ class MerlinFileStoreHDF5(FileStoreBase):
         filename, read_path, write_path = self.make_filename()
 
         # Ensure we do not have an old file open.
-        set_and_wait(self.capture, 0)
+        # set_and_wait(self.capture, 0)  // deprecated
+        self.capture.set(0).wait()
         # These must be set before parent is staged (specifically
         # before capture mode is turned on. They will not be reset
         # on 'unstage' anyway.
         self.file_path.put(write_path)
         # set_and_wait(self.file_path, write_path)
-        set_and_wait(self.file_name, filename)
-        set_and_wait(self.file_number, 0)
+        # set_and_wait(self.file_name, filename)  // deprecated
+        self.file_name.set(filename).wait()
+        # set_and_wait(self.file_number, 0)  // deprecated
+        self.file_number.set(0).wait()
         staged = super().stage()
 
         # AD does this same templating in C, but we can't access it

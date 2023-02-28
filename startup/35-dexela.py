@@ -5,7 +5,7 @@ import os
 import h5py
 import datetime
 
-import ophyd
+# import ophyd
 from hxntools.detectors.dexela import (DexelaDetector,)
 from nslsii.detectors.xspress3 import (logger, )
 from databroker.assets.handlers import HandlerBase
@@ -91,15 +91,20 @@ class DexelaFileStoreHDF5(FileStoreBase):
         filename, read_path, write_path = self.make_filename()
 
         # Ensure we do not have an old file open.
-        set_and_wait(self.capture, 0)
+        # set_and_wait(self.capture, 0)  // deprecated
+        self.capture.set(0).wait()
         # These must be set before parent is staged (specifically
         # before capture mode is turned on. They will not be reset
         # on 'unstage' anyway.
-        set_and_wait(self.file_path, write_path)
-        set_and_wait(self.file_name, filename)
-        set_and_wait(self.file_number, 0)
+        # set_and_wait(self.file_path, write_path)  // deprecated
+        self.file_path.set(write_path).wait()
+        # set_and_wait(self.file_name, filename)  // deprecated
+        self.file_name.set(filename).wait()
+        # set_and_wait(self.file_number, 0)  // deprecated
+        self.file_number.set(0).wait()
         if self.parent._mode is SRXMode.step:
-            set_and_wait(self.num_capture, self.parent.total_points.get())
+            # set_and_wait(self.num_capture, self.parent.total_points.get())  // deprecated
+            self.num_capture.set(self.parent.total_points.get()).wait()
 
         staged = super().stage()
 
@@ -117,7 +122,8 @@ class DexelaFileStoreHDF5(FileStoreBase):
         if self.parent._mode is SRXMode.fly:
             res_kwargs = {}
         else:
-            set_and_wait(self.parent.cam.num_images, 1)
+            # set_and_wait(self.parent.cam.num_images, 1)  // deprecated
+            self.parent.cam.num_images.set(1).wait()
             res_kwargs = {'frame_per_point': 1}
 
             self._point_counter = itertools.count()

@@ -174,14 +174,14 @@ class SRXDCM(Device):
     c1_roll = Cpt(EpicsMotor, "R1}Mtr")
     c1_fine = Cpt(
         HDCMPiezoRoll,
-        "XF:05ID-BI{EM:BPM1}DAC0", name="c1_fine",
+        "XF:05IDA-BI{BEST:1}PreDAC0:OutCh2", name="c1_fine",
         add_prefix=()
     )
     c2_x = energy.c2_x
     c2_pitch = Cpt(EpicsMotor, "P2}Mtr")
     c2_fine = Cpt(
         HDCMPiezoPitch,
-        "XF:05ID-BI{EM:BPM1}DAC1",
+        "XF:05IDA-BI{BEST:1}PreDAC0:OutCh1",
         name="c2_fine",
         add_prefix=()
     )
@@ -205,8 +205,9 @@ class SRXBPM(Device):
     diode_y = Cpt(EpicsMotor, "YDiode}Mtr")
 
 
-bpm1_pos = SRXBPM("XF:05IDA-BI:1{BPM:1-Ax:", name="bpm1_pos")
-bpm2_pos = SRXBPM("XF:05IDB-BI:1{BPM:2-Ax:", name="bpm2_pos")
+# These are the positioners for the backscattering diodes for bpm3/4
+bpm3_pos = SRXBPM("XF:05IDA-BI:1{BPM:1-Ax:", name="bpm3_pos")
+bpm4_pos = SRXBPM("XF:05IDB-BI:1{BPM:2-Ax:", name="bpm4_pos")
 
 
 # Setup SSA

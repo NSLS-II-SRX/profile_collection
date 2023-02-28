@@ -109,7 +109,8 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
 
         """
         print("  Warming up the hdf5 plugin...", end="", flush=True)
-        set_and_wait(self.enable, 1)
+        # set_and_wait(self.enable, 1)  // deprecated
+        self.enable.set(1).wait()
         sigs = OrderedDict(
             [
                 (self.parent.settings.array_callbacks, 1),
@@ -126,13 +127,15 @@ class Xspress3FileStoreFlyable(Xspress3FileStore):
 
         for sig, val in sigs.items():
             ttime.sleep(0.1)  # abundance of caution
-            set_and_wait(sig, val)
+            # set_and_wait(sig, val)  // deprecated
+            sig.set(val).wait()
 
         ttime.sleep(2)  # wait for acquisition
 
         for sig, val in reversed(list(original_vals.items())):
             ttime.sleep(0.1)
-            set_and_wait(sig, val)
+            # set_and_wait(sig, val)  // deprecated
+            sig.set(val).wait()
         print("done")
 
     def describe(self):
@@ -194,7 +197,8 @@ class CommunityXspress3FileStoreFlyable(CommunityXspress3FileStore):
 
         """
         print("  Warming up the hdf5 plugin...", end="", flush=True)
-        set_and_wait(self.enable, 1)
+        # set_and_wait(self.enable, 1)  // deprecated
+        self.enable.set(1).wait()
         sigs = OrderedDict(
             [
                 (self.parent.cam.array_callbacks, 1),
@@ -211,13 +215,15 @@ class CommunityXspress3FileStoreFlyable(CommunityXspress3FileStore):
 
         for sig, val in sigs.items():
             ttime.sleep(0.1)  # abundance of caution
-            set_and_wait(sig, val)
+            # set_and_wait(sig, val)  // deprecated
+            sig.set(val).wait()
 
         ttime.sleep(2)  # wait for acquisition
 
         for sig, val in reversed(list(original_vals.items())):
             ttime.sleep(0.1)
-            set_and_wait(sig, val)
+            # set_and_wait(sig, val)  // deprecated
+            sig.set(val).wait()
         print("done")
 
     def describe(self):

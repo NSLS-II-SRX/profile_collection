@@ -1354,6 +1354,11 @@ def flying_xas(num_passes=1, shutter=True, md=None):
     yield from check_shutters(shutter, 'Close')
 
 
+@parameter_annotation_decorator({
+    "parameters": {
+        "flyers": {"default": "['flyer_id_mono']"},
+    }
+})
 def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
                         num_scans=1, scan_type='uni', shutter=True, plot=True,
                         flyers=[flyer_id_mono], harmonic=1, roi_num=1, md=None):
