@@ -457,7 +457,7 @@ def set_flyer_zebra_stage_sigs(flyer, method):
         # flyer.stage_sigs[flyer._encoder.pulse1.delay] = 0.2
         # flyer.stage_sigs[flyer._encoder.pulse1.width] = 0.1
         # flyer.stage_sigs[flyer._encoder.pulse1.time_units] = 0
-        flyer.stage_sigs[flyer._encoder.pulse2.input_addr] = 31
+        flyer.stage_sigs[flyer._encoder.pulse2.input_addr] = 30
         flyer.stage_sigs[flyer._encoder.pulse2.input_edge] = 0  # 0 = rising, 1 = falling
         flyer.stage_sigs[flyer._encoder.pulse2.delay] = 0
         flyer.stage_sigs[flyer._encoder.pulse2.width] = 0.45
@@ -845,10 +845,11 @@ class SRXFlyer1Axis(Device):
             ttime.sleep(0.01)
             if (ttime.monotonic() - t0) > 60:
                 print(f"{self.name} is behaving badly!")
-                self._encoder.pc.disarm.put(1)
-                ttime.sleep(0.100)
-                if self._encoder.pc.data_in_progress.get() == 1:
-                    raise TimeoutError
+                #self._encoder.pc.disarm.put(1)
+                #ttime.sleep(0.100)
+                #if self._encoder.pc.data_in_progress.get() == 1:
+                    #raise TimeoutError
+                break
 
         # ttime.sleep(.1)
         self._mode = "complete"
@@ -1120,18 +1121,28 @@ except Exception as ex:
 
 def export_nano_zebra_data(zebra, filepath, fastaxis):
     j = 0
+    flag_bad_zebra = False
     while zebra.pc.data_in_progress.get() == 1:
         print("Waiting for zebra...")
         ttime.sleep(0.1)
         j += 1
         if j > 10:
             print("THE ZEBRA IS BEHAVING BADLY CARRYING ON")
+            flag_bad_zebra = True
+            zebra.pc.reset_block_state.put(1)
             break
 
     time_d = zebra.pc.data.time.get()
     enc1_d = zebra.pc.data.enc1.get()
     enc2_d = zebra.pc.data.enc2.get()
     enc3_d = zebra.pc.data.enc3.get()
+
+    # Drop the first point if Zebra is behaving badly
+    if flag_bad_zebra:
+        time_d = time_d[1:]
+        enc1_d = enc1_d[1:]
+        enc2_d = enc2_d[1:]
+        enc3_d = enc3_d[1:]
 
     px = zebra.pc.pulse_step.get()
     if fastaxis == 'NANOHOR':

@@ -115,14 +115,14 @@ class SRXScanRecord(Device):
         # print(self.cycle.connected)
         # if (self.cycle.connected is True):
         if True:
-            self.proposal_num.put(str(md['proposal_num']))
-            self.proposal_title.put(str(md['proposal_title']))
-            self.SAF.put(str(md['saf_num']))
-            self.PI.put(str(md['PI_lastname']))
-            self.cycle.put(str(md['cycle']))
+            self.proposal_num.set(str(md['proposal_num']), timeout=5)
+            self.proposal_title.set(str(md['proposal_title']), timeout=5)
+            self.SAF.set(str(md['saf_num']), timeout=5)
+            self.PI.set(str(md['PI_lastname']), timeout=5)
+            self.cycle.set(str(md['cycle']), timeout=5)
             print('Scanrecord updated.')
         else:
-            print('Scanrecord NOT updated...')
+            print('Scanrecord NOT updated...', timeout=5)
 
     current_scan = Cpt(EpicsSignal, 'Scan:CUR')
     current_scan_id = Cpt(EpicsSignal, 'Scan:CUR_ID')

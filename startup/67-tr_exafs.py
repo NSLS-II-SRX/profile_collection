@@ -136,7 +136,7 @@ def set_tr_flyer_stage_sigs(flyer, divs=[3, 3, 3, 100]):
     ## PULSE tab
     #flyer.stage_sigs[flyer._encoder.pulse1.width] = 2.75 # change to 0.9??
     flyer.stage_sigs[flyer._encoder.pulse1.width] = divs[0] - 0.25
-    flyer.stage_sigs[flyer._encoder.pulse1.input_addr] = 32
+    flyer.stage_sigs[flyer._encoder.pulse1.input_addr] = 44  # 32
     flyer.stage_sigs[flyer._encoder.pulse1.delay] = 0
     flyer.stage_sigs[flyer._encoder.pulse1.time_units] = "ms"
     flyer.stage_sigs[flyer._encoder.pulse1.input_edge] = 0
@@ -339,9 +339,10 @@ def laser_on(power, hold, ramp=5, delay=0):
     log(f'{power} mW power, {hold} sec hold, {ramp} sec ramp.')
     
     # Set up variables. Settle_time to not overwhelm zebra
-    yield from abs_set(laser.power, power, settle_time=0.010)
-    yield from abs_set(laser.hold, hold, settle_time=0.010)
-    yield from abs_set(laser.ramp, ramp, settle_time=0.010)
+    yield from abs_set(laser.power, power, settle_time=0.025)
+    yield from abs_set(laser.hold, hold, settle_time=0.025)
+    yield from abs_set(laser.ramp, ramp, settle_time=0.025)
+    yield from bps.sleep(0.100)  # Not necessary, just paranoid
 
     # Trigger laser after delay
     if delay > 0:
@@ -741,7 +742,7 @@ def plot_beam_alignment(laserid=-1, xrayid=0,
     # Define some useful variables
     dir = '/home/xf05id1/current_user_data/alignments/'
     data_dir = dir + 'raw_data/'
-    colors = ['k', 'r']
+    colors = ['r', 'k']
     sides = ['left', 'right']
 
     # Building data information
@@ -828,7 +829,7 @@ def plot_beam_alignment(laserid=-1, xrayid=0,
                  ax1.get_xlim()[1])
     ax1.set_xlabel(f'{direction} coordinates (µm)')
 
-    annotation = f'x-ray: {meta_string[0]}\nlaser: {meta_string[1]}'
+    annotation = f'x-ray: {meta_string[1]}\nlaser: {meta_string[0]}'
     ax1.annotate(annotation,
                  xy=(0.5, 0.01),
                  xycoords='axes fraction',
@@ -1097,6 +1098,7 @@ def laser_time_series(power, hold, ramp=5, wait=0,
             log(f'  Triggering {d.name}')
             st = yield from bps.trigger(d, group=row_str)
         yield from abs_set(xs.hdf5.capture, 1, wait=True, timeout=10)
+        yield from bps.sleep(1)  # additional sleep for good measure, in theory can be removed
 
         # Turn on laser and wait
         yield from laser_on(power, hold, ramp, delay=0)
@@ -1118,9 +1120,18 @@ def laser_time_series(power, hold, ramp=5, wait=0,
         #   shutter while waiting for data collection to complete?
         #   I think the timeout would to a "total time" since trigger
         #   not waiting at a given point in the code for timeout
-        st.wait(timeout=600)  # Putting default 600 s = 10 min timeout
-        print('done')
-
+        try:
+            st.wait(timeout=360)  # Putting default 600 s = 10 min timeout
+            print("done")
+        except WaitTimeoutError as e:
+            print("Timeout Error!")
+            print(f"  Stopping X3X... {xs.cam.array_counter.get()}/{xs.cam.num_images.get()}")
+            yield from bps.abs_set(xs.cam.acquire, 0, wait=True, timeout=5)
+            for d in extra_dets:
+                print(f"  Stopping {d.name}... {d.cam.num_images_counter.get()}/{d.cam.num_images.get()}")
+                yield from bps.abs_set(d.cam.acquire, 0, wait=True, timeout=5)
+            print("Continuing...")
+        
         # stop counting
         yield from abs_set(sclr1.stop_all, 1, wait=True, timeout=10)  # stop acquiring scaler
 
@@ -1174,10 +1185,10 @@ def laser_time_series(power, hold, ramp=5, wait=0,
     # that to get a scan ID
 
 def tr_xanes_plan(xyze_pos, power, hold,
-                  v_edge=None, h_edge=None, distance=25, stepsize=0.5,
+                  v_edge=None, h_edge=None, distance=25, stepsize=0.25,
                   N_start=1, ramp=5, wait=0,
                   dets=[xs, merlin], acqtime=0.003,
-                  waittime=5, peakup_N=15, align_N=15,
+                  waittime=5, peakup_N=50, align_N=50,
                   no_data=False, shutter=True):
 
     '''
@@ -1249,13 +1260,13 @@ def tr_xanes_plan(xyze_pos, power, hold,
                        attenuators.Mo_shutter, filters[3])
 
     def check_staging(flyer):
-        yield from abs_set(flyer._encoder.pc.block_state_reset, 1,
-                               wait=True, timeout=3)
         if flyer._staged is Staged.yes:
                 flyer.unstage()
         for d in flyer.detectors:
             if d._staged is Staged.yes:
                 d.unstage()
+        yield from abs_set(flyer._encoder.pc.block_state_reset, 1,
+                        wait=True, timeout=3)
 
     # Log batch information...
     if N_start == 1:
@@ -1295,12 +1306,13 @@ def tr_xanes_plan(xyze_pos, power, hold,
             log(f'Performing peakup {peakup_count} of {num_peakup}')
             yield from attenuate_beam([0, 0, 0, 0])
             yield from check_staging(nano_flying_zebra_laser)
-            yield from peakup_fine(shutter=shutter) #shutter=shutter necessary?
+            yield from peakup(shutter=shutter) #shutter=shutter necessary?
             t_elap_p += ttime.time() - t0_p
             
 
         # Periodically perform auto_align to confirm laser and x-ray coincidence
         if (align_N != 0) and ((i % align_N == 0) or (i + 1 == N_start)):
+        #if (align_N != 0) and (i % align_N == 0):
             t0_a = ttime.time()
             align_count += 1
             log(f'Performing auto beam alignment {align_count} of {num_align}')
@@ -1368,9 +1380,15 @@ def tr_xanes_plan(xyze_pos, power, hold,
             log('Estimating batch time completion...')
             t_rem_p, t_rem_a = 0, 0
             if peakup_N != 0:
-                t_rem_p = (num_peakup - peakup_count) * (t_elap_p / peakup_count)
+                try:
+                    t_rem_p = (num_peakup - peakup_count) * (t_elap_p / peakup_count)
+                except ZeroDivisionError:
+                    t_rem_p = 0
             if align_N != 0:
-                t_rem_a = (num_align - align_count) * (t_elap_a / align_count)
+                try:
+                    t_rem_a = (num_align - align_count) * (t_elap_a / align_count)
+                except ZeroDivisionError:
+                    t_rem_a = 0
             print(f'Estimates based on {N - i - 1} remaining events.')
             t_rem_e = (N - i - 1) * (t_elap_e / (i - N_start + 2))
             t_rem_tot = np.sum([t_rem_p, t_rem_a, t_rem_e])
