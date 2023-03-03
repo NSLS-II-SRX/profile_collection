@@ -163,6 +163,7 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
     fly_next = Cpt(Signal, value=False)
 
     roi1 = Cpt(ROIPlugin, 'ROI1:')
+    stats1 = Cpt(StatsPlugin, 'Stats1:')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

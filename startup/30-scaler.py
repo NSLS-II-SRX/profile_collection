@@ -154,6 +154,58 @@ def export_sis_data(ion, filepath, zebra):
         f.close()
 
 
+def export_sis_data_laser(ion, filepath, zebra):
+    N = ion.nuse_all.get()
+    t = ion.mca1.get(timeout=5.0)
+    i = ion.mca2.get(timeout=5.0)
+    im = ion.mca3.get(timeout=5.0)
+    it = ion.mca4.get(timeout=5.0)
+    while len(t) == 0 and len(t) != len(i):
+        t = ion.mca1.get(timeout=5.0)
+        i = ion.mca2.get(timeout=5.0)
+        im = ion.mca3.get(timeout=5.0)
+        it = ion.mca4.get(timeout=5.0)
+
+    if len(i) != N:
+        print(f'Scaler did not receive collect enough points.')
+        ## Try one more time
+        t = ion.mca1.get(timeout=5.0)
+        i = ion.mca2.get(timeout=5.0)
+        im = ion.mca3.get(timeout=5.0)
+        it = ion.mca4.get(timeout=5.0)
+        if len(i) != N:
+            print(f'Nope. Only received {len(i)}/{N} points.')
+
+    correct_length = N
+    # correct_length = zebra.pc.data.num_down.get()
+    # Only consider even points
+    with h5py.File(filepath, "w") as f:
+        if len(t) != correct_length:
+            correction_factor = correct_length - len(t)
+            print(f"Adding {correction_factor} points to scaler!")
+            print(f"t is not the correct length. {t} != {correct_length}")
+            correction_list = [1e10 for _ in range(0, int(correction_factor))]
+            new_t = [k for k in t] + correction_list
+            new_i = [k for k in i] + correction_list
+            new_im = [k for k in im] + correction_list
+            new_it = [k for k in it] + correction_list
+        else:
+            correction_factor = 0
+            new_t = t
+            new_i = i
+            new_im = im
+            new_it = it
+        dset0 = f.create_dataset("time", (correct_length,), dtype="f")
+        dset0[...] = np.array(new_t)
+        dset1 = f.create_dataset("i0", (correct_length,), dtype="f")
+        dset1[...] = np.array(new_i)
+        dset2 = f.create_dataset("im", (correct_length,), dtype="f")
+        dset2[...] = np.array(new_im)
+        dset3 = f.create_dataset("it", (correct_length,), dtype="f")
+        dset3[...] = np.array(new_it)
+        f.close()
+
+
 class SISHDF5Handler(HandlerBase):
     HANDLER_NAME = "SIS_HDF51"
 

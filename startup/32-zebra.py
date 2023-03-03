@@ -183,7 +183,7 @@ class ZebraPositionCapture(Device):
         super().unstage()
 
 
-class SRXZebraOR(Device):
+class SRXZebraANDOR(Device):
     # I really appreciate the different indexing for input source
     # Thank you for that
     use1 = Cpt(EpicsSignal, '_ENA:B0')
@@ -206,21 +206,22 @@ class SRXZebraOR(Device):
         super().unstage()
 
 
-class SRXZebraAND(Device):
-    # I really appreciate the different indexing for input source
-    # Thank you for that
-    use1 = Cpt(EpicsSignal, '_ENA:B0')
-    use2 = Cpt(EpicsSignal, '_ENA:B1')
-    use3 = Cpt(EpicsSignal, '_ENA:B2')
-    use4 = Cpt(EpicsSignal, '_ENA:B3')
-    input_source1 = Cpt(EpicsSignal, '_INP1')
-    input_source2 = Cpt(EpicsSignal, '_INP2')
-    input_source3 = Cpt(EpicsSignal, '_INP3')
-    input_source4 = Cpt(EpicsSignal, '_INP4')
-    invert1 = Cpt(EpicsSignal, '_INV:B0')
-    invert2 = Cpt(EpicsSignal, '_INV:B1')
-    invert3 = Cpt(EpicsSignal, '_INV:B2')
-    invert4 = Cpt(EpicsSignal, '_INV:B3')
+class SRXZebraDIV(Device):
+    input_source = Cpt(EpicsSignal, 'INP')
+    div = Cpt(EpicsSignal, 'DIV')
+    first_pulse = FC(EpicsSignal, '{self._zebra_prefix}DIV_FIRST:{self._div_addr}')
+    trigger_on = FC(EpicsSignal, '{self._zebra_prefix}POLARITY:{self._edge_addr}')
+
+    _edge_addrs = {1: 'B8',
+                   2: 'B9',
+                   3: 'BA',
+                   4: 'BB',
+                   }
+    _div_addrs = {1: 'B0',
+                  2: 'B1',
+                  3: 'B2',
+                  4: 'B3',
+                 }
 
     def stage(self):
         super().stage()
@@ -228,6 +229,21 @@ class SRXZebraAND(Device):
     def unstage(self):
         super().unstage()
 
+    def __init__(self, prefix, *, index=None, parent=None,
+                 configuration_attrs=None, read_attrs=None, **kwargs):
+        if read_attrs is None:
+            read_attrs = ['input_source', 'div', 'first_pulse', 'trigger_on']
+        if configuration_attrs is None:
+            configuration_attrs = []
+
+        zebra = parent
+        self.index = index
+        self._zebra_prefix = zebra.prefix
+        self._edge_addr = self._edge_addrs[index]
+        self._div_addr = self._div_addrs[index]
+
+        super().__init__(prefix, configuration_attrs=configuration_attrs,
+                         read_attrs=read_attrs, parent=parent, **kwargs)
 
 
 class ZebraPulse(Device):
@@ -240,8 +256,7 @@ class ZebraPulse(Device):
     time_units = Cpt(EpicsSignalWithRBV, 'PRE', string=True)
     output = Cpt(EpicsSignal, 'OUT')
 
-    input_edge = FC(EpicsSignal,
-                    '{self._zebra_prefix}POLARITY:{self._edge_addr}')
+    input_edge = FC(EpicsSignal, '{self._zebra_prefix}POLARITY:{self._edge_addr}')
 
     _edge_addrs = {1: 'BC',
                    2: 'BD',
@@ -278,18 +293,22 @@ class SRXZebra(Zebra):
     """
 
     pc = Cpt(ZebraPositionCapture, "")
-    or1 = Cpt(SRXZebraOR, "OR1")  # XF:05IDD-ES:1{Dev:Zebra2}:OR1_INV:B0
-    or2 = Cpt(SRXZebraOR, "OR2")
-    or3 = Cpt(SRXZebraOR, "OR3")
-    or4 = Cpt(SRXZebraOR, "OR4")
-    and1 = Cpt(SRXZebraAND, "AND1")  # XF:05IDD-ES:1{Dev:Zebra2}:AND1_ENA:B0
-    and2 = Cpt(SRXZebraAND, "AND2")
-    and3 = Cpt(SRXZebraAND, "AND3")
-    and4 = Cpt(SRXZebraAND, "AND4")
+    and1 = Cpt(SRXZebraANDOR, "AND1")
+    and2 = Cpt(SRXZebraANDOR, "AND2")
+    and3 = Cpt(SRXZebraANDOR, "AND3")
+    and4 = Cpt(SRXZebraANDOR, "AND4")
+    or1 = Cpt(SRXZebraANDOR, "OR1")  # XF:05IDD-ES:1{Dev:Zebra2}:OR1_INV:B0
+    or2 = Cpt(SRXZebraANDOR, "OR2")
+    or3 = Cpt(SRXZebraANDOR, "OR3")
+    or4 = Cpt(SRXZebraANDOR, "OR4")
     pulse1 = Cpt(ZebraPulse, "PULSE1_", index=1)  # XF:05IDD-ES:1{Dev:Zebra2}:PULSE1_INP
     pulse2 = Cpt(ZebraPulse, "PULSE2_", index=2)
     pulse3 = Cpt(ZebraPulse, "PULSE3_", index=3)
     pulse4 = Cpt(ZebraPulse, "PULSE4_", index=4)
+    div1 = Cpt(SRXZebraDIV, "DIV1_", index=1)
+    div2 = Cpt(SRXZebraDIV, "DIV2_", index=2)
+    div3 = Cpt(SRXZebraDIV, "DIV3_", index=3)
+    div4 = Cpt(SRXZebraDIV, "DIV4_", index=4)
 
     def stage(self):
         super().stage()
@@ -386,7 +405,7 @@ def set_flyer_zebra_stage_sigs(flyer, method):
         # flyer.stage_sigs[flyer._encoder.pulse1.delay] = 0.2
         # flyer.stage_sigs[flyer._encoder.pulse1.width] = 0.1
         # flyer.stage_sigs[flyer._encoder.pulse1.time_units] = 0
-        flyer.stage_sigs[flyer._encoder.pulse2.input_addr] = 30
+        flyer.stage_sigs[flyer._encoder.pulse2.input_addr] = 31
         flyer.stage_sigs[flyer._encoder.pulse2.input_edge] = 0  # 0 = rising, 1 = falling
         flyer.stage_sigs[flyer._encoder.pulse2.delay] = 0
         flyer.stage_sigs[flyer._encoder.pulse2.width] = 0.1
@@ -438,11 +457,11 @@ def set_flyer_zebra_stage_sigs(flyer, method):
         # flyer.stage_sigs[flyer._encoder.pulse1.delay] = 0.2
         # flyer.stage_sigs[flyer._encoder.pulse1.width] = 0.1
         # flyer.stage_sigs[flyer._encoder.pulse1.time_units] = 0
-        # flyer.stage_sigs[flyer._encoder.pulse2.input_addr] = 30
-        # flyer.stage_sigs[flyer._encoder.pulse2.input_edge] = 0  # 0 = rising, 1 = falling
-        # flyer.stage_sigs[flyer._encoder.pulse2.delay] = 0
-        # flyer.stage_sigs[flyer._encoder.pulse2.width] = 0.1
-        # flyer.stage_sigs[flyer._encoder.pulse2.time_units] = 0
+        flyer.stage_sigs[flyer._encoder.pulse2.input_addr] = 30
+        flyer.stage_sigs[flyer._encoder.pulse2.input_edge] = 0  # 0 = rising, 1 = falling
+        flyer.stage_sigs[flyer._encoder.pulse2.delay] = 0
+        flyer.stage_sigs[flyer._encoder.pulse2.width] = 0.45
+        flyer.stage_sigs[flyer._encoder.pulse2.time_units] = 1
         flyer.stage_sigs[flyer._encoder.pulse3.input_addr] = 31
         flyer.stage_sigs[flyer._encoder.pulse3.input_edge] = 0  # 0 = rising, 1 = falling
         flyer.stage_sigs[flyer._encoder.pulse3.delay] = 0.0
@@ -826,10 +845,11 @@ class SRXFlyer1Axis(Device):
             ttime.sleep(0.01)
             if (ttime.monotonic() - t0) > 60:
                 print(f"{self.name} is behaving badly!")
-                self._encoder.pc.disarm.put(1)
-                ttime.sleep(0.100)
-                if self._encoder.pc.data_in_progress.get() == 1:
-                    raise TimeoutError
+                #self._encoder.pc.disarm.put(1)
+                #ttime.sleep(0.100)
+                #if self._encoder.pc.data_in_progress.get() == 1:
+                    #raise TimeoutError
+                break
 
         # ttime.sleep(.1)
         self._mode = "complete"
@@ -920,7 +940,12 @@ class SRXFlyer1Axis(Device):
 
         if amk_debug_flag:
             t_sisdata = tic()
-        get_sis_data()
+        if 'laser' in self.name:
+            export_sis_data_laser(
+                self._sis, self.__write_filepath_sis, self._encoder
+            )
+        else:
+            get_sis_data()
         if amk_debug_flag:
             toc(t_sisdata, str='Get SIS data')
 
@@ -1096,18 +1121,28 @@ except Exception as ex:
 
 def export_nano_zebra_data(zebra, filepath, fastaxis):
     j = 0
+    flag_bad_zebra = False
     while zebra.pc.data_in_progress.get() == 1:
         print("Waiting for zebra...")
         ttime.sleep(0.1)
         j += 1
         if j > 10:
             print("THE ZEBRA IS BEHAVING BADLY CARRYING ON")
+            flag_bad_zebra = True
+            zebra.pc.reset_block_state.put(1)
             break
 
     time_d = zebra.pc.data.time.get()
     enc1_d = zebra.pc.data.enc1.get()
     enc2_d = zebra.pc.data.enc2.get()
     enc3_d = zebra.pc.data.enc3.get()
+
+    # Drop the first point if Zebra is behaving badly
+    if flag_bad_zebra:
+        time_d = time_d[1:]
+        enc1_d = enc1_d[1:]
+        enc2_d = enc2_d[1:]
+        enc3_d = enc3_d[1:]
 
     px = zebra.pc.pulse_step.get()
     if fastaxis == 'NANOHOR':

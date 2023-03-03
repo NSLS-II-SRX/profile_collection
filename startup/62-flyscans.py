@@ -127,6 +127,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
     # Get the scan speed
     v = ((xstop - xstart) / (xnum - 1)) / dwell  # compute "stage speed"
+    v = np.abs(v)
     if (v > xmotor.velocity.high_limit):
         raise ValueError(f'Desired motor velocity too high\n' \
                          f'Max velocity: {xmotor.velocity.high_limit}')
@@ -162,8 +163,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             dwell = 0.007
         # According to Ken's comments in hxntools, this is a de-bounce time
         # when in external trigger mode
-        dpc.cam.stage_sigs['acquire_time'] = 0.50 * dwell - 0.0016392
-        dpc.cam.stage_sigs['acquire_period'] = 0.75 * dwell
+        dpc.cam.stage_sigs['acquire_time'] = 0.75 * dwell  # - 0.0016392
+        dpc.cam.stage_sigs['acquire_period'] = 0.75 * dwell + 0.0016392
         dpc.cam.stage_sigs['num_images'] = 1
         dpc.stage_sigs['total_points'] = xnum
         dpc.hdf5.stage_sigs['num_capture'] = xnum
@@ -420,7 +421,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 print(ex)
             ## Clean up scaler
             try:
-                yield from abs_set(ion.stop_all, 1, timeout=10)  # stop acquiring scaler
+                yield from abs_set(ion.stop_all, 1, wait=True, timeout=10)  # stop acquiring scaler
             except ex:
                 print('Hopefully a timeout error while cleaning up scaler...')
                 print(ex)
@@ -444,7 +445,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             toc(t_datacollect, str='Total time')
 
         # we still know about ion from above
-        yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
+        yield from abs_set(ion.stop_all, 1, wait=True)  # stop acquiring scaler
 
         def zebra_complete():
             yield from complete(flying_zebra)  # tell the Zebra we are done
@@ -508,9 +509,27 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     else:
         livepopup = []
 
+    # if ('merlin' in dets_by_name):
+    #     livepopup.append(LiveGrid((ynum, xnum), merlin.stats1.total.name,
+    #                               clim=None, cmap='viridis',
+    #                               xlabel='x [um]', ylabel='y [um]',
+    #                               extent=[xstart, xstop, ystart, ystop],
+    #                               x_positive='right', y_positive='down'))
+    if ('dexela' in dets_by_name):
+        if (ynum == 1):
+            livepopup.append(SRX1DFlyerPlot(dexela.stats1.total.name, xstart=xstart, xstep=(xstop-xstart)/(xnum-1),xlabel=xmotor.name))
+        else:
+            livepopup.append(LiveGrid((ynum, xnum), dexela.stats1.total.name,
+                                      clim=None, cmap='viridis',
+                                      xlabel='x [um]', ylabel='y [um]',
+                                      extent=[xstart, xstop, ystart, ystop],
+                                      x_positive='right', y_positive='down'))
+                                  
+
     @subs_decorator(livepopup)
     @subs_decorator({'start': at_scan})
     @subs_decorator({'stop': finalize_scan})
+    @monitor_during_decorator([dexela.stats1.total])
     @ts_monitor_during_decorator([roi_pv])
     # @monitor_during_decorator([roi_pv])
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.

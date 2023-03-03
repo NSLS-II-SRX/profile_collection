@@ -108,6 +108,7 @@ class MerlinFileStoreHDF5(FileStoreBase):
         # These must be set before parent is staged (specifically
         # before capture mode is turned on. They will not be reset
         # on 'unstage' anyway.
+        self.file_path.put(write_path)
         # set_and_wait(self.file_path, write_path)
         # set_and_wait(self.file_name, filename)  // deprecated
         self.file_name.set(filename).wait()
@@ -155,6 +156,8 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
     fly_next = Cpt(Signal,
                    value=False,
                    doc="latch to put the detector in 'fly' mode")
+    
+    _staging_delay = 0.025
 
     hdf5 = Cpt(HDF5PluginWithFileStoreMerlin, 'HDF1:',
                read_attrs=[],
@@ -220,22 +223,153 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
 
             self._mode = SRXMode.step
 
+        # return self._stage_with_delay()
         return super().stage()
+    
+    def _stage_with_delay(self):
+        # Staging taken from https://github.com/bluesky/ophyd/blob/master/ophyd/device.py
+        # Device - BlueskyInterface
+        """Stage the device for data collection.
+        This method is expected to put the device into a state where
+        repeated calls to :meth:`~BlueskyInterface.trigger` and
+        :meth:`~BlueskyInterface.read` will 'do the right thing'.
+        Staging not idempotent and should raise
+        :obj:`RedundantStaging` if staged twice without an
+        intermediate :meth:`~BlueskyInterface.unstage`.
+        This method should be as fast as is feasible as it does not return
+        a status object.
+        The return value of this is a list of all of the (sub) devices
+        stage, including it's self.  This is used to ensure devices
+        are not staged twice by the :obj:`~bluesky.run_engine.RunEngine`.
+        This is an optional method, if the device does not need
+        staging behavior it should not implement `stage` (or
+        `unstage`).
+        Returns
+        -------
+        devices : list
+            list including self and all child devices staged
+        """
+        if self._staged == Staged.no:
+            pass  # to short-circuit checking individual cases
+        elif self._staged == Staged.yes:
+            raise RedundantStaging("Device {!r} is already staged. "
+                                   "Unstage it first.".format(self))
+        elif self._staged == Staged.partially:
+            raise RedundantStaging("Device {!r} has been partially staged. "
+                                   "Maybe the most recent unstaging "
+                                   "encountered an error before finishing. "
+                                   "Try unstaging again.".format(self))
+        self.log.debug("Staging %s", self.name)
+        self._staged = Staged.partially
+
+        # Resolve any stage_sigs keys given as strings: 'a.b' -> self.a.b
+        stage_sigs = OrderedDict()
+        for k, v in self.stage_sigs.items():
+            if isinstance(k, str):
+                # Device.__getattr__ handles nested attr lookup
+                stage_sigs[getattr(self, k)] = v
+            else:
+                stage_sigs[k] = v
+
+        # Read current values, to be restored by unstage()
+        original_vals = {sig: sig.get() for sig in stage_sigs}
+
+        # We will add signals and values from original_vals to
+        # self._original_vals one at a time so that
+        # we can undo our partial work in the event of an error.
+
+        # Apply settings.
+        devices_staged = []
+        try:
+            for sig, val in stage_sigs.items():
+                self.log.debug("Setting %s to %r (original value: %r)",
+                               self.name,
+                               val, original_vals[sig])
+                sig.set(val, timeout=10).wait()
+                ttime.sleep(self._staging_delay)
+                # It worked -- now add it to this list of sigs to unstage.
+                self._original_vals[sig] = original_vals[sig]
+            devices_staged.append(self)
+
+            # Call stage() on child devices.
+            for attr in self._sub_devices:
+                device = getattr(self, attr)
+                if hasattr(device, 'stage'):
+                    device.stage()
+                    devices_staged.append(device)
+        except Exception:
+            self.log.debug("An exception was raised while staging %s or "
+                           "one of its children. Attempting to restore "
+                           "original settings before re-raising the "
+                           "exception.", self.name)
+            self.unstage()
+            raise
+        else:
+            self._staged = Staged.yes
+        return devices_staged
+
 
     def unstage(self):
         try:
+            # self._unstage_with_delay()
             ret = super().unstage()
         finally:
             self._mode = SRXMode.step
         return ret
 
 
+    def _unstage_with_delay(self):
+        # Staging taken from https://github.com/bluesky/ophyd/blob/master/ophyd/device.py
+        # Device - BlueskyInterface
+        """Unstage the device.
+        This method returns the device to the state it was prior to the
+        last `stage` call.
+        This method should be as fast as feasible as it does not
+        return a status object.
+        This method must be idempotent, multiple calls (without a new
+        call to 'stage') have no effect.
+        Returns
+        -------
+        devices : list
+            list including self and all child devices unstaged
+        """
+        self.log.debug("Unstaging %s", self.name)
+        self._staged = Staged.partially
+        devices_unstaged = []
+
+        # Call unstage() on child devices.
+        for attr in self._sub_devices[::-1]:
+            device = getattr(self, attr)
+            if hasattr(device, 'unstage'):
+                device.unstage()
+                devices_unstaged.append(device)
+
+        # Restore original values.
+        for sig, val in reversed(list(self._original_vals.items())):
+            self.log.debug("Setting %s back to its original value: %r)",
+                           self.name,
+                           val)
+            sig.set(val, timeout=10).wait()
+            ttime.sleep(self._staging_delay)
+            self._original_vals.pop(sig)
+        devices_unstaged.append(self)
+
+        self._staged = Staged.no
+        return devices_unstaged
+
+
 try:
+    print('Setting up merlin...', end='', flush=True)
     merlin = SRXMerlin('XF:05IDD-ES{Merlin:1}',
                        name='merlin',
                        read_attrs=['hdf5', 'cam', 'stats1'])
+    print('done')
+    print('  Setting read_attrs...', end='', flush=True)
     merlin.hdf5.read_attrs = []
+    print('done')
+    print('  Warming up merlin...', end='', flush=True)
     merlin.hdf5.warmup()
+    print('done')
 except TimeoutError:
     print('\nCannot connect to Merlin. Continuing without device.\n')
 except Exception:
