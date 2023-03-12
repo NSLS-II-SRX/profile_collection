@@ -304,6 +304,12 @@ class PairedCallback(QtAwareCallback):
         super().stop(doc)
 
 
+@parameter_annotation_decorator({
+    "parameters": {
+        "motor": {"default": "dcm.c2_fine"},
+        "detectors": {"default": ['bpm3', 'bpm4', 'xbpm2']},
+    }
+})
 def smart_peakup(start=None,
                  min_step=0.005,
                  max_step=0.50,
