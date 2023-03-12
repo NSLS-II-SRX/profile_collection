@@ -162,8 +162,10 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             dwell = 0.007
         # According to Ken's comments in hxntools, this is a de-bounce time
         # when in external trigger mode
-        dpc.cam.stage_sigs['acquire_time'] = 0.50 * dwell - 0.0016392
-        dpc.cam.stage_sigs['acquire_period'] = 0.75 * dwell
+        # dpc.cam.stage_sigs['acquire_time'] = 0.001
+        # dpc.cam.stage_sigs['acquire_period'] = 0.003
+        dpc.cam.stage_sigs['acquire_time'] = 0.9*dwell - 0.002
+        dpc.cam.stage_sigs['acquire_period'] = 0.9*dwell
         dpc.cam.stage_sigs['num_images'] = 1
         dpc.stage_sigs['total_points'] = xnum
         dpc.hdf5.stage_sigs['num_capture'] = xnum
@@ -359,6 +361,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             if (ttime.monotonic() - t0) > 10:
                 print('XS Acquire timeout!')
                 raise Exception
+        yield from bps.sleep(1)
 
         # The zebra needs to be armed last for time-based scanning.
         # If it is armed too early, the timing may be off and the xs3 will miss the first point
@@ -415,19 +418,19 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             try:
                 yield from abs_set(xs.hdf5.capture, 'Done', timeout=10)
                 yield from abs_set(xs.hdf5.write_file, 1, timeout=10)
-            except ex:
+            except Exception as ex:
                 print('Hopefully a timeout error while cleaning up X3X...')
                 print(ex)
             ## Clean up scaler
             try:
                 yield from abs_set(ion.stop_all, 1, timeout=10)  # stop acquiring scaler
-            except ex:
+            except Exception as ex:
                 print('Hopefully a timeout error while cleaning up scaler...')
                 print(ex)
             ## Clean up zebra
             try:
                 yield from abs_set(flying_zebra._encoder.pc.disarm, 1, timeout=10)  # stop acquiring zebra
-            except ex:
+            except Exception as ex:
                 print('Hopefully a timeout error while cleaning up scaler...')
                 print(ex)
 

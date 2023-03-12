@@ -203,7 +203,8 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
             # self.stage_sigs[self.cam.acquire_time] = 0.005
             # self.stage_sigs[self.cam.acquire_period] = 0.0066392
 
-            self.stage_sigs[self.cam.trigger_mode] = 2
+            # self.stage_sigs[self.cam.trigger_mode] = 1  # Trigger Enable
+            self.stage_sigs[self.cam.trigger_mode] = 2  # Trigger Start Rising
             self._mode = SRXMode.fly
         else:
             # Set trigger mode
