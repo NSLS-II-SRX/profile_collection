@@ -59,11 +59,22 @@ from hxntools.handlers import register
 
 # Define wrapper to time a function
 def timer_wrapper(func, *args, **kwargs):
+    if 'log_file' in kwargs:
+        log_file = kwargs['log_file']
+        del kwargs['log_file']
+    else:
+        log_file = None
+
     def wrapper():
         t0 = ttime.monotonic()
         yield from func(*args, **kwargs)
         dt = ttime.monotonic() - t0
-        print(f'{func.__name__}: dt = {dt:.6f}')
+        s = f'{func.__name__}: dt = {dt:.6f}\n'
+        print(s, end='')
+        if log_file is not None:
+            with open(log_file, 'a') as f:
+                f.write(s)
+
     ret = yield from wrapper()
     return ret
 
@@ -72,9 +83,15 @@ def tic():
     return ttime.monotonic()
 
 
-def toc(t0, str=''):
+def toc(t0, str='', log_file=None):
     dt = ttime.monotonic() - t0
-    print('%s: dt = %f' % (str, dt))
+    s = f"{str}: dt = {dt:.6f}\n"
+    # print('%s: dt = %f' % (str, dt))
+    print(s, end='')
+    if log_file is not None:
+        with open(log_file, 'a') as f:
+            f.write(s)
+    
 
 
 # changed the flyer device to be aware of fast vs slow axis in a 2D scan
@@ -118,6 +135,15 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # It is not desirable to display plots when the plan is executed by Queue Server.
     if is_re_worker_active():
         plot = False
+
+    # Check if logging directory exists
+    log_file = None
+    if (verbose):
+        log_path = os.path.join(userdatadir, 'timing_logs')
+        os.makedirs(os.path.join(log_path), exist_ok=True)
+        # We do not have the updated scan id yet because we haven't run the run_decorator
+        # We are assuming we can just take the previous scan ID and add one
+        log_file = os.path.join(log_path, f"scan2D_{db[-1].start['scan_id']+1}.log")
 
     t_setup = tic()
 
@@ -239,6 +265,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
     @stage_decorator(flying_zebra.detectors)
     def fly_each_step(motor, step, row_start, row_stop):
+        if verbose:
+            toc(0, str='timing stage', log_file=log_file)
         def move_to_start_fly():
             row_str = short_uid('row')
             yield from bps.checkpoint()
@@ -249,7 +277,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             yield from bps.trigger_and_read([motor, nano_stage_interferometer])
 
         if verbose:
-            yield from timer_wrapper(move_to_start_fly)
+            yield from timer_wrapper(move_to_start_fly, log_file=log_file)
         else:
             yield from move_to_start_fly()
 
@@ -313,7 +341,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             st.wait(timeout=10)
         try:
             if verbose:
-                yield from timer_wrapper(zebra_kickoff)
+                yield from timer_wrapper(zebra_kickoff, log_file=log_file)
             else:
                 yield from zebra_kickoff()
         except WaitTimeoutError as e:
@@ -331,7 +359,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         def fly_scan_reset_scaler():
             yield from abs_set(ion.erase_start, 1)
         if verbose:
-            yield from timer_wrapper(fly_scan_reset_scaler)
+            yield from timer_wrapper(fly_scan_reset_scaler, log_file=log_file)
         else:
             yield from fly_scan_reset_scaler()
 
@@ -344,7 +372,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 print(f'  triggering {d.name}')
             st = yield from bps.trigger(d, group=row_str)
             if verbose:
-                st.add_callback(lambda x: toc(t_datacollect, str=f"  status object  {datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S.%f')}"))
+                st.add_callback(lambda x: toc(t_datacollect, str=f"  status object  {datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S.%f')}", log_file=log_file))
             if (d.name == 'dexela'):
                 yield from bps.sleep(1)
         # AMK paranoid check
@@ -361,7 +389,6 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             if (ttime.monotonic() - t0) > 10:
                 print('XS Acquire timeout!')
                 raise Exception
-        yield from bps.sleep(1)
 
         # The zebra needs to be armed last for time-based scanning.
         # If it is armed too early, the timing may be off and the xs3 will miss the first point
@@ -371,16 +398,16 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             print('Failed to arm the Zebra! This line WILL FAIL!')
             # raise e
         if verbose:
-            toc(t_datacollect, str='  trigger detectors')
+            toc(t_datacollect, str='  trigger detectors', log_file=log_file)
 
         # Move from start to end
         if verbose:
-            toc(t_datacollect, str='  move start')
+            toc(t_datacollect, str='  move start', log_file=log_file)
         @stage_decorator([xmotor])
         def move_row():
             yield from abs_set(xmotor, row_stop, wait=True)
         if verbose:
-            yield from timer_wrapper(move_row)
+            yield from timer_wrapper(move_row, log_file=log_file)
         else:
             yield from move_row()
 
@@ -388,13 +415,13 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             # ttime.sleep(0.1)
             # while (xmotor.motor_is_moving.get()):
             #     ttime.sleep(0.001)
-            # toc(t_datacollect, str='  move end')
+            # toc(t_datacollect, str='  move end', log_file=log_file)
             while (get_me_the_cam(xs).detector_state.get()):  # switched to get_me_cam
                 ttime.sleep(0.001)
-            toc(t_datacollect, str='  xs done')
+            toc(t_datacollect, str='  xs done', log_file=log_file)
             while (sclr1.acquiring.get()):
                 ttime.sleep(0.001)
-            toc(t_datacollect, str='  sclr1 done')
+            toc(t_datacollect, str='  sclr1 done', log_file=log_file)
         # wait for the motor and detectors to all agree they are done
         try:
             # print('Waiting for x3x...\n')
@@ -444,7 +471,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 print(e)
 
         if verbose:
-            toc(t_datacollect, str='Total time')
+            toc(t_datacollect, str='Total time', log_file=log_file)
 
         # we still know about ion from above
         yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
@@ -452,7 +479,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         def zebra_complete():
             yield from complete(flying_zebra)  # tell the Zebra we are done
         if verbose:
-            yield from timer_wrapper(zebra_complete)
+            yield from timer_wrapper(zebra_complete, log_file=log_file)
         else:
             yield from zebra_complete()
 
@@ -460,9 +487,12 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         def zebra_collect():
             yield from collect(flying_zebra)  # extract data from Zebra
         if verbose:
-            yield from timer_wrapper(zebra_collect)
+            yield from timer_wrapper(zebra_collect, log_file=log_file)
         else:
             yield from zebra_collect()
+
+        if verbose:
+            toc(0, str='timing unstage', log_file=log_file)
 
     def at_scan(name, doc):
         scanrecord.current_scan.put(doc['uid'][:6])
@@ -520,7 +550,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     @run_decorator(md=md)
     def plan():
         if verbose:
-            toc(t_setup, str='Setup time + into plan()')
+            # open file
+            # log_file = os.path.join(log_path, f"scan2D_{db[-1].start['scan_id']}.log")
+            toc(t_setup, str='Setup time + into plan()', log_file=log_file)
 
         # TODO move this to stage sigs
         for d in flying_zebra.detectors:
@@ -570,7 +602,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 print(e)
             flying_zebra._encoder.pc.dir.set(direction)
             if verbose:
-                yield from timer_wrapper(fly_each_step, ymotor, step, start, stop)
+                toc(0, str='timing stage', log_file=log_file)
+                yield from timer_wrapper(fly_each_step, ymotor, step, start, stop, log_file=log_file)
+                toc(0, str='timing unstage', log_file=log_file)
                 print('\n')
             else:
                 yield from fly_each_step(ymotor, step, start, stop)
@@ -589,7 +623,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     if shutter:
         if verbose:
             final_plan = finalize_wrapper(plan(),
-                                          timer_wrapper(check_shutters, shutter, 'Close'))
+                                          timer_wrapper(check_shutters, shutter, 'Close', log_file=log_file))
         else:
             final_plan = finalize_wrapper(plan(),
                                           check_shutters(shutter, 'Close'))
@@ -597,11 +631,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         final_plan = plan()
 
     if verbose:
-        toc(t_setup, str='Setup time')
+        toc(t_setup, str='Setup time', log_file=log_file)
 
     # Open the shutter
     if verbose:
-        yield from timer_wrapper(check_shutters, shutter, 'Open')
+        yield from timer_wrapper(check_shutters, shutter, 'Open', log_file=log_file)
     else:
         yield from check_shutters(shutter, 'Open')
 
