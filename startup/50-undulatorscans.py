@@ -31,7 +31,8 @@ def undulator_calibration(
     UCalibDir='/home/xf05id1/current_user_data/',
     u_gap_start=6500,
     u_gap_end=12000,
-    u_gap_step=500
+    u_gap_step=500,
+    harmonic=3,
 ):
     '''
     outfile  string   filename for a txt file for the lookup table
@@ -57,7 +58,6 @@ def undulator_calibration(
     bragg_scanwidth = 0.25  # keV +/- this value
     bragg_scanpoint = (np.floor((2 * bragg_scanwidth) / (energy_res)) + 1).astype('int')
 
-    harmonic = 3
     energy.harmonic.put(harmonic)
 
     # Generate lookup table by scanning Bragg at each undulator gap set point
