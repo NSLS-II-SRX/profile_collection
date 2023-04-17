@@ -245,7 +245,7 @@ class Energy(PseudoPositioner):
         calib_path = Path(__file__).parent
         # calib_file = "../data/SRXUgapCalibration20170612.txt"
         # calib_file = "../data/20210912_SRXUgapCalibration.txt"
-        calib_file = "../data/20230221_SRXUgapCalibration.txt"
+        calib_file = "../data/SRXUgapCalibration.txt"  # 20230221
 
         # with open(os.path.join(calib_path, calib_file), 'r') as f:
         with open(calib_path / calib_file, "r") as f:
