@@ -282,14 +282,14 @@ class CommunitySRXXspressTrigger(CommunityXspressTrigger):
         if self._mode is SRXMode.step:
             # community IOC ophyd xspress3
             for channel in self.iterate_channels():
-                self.dispatch(channel.name, trigger_time)
+                self.generate_datum(channel.name, trigger_time)
             # quantum IOC ophyd xspress3
             #for sn in self.read_attrs:
             #    if sn.startswith("channel") and "." not in sn:
             #        ch = getattr(self, sn)
             #        self.dispatch(ch.name, trigger_time)
         elif self._mode is SRXMode.fly:
-            self.dispatch(self._f_key, trigger_time)
+            self.generate_datum(self._f_key, trigger_time)
         else:
             raise Exception(f"unexpected mode {self._mode}")
         self._abs_trigger_count += 1
