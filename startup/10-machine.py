@@ -145,6 +145,10 @@ class Energy(PseudoPositioner):
     epics_d_spacing = EpicsSignal("XF:05IDA-CT{IOC:Status01}DCMDspacing.VAL")
     epics_bragg_offset = EpicsSignal("XF:05IDA-CT{IOC:Status01}BraggOffset.VAL")
 
+    # Energy "limits"
+    _low = 4.4
+    _high = 25
+
     # Motor enable flags
     move_u_gap = Cpt(Signal, None, add_prefix=(), value=True)
     move_c2_x = Cpt(Signal, None, add_prefix=(), value=True)
@@ -241,11 +245,8 @@ class Energy(PseudoPositioner):
         self._t2cal = T2cal
         super().__init__(*args, **kwargs)
 
-        # calib_path = '/nfs/xf05id1/UndulatorCalibration/'
         calib_path = Path(__file__).parent
-        # calib_file = "../data/SRXUgapCalibration20170612.txt"
-        # calib_file = "../data/20210912_SRXUgapCalibration.txt"
-        calib_file = "../data/SRXUgapCalibration.txt"  # 20230221
+        calib_file = "../data/SRXUgapCalibration.txt"  # /nsls2/data/srx/shared/config/bluesky/profile_collection/data 
 
         # with open(os.path.join(calib_path, calib_file), 'r') as f:
         with open(calib_path / calib_file, "r") as f:
@@ -293,17 +294,17 @@ class Energy(PseudoPositioner):
                 "Set `energy.harmonic` to a positive odd integer or 0."
             )
         detune = self.detune.get()
-        if energy <= 4.4:
+        if energy <= self._low:
             raise ValueError(
-                "The energy you entered is too low ({} keV). "
-                "Minimum energy = 4.4 keV".format(energy)
+                f"The energy you entered is too low ({energy} keV). "
+                f"Minimum energy = {self._low:.1f} keV"
             )
-        if energy > 25.0:
-            if (energy < 4400.0) or (energy > 25000.0):
+        if energy > self._high:
+            if (energy < self._low * 1000) or (energy > self._high * 1000):
                 # Energy is invalid
                 raise ValueError(
-                    "The requested photon energy is invalid ({} keV). "
-                    "Values must be in the range of 4.4 - 25 keV".format(energy)
+                    f"The requested photon energy is invalid ({energy} keV). "
+                    f"Values must be in the range of {self._low:.1f} - {self._high:.1f} keV"
                 )
             else:
                 # Energy is in eV
