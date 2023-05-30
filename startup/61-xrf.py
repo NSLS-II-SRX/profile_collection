@@ -362,6 +362,12 @@ def export_flying_merlin2tiff(scanid=-1, wd=None):
     fn_txt = 'scan%d.txt' % scanid
     io.imsave(wd + fn, d)
     np.savetxt(wd + fn_txt, np.array((x_flat, y_flat, I0_flat)))
+       # HACK to make sure we clear the cache.  The cache size is 1024 so
+    # this would eventually clear, however on this system the maximum
+    # number of open files is 1024 so we fail from resource exaustion before
+    # we evict anything.
+    db._catalog._entries.cache_clear()
+    gc.collect()
 
 
 def export_merlin2tiff(scanid=-1, wd=None):
@@ -387,6 +393,12 @@ def export_merlin2tiff(scanid=-1, wd=None):
     fn_txt = 'scan%d.txt' % scanid
     io.imsave(wd + fn, d)
     np.savetxt(wd + fn_txt, np.array((x, y, I0)))
+    # HACK to make sure we clear the cache.  The cache size is 1024 so
+    # this would eventually clear, however on this system the maximum
+    # number of open files is 1024 so we fail from resource exaustion before
+    # we evict anything.
+    db._catalog._entries.cache_clear()
+    gc.collect()
 
 
 @parameter_annotation_decorator({
