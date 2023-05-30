@@ -374,10 +374,19 @@ cal_data_2023cycle1 = {
     "xoffset": 24.65,
 }
 
+# Quick calibration
+cal_data_2023cycle2 = {
+    "d_111": 3.12958966591756,
+    "delta_bragg": 0.2212039136608373,
+    "C2Xcal": 3.6,
+    "T2cal": 15.0347755916,
+    "xoffset": 24.65,
+}
+
 
 
 # print('Connecting to energy PVs...')
-energy = Energy(prefix="", name="energy", **cal_data_2023cycle1)
+energy = Energy(prefix="", name="energy", **cal_data_2023cycle2)
 energy.wait_for_connection()
 energy.synch_with_epics()
 energy.value = 1.0
