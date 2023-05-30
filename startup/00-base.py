@@ -46,7 +46,7 @@ EpicsSignal.wait_for_connection = wait_for_connection
 
 if if_touch_beamline():
     # Case of real beamline:
-    timeout = 2  # seconds
+    timeout = 10  # seconds
     going = "Going"
 else:
     # Case of CI:
