@@ -507,7 +507,7 @@ peakup = smart_peakup
 
 
 def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
-                fix_roll=True, fix_pitch=True, feedback=True):
+                fix_roll=True, fix_pitch=True, feedback=False):
     """
 
     Scan the HDCM C2 Piezo Motor to optimize the beam.
