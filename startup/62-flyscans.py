@@ -133,8 +133,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     """
 
     # It is not desirable to display plots when the plan is executed by Queue Server.
-    if is_re_worker_active():
-        plot = False
+    # if is_re_worker_active():
+    #     plot = False
 
     # Check if logging directory exists
     log_file = None
@@ -443,8 +443,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             # Cleanup
             ## Clean up X3X
             try:
-                yield from abs_set(xs.hdf5.capture, 'Done', timeout=10)
-                yield from abs_set(xs.hdf5.write_file, 1, timeout=10)
+                yield from abs_set(xs.hdf5.capture, 'Done', wait=True, timeout=10)
+                yield from abs_set(xs.hdf5.write_file, 1, wait=True, timeout=10)
             except Exception as ex:
                 print('Hopefully a timeout error while cleaning up X3X...')
                 print(ex)
@@ -474,7 +474,12 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             toc(t_datacollect, str='Total time', log_file=log_file)
 
         # we still know about ion from above
-        yield from abs_set(ion.stop_all, 1)  # stop acquiring scaler
+        ## YY: added a timeout
+        try:
+            yield from abs_set(ion.stop_all, 1, timeout = 10)  # stop acquiring scaler
+        except Exception as ex:
+            print('Hopefully another timeout error while cleaning up scaler...')
+            print(ex)
 
         def zebra_complete():
             yield from complete(flying_zebra)  # tell the Zebra we are done
