@@ -1227,7 +1227,7 @@ setup_zebra_for_xas(flyer_id_mono)
 
 
 # Helper functions for quick vis:
-def plot_flyer_id_mono_data(uid_or_scanid, e_min=None, e_max=None, fname=None, root='/home/xf05id1/current_user_data/', num_channels=4, plot=True):
+def plot_flyer_id_mono_data(uid_or_scanid, e_min=None, e_max=None, fname=None, root='/home/xf05id1/current_user_data/', num_channels=7, plot=True):
     hdr = db[uid_or_scanid]
     stream_names = hdr.stream_names
     stream_names.remove('baseline')
