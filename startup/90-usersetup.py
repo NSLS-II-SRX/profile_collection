@@ -16,6 +16,11 @@ proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
 saf_num = 311284
 
+#proposal_num = 311593
+#proposal_title = 'Environmental weathering of microplastic fibers- implications for heavy metal adsorption'
+#PI_lastname = 'Pincus'
+#saf_num = 310659
+
 
 cycle = '2023_cycle2'
 
