@@ -71,7 +71,14 @@ class Ui(QtWidgets.QMainWindow):
         y_e = self.dsb_nanoy_end.value()
         y_n = self.sb_nano_yn.value()
         exp = self.dsb_nano_exp_time.value()
+        
         scan_label = self.le_nano_label.text()
+        #extra_det  = self.cb_nano_extra_det.currentText()
+        #if extra_det=="None":
+        #    extra_dets = []
+        #else:
+        #    extra_dets = extra_det
+
 
         params = {"mot1_s": x_s, "mot1_e": x_e, "mot1_n": x_n, "mot2_s": y_s, "mot2_e": y_e, "mot2_n": y_n, "exp_t": exp}
         plan_name = "recover_and_scan_nano"
@@ -88,7 +95,16 @@ class Ui(QtWidgets.QMainWindow):
         scan_label = self.le_coarse_label.text()
         exp = self.dsb_coarse_exp_time.value()
 
-        params = {"mot1_s": x_s, "mot1_e": x_e, "mot1_n": x_n, "mot2_s": y_s, "mot2_e": y_e, "mot2_n": y_n, "exp_t": exp}
+        #extra_det  = self.cb_coarse_extra_det.currentText()
+        #if extra_det=="None":
+        #    extra_dets = []
+        #else:
+        #    extra_dets = extra_det
+
+        x_pos = np.around(caget("XF:05IDD-ES:1{nKB:Smpl-Ax:sx}Mtr.RBV"),2)
+        y_pos = np.around(caget("XF:05IDD-ES:1{nKB:Smpl-Ax:sy}Mtr.RBV"),2)
+
+        params = {"mot1_s": x_s+x_pos, "mot1_e": x_e+x_pos, "mot1_n": x_n, "mot2_s": y_s+y_pos, "mot2_e": y_e+y_pos, "mot2_n": y_n, "exp_t": exp}
         plan_name = "recover_and_scan_coarse"
         add_plan_with_roi_positions(plan_name, scan_label, params)
 
@@ -102,6 +118,13 @@ class Ui(QtWidgets.QMainWindow):
         exp = self.dsb_nano_exp_time.value()
 
         scan_label = self.le_nano_label.text()
+
+        #extra_det  = self.cb_nano_extra_det.currentText()
+        #if extra_det=="None":
+        #    extra_dets = []
+        #else:
+        #    extra_dets = extra_det
+
 
         nano_plan = f"send_nano_plan_to_queue('{scan_label}', {x_s}, {x_e}, {x_n}, {y_s}, {y_e}, {y_n}, {exp})"
         self.le_plan_to_copy.setText(nano_plan)
@@ -126,6 +149,12 @@ class Ui(QtWidgets.QMainWindow):
 
         scan_label = self.le_coarse_label.text()
         exp = self.dsb_coarse_exp_time.value()
+
+        #extra_det  = self.cb_coarse_extra_det.currentText()
+        #if extra_det=="None":
+        #    extra_dets = []
+        #else:
+        #    extra_dets = extra_det
 
         x_pos = np.around(caget("XF:05IDD-ES:1{nKB:Smpl-Ax:sx}Mtr.RBV"),2)
         y_pos = np.around(caget("XF:05IDD-ES:1{nKB:Smpl-Ax:sy}Mtr.RBV"),2)
