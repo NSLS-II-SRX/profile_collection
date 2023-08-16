@@ -325,4 +325,3 @@ class CommunityXspressTrigger(BlueskyInterface):
 
         self._abs_trigger_count += 1
         return self._status
-
