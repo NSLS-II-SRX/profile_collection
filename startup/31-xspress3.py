@@ -22,6 +22,14 @@ from nslsii.detectors.xspress3 import (
     Xspress3FileStore,  #  JL use CommunityXspress3FileStore
 )
 
+from ophyd.areadetector import Xspress3Detector as Xspress3Detector_ophyd_ad
+
+from nslsii.areadetector.xspress3 import (
+    build_xspress3_class,
+    Xspress3HDF5Plugin,
+    Xspress3Trigger
+)
+
 # this is the community IOC package
 from nslsii.areadetector.xspress3 import (
     build_xspress3_class
@@ -309,7 +317,19 @@ class SrxXSP3Handler:
 # build a community IOC xspress3 class with 4 channels
 CommunityXspress3_8Channel = build_xspress3_class(
     channel_numbers=(1, 2, 3, 4, 5, 6, 7, 8),
-    mcaroi_numbers=(1, 2, 3, 4)
+    mcaroi_numbers=(1, 2, 3, 4),
+    image_data_key="fluor",
+    xspress3_parent_classes=(Xspress3Detector_ophyd_ad, Xspress3Trigger),
+    extra_class_members={
+        "hdf5": Cpt(
+            Xspress3HDF5Plugin,
+            "HDF1:",
+            name="hdf5",
+            root_path="/nsls2/data/srx/assets/xspress3",
+            path_template="/nsls2/data/srx/assets/xspress3/%Y/%m/%d",
+        )
+    }
+
 )
 
 class SrxXspress3Detector(SRXXspressTrigger, Xspress3Detector):
@@ -443,13 +463,13 @@ class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3
     # replace HDF5:FileCreateDir with HDF1:FileCreateDir
     create_dir = Cpt(EpicsSignal, "HDF1:FileCreateDir")
 
-    hdf5 = Cpt(
-        CommunityXspress3FileStoreFlyable,
-        "HDF1:",
-        read_path_template="/nsls2/data/srx/assets/xspress3/%Y/%m/%d",
-        write_path_template="/nsls2/data/srx/assets/xspress3/%Y/%m/%d",
-        root="/nsls2/data/srx/assets/xspress3",
-    )
+    # hdf5 = Cpt(
+    #     CommunityXspress3FileStoreFlyable,
+    #     "HDF1:",
+    #     read_path_template="/nsls2/data/srx/assets/xspress3/%Y/%m/%d",
+    #     write_path_template="/nsls2/data/srx/assets/xspress3/%Y/%m/%d",
+    #     root="/nsls2/data/srx/assets/xspress3",
+    # )
 
     # this is used as a latch to put the xspress3 into 'bulk' mode
     # for fly scanning.  Do this is a signal (rather than as a local variable
