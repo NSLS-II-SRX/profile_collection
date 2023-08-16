@@ -22,6 +22,7 @@ user_groups:
     forbidden_devices:
       - null  # Nothing is forbidden
     allowed_functions:
+      - "get_current_position"
       - "function_sleep"  # Explicitly listed name
   test_user:  # Users with limited access capabilities
     allowed_plans:

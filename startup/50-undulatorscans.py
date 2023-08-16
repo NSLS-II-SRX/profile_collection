@@ -112,3 +112,28 @@ def undulator_calibration(
     # Return moving u_gap
     energy.move_u_gap.put(True)
 
+def max_Ugap(set_offset=True):
+    # Assuming current gap is the calculated gap
+    calc_gap = energy.u_gap.position
+
+    ps = PeakStats("energy_u_gap", "xbpm2_sumX")
+    live_cb = [LiveTable(["energy_u_gap", "xbpm2_sumX"]),
+               LivePlot("xbpm2_sumX", x="energy_u_gap"),
+               ps]
+    @subs_decorator(live_cb)
+    def plan():
+        yield from rel_scan([xbpm2], energy.u_gap, -25, 25, 51)
+
+    yield from plan()
+
+    print(f"{ps=}")
+    new_gap = ps['max'][0]
+    print(f"Maximum found at gap={new_gap:.2f}")
+    offset = new_gap - calc_gap - energy._u_gap_offset
+    print(f"Calculated offset is {offset:.2f} um.")
+    print()
+    print(f"Moving to new position...")
+    yield from mov(energy.u_gap, new_gap)
+
+    if set_offset:
+        energy._u_gap_offset = offset

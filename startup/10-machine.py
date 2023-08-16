@@ -130,6 +130,7 @@ class Energy(PseudoPositioner):
 
     # Real motors
     u_gap = Cpt(InsertionDevice, "SR:C5-ID:G1{IVU21:1")
+    _u_gap_offset = 0
     bragg = Cpt(
         EpicsMotor,
         "XF:05IDA-OP:1{Mono:HDCM-Ax:P}Mtr",
@@ -208,6 +209,7 @@ class Energy(PseudoPositioner):
             etoulookup((target_energy + u_detune) / undulator_harmonic)
         )  # in mm
         ugap *= 1000  # convert to um
+        ugap = ugap + self._u_gap_offset
 
         return BraggRBV, C2X, ugap
 
