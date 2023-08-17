@@ -314,6 +314,53 @@ class SrxXSP3Handler:
         with h5py.File(self._filepath, "r") as f:
             return np.asarray(f[self.XRF_DATA_KEY])
 
+class Xspress3HDF5PluginSRX(Xspress3HDF5Plugin):
+    """
+    This should be added to Xspress3HDF5Plugin.
+    """
+    def warmup(self):
+        """
+        A convenience method for 'priming' the plugin.
+        The plugin has to 'see' one acquisition before it is ready to capture.
+        This sets the array size, etc.
+
+        NOTE : this comes from:
+            https://github.com/NSLS-II/ophyd/blob/master/ophyd/areadetector/plugins.py
+        
+        (self.parent.cam.acquire_period, 1) was removed from the HDF5Plugin sigs
+        list because at least some Xspress3 devices are unhappy about it.
+
+        """
+        print("  Warming up the hdf5 plugin...", end="", flush=True)
+        self.enable.set(1).wait()
+        sigs = OrderedDict(
+            [
+                (self.parent.cam.array_callbacks, 1),
+                (self.parent.cam.image_mode, "Single"),
+                (self.parent.cam.trigger_mode, "Internal"),
+                # In case the acquisition time is set very long
+                (self.parent.cam.acquire_time, 1),
+                # (self.parent.cam.acquire_period, 1),
+                (self.parent.cam.acquire, 1),
+            ]
+        )
+
+        original_vals = {sig: sig.get() for sig in sigs}
+
+        for sig, val in sigs.items():
+            ttime.sleep(0.1)  # abundance of caution
+            # set_and_wait(sig, val)  // deprecated
+            sig.set(val).wait()
+
+        ttime.sleep(2)  # wait for acquisition
+
+        for sig, val in reversed(list(original_vals.items())):
+            ttime.sleep(0.1)
+            # set_and_wait(sig, val)  // deprecated
+            sig.set(val).wait()
+        print("done")
+
+
 # build a community IOC xspress3 class with 4 channels
 CommunityXspress3_8Channel = build_xspress3_class(
     channel_numbers=(1, 2, 3, 4, 5, 6, 7, 8),
@@ -322,7 +369,7 @@ CommunityXspress3_8Channel = build_xspress3_class(
     xspress3_parent_classes=(Xspress3Detector_ophyd_ad, Xspress3Trigger),
     extra_class_members={
         "hdf5": Cpt(
-            Xspress3HDF5Plugin,
+            Xspress3HDF5PluginSRX,
             "HDF1:",
             name="hdf5",
             root_path="/nsls2/data/srx/assets/xspress3",
