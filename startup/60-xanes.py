@@ -549,12 +549,14 @@ def fast_shutter_per_step(detectors, motor, step):
     yield from move()
     # Open and close the fast shutter (Mo Foil) between XANES points
     # Open the shutter
-    yield from mv(Mo_shutter, 0)
+    # yield from mv(shut_d, 0)
+    yield from mv(shut_d.request_open, 1)
     yield from bps.sleep(1.0)
     # Step? trigger xspress3
     yield from trigger_and_read(list(detectors) + [motor])
     # Close the shutter
-    yield from mv(Mo_shutter, 1)
+    # yield from mv(shut_d, 1)
+    yield from mv(shut_d.request_open, 0)
 
 
 class FlyerIDMono(Device):

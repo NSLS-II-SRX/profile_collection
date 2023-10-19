@@ -444,8 +444,8 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
             line_pos = (popt[2] + popt[6]) / 2
             print(f'The center beam position is {line_pos:.4f} um\n')
             return line_pos
-        
-        line_pos_seq[idx] = line_fit(x, y)  
+
+        line_pos_seq[idx] = line_fit(x, y)
 
     if interp_range is None:
         interp_range = np.arange(numline)

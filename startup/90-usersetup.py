@@ -17,7 +17,7 @@ PI_lastname = 'Kiss'
 saf_num = 311284
 
 
-cycle = '2023_cycle2'
+cycle = '2023_cycle3'
 
 # Set user data in bluesky
 RE.md['proposal']  = {'proposal_num': str(proposal_num),
