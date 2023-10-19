@@ -80,9 +80,9 @@ def undulator_calibration(
         # Setup LiveCallbacks
         # liveplotfig1 = plt.figure()
         liveplotx = energy.energy.name
-        liveploty = bpm3.total_current.name
-        livetableitem = [energy.energy.name, ring_current.name, bpm3.total_current.name]
-        ps = PeakStats(energy.energy.name, bpm3.total_current.name)
+        liveploty = bpm4.total_current.name
+        livetableitem = [energy.energy.name, ring_current.name, bpm4.total_current.name]
+        ps = PeakStats(energy.energy.name, bpm4.total_current.name)
         livecallbacks = [LiveTable(livetableitem),
                          LivePlot(liveploty, x=liveplotx),
                          ps]
@@ -90,7 +90,7 @@ def undulator_calibration(
         # Setup the scan
         @subs_decorator(livecallbacks)
         def braggscan():
-            yield from scan([bpm3, bpm4, ring_current],
+            yield from scan([bpm4, ring_current],
                             energy,
                             energy_setpoint - bragg_scanwidth,
                             energy_setpoint + bragg_scanwidth,
@@ -112,9 +112,11 @@ def undulator_calibration(
     # Return moving u_gap
     energy.move_u_gap.put(True)
 
-def max_Ugap(set_offset=True):
+def max_Ugap(set_offset=True, shutter=True):
     # Assuming current gap is the calculated gap
     calc_gap = energy.u_gap.position
+
+    yield from check_shutters(shutter, 'Open')
 
     ps = PeakStats("energy_u_gap", "xbpm2_sumX")
     live_cb = [LiveTable(["energy_u_gap", "xbpm2_sumX"]),
@@ -125,6 +127,7 @@ def max_Ugap(set_offset=True):
         yield from rel_scan([xbpm2], energy.u_gap, -25, 25, 51)
 
     yield from plan()
+    yield from check_shutters(shutter, 'Close')
 
     print(f"{ps=}")
     new_gap = ps['max'][0]

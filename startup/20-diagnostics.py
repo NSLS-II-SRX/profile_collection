@@ -112,6 +112,7 @@ class SRX_AH501(QuadEM):
         for d in self.read_attrs:
             getattr(self, d).kind = Kind.normal
 
+# bpm1 = SRX_AH501('XF:05IDA-BI{BPM:01}AH501:', name='bpm1')
 bpm2 = SRX_AH501('XF:05IDA-BI{BPM:02}AH501:', name='bpm2')
 bpm5 = SRX_AH501('XF:05IDA-BI{BPM:05}AH501:', name='bpm5')
 
