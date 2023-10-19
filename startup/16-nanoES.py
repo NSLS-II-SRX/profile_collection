@@ -48,7 +48,7 @@ nanoKB = SRXNanoKB('XF:05IDD-ES:1{nKB:', name='nanoKB')
 
 # High flux sample stages
 class SRXNanoStage(Device):
-    x = Cpt(EpicsMotor, 'sx}Mtr')  # XF:05IDD-ES:1{nKB:Smpl-Ax:sx}Mtr.RBV
+    # x = Cpt(EpicsMotor, 'sx}Mtr')  # XF:05IDD-ES:1{nKB:Smpl-Ax:sx}Mtr.RBV
     y = Cpt(EpicsMotor, 'sy}Mtr')  # XF:05IDD-ES:1{nKB:Smpl-Ax:sy}Mtr.RBV
     z = Cpt(EpicsMotor, 'sz}Mtr')  # XF:05IDD-ES:1{nKB:Smpl-Ax:sz}Mtr.RBV
     sx = Cpt(EpicsMotor, 'ssx}Mtr')  # XF:05IDD-ES:1{nKB:Smpl-Ax:ssx}Mtr.RBV
@@ -131,7 +131,7 @@ def center_scanner():
 
 def mv_along_axis(z_end):
     ## move along the focused beam axis
-    cur_x = nano_stage.x.user_readback.get()
+    cur_x = nano_stage.topx.user_readback.get()
     cur_y = nano_stage.y.user_readback.get()
     cur_z = nano_stage.z.user_readback.get()
     print(f'current locations are: {cur_x}, {cur_y}, {cur_z}')
@@ -148,7 +148,7 @@ def mv_along_axis(z_end):
     delta_y = ratio_yz*delta_z
     print(f'moving y by {delta_y}')
 
-    yield from mvr(nano_stage.x, delta_x)
+    yield from mvr(nano_stage.topx, delta_x)
     yield from mvr(nano_stage.y, delta_y)
     yield from mv(nano_stage.z, z_end)
 
