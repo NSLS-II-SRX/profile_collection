@@ -9,7 +9,7 @@ def get_current_position():
 	roi = {}
 
 	sx, sy = nano_stage.sx.position, nano_stage.sy.position #scanners (used for scanning at HXN)
-	x, y, z = nano_stage.x.position, nano_stage.y.position, nano_stage.z.position #coarse motors
+	x, y, z = nano_stage.topx.position, nano_stage.y.position, nano_stage.z.position #coarse motors
 	topx, topz = nano_stage.topx.position, nano_stage.topz.position #top
 	th = nano_stage.th.position
 

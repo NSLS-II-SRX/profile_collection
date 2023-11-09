@@ -156,7 +156,8 @@ class Ui(QtWidgets.QMainWindow):
         #else:
         #    extra_dets = extra_det
 
-        x_pos = np.around(caget("XF:05IDD-ES:1{nKB:Smpl-Ax:sx}Mtr.RBV"),2)
+        #x_pos = np.around(caget("XF:05IDD-ES:1{nKB:Smpl-Ax:sx}Mtr.RBV"),2)
+        x_pos = np.around(caget("XF:05IDD-ES:1{nKB:Smpl-Ax:xth}Mtr.RBV"),2)
         y_pos = np.around(caget("XF:05IDD-ES:1{nKB:Smpl-Ax:sy}Mtr.RBV"),2)
 
         coarse_plan = f"send_coarse_plan_to_queue('{scan_label}', {x_pos+x_s}, {x_pos+x_e}, {x_n}, {y_pos+y_s}, {y_pos+y_e}, {y_n}, {exp})"
