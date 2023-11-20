@@ -485,7 +485,7 @@ def xanes_batch_plan(xypos=[], erange=[], estep=[], acqtime=1.0,
         # Move above edge and peak up
         if (i % peakup_N == 0):
             yield from mov(energy, peakup_E)
-            yield from peakup_fine()
+            yield from peakup()
 
         # Run the energy scan
         yield from xanes_plan(erange=erange, estep=estep, acqtime=acqtime)
