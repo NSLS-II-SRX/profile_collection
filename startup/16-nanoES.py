@@ -121,7 +121,7 @@ def center_scanner():
     del_sz = nano_stage.sz.user_readback.get()
 
     yield from mv(nano_stage.sx, 0)
-    yield from mvr(nano_stage.x, del_sx)
+    yield from mvr(nano_stage.topx, del_sx)
 
     yield from mv(nano_stage.sy, 0)
     yield from mvr(nano_stage.y, del_sy)
