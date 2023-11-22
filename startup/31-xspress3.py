@@ -285,12 +285,11 @@ class CommunitySRXXspressTrigger(Xspress3Trigger):
         self._status = DeviceStatus(self)
         # the next line causes a ~3s delay in the community IOC
         #self.cam.erase.put(1)
-        self._acquisition_signal.put(1, wait=False)
+        self.cam.acquire.put(1, wait=False)
         trigger_time = ttime.time()
         if self._mode is SRXMode.step:
             # community IOC ophyd xspress3
-            for channel in self.iterate_channels():
-                self.generate_datum(channel.name, trigger_time)
+            self.generate_datum(None, trigger_time, {})
             # quantum IOC ophyd xspress3
             #for sn in self.read_attrs:
             #    if sn.startswith("channel") and "." not in sn:
@@ -333,6 +332,7 @@ CommunityXspress3_8Channel = build_xspress3_class(
             name="hdf5",
             root_path="/nsls2/data/srx/assets/xspress3",
             path_template="/nsls2/data/srx/assets/xspress3/%Y/%m/%d",
+            resource_kwargs={},
         )
     }
 )
@@ -447,7 +447,8 @@ CommunityXspress3_8Channel = build_xspress3_class(
 #         return ret
 
 
-class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3_8Channel):
+# class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3_8Channel):
+class CommunitySrxXspress3Detector(CommunityXspress3_8Channel):
     # provided by CommunityXspress3_4Channel
     #roi_data = Cpt(PluginBase, "ROIDATA:")
     #erase = Cpt(EpicsSignal, "ERASE")
@@ -544,10 +545,14 @@ class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3
         # JL commented out the next line because it caused a significant delay in starting acqusitions
         #self.cam.erase.put(0)
         # JL added the next line, it is not pretty
-        self.previous_file_write_mode_value = self.hdf5.file_write_mode.get()
+
+        # file_write_mode = self.hdf5.file_write_mode.get(as_string=True)
+        # print(f"{file_write_mode = }")
+
+        # self.previous_file_write_mode_value = self.hdf5.file_write_mode.get()
         # JL added the next 2 lines
         #   should use stage_sigs for file_write_mode?
-        self.hdf5.file_write_mode.put(1)
+        # self.hdf5.file_write_mode.put(1)
         #self.hdf5.auto_save.put(1)  # using stage_sigs for this
         # do the latching
         if self.fly_next.get():
@@ -559,7 +564,7 @@ class CommunitySrxXspress3Detector(CommunitySRXXspressTrigger, CommunityXspress3
         # print("unstage!")
         # JL added the next two lines
         #self.hdf5.auto_save.put(0)
-        self.hdf5.file_write_mode.put(self.previous_file_write_mode_value)
+        # self.hdf5.file_write_mode.put(self.previous_file_write_mode_value)
         # JL removed the next line
         #self.hdf5.capture.put(0)  # this PV un-sets itself
         try:
@@ -598,7 +603,7 @@ class SrxXspress3DetectorIDMonoFly(CommunitySrxXspress3Detector):
         # num_frames = self.hdf5.num_captured.get()
         num_frames = self.cam.array_counter.get()
 
-        # print(f"{num_frames=}") 
+        # print(f"{num_frames=}")
         for frame_num in range(num_frames):
             # print(f'  frame_num in "complete": {frame_num + 1} / {num_frames}')
             for channel in self.iterate_channels():
@@ -637,7 +642,7 @@ class SrxXspress3DetectorIDMonoFly(CommunitySrxXspress3Detector):
 
 try:
     xs_id_mono_fly = SrxXspress3DetectorIDMonoFly("XF:05IDD-ES{Xsp:3}:", name="xs_id_mono_fly")
-    # add all channel.channelNN to xs.read_attrs 
+    # add all channel.channelNN to xs.read_attrs
     read_channel_attrs = [f"channel{ch:02}" for ch in xs_id_mono_fly.channel_numbers]
     read_channel_attrs.append("hdf5")
     # print(f"read_channel_attrs: {read_channel_attrs}")
@@ -651,7 +656,7 @@ try:
             mcaroi_read_attrs = [f"mcaroi{m:02}.total_rbv" for m in range(1, 5)]
         xs_channel.read_attrs = mcaroi_read_attrs
 
-    if os.getenv("TOUCHBEAMLINE", "0") == "1":
+    if False:  # os.getenv("TOUCHBEAMLINE", "0") == "1":
         print('  Touching xs_id_mono_fly...')
         # TODO add cam function
         xs_id_mono_fly.cam.num_channels.put(xs_id_mono_fly.get_channel_count())  # 4 for ME4 detector
@@ -696,96 +701,97 @@ except Exception as ex:
     print(ex, end="\n\n")
 
 
+# TODO: MR commented it out on 2022-11-22. Need to fix the class to use the community IOC code.
 # Working xs2 detector
 # JL replaced SRXXspressTrigger with CommunitySRXXspressTrigger
-class SrxXspress3Detector2(CommunitySRXXspressTrigger, Xspress3Detector):
-    # TODO: garth, the ioc is missing some PVs?
-    #   det_settings.erase_array_counters
-    #       (XF:05IDD-ES{Xsp:1}:ERASE_ArrayCounters)
-    #   det_settings.erase_attr_reset (XF:05IDD-ES{Xsp:1}:ERASE_AttrReset)
-    #   det_settings.erase_proc_reset_filter
-    #       (XF:05IDD-ES{Xsp:1}:ERASE_PROC_ResetFilter)
-    #   det_settings.update_attr (XF:05IDD-ES{Xsp:1}:UPDATE_AttrUpdate)
-    #   det_settings.update (XF:05IDD-ES{Xsp:1}:UPDATE)
-    roi_data = Cpt(PluginBase, "ROIDATA:")
+# class SrxXspress3Detector2(CommunitySRXXspressTrigger, Xspress3Detector):
+#     # TODO: garth, the ioc is missing some PVs?
+#     #   det_settings.erase_array_counters
+#     #       (XF:05IDD-ES{Xsp:1}:ERASE_ArrayCounters)
+#     #   det_settings.erase_attr_reset (XF:05IDD-ES{Xsp:1}:ERASE_AttrReset)
+#     #   det_settings.erase_proc_reset_filter
+#     #       (XF:05IDD-ES{Xsp:1}:ERASE_PROC_ResetFilter)
+#     #   det_settings.update_attr (XF:05IDD-ES{Xsp:1}:UPDATE_AttrUpdate)
+#     #   det_settings.update (XF:05IDD-ES{Xsp:1}:UPDATE)
+#     roi_data = Cpt(PluginBase, "ROIDATA:")
 
-    # XS2 only uses 1 channel. Currently only using three channels.
-    # Uncomment these to enable more
-    channel1 = Cpt(Xspress3Channel, "C1_", channel_num=1, read_attrs=["rois"])
-    # channel2 = Cpt(Xspress3Channel, 'C2_', channel_num=2, read_attrs=['rois'])
-    # channel3 = Cpt(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
+#     # XS2 only uses 1 channel. Currently only using three channels.
+#     # Uncomment these to enable more
+#     channel1 = Cpt(Xspress3Channel, "C1_", channel_num=1, read_attrs=["rois"])
+#     # channel2 = Cpt(Xspress3Channel, 'C2_', channel_num=2, read_attrs=['rois'])
+#     # channel3 = Cpt(Xspress3Channel, 'C3_', channel_num=3, read_attrs=['rois'])
 
-    erase = Cpt(EpicsSignal, "ERASE")
+#     erase = Cpt(EpicsSignal, "ERASE")
 
-    array_counter = Cpt(EpicsSignal, "ArrayCounter_RBV")
+#     array_counter = Cpt(EpicsSignal, "ArrayCounter_RBV")
 
-    create_dir = Cpt(EpicsSignal, "HDF5:FileCreateDir")
+#     create_dir = Cpt(EpicsSignal, "HDF5:FileCreateDir")
 
-    # hdf5 = Cpt(
-    #     CommunityXspress3FileStoreFlyable,  # JL replaced Xspress3FileStoreFlyable with CommunityXspress3FileStoreFlyable
-    #     "HDF5:",
-    #     read_path_template="/nsls2/xf05id1/data/2020-2/XS3MINI",
-    #     write_path_template="/home/xspress3/data/SRX/2020-2",
-    #     root="/nsls2/xf05id1",
-    # )
+#     # hdf5 = Cpt(
+#     #     CommunityXspress3FileStoreFlyable,  # JL replaced Xspress3FileStoreFlyable with CommunityXspress3FileStoreFlyable
+#     #     "HDF5:",
+#     #     read_path_template="/nsls2/xf05id1/data/2020-2/XS3MINI",
+#     #     write_path_template="/home/xspress3/data/SRX/2020-2",
+#     #     root="/nsls2/xf05id1",
+#     # )
 
-    # this is used as a latch to put the xspress3 into 'bulk' mode
-    # for fly scanning.  Do this is a signal (rather than as a local variable
-    # or as a method so we can modify this as part of a plan
-    fly_next = Cpt(Signal, value=False)
+#     # this is used as a latch to put the xspress3 into 'bulk' mode
+#     # for fly scanning.  Do this is a signal (rather than as a local variable
+#     # or as a method so we can modify this as part of a plan
+#     fly_next = Cpt(Signal, value=False)
 
-    def __init__(
-        self,
-        prefix,
-        *,
-        f_key="fluor",
-        configuration_attrs=None,
-        read_attrs=None,
-        **kwargs,
-    ):
-        self._f_key = f_key
-        if configuration_attrs is None:
-            configuration_attrs = [
-                "external_trig",
-                "total_points",
-                "spectra_per_point",
-                "settings",
-                "rewindable",
-            ]
-        if read_attrs is None:
-            read_attrs = ["channel1", "hdf5"]
-        super().__init__(
-            prefix,
-            configuration_attrs=configuration_attrs,
-            read_attrs=read_attrs,
-            **kwargs,
-        )
-        # this is possiblely one too many places to store this
-        # in the parent class it looks at if the extrenal_trig signal is high
-        self._mode = SRXMode.step
+#     def __init__(
+#         self,
+#         prefix,
+#         *,
+#         f_key="fluor",
+#         configuration_attrs=None,
+#         read_attrs=None,
+#         **kwargs,
+#     ):
+#         self._f_key = f_key
+#         if configuration_attrs is None:
+#             configuration_attrs = [
+#                 "external_trig",
+#                 "total_points",
+#                 "spectra_per_point",
+#                 "settings",
+#                 "rewindable",
+#             ]
+#         if read_attrs is None:
+#             read_attrs = ["channel1", "hdf5"]
+#         super().__init__(
+#             prefix,
+#             configuration_attrs=configuration_attrs,
+#             read_attrs=read_attrs,
+#             **kwargs,
+#         )
+#         # this is possiblely one too many places to store this
+#         # in the parent class it looks at if the extrenal_trig signal is high
+#         self._mode = SRXMode.step
 
-        # self.create_dir.put(-3)
+#         # self.create_dir.put(-3)
 
-    def stop(self, *, success=False):
-        ret = super().stop()
-        # todo move this into the stop method of the settings object?
-        self.settings.acquire.put(0)
-        self.hdf5.stop(success=success)
-        return ret
+#     def stop(self, *, success=False):
+#         ret = super().stop()
+#         # todo move this into the stop method of the settings object?
+#         self.settings.acquire.put(0)
+#         self.hdf5.stop(success=success)
+#         return ret
 
-    def stage(self):
-        # do the latching
-        if self.fly_next.get():
-            self.fly_next.put(False)
-            self._mode = SRXMode.fly
-        return super().stage()
+#     def stage(self):
+#         # do the latching
+#         if self.fly_next.get():
+#             self.fly_next.put(False)
+#             self._mode = SRXMode.fly
+#         return super().stage()
 
-    def unstage(self):
-        try:
-            ret = super().unstage()
-        finally:
-            self._mode = SRXMode.step
-        return ret
+#     def unstage(self):
+#         try:
+#             ret = super().unstage()
+#         finally:
+#             self._mode = SRXMode.step
+#         return ret
 
 
 # try:
@@ -808,13 +814,14 @@ try:
     # JL replaced {Xsp:1}: with {Xsp:3}:det1:
     #xs = SrxXspress3Detector("XF:05IDD-ES{Xsp:1}:", name="xs")
     xs = CommunitySrxXspress3Detector("XF:05IDD-ES{Xsp:3}:", name="xs", f_key="fluor")
+    # xs = CommunityXspress3_8Channel("XF:05IDD-ES{Xsp:3}:", name="xs", f_key="fluor")
     xs2 = None
 
     # the next line worked!
-    # xs.read_attrs = ["channels.channel01.mcarois.mcaroi01.total_rbv"]    
+    # xs.read_attrs = ["channels.channel01.mcarois.mcaroi01.total_rbv"]
     # but putting all channels, all mcarois in one list did not work
 
-    # add all channel.channelNN to xs.read_attrs 
+    # add all channel.channelNN to xs.read_attrs
     read_channel_attrs = [f"channel{ch:02}" for ch in xs.channel_numbers]
     read_channel_attrs.append("hdf5")
     # print(f"read_channel_attrs: {read_channel_attrs}")
@@ -859,10 +866,32 @@ try:
             "trigger_signal",
         ]
 
+
+        # To be run with: BS_ENV=2023-3.3-py310-tiled bsui
+        xs.fluor.kind = "normal"
+        # xs.fluor.name = "fluor"  # FIXME - this causes the shape to become (251, 4, 4096)
+
+        # TODOs:
+        # 1. Set up TTL Veto mode and number of points in the external trigger mode.
+        # 2. Fix the shapes dynamically:
+        # xs.fluor.shape = (121, 8, 4096)
+        # xs.fluor.describe()
+        # Out[2]:
+        # {'fluor': {'source': 'SIM:fluor',
+        # 'dtype': 'array',
+        # 'shape': (121, 8, 4096),
+        # 'external': 'FILESTORE:',
+        # 'dtype_str': 'uint32',
+        # 'dims': ('bin_count',)}}
+        # 3. Sort out the wrong shape (251, 4, 4096)
+
+
+
+
         # This is necessary for when the IOC restarts
         # We have to trigger one image for the hdf5 plugin to work correctly
         # else, we get file writing errors
-        xs.hdf5.warmup()
+        ##### xs.hdf5.warmup()
 
         # Rename the ROIs
         # JL commented this loop out
