@@ -536,6 +536,43 @@ class CommunitySrxXspress3Detector(CommunityXspress3_8Channel):
         return ret
 
     def stage(self):
+        # if should external trigger
+        ext_trig = self.external_trig.get()
+
+        # really force it to stop acquiring
+        self.cam.acquire.put(0, wait=True)
+
+        total_points = self.total_points.get()
+        if total_points < 1:
+            raise RuntimeError("You must set the total points")
+        spec_per_point = self.spectra_per_point.get()
+        total_capture = total_points * spec_per_point
+
+        # # stop previous acquisition
+        # self.stage_sigs[self.parent.cam.acquire] = 0
+
+        # # re-order the stage signals and disable the calc record which is
+        # # interfering with the capture count
+        # self.stage_sigs.pop(self.num_capture, None)
+        # self.stage_sigs.pop(self.parent.cam.num_images, None)
+        # self.stage_sigs[self.num_capture_calc_disable] = 1
+
+        if ext_trig:
+            self.stage_sigs[self.cam.trigger_mode] = 'TTL Veto Only'
+            self.stage_sigs[self.cam.num_images] = total_capture
+            self.fluor.shape = (
+                total_capture,
+                self.hdf5.array_size_all.array_size1.get(),
+                self.hdf5.array_size_all.array_size0.get(),
+            )
+        else:
+            # self.settings.trigger_mode.put('Internal')
+            # self.settings.num_images.put(1)
+            self.stage_sigs[self.cam.trigger_mode] = 'Internal'
+            self.stage_sigs[self.cam.num_images] = spec_per_point
+
+        self.stage_sigs[self.hdf5.auto_save] = 'Yes'
+
         # print("stage!")
         # Erase what is currently in the system
         # This prevents a single hot pixel in the upper-left corner of a map
@@ -884,8 +921,21 @@ try:
         # 'dtype_str': 'uint32',
         # 'dims': ('bin_count',)}}
         # 3. Sort out the wrong shape (251, 4, 4096)
-
-
+        #
+        # 1-3 items seems to be done. New TODOs:
+        # WARNING:databroker.mongo_normalized:'xs_fluor' actually has dtype '<f8' but was reported as having dtype '<u4'. It will be converted to the reported type, but this should be fixed by setting 'dtype_str' in the data_key of the EventDescriptor. RunStart UID: 'e5381c97-b6ea-47b1-ba6c-c8f4a41ce988'
+        # WARNING:databroker.mongo_normalized:'xs_fluor' actually has dtype '<f8' but was reported as having dtype '<u4'. It will be converted to the reported type, but this should be fixed by setting 'dtype_str' in the data_key of the EventDescriptor. RunStart UID: 'e5381c97-b6ea-47b1-ba6c-c8f4a41ce988'
+        # WARNING:databroker.mongo_normalized:'xs_fluor' actually has dtype '<f8' but was reported as having dtype '<u4'. It will be converted to the reported type, but this should be fixed by setting 'dtype_str' in the data_key of the EventDescriptor. RunStart UID: 'e5381c97-b6ea-47b1-ba6c-c8f4a41ce988'
+        # WARNING:databroker.mongo_normalized:'xs_fluor' actually has dtype '<f8' but was reported as having dtype '<u4'. It will be converted to the reported type, but this should be fixed by setting 'dtype_str' in the data_key of the EventDescriptor. RunStart UID: 'e5381c97-b6ea-47b1-ba6c-c8f4a41ce988'
+        # WARNING:databroker.mongo_normalized:'xs_fluor' actually has dtype '<f8' but was reported as having dtype '<u4'. It will be converted to the reported type, but this should be fixed by setting 'dtype_str' in the data_key of the EventDescriptor. RunStart UID: 'e5381c97-b6ea-47b1-ba6c-c8f4a41ce988'
+        # WARNING:databroker.mongo_normalized:'xs_fluor' actually has dtype '<f8' but was reported as having dtype '<u4'. It will be converted to the reported type, but this should be fixed by setting 'dtype_str' in the data_key of the EventDescriptor. RunStart UID: 'e5381c97-b6ea-47b1-ba6c-c8f4a41ce988'
+        # WARNING:databroker.mongo_normalized:'xs_fluor' actually has dtype '<f8' but was reported as having dtype '<u4'. It will be converted to the reported type, but this should be fixed by setting 'dtype_str' in the data_key of the EventDescriptor. RunStart UID: 'e5381c97-b6ea-47b1-ba6c-c8f4a41ce988'
+        # WARNING:databroker.mongo_normalized:'xs_fluor' actually has dtype '<f8' but was reported as having dtype '<u4'. It will be converted to the reported type, but this should be fixed by setting 'dtype_str' in the data_key of the EventDescriptor. RunStart UID: 'e5381c97-b6ea-47b1-ba6c-c8f4a41ce988'
+        # WARNING:databroker.mongo_normalized:'xs_fluor' actually has dtype '<f8' but was reported as having dtype '<u4'. It will be converted to the reported type, but this should be fixed by setting 'dtype_str' in the data_key of the EventDescriptor. RunStart UID: 'e5381c97-b6ea-47b1-ba6c-c8f4a41ce988'
+        # WARNING:databroker.mongo_normalized:'xs_fluor' actually has dtype '<f8' but was reported as having dtype '<u4'. It will be converted to the reported type, but this should be fixed by setting 'dtype_str' in the data_key of the EventDescriptor. RunStart UID: 'e5381c97-b6ea-47b1-ba6c-c8f4a41ce988'
+        # WARNING:databroker.mongo_normalized:'xs_fluor' actually has dtype '<f8' but was reported as having dtype '<u4'. It will be converted to the reported type, but this should be fixed by setting 'dtype_str' in the data_key of the EventDescriptor. RunStart UID: 'e5381c97-b6ea-47b1-ba6c-c8f4a41ce988'
+        # WARNING:databroker.mongo_normalized:'xs_fluor' actually has dtype '<f8' but was reported as having dtype '<u4'. It will be converted to the reported type, but this should be fixed by setting 'dtype_str' in the data_key of the EventDescriptor. RunStart UID: 'e5381c97-b6ea-47b1-ba6c-c8f4a41ce988'
+        # WARNING:databroker.mongo_normalized:'xs_fluor' actually has dtype '<f8' but was reported as having dtype '<u4'. It will be converted to the reported type, but this should be fixed by setting 'dtype_str' in the data_key of the EventDescriptor. RunStart UID: 'e5381c97-b6ea-47b1-ba6c-c8f4a41ce988'
 
 
         # This is necessary for when the IOC restarts
