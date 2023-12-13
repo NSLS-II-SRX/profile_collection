@@ -50,7 +50,7 @@ if if_touch_beamline():
     going = "Going"
 else:
     # Case of CI:
-    timeout = 10  # seconds
+    timeout = 30  # seconds
     going = "NOT going"
 
 print(f'\nEpicsSignalBase timeout is {timeout} [seconds]. {going} to touch beamline hardware.\n')
