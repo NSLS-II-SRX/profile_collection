@@ -701,7 +701,12 @@ class SRXFlyer1Axis(Device):
         }
 
         desc = OrderedDict()
-        for chan in ("time", "enc1", "enc2", "enc3"):
+        desc["zebra_time"] = spec
+        desc["zebra_time"]["source"] = getattr(self._encoder.pc.data, "time").pvname
+        desc["zebra_time"]["dtype_str"] = "<f4"
+        # nanoZebra.pc.data.time.dtype_str = "<f4"
+
+        for chan in ("enc1", "enc2", "enc3"):
             desc[chan] = spec
             desc[chan]["source"] = getattr(self._encoder.pc.data, chan).pvname
 
@@ -867,14 +872,14 @@ class SRXFlyer1Axis(Device):
             path_semantics="posix",
         )
 
-        time_datum = datum_factory_z({"column": "time"})
+        time_datum = datum_factory_z({"column": "zebra_time"})
         enc1_datum = datum_factory_z({"column": "enc1"})
         enc2_datum = datum_factory_z({"column": "enc2"})
         enc3_datum = datum_factory_z({"column": "enc3"})
         sis_datum = datum_factory_sis({"column": "i0"})
         sis_datum_im = datum_factory_sis({"column": "im"})
         sis_datum_it = datum_factory_sis({"column": "it"})
-        sis_time = datum_factory_sis({"column": "time"})
+        sis_datum_time = datum_factory_sis({"column": "sis_time"})
 
         self._document_cache.extend(
             ("resource", d)
@@ -888,7 +893,7 @@ class SRXFlyer1Axis(Device):
                 enc2_datum,
                 enc3_datum,
                 sis_datum,
-                sis_time,
+                sis_datum_time,
                 sis_datum_im,
                 sis_datum_it,
             )
@@ -930,22 +935,22 @@ class SRXFlyer1Axis(Device):
             "time": ttime.time(),
             "seq_num": 1,
             "data": {
-                "time": time_datum["datum_id"],
+                "zebra_time": time_datum["datum_id"],
                 "enc1": enc1_datum["datum_id"],
                 "enc2": enc2_datum["datum_id"],
                 "enc3": enc3_datum["datum_id"],
                 "i0": sis_datum["datum_id"],
-                "i0_time": sis_time["datum_id"],
+                "i0_time": sis_datum_time["datum_id"],
                 "im": sis_datum_im["datum_id"],
                 "it": sis_datum_it["datum_id"],
             },
             "timestamps": {
-                "time": time_datum["datum_id"],  # not a typo#
+                "zebra_time": time_datum["datum_id"],  # not a typo#
                 "enc1": time_datum["datum_id"],
                 "enc2": time_datum["datum_id"],
                 "enc3": time_datum["datum_id"],
-                "i0": sis_time["datum_id"],
-                "i0_time": sis_time["datum_id"],
+                "i0": sis_datum["datum_id"],
+                "i0_time": sis_datum_time["datum_id"],
                 "im": sis_datum_im["datum_id"],
                 "it": sis_datum_it["datum_id"],
             },
@@ -1122,7 +1127,7 @@ def export_nano_zebra_data(zebra, filepath, fastaxis):
 
     size = (len(time_d),)
     with h5py.File(filepath, "w") as f:
-        dset0 = f.create_dataset("time", size, dtype="f")
+        dset0 = f.create_dataset("zebra_time", size, dtype="f")
         dset0[...] = np.array(time_d)
         dset1 = f.create_dataset("enc1", size, dtype="f")
         dset1[...] = np.array(enc1_d)
