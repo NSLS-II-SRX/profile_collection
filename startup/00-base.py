@@ -50,7 +50,7 @@ if if_touch_beamline():
     going = "Going"
 else:
     # Case of CI:
-    timeout = 10  # seconds
+    timeout = 30  # seconds
     going = "NOT going"
 
 print(f'\nEpicsSignalBase timeout is {timeout} [seconds]. {going} to touch beamline hardware.\n')
@@ -195,7 +195,7 @@ RE.md = PersistentDict(runengine_metadata_dir)
 
 # Optional: set any metadata that rarely changes.
 RE.md["beamline_id"] = "SRX"
-RE.md["md_version"] = "1.0"
+RE.md["md_version"] = "1.1"
 
 # from bluesky.utils import ts_msg_hook
 # RE.msg_hook = ts_msg_hook
