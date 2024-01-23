@@ -86,7 +86,8 @@ RE.unsubscribe(0)
 
 from tiled.client import from_profile
 
-srx_raw = from_profile('nsls2', api_key=os.environ["TILED_SERVICE_ACCOUNT_API_KEY_THAT_CAN_WRITE"])['srx']['raw']
+
+srx_raw = from_profile('nsls2', api_key=os.environ["TILED_BLUESKY_WRITING_API_KEY_SRX"])['srx']['raw']
 
 def post_document(name, doc):
     srx_raw.post_document(name, doc)
