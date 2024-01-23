@@ -239,9 +239,10 @@ try:
                        read_attrs=['hdf5', 'cam', 'stats1'])
     print("done")
     merlin.hdf5.read_attrs = []
-    print("  Warmup...", end="", flush=True)
-    merlin.hdf5.warmup()
-    print("done")
+    if np.array(merlin.cam.array_size.get()).sum() == 0:
+        print("  Warmup...", end="", flush=True)
+        merlin.hdf5.warmup()
+        print("done")
 except TimeoutError:
     print('\nCannot connect to Merlin. Continuing without device.\n')
 except Exception:

@@ -167,6 +167,7 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._mode = SRXMode.step
+        # self.cam.trigger_mode = EpicsSignalWithRBV("XF:05IDD-ES{Dexela:1}cam1:TriggerMode")
 
     def stage(self):
         # do the latching
@@ -194,6 +195,11 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
 try:
     dexela = SRXDexelaDetector('XF:05IDD-ES{Dexela:1}', name='dexela')
     dexela.read_attrs = ['hdf5']
+    # TODO: Automatically warmup
+    # if np.array(dexela.cam.array_size.get()).sum() == 0:
+    #     print("  Warmup...", end="", flush=True)
+    #     dexela.hdf5.warmup()
+    #     print("done")
 except TimeoutError:
     dexela = None
     print('\nCannot connect to Dexela. Continuing without device.\n')
