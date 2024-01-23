@@ -368,25 +368,26 @@ class Energy(PseudoPositioner):
         self.detune.put(0.0)
         self.move(self.energy.get()[0])
 
-#cal_data_2023cycle2 = {
-#    "d_111": 3.12956888737595,
-#    "delta_bragg": 0.21583184322629267,
+#cal_data_2023cycle3 = {
+#    "d_111": 3.12948926950352,
+#    "delta_bragg": 0.21855308758389433,
 #    "C2Xcal": 3.6,
 #    "T2cal": 15.0347755916,
 #    "xoffset": 24.65,
 #}
 
-cal_data_2023cycle3 = {
-    "d_111": 3.12948926950352,
-    "delta_bragg": 0.21855308758389433,
+cal_data_2024cycle1 = {
+    "d_111": 3.129926663577669,
+    "delta_bragg": 0.22462790072883754,
     "C2Xcal": 3.6,
     "T2cal": 15.0347755916,
     "xoffset": 24.65,
 }
 
 
+
 # print('Connecting to energy PVs...')
-energy = Energy(prefix="", name="energy", **cal_data_2023cycle3)
+energy = Energy(prefix="", name="energy", **cal_data_2024cycle1)
 energy.wait_for_connection()
 energy.synch_with_epics()
 energy.value = 1.0
