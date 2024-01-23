@@ -16,13 +16,13 @@ proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
 saf_num = 311284
 
-proposal_num = 313507
-proposal_title = 'Data Security at SRX'
-PI_lastname = 'Kiss'
-saf_num = 312779
+# proposal_num = 313507
+# proposal_title = 'Data Security at SRX'
+# PI_lastname = 'Kiss'
+# saf_num = 312779
 
 
-cycle = '2023_cycle3'
+cycle = '2024_cycle1'
 
 # Set user data in bluesky
 RE.md['proposal']  = {'proposal_num': str(proposal_num),
