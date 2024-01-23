@@ -252,17 +252,17 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
 
 
 # Written quickly
-def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=True, plot_guess=False,
+def plot_knife_edge(scanid=-1, fluor_key='xs_fluor', use_trans=False, normalize=True, plot_guess=False,
                     bin_low=None, bin_high=None, plotme=None):
     # Get the scanid
-    h = db[int(scanid)]
-    id_str = h.start['scan_id']
-    if 'FLY' in h.start['scan']['type']:
+    bs_run = c[int(scanid)]
+    id_str = bs_run.start['scan_id']
+    if 'FLY' in bs_run.start['scan']['type']:
         fly = True
     else:
         fly = False
 
-    fast_axis = h.start['scan']['fast_axis']['motor_name']
+    fast_axis = bs_run.start['scan']['fast_axis']['motor_name']
 
     try:
         if (fast_axis=='nano_stage_sx'):
@@ -274,59 +274,29 @@ def plot_knife_edge(scanid=-1, fluor_key='fluor', use_trans=False, normalize=Tru
         return
 
     # Get the information from the previous scan
-    haz_data = False
-    loop_counter = 0
-    MAX_LOOP_COUNTER = 30
-    print('Waiting for data...', end='', flush=True)
-    while (loop_counter < MAX_LOOP_COUNTER):
-        try:
-            if (fly):
-                tbl = db[int(id_str)].table('stream0', fill=True)
-            else:
-                tbl = db[int(id_str)].table(fill=True)
-            haz_data = True
-            print('done')
-            break
-        except:
-            loop_counter += 1
-            ttime.sleep(1)
-
-    # Check if we haz data
-    if (not haz_data):
-        print('Data collection timed out!')
-        return
+    ds = bs_run['stream0']['data']
+    ds_keys = list(ds.keys())
     
     # Get the data
     if (use_trans == True):
-        y = tbl['it'].values[0] / tbl['im'].values[0]
+        y = ds['it'].read() / ds['im'].read()
     else:
         if bin_low is None:
             bin_low = xs.channel01.mcaroi01.min_x.get()
         if bin_high is None:
             bin_high = xs.channel01.mcaroi01.min_x.get() + xs.channel01.mcaroi01.size_x.get()
-        d = np.array(tbl[fluor_key])[0]
-        if (d.ndim == 1):
-            d = np.array(tbl[fluor_key])
-        d = np.stack(d)
-        if (d.ndim == 2):
-            d = np.sum(d[:, bin_low:bin_high], axis=1)
-        elif (d.ndim == 3):
-            d = np.sum(d[:, :, bin_low:bin_high], axis=(1, 2))
-        try:
-            I0 = np.array(tbl['i0'])[0]
-            #I0 = np.array(tbl['im'])[0]
-        except KeyError:
-            I0 = np.array(tbl['sclr_i0'])
-            #I0 = np.array(tbl['sclr_im'])
-        if (normalize):
-            y = d / I0
+        d = ds[fluor_key][..., bin_low:bin_high].sum(axis=(-2, -1)).squeeze()
+        if 'i0' in ds_keys:
+            I0 = ds['i0'].read().squeeze()
+        elif 'sclr_i0' in ds_keys:
+            I0 = ds['sclr_i0'].read().squeeze()
         else:
-            y = d
-    x = np.array(tbl[pos])[0]
-    if (x.size == 1):
-        x = np.array(tbl[pos])
-    x = x.astype(np.float64)
-    y = y.astype(np.float64)
+            raise KeyError
+        if (normalize):
+            y = np.array(d / I0).astype(np.float64)
+        else:
+            y = d.astype(np.float64)
+    x = ds[pos].read().squeeze().astype(np.float64)
     dydx = np.gradient(y, x)
     #try:
     #    hf = h5py.File('/home/xf05id1/current_user_data/knife_edge_scan.h5', 'a')

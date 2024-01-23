@@ -205,6 +205,9 @@ except ImportError:
 # runengine_metadata_dir = Path('/nsls2/xf05id1/shared/config/runengine-metadata-new')
 runengine_metadata_dir = Path('/nsls2/data/srx/legacy/xf05id1/shared/config/runengine-metadata-new')
 
+# Define tiled catalog
+c = from_profile("srx")
+
 RE.md = PersistentDict(runengine_metadata_dir)
 
 # Optional: set any metadata that rarely changes.
