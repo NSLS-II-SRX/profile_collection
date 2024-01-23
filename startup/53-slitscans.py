@@ -299,111 +299,45 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
     delta_fine_pitch = 0.0 # unit: um
  
     for idx, scan_id in enumerate(scan_id_list):
-        h = db[int(scan_id)]
-        scan_id = h.start['scan_id']
+        bs_run = c[int(scan_id)]
+        scan_id = int(bs_run.start['scan_id'])
 
         # Get the information from the previous scan
-        haz_data = False
-        loop_counter = 0
-        MAX_LOOP_COUNTER = 15
-        print(f'Scan ID: {int(scan_id):d}\nWaiting for data...', end='', flush=True)
-        while (loop_counter < MAX_LOOP_COUNTER):
-            try:
-                tbl = h.table('stream0', fill=True)
-                haz_data = True
-                print('done')
-                break
-            except:
-                loop_counter += 1
-                time.sleep(1)
-
-        # Check if we haz data
-        if (not haz_data):
-            print('Data collection timed out!')
-            return
-        
-        fluor_key = 'fluor'
-        d = np.array(tbl[fluor_key])[0]
-        if 'nano_stage_sx' in h.start['scan']['fast_axis']['motor_name']:
+        ds = bs_run['stream0']['data']
+        ds_keys = list(ds.keys())
+        fluor_key = 'xs_fluor'
+ 
+        if 'nano_stage_sx' in bs_run.start['scan']['fast_axis']['motor_name']:
             flag_dir = 'HOR'
             pos = 'enc1'
-            slit_range[idx] = h.table('baseline')['jjslits_h_trans'][1]
-        elif 'nano_stage_sy' in h.start['scan']['fast_axis']['motor_name']:
+            slit_range[idx] = bs_run['baseline']['data']['jjslits_h_trans'][1]
+        elif 'nano_stage_sy' in bs_run.start['scan']['fast_axis']['motor_name']:
             flag_dir = 'VER'
             pos = 'enc2'
-            slit_range[idx] = h.table('baseline')['jjslits_v_trans'][1]
+            slit_range[idx] = bs_run['baseline']['data']['jjslits_v_trans'][1]
         else:
-            print('Cannot automatically determine entrance slit positions. Exiting...')
+            print('Unknown motor')
             return
 
         if bin_low is None:
             bin_low = xs.channel01.mcaroi01.min_x.get()
         if bin_high is None:
             bin_high = xs.channel01.mcaroi01.max_x.get()
-        if (d.ndim == 1):
-            d = np.array(tbl[fluor_key])
-        d = np.stack(d)
-        if (d.ndim == 2):
-            d = np.sum(d[:, bin_low:bin_high], axis=1)
-        elif (d.ndim == 3):
-            d = np.sum(d[:, :, bin_low:bin_high], axis=(1, 2))
-        try:
-            I0 = np.array(tbl['i0'])[0]
-        except KeyError:
-            I0 = np.array(tbl['sclr_i0'])
-        if (normalize):
-            y = d / I0
+        d = ds[fluor_key][..., bin_low:bin_high].sum(axis=(-2, -1)).squeeze()
+        if 'i0' in ds_keys:
+            I0 = ds['i0'].read().squeeze()
+        elif 'sclr_i0' in ds_keys:
+            I0 = ds['sclr_i0'].read().squeeze()
         else:
-            y = d
-        x = np.array(tbl[pos])[0]
-        if (x.size == 1):
-            x = np.array(tbl[pos])
-        x = x.astype(np.float64) # position data
-        y = y.astype(np.float64) # fluo data
+            raise KeyError
+        if (normalize):
+            y = np.array(d / I0).astype(np.float64)
+        else:
+            y = d.astype(np.float64)
+        x = ds[pos].read().squeeze().astype(np.float64)
        
         numpts = x.shape
         
-    # ind_line = np.linspace(0, len(cts), numline, endpoint=False, dtype=np.int)
-    
-    # numline_array = np.arange(len(cts)/numpts)
-    # line_seq = np.zeros((int(numline), int(numpts)))
-    # pos_seq = np.zeros((int(numline), int(numpts)))
-    # I0_seq = np.zeros((int(numline), int(numpts)))
-    # slit_pos_seq = np.zeros(int(numline))
-    
-    # for i in range(int(numline)):
-    #     line_seq[i,:] = cts[ind_line[i]:ind_line[i] + int(numpts)]
-    #     pos_seq[i,:] = pos[ind_line[i]:ind_line[i] + int(numpts)]
-    #     I0_seq[i,:] = I0[ind_line[i]:ind_line[i] + int(numpts)]
-    #     slit_pos_seq[i] = slit_pos[ind_line[i] + 1]
-    
-    # pos_seq_plt = pos_seq[0, :]
-    # norm_line_seq = line_seq / I0_seq
-    # At this point, i haz data and full variables so now itz timez to plot
-
-        # if from_RE == []:
-        #     _, ax = plt.subplots()
-        # else:
-        #     ax = from_RE[0].ax
-        # #for i in range(numline):
-        # ax.plot(x, y, label=f'y = {i+1}')
-        # ax.set_ylabel('Slit position')
-        # ax.set_ylabel('Normalized Signal')
-        # ax.set_title(f'Scan {scan_id}')
-        # ax.legend(loc='upper left')
-
-        # if from_RE == []:
-        #     _, ax = plt.subplots()
-        # else:
-        #     ax = from_RE[1].ax
-        # #for i in range(numline):
-        # ax.plot(x, y, label=f'y = {i+1}')
-        # ax.set_ylabel('Slit position')
-        # ax.set_ylabel('Raw Signal')
-        # ax.set_title(f'Scan {scan_id}')
-        # ax.legend(loc='upper left')
-
-        # line fit
         # Error function with offset
         def f_offset_erf(x, A, sigma, x0, y0):
             x_star = (x - x0) / sigma
@@ -610,36 +544,18 @@ def orth_slit_nanoflyscan_cal(scan_id_list=[], slit_range=[], from_RE=[], orthog
     delta_fine_pitch = 0.0 # unit: um
 
     for idx, scan_id in enumerate(scan_id_list):
-        h = db[int(scan_id)]
-        scan_id = h.start['scan_id']
+        bs_run = c[int(scan_id)]
+        scan_id = int(bs_run.start['scan_id'])
 
         # Get the information from the previous scan
-        haz_data = False
-        loop_counter = 0
-        MAX_LOOP_COUNTER = 15
-        print(f'Scan ID: {int(scan_id):d}\nWaiting for data...', end='', flush=True)
-        while (loop_counter < MAX_LOOP_COUNTER):
-            try:
-                tbl = h.table('stream0', fill=True)
-                haz_data = True
-                print('done')
-                break
-            except:
-                loop_counter += 1
-                time.sleep(1)
-
-        # Check if we haz data
-        if (not haz_data):
-            print('Data collection timed out!')
-            return
+        ds = bs_run['stream0']['data']
+        ds_keys = list(ds.keys())
+        fluor_key = 'xs_fluor'
  
-       
-        fluor_key = 'fluor'
-        d = np.array(tbl[fluor_key])[0]
-        if 'nano_stage_sx' in h.start['scan']['fast_axis']['motor_name']:
+        if 'nano_stage_sx' in bs_run.start['scan']['fast_axis']['motor_name']:
             flag_dir = 'HOR'
             pos = 'enc1'
-        elif 'nano_stage_sy' in h.start['scan']['fast_axis']['motor_name']:
+        elif 'nano_stage_sy' in bs_run.start['scan']['fast_axis']['motor_name']:
             flag_dir = 'VER'
             pos = 'enc2'
         else:
@@ -650,70 +566,21 @@ def orth_slit_nanoflyscan_cal(scan_id_list=[], slit_range=[], from_RE=[], orthog
             bin_low = xs.channel01.mcaroi01.min_x.get()
         if bin_high is None:
             bin_high = xs.channel01.mcaroi01.max_x.get()
-        if (d.ndim == 1):
-            d = np.array(tbl[fluor_key])
-        d = np.stack(d)
-        if (d.ndim == 2):
-            d = np.sum(d[:, bin_low:bin_high], axis=1)
-        elif (d.ndim == 3):
-            d = np.sum(d[:, :, bin_low:bin_high], axis=(1, 2))
-        try:
-            I0 = np.array(tbl['i0'])[0]
-        except KeyError:
-            I0 = np.array(tbl['sclr_i0'])
-        if (normalize):
-            y = d / I0
+        d = ds[fluor_key][..., bin_low:bin_high].sum(axis=(-2, -1)).squeeze()
+        if 'i0' in ds_keys:
+            I0 = ds['i0'].read().squeeze()
+        elif 'sclr_i0' in ds_keys:
+            I0 = ds['sclr_i0'].read().squeeze()
         else:
-            y = d
-        x = np.array(tbl[pos])[0]
-        if (x.size == 1):
-            x = np.array(tbl[pos])
-        x = x.astype(np.float64) # position data
-        y = y.astype(np.float64) # fluo data
+            raise KeyError
+        if (normalize):
+            y = np.array(d / I0).astype(np.float64)
+        else:
+            y = d.astype(np.float64)
+        x = ds[pos].read().squeeze().astype(np.float64)
        
         numpts = x.shape
        
-    #ind_line = np.linspace(0, len(cts), numline, endpoint=False, dtype=np.int)
-    
-    # numline_array = np.arange(len(cts)/numpts)
-    #line_seq = np.zeros((int(numline), int(numpts)))
-    #pos_seq = np.zeros((int(numline), int(numpts)))
-    #I0_seq = np.zeros((int(numline), int(numpts)))
-    #slit_pos_seq = np.zeros(int(numline))
-    
-    #for i in range(int(numline)):
-    #    line_seq[i,:] = cts[ind_line[i]:ind_line[i] + int(numpts)]
-    #    pos_seq[i,:] = pos[ind_line[i]:ind_line[i] + int(numpts)]
-    #    I0_seq[i,:] = I0[ind_line[i]:ind_line[i] + int(numpts)]
-    #    slit_pos_seq[i] = slit_pos[ind_line[i] + 1]
-    
-    #pos_seq_plt = pos_seq[0, :]
-    #norm_line_seq = line_seq / I0_seq
-    # At this point, i haz data and full variables so now itz timez to plot
-
-        #if from_RE == []:
-        #    _, ax = plt.subplots()
-        #else:
-        #    ax = from_RE[0].ax
-        ##for i in range(numline):
-        #ax.plot(x, y, label=f'y = {i+1}')
-        #ax.set_ylabel('Slit position')
-        #ax.set_ylabel('Normalized Signal')
-        #ax.set_title(f'Scan {scan_id}')
-        #ax.legend(loc='upper left')
-
-        #if from_RE == []:
-        #    _, ax = plt.subplots()
-        #else:
-        #    ax = from_RE[1].ax
-        ##for i in range(numline):
-        #ax.plot(x, y, label=f'y = {i+1}')
-        #ax.set_ylabel('Slit position')
-        #ax.set_ylabel('Raw Signal')
-        #ax.set_title(f'Scan {scan_id}')
-        #ax.legend(loc='upper left')
-
-        #line fit
         # Error function with offset
         def f_offset_erf(x, A, sigma, x0, y0):
             x_star = (x - x0) / sigma
@@ -787,10 +654,6 @@ def orth_slit_nanoflyscan_cal(scan_id_list=[], slit_range=[], from_RE=[], orthog
         print('quadratic term corresponds to coarse Z ' '{:7.3f}'.format(delta_focal_plane_z), 'um.')
 
 
-    #if from_RE == []:
-    #    _, ax = plt.subplots()
-    #else:
-    #    ax = from_RE[2].ax
     fig, ax = plt.subplots()
     ax.plot(slit_range, line_pos_seq/1000, 'ro', slit_range[interp_range], line_plt)
     ax.set_title(f'scan {scan_id}')
