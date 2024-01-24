@@ -413,8 +413,8 @@ def nano_xrf(xstart, xstop, xstep,
              xmotor=nano_stage.sx, ymotor=nano_stage.sy, flag_snake=True):
 
     # calculate number of points
-    xnum = np.int(np.abs(np.round((xstop - xstart)/xstep)) + 1)
-    ynum = np.int(np.abs(np.round((ystop - ystart)/ystep)) + 1)
+    xnum = int(np.abs(np.round((xstop - xstart)/xstep)) + 1)
+    ynum = int(np.abs(np.round((ystop - ystart)/ystep)) + 1)
 
     # Setup detectors
     if extra_dets is None:

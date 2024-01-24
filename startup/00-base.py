@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from ophyd.signal import EpicsSignalBase, EpicsSignal, DEFAULT_CONNECTION_TIMEOUT
 from bluesky_queueserver import is_re_worker_active, parameter_annotation_decorator
+from tiled.client import from_profile
 
 def if_touch_beamline(envvar="TOUCHBEAMLINE"):
     value = os.environ.get(envvar, "false").lower()
@@ -46,7 +47,7 @@ EpicsSignal.wait_for_connection = wait_for_connection
 
 if if_touch_beamline():
     # Case of real beamline:
-    timeout = 10  # seconds
+    timeout = 2  # seconds
     going = "Going"
 else:
     # Case of CI:
@@ -84,9 +85,8 @@ nslsii.configure_base(ip.user_ns,
 
 RE.unsubscribe(0)
 
-from tiled.client import from_profile
-
-
+# Define tiled catalog
+c = from_profile("srx")
 srx_raw = from_profile('nsls2', api_key=os.environ["TILED_BLUESKY_WRITING_API_KEY_SRX"])['srx']['raw']
 
 def post_document(name, doc):
@@ -205,8 +205,6 @@ except ImportError:
 # runengine_metadata_dir = Path('/nsls2/xf05id1/shared/config/runengine-metadata-new')
 runengine_metadata_dir = Path('/nsls2/data/srx/legacy/xf05id1/shared/config/runengine-metadata-new')
 
-# Define tiled catalog
-c = from_profile("srx")
 
 RE.md = PersistentDict(runengine_metadata_dir)
 
