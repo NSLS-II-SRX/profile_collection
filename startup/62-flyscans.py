@@ -375,7 +375,14 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             if verbose:
                 st.add_callback(lambda x: toc(t_datacollect, str=f"  status object  {datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S.%f')}", log_file=log_file))
             if (d.name == 'dexela'):
+                if verbose:
+                    print("    sleeping for dexela...")
+                state = 0
+                while (state == 0):
+                    yield from bps.sleep(0.1)
+                    state = d.cam.detector_state.get()
                 yield from bps.sleep(1)
+
         # AMK paranoid check
         t0 = ttime.monotonic()
         while (xs.channel01.mcaroi.ts_acquiring.get() != 1 or xs.cam.detector_state.get() != 1):

@@ -746,13 +746,21 @@ class SRXFlyer1Axis(Device):
         v = pxsize / dwell
 
         if mode == 'position':
+            if 'dexela' in [d.name for d in self.detectors]:
+                decrement = (pxsize / dwell) * 0.001
+            else:
+                decrement = (pxsize / dwell) * 0.0001
             # 0.1 ms delay between pulses
-            decrement = (pxsize / dwell) * 0.0001
+            # decrement = (pxsize / dwell) * 0.001
             if decrement < 1e-5:
                 print('Warning: Changing the pulse width!')
                 decrement = 1e-5
         elif mode == 'time':
-            decrement = 0.0002
+            if 'dexela' in [d.name for d in self.detectors]:
+                decrement = 0.001
+            else:
+                decrement = 0.0002
+            # decrement = 0.0002
 
         if mode == 'position':
             self._encoder.pc.gate_start.put(xstart - direction * (pxsize / 2))
