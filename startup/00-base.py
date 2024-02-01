@@ -205,8 +205,11 @@ except ImportError:
 # runengine_metadata_dir = Path('/nsls2/xf05id1/shared/config/runengine-metadata-new')
 runengine_metadata_dir = Path('/nsls2/data/srx/legacy/xf05id1/shared/config/runengine-metadata-new')
 
+from nslsii.md_dict import RunEngineRedisDict
 
-RE.md = PersistentDict(runengine_metadata_dir)
+#RE.md = PersistentDict(runengine_metadata_dir)
+
+RE.md = RunEngineRedisDict("info.srx.nsls2.bnl.gov")
 
 # Optional: set any metadata that rarely changes.
 RE.md["beamline_id"] = "SRX"

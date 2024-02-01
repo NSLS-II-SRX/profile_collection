@@ -193,6 +193,30 @@ class SrxXSP3Handler:
             return np.asarray(f[self.XRF_DATA_KEY])
 
 
+class Xspress3HDF5PluginWithRedis(Xspress3HDF5Plugin):
+    "Subclass to determine file location based on proposal info in Redis"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._redis_dict = RunEngineRedisDict("info.srx.nsls2.bnl.gov")
+        if kwargs["root_path"] is None:
+            self.root_path.put(self.root_path_str)
+        if kwargs["path_template"] is None:
+            self.path_template.put(self.path_template_str)
+
+    @property
+    def root_path_str(self):
+        data_session = self._redis_dict["data_session"]
+        cycle = self._redis_dict["cycle"]
+        root_path = f"/nsls2/data/srx/proposals/{cycle}/{data_session}/assets/xspress3/"
+        return root_path
+
+    @property
+    def path_template_str(self):
+        path_template = "%Y/%m/%d"
+        return path_template
+
+
 # build a community IOC xspress3 class with 8 channels
 CommunityXspress3_8Channel = build_xspress3_class(
     channel_numbers=(1, 2, 3, 4, 5, 6, 7, 8),
@@ -201,12 +225,13 @@ CommunityXspress3_8Channel = build_xspress3_class(
     xspress3_parent_classes=(Xspress3Detector, Xspress3Trigger),
     extra_class_members={
         "hdf5": Cpt(
-            Xspress3HDF5Plugin,
+            Xspress3HDF5PluginWithRedis,
             "HDF1:",
             name="hdf5",
-            root_path="/nsls2/data/srx/assets/xspress3",
-            path_template="/nsls2/data/srx/assets/xspress3/%Y/%m/%d",
             resource_kwargs={},
+            # These are overriden by properties.
+            path_template=None,
+            root_path=None,
         )
     }
 )
@@ -274,6 +299,14 @@ class CommunitySrxXspress3Detector(CommunityXspress3_8Channel):
         self.hdf5.stop(success=success)
         return ret
 
+    def _compute_total_capture(self):
+        total_points = self.total_points.get()
+        if total_points < 1:
+            raise RuntimeError("You must set the total points")
+        spec_per_point = self.spectra_per_point.get()
+        total_capture = total_points * spec_per_point
+        return total_points, spec_per_point, total_capture
+
     def stage(self):
         # if should external trigger
         ext_trig = self.external_trig.get()
@@ -281,11 +314,7 @@ class CommunitySrxXspress3Detector(CommunityXspress3_8Channel):
         # really force it to stop acquiring
         self.cam.acquire.put(0, wait=True)
 
-        total_points = self.total_points.get()
-        if total_points < 1:
-            raise RuntimeError("You must set the total points")
-        spec_per_point = self.spectra_per_point.get()
-        total_capture = total_points * spec_per_point
+        total_points, spec_per_point, total_capture = self._compute_total_capture()
 
         # # stop previous acquisition
         # self.stage_sigs[self.parent.cam.acquire] = 0
@@ -309,6 +338,11 @@ class CommunitySrxXspress3Detector(CommunityXspress3_8Channel):
             # self.settings.num_images.put(1)
             self.stage_sigs[self.cam.trigger_mode] = 'Internal'
             self.stage_sigs[self.cam.num_images] = spec_per_point
+            # Failed attempt to fix expected shape in tiled
+            self.fluor.shape = (
+                self.hdf5.array_size_all.array_size1.get(),
+                self.hdf5.array_size_all.array_size0.get(),
+            )
 
         self.stage_sigs[self.hdf5.auto_save] = 'Yes'
 
@@ -412,8 +446,7 @@ class SrxXspress3DetectorIDMonoFly(CommunitySrxXspress3Detector):
     def collect_asset_docs(self):
         items = list(self._asset_docs_cache)
         self._asset_docs_cache.clear()
-        for item in items:
-            yield item
+        yield from items
 
 
 try:
