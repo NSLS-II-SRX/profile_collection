@@ -11,15 +11,15 @@ import shutil
 # PI_lastname = None
 # saf_num = None
 
-proposal_num = 312933
-proposal_title = 'SRX Beamline Commissioning'
-PI_lastname = 'Kiss'
-saf_num = 311284
-
-# proposal_num = 313507
-# proposal_title = 'Data Security at SRX'
+# proposal_num = 312933
+# proposal_title = 'SRX Beamline Commissioning'
 # PI_lastname = 'Kiss'
-# saf_num = 312779
+# saf_num = 311284
+
+proposal_num = 313507
+proposal_title = 'Data Security at SRX'
+PI_lastname = 'Kiss'
+saf_num = 312779
 
 
 cycle = '2024_cycle1'

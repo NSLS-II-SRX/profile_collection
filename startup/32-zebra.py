@@ -749,7 +749,10 @@ class SRXFlyer1Axis(Device):
             if 'dexela' in [d.name for d in self.detectors]:
                 decrement = (pxsize / dwell) * 0.001
             else:
-                decrement = (pxsize / dwell) * 0.0001
+                if dwell > 0.099:
+                    decrement = (pxsize / dwell) * 0.001
+                else:
+                    decrement = (pxsize / dwell) * 0.0001
             # 0.1 ms delay between pulses
             # decrement = (pxsize / dwell) * 0.001
             if decrement < 1e-5:
