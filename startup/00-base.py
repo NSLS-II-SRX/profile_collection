@@ -1,6 +1,8 @@
 print(f"Loading {__file__}...")
 
 import os
+import redis
+import redis_json_dict
 from datetime import datetime
 from ophyd.signal import EpicsSignalBase, EpicsSignal, DEFAULT_CONNECTION_TIMEOUT
 from bluesky_queueserver import is_re_worker_active, parameter_annotation_decorator
@@ -209,7 +211,8 @@ from nslsii.md_dict import RunEngineRedisDict
 
 #RE.md = PersistentDict(runengine_metadata_dir)
 
-RE.md = RunEngineRedisDict("info.srx.nsls2.bnl.gov")
+redis_client = redis.Redis("info.srx.nsls2.bnl.gov")
+RE.md = RedisJSONDict(redis_client, prefix="bsui")
 
 # Optional: set any metadata that rarely changes.
 RE.md["beamline_id"] = "SRX"
