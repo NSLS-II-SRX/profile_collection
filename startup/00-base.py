@@ -2,7 +2,7 @@ print(f"Loading {__file__}...")
 
 import os
 import redis
-import redis_json_dict
+from redis_json_dict import RedisJSONDict
 from datetime import datetime
 from ophyd.signal import EpicsSignalBase, EpicsSignal, DEFAULT_CONNECTION_TIMEOUT
 from bluesky_queueserver import is_re_worker_active, parameter_annotation_decorator
