@@ -11,25 +11,28 @@ import shutil
 # PI_lastname = None
 # saf_num = None
 
-# proposal_num = 312933
-# proposal_title = 'SRX Beamline Commissioning'
-# PI_lastname = 'Kiss'
-# saf_num = 311284
-
-proposal_num = 313507
-proposal_title = 'Data Security at SRX'
+proposal_num = 312933
+proposal_title = 'SRX Beamline Commissioning'
 PI_lastname = 'Kiss'
-saf_num = 312779
+saf_num = 311284
+
+# proposal_num = 313507
+# proposal_title = 'Data security at SRX'
+# PI_lastname = 'Kiss'
+# saf_num = 312779
+
+data_session = f"pass-{proposal_num}"
 
 
 cycle = '2024_cycle1'
 
 # Set user data in bluesky
+RE.md['data_session'] = data_session
 RE.md['proposal']  = {'proposal_num': str(proposal_num),
                       'proposal_title': str(proposal_title),
                       'PI_lastname': str(PI_lastname),
                       'saf_num': str(saf_num),
-                      'cycle': str(cycle)}
+                      'cycle': "2024-1"}
 
 if if_touch_beamline():
     # Set user data in scanbroker

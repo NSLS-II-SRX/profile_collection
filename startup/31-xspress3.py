@@ -198,7 +198,7 @@ class Xspress3HDF5PluginWithRedis(Xspress3HDF5Plugin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._redis_dict = RunEngineRedisDict("info.srx.nsls2.bnl.gov")
+        # self._redis_dict = RunEngineRedisDict("info.srx.nsls2.bnl.gov")
         if kwargs["root_path"] is None:
             self.root_path.put(self.root_path_str)
         if kwargs["path_template"] is None:
@@ -206,9 +206,16 @@ class Xspress3HDF5PluginWithRedis(Xspress3HDF5Plugin):
 
     @property
     def root_path_str(self):
-        data_session = self._redis_dict["data_session"]
-        cycle = self._redis_dict["cycle"]
-        root_path = f"/nsls2/data/srx/proposals/{cycle}/{data_session}/assets/xspress3/"
+        # data_session = self._redis_dict["data_session"]
+        # cycle = self._redis_dict["cycle"]
+        data_session = RE.md["data_session"]
+        cycle = RE.md["proposal"]["cycle"]
+        ## This should be fixed
+        # root_path = f"/nsls2/data/srx/proposals/{cycle}/{data_session}/assets/xspress3/"
+        if int(RE.md["proposal"]['proposal_num']) == 312933:
+            root_path = f"/nsls2/data/srx/proposals/commissioning/pass-312933/assets/xspress3/"
+        else:
+            root_path = f"/nsls2/data/srx/proposals/2024-1/pass-{int(RE.md['proposal']['proposal_num'])}/assets/xspress3/"
         return root_path
 
     @property
