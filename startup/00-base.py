@@ -8,6 +8,13 @@ from datetime import datetime
 from ophyd.signal import EpicsSignalBase, EpicsSignal, DEFAULT_CONNECTION_TIMEOUT
 from bluesky_queueserver import is_re_worker_active, parameter_annotation_decorator
 from tiled.client import from_profile
+from ophyd.signal import EpicsSignalBase
+import datetime
+import nslsii
+import matplotlib as mpl
+from IPython.terminal.prompts import Prompts, Token
+
+
 
 def if_touch_beamline(envvar="TOUCHBEAMLINE"):
     value = os.environ.get(envvar, "false").lower()
@@ -59,32 +66,24 @@ else:
 
 print(f'\nEpicsSignalBase timeout is {timeout} [seconds]. {going} to touch beamline hardware.\n')
 
-from ophyd.signal import EpicsSignalBase
 # EpicsSignalBase.set_default_timeout(timeout=timeout, connection_timeout=timeout)  # old style
 EpicsSignalBase.set_defaults(timeout=timeout, connection_timeout=timeout)  # new style
 
-import datetime
+
 
 def print_now():
     return datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S.%f')
 
-import nslsii
-import matplotlib as mpl
-from IPython.terminal.prompts import Prompts, Token
 
-
-class SRXPrompt(Prompts):
-    def in_prompt_tokens(self, cli=None):
-        return [
-            (Token.Prompt, "☁️  BlueSky@SRX ["),
-            (Token.PromptNum, str(self.shell.execution_count)),
-            (Token.Prompt, "]: "),
-        ]
 
 ip = get_ipython()
-nslsii.configure_base(ip.user_ns,
-                      "srx",
-                      publish_documents_with_kafka=True)
+nslsii.configure_base(
+    ip.user_ns,
+    "srx",
+    publish_documents_with_kafka=False,
+)
+# NOTE: As of 2024-02-16, the docs submitted to Kafka are not serializable, until the fix to Bluesky is deployed.
+# See the https://github.com/NSLS2/redis-json-dict/pull/6 and the future PR in https://github.com/bluesky/bluesky/pulls by @danielballan.
 
 RE.unsubscribe(0)
 
@@ -98,15 +97,11 @@ def post_document(name, doc):
         doc = copy.deepcopy(doc)
     srx_raw.post_document(name, doc)
 
-
 RE.subscribe(post_document)
 
 ip.log.setLevel('WARNING')
 
 nslsii.configure_olog(ip.user_ns)
-ip.prompts = SRXPrompt(ip)
-
-
 
 # Custom Matplotlib configs:
 mpl.rcParams["axes.grid"] = True  # grid always on
@@ -127,6 +122,15 @@ RE.md = RedisJSONDict(redis.Redis("info.srx.nsls2.bnl.gov"), prefix="bsui")
 RE.md["beamline_id"] = "SRX"
 RE.md["md_version"] = "1.1"
 
+class SRXPrompt(Prompts):
+    def in_prompt_tokens(self, cli=None):
+        return [
+            (Token.Prompt, f"☁️  BlueSky@SRX | Proposal #{RE.md.get('proposal', {}).get('proposal_num', 'N/A')} ["),
+            (Token.PromptNum, str(self.shell.execution_count)),
+            (Token.Prompt, "]: "),
+        ]
+ip.prompts = SRXPrompt(ip)
+""
 # from bluesky.utils import ts_msg_hook
 # RE.msg_hook = ts_msg_hook
 

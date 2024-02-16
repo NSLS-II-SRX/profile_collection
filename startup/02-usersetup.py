@@ -37,7 +37,6 @@ for user in proposal["users"]:
 
 saf_num = proposal["safs"][0]["saf_id"]
 
-
 md_proposal = {
     'proposal_num' :  proposal_num,
     'proposal_title' : proposal["title"],
@@ -57,4 +56,5 @@ cycle = '2024_cycle1'
 
 # Set user data in bluesky
 # RE.md['data_session'] = data_session
-RE.md['proposal'] = md_proposal
+RE.md["proposal"] = md_proposal
+RE.md["cycle"] = proposal["cycles"][-1]
