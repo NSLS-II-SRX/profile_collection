@@ -1,6 +1,7 @@
 print(f"Loading {__file__}...")
 
 import os
+import copy
 import redis
 from redis_json_dict import RedisJSONDict
 from datetime import datetime
@@ -75,7 +76,7 @@ from IPython.terminal.prompts import Prompts, Token
 class SRXPrompt(Prompts):
     def in_prompt_tokens(self, cli=None):
         return [
-            (Token.Prompt, "BlueSky@SRX ["),
+            (Token.Prompt, "☁️  BlueSky@SRX ["),
             (Token.PromptNum, str(self.shell.execution_count)),
             (Token.Prompt, "]: "),
         ]
@@ -91,7 +92,10 @@ RE.unsubscribe(0)
 c = from_profile("srx")
 srx_raw = from_profile('nsls2', api_key=os.environ["TILED_BLUESKY_WRITING_API_KEY_SRX"])['srx']['raw']
 
+
 def post_document(name, doc):
+    if name == "start":
+        doc = copy.deepcopy(doc)
     srx_raw.post_document(name, doc)
 
 
@@ -116,102 +120,6 @@ bec.disable_table()
 bec.disable_plots()
 
 from pathlib import Path
-
-import appdirs
-
-
-try:
-    from bluesky.utils import PersistentDict
-except ImportError:
-    import msgpack
-    import msgpack_numpy
-    import zict
-
-    class PersistentDict(zict.Func):
-        """
-        A MutableMapping which syncs it contents to disk.
-        The contents are stored as msgpack-serialized files, with one file per item
-        in the mapping.
-        Note that when an item is *mutated* it is not immediately synced:
-        >>> d['sample'] = {"color": "red"}  # immediately synced
-        >>> d['sample']['shape'] = 'bar'  # not immediately synced
-        but that the full contents are synced to disk when the PersistentDict
-        instance is garbage collected.
-        """
-        def __init__(self, directory):
-            self._directory = directory
-            self._file = zict.File(directory)
-            self._cache = {}
-            super().__init__(self._dump, self._load, self._file)
-            self.reload()
-
-            # Similar to flush() or _do_update(), but without reference to self
-            # to avoid circular reference preventing collection.
-            # NOTE: This still doesn't guarantee call on delete or gc.collect()!
-            #       Explicitly call flush() if immediate write to disk required.
-            def finalize(zfile, cache, dump):
-                zfile.update((k, dump(v)) for k, v in cache.items())
-
-            import weakref
-            self._finalizer = weakref.finalize(
-                self, finalize, self._file, self._cache, PersistentDict._dump)
-
-        @property
-        def directory(self):
-            return self._directory
-
-        def __setitem__(self, key, value):
-            self._cache[key] = value
-            super().__setitem__(key, value)
-
-        def __getitem__(self, key):
-            return self._cache[key]
-
-        def __delitem__(self, key):
-            del self._cache[key]
-            super().__delitem__(key)
-
-        def __repr__(self):
-            return f"<{self.__class__.__name__} {dict(self)!r}>"
-
-        @staticmethod
-        def _dump(obj):
-            "Encode as msgpack using numpy-aware encoder."
-            # See https://github.com/msgpack/msgpack-python#string-and-binary-type
-            # for more on use_bin_type.
-            return msgpack.packb(
-                obj,
-                default=msgpack_numpy.encode,
-                use_bin_type=True)
-
-        @staticmethod
-        def _load(file):
-            return msgpack.unpackb(
-                file,
-                object_hook=msgpack_numpy.decode,
-                raw=False)
-
-        def flush(self):
-            """Force a write of the current state to disk"""
-            for k, v in self.items():
-                super().__setitem__(k, v)
-
-        def reload(self):
-            """Force a reload from disk, overwriting current cache"""
-            self._cache = dict(super().items())
-
-
-# using appdirs line for xspress3 development on xf05id2-ws1
-# do not commit this
-# runengine_metadata_dir = appdirs.user_data_dir(appname="bluesky") / Path("runengine-metadata")
-# runengine_metadata_dir = Path('/nsls2/xf05id1/shared/config/runengine-metadata-new')
-runengine_metadata_dir = Path('/nsls2/data/srx/legacy/xf05id1/shared/config/runengine-metadata-new')
-
-from nslsii.md_dict import RunEngineRedisDict
-
-# RE.md = PersistentDict(runengine_metadata_dir)
-
-# RE.md = RunEngineRedisDict()
 
 RE.md = RedisJSONDict(redis.Redis("info.srx.nsls2.bnl.gov"), prefix="bsui")
 

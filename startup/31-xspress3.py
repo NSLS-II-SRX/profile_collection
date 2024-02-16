@@ -210,6 +210,8 @@ class Xspress3HDF5PluginWithRedis(Xspress3HDF5Plugin):
         # cycle = self._redis_dict["cycle"]
         data_session = RE.md["data_session"]
         cycle = RE.md["proposal"]["cycle"]
+        print(f"{data_session=}")
+        print(f"{cycle=}")
         ## This should be fixed
         # root_path = f"/nsls2/data/srx/proposals/{cycle}/{data_session}/assets/xspress3/"
         if int(RE.md["proposal"]['proposal_num']) == 312933:
