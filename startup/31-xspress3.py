@@ -410,11 +410,11 @@ class SrxXspress3DetectorIDMonoFly(CommunitySrxXspress3Detector):
         self._datum_counter = None
 
     def complete(self, *args, **kwargs):
-        # print(f'In {self.name}.complete()...')
+        print(f'In {self.name}.complete()...')
         for resource in self.hdf5._asset_docs_cache:
-            # print(f'  resource in "complete": {resource}')
+            print(f'  resource in "complete": {resource}')
             self._asset_docs_cache.append(('resource', resource[1]))
-        # print(f'\ncomplete in {self.name}: {self._asset_docs_cache}')
+        print(f'\ncomplete in {self.name}: {self._asset_docs_cache}')
 
         self._datum_ids = []
 
@@ -422,18 +422,29 @@ class SrxXspress3DetectorIDMonoFly(CommunitySrxXspress3Detector):
         # num_frames = self.hdf5.num_captured.get()
         num_frames = self.cam.array_counter.get()
 
-        # print(f"{num_frames=}")
+        print(f"{num_frames=}")
         for frame_num in range(num_frames):
-            # print(f'  frame_num in "complete": {frame_num + 1} / {num_frames}')
+            print(f'  frame_num in "complete": {frame_num + 1} / {num_frames}')
+            # print(f"{self.name=}")
+            for ch in xs_id_mono_fly.channel_numbers:
+                print(ch)
+            for ch in self.channel_numbers:
+                print(ch)
             for channel in self.iterate_channels():
-                datum_id = '{}/{}'.format(self.hdf5._resource_uid, next(self._datum_counter))
-                datum = {'resource': self.hdf5._resource_uid,
+                print(channel)
+            for channel in self.iterate_channels():
+                # print(f"{self.hdf5._resource_uid=}\n{self._datum_counter=}")
+                print(f"{self.hdf5._resource['uid']=}\n{self._datum_counter=}")
+                datum_id = '{}/{}'.format(self.hdf5._resource['uid'], next(self._datum_counter))
+                print(f"{datum_id=}")
+                datum = {'resource': self.hdf5._resource['uid'],
                          'datum_kwargs': {'frame': frame_num, 'channel': channel.channel_number},
                          'datum_id': datum_id}
+                print(f"{datum=}")
                 self._asset_docs_cache.append(('datum', datum))
                 self._datum_ids.append(datum_id)
 
-        # print(f'\nasset_docs_cache with datums:\n{self._asset_docs_cache}\n')
+        print(f'\nasset_docs_cache with datums:\n{self._asset_docs_cache}\n')
 
         return NullStatus()
 
@@ -466,6 +477,7 @@ try:
     read_channel_attrs.append("hdf5")
     # print(f"read_channel_attrs: {read_channel_attrs}")
     xs_id_mono_fly.read_attrs = read_channel_attrs
+    xs_id_mono_fly.fluor.dtype_str = "<f8"
     # print(f"xs_id_mono_fly.read_attrs: {xs_id_mono_fly.read_attrs}")
 
     # add all mcarois.mcaroiNN.total_rbv to each channelMM.read_attrs
@@ -506,6 +518,7 @@ try:
             "trigger_signal",
         ]
 
+        xs_id_mono_fly.fluor.kind = "normal"
         # This is necessary for when the IOC restarts
         # We have to trigger one image for the hdf5 plugin to work correctly
         # else, we get file writing errors
