@@ -1,8 +1,8 @@
 print(f"Loading {__file__}...")
 
 import copy
-import datetime
 import os
+import time as ttime
 from datetime import datetime
 from pathlib import Path
 
@@ -35,7 +35,7 @@ def wait_for_connection_base(self, timeout=DEFAULT_CONNECTION_TIMEOUT):
     if timeout is DEFAULT_CONNECTION_TIMEOUT:
         timeout = self.connection_timeout
     # print(f'{print_now()}: waiting for {self.name} to connect within {timeout:.4f} s...')
-    start = time.time()
+    start = ttime.time()
     try:
         self._ensure_connected(self._read_pv, timeout=timeout)
         # print(f'{print_now()}: waited for {self.name} to connect for {time.time() - start:.4f} s.')
@@ -50,7 +50,7 @@ def wait_for_connection(self, timeout=DEFAULT_CONNECTION_TIMEOUT):
     if timeout is DEFAULT_CONNECTION_TIMEOUT:
         timeout = self.connection_timeout
     # print(f'{print_now()}: waiting for {self.name} to connect within {timeout:.4f} s...')
-    start = time.time()
+    start = ttime.time()
     self._ensure_connected(self._read_pv, self._write_pv, timeout=timeout)
     # print(f'{print_now()}: waited for {self.name} to connect for {time.time() - start:.4f} s.')
 
@@ -72,10 +72,6 @@ print(f"\nEpicsSignalBase timeout is {timeout} [seconds]. {going} to touch beaml
 
 # EpicsSignalBase.set_default_timeout(timeout=timeout, connection_timeout=timeout)  # old style
 EpicsSignalBase.set_defaults(timeout=timeout, connection_timeout=timeout)  # new style
-
-
-def print_now():
-    return datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d %H:%M:%S.%f")
 
 
 ip = get_ipython()
@@ -129,7 +125,7 @@ class SRXPrompt(Prompts):
         return [
             (
                 Token.Prompt,
-                f"☁️  BlueSky@SRX | Proposal #{RE.md.get('proposal', {}).get('proposal_num', 'N/A')} [",
+                f"BlueSky@SRX | Proposal #{RE.md.get('proposal', {}).get('proposal_num', 'N/A')} [",
             ),
             (Token.PromptNum, str(self.shell.execution_count)),
             (Token.Prompt, "]: "),
@@ -137,7 +133,7 @@ class SRXPrompt(Prompts):
 
 
 ip.prompts = SRXPrompt(ip)
-""
+
 # from bluesky.utils import ts_msg_hook
 # RE.msg_hook = ts_msg_hook
 

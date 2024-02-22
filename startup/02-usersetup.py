@@ -6,12 +6,6 @@ import time as ttime
 
 import httpx
 
-### Proposal information put into the metadata
-# proposal_num = None
-# proposal_title = None
-# PI_lastname = None
-# saf_num = None
-
 # proposal_num = 312933
 data_session = RE.md["data_session"]
 proposal_num = data_session.split("-")[-1]
@@ -50,7 +44,5 @@ md_proposal = {
 
 cycle = "2024_cycle1"
 
-# Set user data in bluesky
-# RE.md['data_session'] = data_session
 RE.md["proposal"] = md_proposal
 RE.md["cycle"] = proposal["cycles"][-1]
