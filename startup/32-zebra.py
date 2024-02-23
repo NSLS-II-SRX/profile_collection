@@ -760,7 +760,7 @@ class SRXFlyer1Axis(Device):
                 decrement = 1e-5
         elif mode == 'time':
             if 'dexela' in [d.name for d in self.detectors]:
-                decrement = 0.001
+                decrement = 0.01
             else:
                 decrement = 0.0002
             # decrement = 0.0002
@@ -768,12 +768,15 @@ class SRXFlyer1Axis(Device):
         if mode == 'position':
             self._encoder.pc.gate_start.put(xstart - direction * (pxsize / 2))
             ttime.sleep(t_delay)
-            self._encoder.pc.gate_step.put(extent + 0.051)
+            # self._encoder.pc.gate_step.put(extent + 0.051)
+            self._encoder.pc.gate_step.put(extent + 0.51)
             ttime.sleep(t_delay)
-            self._encoder.pc.gate_width.put(extent + 0.050)
+            # self._encoder.pc.gate_width.put(extent + 0.050)
+            self._encoder.pc.gate_width.put(extent + 0.50)
             ttime.sleep(t_delay)
         elif mode == 'time':
-            self._encoder.pc.gate_start.put(tacc + t_delay)
+            # self._encoder.pc.gate_start.put(tacc + t_delay)
+            self._encoder.pc.gate_start.put(0.5 + t_delay)
             ttime.sleep(t_delay)
             self._encoder.pc.gate_step.put(extent / v)
             ttime.sleep(t_delay)
