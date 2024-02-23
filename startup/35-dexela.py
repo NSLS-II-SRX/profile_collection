@@ -91,13 +91,18 @@ class DexelaFileStoreHDF5(FileStoreBase):
         filename, read_path, write_path = self.make_filename()
 
         # Ensure we do not have an old file open.
+        timeout=10
         self.capture.set(0, timeout=timeout).wait()
+
         # These must be set before parent is staged (specifically
         # before capture mode is turned on. They will not be reset
         # on 'unstage' anyway.
         self.file_path.set(write_path, timeout=timeout).wait()
-        self.file_name.set(filename, timeout=timeout).wait()
-        self.file_number.set(0, timeout=timeout).wait()
+        self.file_name.put(filename)
+        # AMK does not like this
+        if self.file_number.get() != 0:
+            self.file_number.set(0, timeout=timeout).wait()
+
         if self.parent._mode is SRXMode.step:
             self.num_capture.set(self.parent.total_points.get(), timeout=timeout).wait()
 
@@ -135,6 +140,42 @@ class DexelaHDFWithFileStore(HDF5Plugin, DexelaFileStoreHDF5):
                             " method on the hdf5 plugin.")
 
         return super().stage()
+
+    def warmup(self):
+        """
+        A convenience method for 'priming' the plugin.
+
+        The plugin has to 'see' one acquisition before it is ready to capture.
+        This sets the array size, etc.
+
+        This needs to be redefined because there is no trigger_mode = Internal
+        """
+        self.enable.set(1).wait()
+        sigs = OrderedDict(
+            [
+                (self.parent.cam.array_callbacks, 1),
+                (self.parent.cam.image_mode, "Single"),
+                (self.parent.cam.trigger_mode, "Int. Free Run"),
+                # just in case the acquisition time is set very long...
+                (self.parent.cam.acquire_time, 1),
+                (self.parent.cam.acquire_period, 1),
+                (self.parent.cam.acquire, 1),
+            ]
+        )
+
+        original_vals = {sig: sig.get() for sig in sigs}
+
+        for sig, val in sigs.items():
+            ttime.sleep(0.1)  # abundance of caution
+            # print(f"{sig=}\t{val=}")
+            sig.set(val).wait()
+
+        ttime.sleep(2)  # wait for acquisition
+
+        for sig, val in reversed(list(original_vals.items())):
+            ttime.sleep(0.1)
+            sig.set(val).wait()
+
 
 
 class SRXDexelaDetector(SingleTrigger, DexelaDetector):
@@ -190,11 +231,11 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
 try:
     dexela = SRXDexelaDetector('XF:05IDD-ES{Dexela:1}', name='dexela')
     dexela.read_attrs = ['hdf5', 'stats1', 'stats2']
-    # TODO: Automatically warmup
-    # if np.array(dexela.cam.array_size.get()).sum() == 0:
-    #     print("  Warmup...", end="", flush=True)
-    #     dexela.hdf5.warmup()
-    #     print("done")
+    # Automatically warmup if necessary
+    if np.array(dexela.cam.array_size.get()).sum() == 0:
+        print("  Warmup...", end="", flush=True)
+        dexela.hdf5.warmup()
+        print("done")
 except TimeoutError:
     dexela = None
     print('\nCannot connect to Dexela. Continuing without device.\n')
