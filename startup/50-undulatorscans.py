@@ -46,7 +46,7 @@ def undulator_calibration(
 
     # Format a default filename
     if (outfile is None):
-        outfile = f"{datetime.datetime.now().strftime('%Y%m%d')}_SRXUgapCalibration.txt"
+        outfile = f"{datetime.datetime.now().strftime('%Y%m%d_%H%M')}_SRXUgapCalibration.txt"
 
     # Check if the file exists
     if (not os.path.exists(UCalibDir + outfile)):
@@ -73,9 +73,9 @@ def undulator_calibration(
         print('Move Bragg energy to:\t', energy_setpoint)
 
         # energy.move_c2_x.put(False)
-        energy.move_u_gap.put(True)
-        yield from mv(energy, energy_setpoint)
-        energy.move_u_gap.put(False)
+        yield from mov(energy.move_u_gap, True)
+        yield from mov(energy, energy_setpoint)
+        yield from mov(energy.move_u_gap, False)
 
         # Setup LiveCallbacks
         # liveplotfig1 = plt.figure()
@@ -90,7 +90,7 @@ def undulator_calibration(
         # Setup the scan
         @subs_decorator(livecallbacks)
         def braggscan():
-            yield from scan([bpm4, ring_current],
+            yield from scan([xbpm1, bpm4, ring_current],
                             energy,
                             energy_setpoint - bragg_scanwidth,
                             energy_setpoint + bragg_scanwidth,
@@ -110,7 +110,7 @@ def undulator_calibration(
             f.write(f"{energy.u_gap.position / 1000:.6f}\t{(maxenergy / harmonic):.8f}\n")
     
     # Return moving u_gap
-    energy.move_u_gap.put(True)
+    yield from mov(energy.move_u_gap, True)
 
 def max_Ugap(set_offset=True, shutter=True):
     # Assuming current gap is the calculated gap

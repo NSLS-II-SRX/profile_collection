@@ -7,15 +7,15 @@ resources:
       endpoint: github
 
 jobs:
-  - template: 2022-2.3-py39-tiled.yml@templates
+  - template: 2023-3.3-py310-tiled.yml@templates
     parameters:
-      beamline_acronym: HXN
-  - template: 2022-2.3-py39.yml@templates
+      beamline_acronym: SRX
+  - template: 2023-3.3-py310.yml@templates
     parameters:
-      beamline_acronym: HXN
-  - template: 2022-2.4-py39-tiled.yml@templates
+      beamline_acronym: SRX
+  - template: 2023-3.3-py311-tiled.yml@templates
     parameters:
-      beamline_acronym: HXN
-  - template: 2022-2.4-py39.yml@templates
+      beamline_acronym: SRX
+  - template: 2023-3.3-py311.yml@templates
     parameters:
-      beamline_acronym: HXN
+      beamline_acronym: SRX

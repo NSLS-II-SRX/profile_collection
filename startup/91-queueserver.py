@@ -15,7 +15,7 @@ def get_current_position():
 
 	roi = {
 	"nano_stage.sx": sx, "nano_stage.sy": sy,
-	"nano_stage.x": x, "nano_stage.y": y, "nano_stage.z": z,
+	"nano_stage.topx": x, "nano_stage.y": y, "nano_stage.z": z,
 	"nano_stage.topx": topx, "nano_stage.topz": topz,
 	"nano_stage.th": th
 	}
@@ -26,7 +26,7 @@ def recover_and_scan_nano(label, roi_positions, mot1_s, mot1_e, mot1_n, mot2_s, 
 
 	print(f"{label} running")
 	for key, value in roi_positions.items():
-	
+		print(f"{key=}\t{value=}")
 		yield from bps.mov(eval(key), value) #recover positions
 		print(f"{key} moved to {value :.3f}")
 	

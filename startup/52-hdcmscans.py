@@ -36,10 +36,9 @@ This program provides functionality to calibrate HDCM energy:
     currently, the xanes needs to be collected on roi1 in xrf mode
 '''
 
-def mono_calib(Element, acqtime=1.0, peakup=False,
-               peakup_calib=True):
+def mono_calib(Element, acqtime=1.0, peakup=True):
     """
-    SRX mono_calib(Element, acqtime=1.0, peakup=False, peakup_calib=True)
+    SRX mono_calib(Element, acqtime=1.0, peakup=True)
 
     Go to the edge of the specified element, do a peakup, setroi, and automatic perform a xanes scan (+-50eV) on the specified element
 
@@ -64,7 +63,7 @@ def mono_calib(Element, acqtime=1.0, peakup=False,
     setroi(1, Element)
     if peakup:
         yield from bps.sleep(5)
-        yield from peakup_fine(use_calib=peakup_calib, feedback=False, fix_roll=False)
+        yield from peakup()
     yield from xanes_plan(erange=[EnergyX-100,EnergyX+50],
                           estep=[1.0],
                           samplename=f'{Element}Foil',
@@ -316,7 +315,7 @@ def smart_peakup(start=None,
                  *,
                  shutter=True,
                  motor=dcm.c2_fine,
-                 detectors=[bpm4, xbpm2],
+                 detectors=[dcm.c2_pitch, bpm4, xbpm2],
                  target_fields=['bpm4_total_current', 'xbpm2_sumT'],
                  MAX_ITERS=100,
                  md=None,
@@ -456,6 +455,7 @@ def smart_peakup(start=None,
                 yield Msg('create', None, name='primary')
                 for det in detectors:
                     yield Msg('trigger', det, group='B')
+                yield Msg('trigger', motor, group='B')
                 yield Msg('wait', None, 'B')
                 for det in utils.separate_devices(detectors + [motor]):
                     cur_det = yield Msg('read', det)
@@ -696,23 +696,33 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
 
 
 def plot_all_peakup(scanid=-1):
-    def normalize_y(d):
-        return (d - np.amin(d)) / (np.amax(d) - np.amin(d))
+    def normalize_y(d, norm_min=None, norm_max=None):
+        if norm_min is None:
+            norm_min = np.amin(d)
+        if norm_max is None:
+            norm_max = np.amax(d)
+        return (d - norm_min) / (norm_max - norm_min)
 
-    h = db[int(scanid)]
-    tbl = h.table(fill=True)
+    bs_run = c[int(scanid)]
+    ds = bs_run['primary']['data']
+    ds_keys = list(ds.keys())
     fig, ax = plt.subplots()
-    x = tbl['dcm_c2_pitch'].values
-    if 'xbpm1_sumT' in tbl.keys():
-        ax.plot(x, normalize_y(tbl['xbpm1_sumT'].values), label='XBPM-1')
-    if 'bpm4_total_current' in tbl.keys():
-        ax.plot(x, normalize_y(tbl['bpm4_total_current'].values), label='B-hutch XBPM')
-    if 'bpm5_total_current' in tbl.keys():
-        ax.plot(x, normalize_y(tbl['bpm5_total_current'].values), label='B-hutch SSA')
-    if 'xbpm2_sumT' in tbl.keys():
-        ax.plot(x, normalize_y(tbl['xbpm2_sumT'].values), label='XBPM-2')
-    if 'sclr_i0' in tbl.keys():
-        ax.plot(x, normalize_y(tbl['sclr_i0'].values), label='I0')
+    x = ds['dcm_c2_pitch']
+    arg_sort = np.argsort(x)
+    if 'xbpm1_sumT' in ds_keys:
+        ax.plot(x[arg_sort], normalize_y(ds['xbpm1_sumT'])[arg_sort], label='XBPM-1')
+    if 'bpm4_total_current' in ds_keys:
+        ax.plot(x[arg_sort],
+                normalize_y(ds['bpm4_total_current'][:], norm_min=0.0002)[arg_sort],
+                label='B-hutch XBPM')
+    if 'bpm5_total_current' in ds_keys:
+        ax.plot(x[arg_sort], normalize_y(ds['bpm5_total_current'])[arg_sort], label='B-hutch SSA')
+    if 'xbpm2_sumT' in ds_keys:
+        ax.plot(x[arg_sort],
+                normalize_y(ds['xbpm2_sumT'][:], norm_min=0.024)[arg_sort],
+                label='XBPM-2')
+    if 'sclr_i0' in ds_keys:
+        ax.plot(x[arg_sort], normalize_y(ds['sclr_i0'])[arg_sort], label='I0')
     ax.set_xlabel('DCM C2 Pitch')
     ax.set_ylabel('Normalized Counts')
     ax.legend()

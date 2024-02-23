@@ -194,8 +194,12 @@ def collect_xrd_map(xstart, xstop, xnum,
 def xrd_fly(*args, extra_dets=[dexela], **kwargs):
     kwargs.setdefault('xmotor', nano_stage.sx)
     kwargs.setdefault('ymotor', nano_stage.sy)
+    kwargs.setdefault('flying_zebra', nano_flying_zebra)
+
+    yield from abs_set(kwargs['flying_zebra'].fast_axis, 'NANOHOR', wait=True)
+    yield from abs_set(kwargs['flying_zebra'].slow_axis, 'NANOVER')
+
     _xs = kwargs.pop('xs', xs)
-    kwargs.setdefault('flying_zebra', flying_zebra)
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
