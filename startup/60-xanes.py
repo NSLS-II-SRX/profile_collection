@@ -915,7 +915,7 @@ class FlyerIDMono(Device):
     #     return ret
 
     def describe_collect(self, *args, **kwargs):
-        # print(f"\n\n{print_now()}: describe_collect started")
+        print(f"\n\n{print_now()}: describe_collect started")
         return_dict = {}
         if True:
         # for scan_num in range(self.num_scans):
@@ -1024,6 +1024,8 @@ class FlyerIDMono(Device):
         if len(i0_time) != len(i0) != len(im) != len(it):
             print(f'{len(i0_time)=}')
             raise RuntimeError(f"Lengths of the collected arrays are not equal")
+        print(f"{len(i0_time)=}")
+        print(f"{num_triggers=}")
         if len(i0_time) != num_triggers:
             # I don't understand why I can't do this in a for-loop with a list
             # for d in [i0_time, i0, im, it]:
@@ -1472,6 +1474,7 @@ def fly_multiple_passes(e_start, e_stop, e_width, dwell, num_pts, *,
         for n in range(num_scans):
             print(f"\n\n*** {print_now()} Iteration #{n+1} ***\n")
             yield from bps.checkpoint()
+            # flyer_id_mono.scaler.erase_start.put(1)
             for flyer in flyers:
                 print(f"  {flyer.name} complete...")
                 yield from bps.complete(flyer, wait=True)
