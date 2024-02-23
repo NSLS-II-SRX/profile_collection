@@ -200,9 +200,10 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Setup dexela
     if ('dexela' in dets_by_name):
         xrd = dets_by_name['dexela']
+        # If the dexela is acquiring, stop
+        if xrd.cam.detector_state.get() == 1:
+            xrd.cam.acquire.set(0)
         xrd.cam.stage_sigs['acquire_time'] = dwell
-        # Evan edit
-        # xrd.cam.stage_sigs['acquire_period'] = dwell
         del xrd
 
     # If delta is None, set delta based on time for acceleration
