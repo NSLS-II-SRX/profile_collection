@@ -207,8 +207,8 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         del xrd
 
     # If delta is None, set delta based on time for acceleration
+    MIN_DELTA = 0.100  # default value
     if (delta is None):
-        MIN_DELTA = 0.100  # default value
         v = ((xstop - xstart) / (xnum - 1)) / dwell  # compute "stage speed"
         t_acc = xmotor.acceleration.get()  # acceleration time
         delta = 0.5 * t_acc * v  # distance the stage will travel in t_acc
@@ -333,12 +333,19 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 _row_start = xstop
                 _row_stop = xstart
 
+            accel_time = xmotor.acceleration.get()  # acceleration time
+            if delta == MIN_DELTA:
+                # Calculate time from starting point to first data point
+                delta_acc = v*accel_time / 2
+                delta_const = (delta - delta_acc) / v
+                accel_time += delta_const
+
             st = yield from kickoff(flying_zebra,
                                    xstart=_row_start,
                                    xstop=_row_stop,
                                    xnum=xnum,
                                    dwell=dwell,
-                                   tacc=xmotor.acceleration.get(),
+                                   tacc=accel_time,
                                    wait=True)
             st.wait(timeout=10)
         try:
