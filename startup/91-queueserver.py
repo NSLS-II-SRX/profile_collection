@@ -54,3 +54,43 @@ def send_coarse_plan_to_queue(label, mot1_s, mot1_e, mot1_n, mot2_s, mot2_e, mot
 
 	roi = get_current_position()
 	RM.item_add((BPlan("recover_and_scan_coarse",label, roi, mot1_s, mot1_e, mot1_n, mot2_s, mot2_e, mot2_n, exp_t))) #2D flyscan
+
+
+def download_qs_history(file_name="qs_history", *, format="text"):
+    """
+    Downloads history from the Queue Server and saves it as a text or
+    or a JSON file. The text file is nicely formatted and human readable.
+    JSON file is human readable, but also machine-readable.
+
+    Parameters
+    ----------
+    file_name: str
+        File name without extension. The function adds ``.txt`` extension
+        to the name of a text file and ``.json`` extension to the name of
+        a JSON file.
+    format: str ('text' or 'json')
+        The string that specifies the format of the output file.
+    """
+    from bluesky_queueserver_api.zmq import REManagerAPI
+    import pprint
+    import json
+    RM = REManagerAPI()
+
+    resp = RM.history_get()
+    history = resp["items"]
+    if format.lower() == "text":
+        file_name = file_name + ".txt"
+        with open(file_name, "wt") as f:
+            for n, plan in enumerate(history):
+                f.write("=" * 80)
+                s = f"PLAN {n + 1}"
+                f.write(f"\n{s: ^80}\n")
+                f.write("=" * 80)
+                f.write(f"\n{pprint.pformat(plan, width=80)}\n")
+    elif format.lower() == "json":
+        file_name = file_name + ".json"
+        with open(file_name, "wt") as f:
+            json.dump(history, f, indent=2)
+    else:
+        raise ValueError(f"Unsupported output format: {format!r}")
+    print(f"QS history was saved to the file {file_name!r}")
