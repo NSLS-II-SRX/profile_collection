@@ -207,7 +207,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         del xrd
 
     # If delta is None, set delta based on time for acceleration
-    MIN_DELTA = 0.100  # default value
+    #MIN_DELTA = 0.200  # default value
+    # EJM edit
+    MIN_DELTA = 1.00  # default value
     if (delta is None):
         v = ((xstop - xstart) / (xnum - 1)) / dwell  # compute "stage speed"
         t_acc = xmotor.acceleration.get()  # acceleration time
@@ -268,6 +270,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     @stage_decorator(flying_zebra.detectors)
     def fly_each_step(motor, step, row_start, row_stop):
         if verbose:
+            print("In fly_each_step...")
             toc(0, str='timing stage', log_file=log_file)
         def move_to_start_fly():
             row_str = short_uid('row')
@@ -683,7 +686,6 @@ def nano_scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *, extra_
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
-
     if center:
         yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
     yield from scan_and_fly_base(dets, xstart, xstop, xnum, ystart, ystop, ynum, dwell, **kwargs)

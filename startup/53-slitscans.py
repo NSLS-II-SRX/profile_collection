@@ -503,7 +503,7 @@ def plot_slit_scans(start_id, N):
     for scanid in [start_id + i for i in range(N)]:
         print(f'Loading {scanid}...', end='')
         h = db[int(scanid)]
-        d = np.array(list(h.data('fluor', stream_name='stream0', fill=True)))
+        d = np.array(list(h.data('xs_fluor', stream_name='stream0', fill=True)))
         d_i0 = np.array(list(h.data('i0', stream_name='stream0', fill=True)))
         d = np.squeeze(d)
         d = np.sum(d[:, :, 934:954], axis=(-1, -2))

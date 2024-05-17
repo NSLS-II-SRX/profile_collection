@@ -23,15 +23,22 @@ def get_current_position():
 	return roi
 
 def recover_and_scan_nano(label, roi_positions, mot1_s, mot1_e, mot1_n, mot2_s, mot2_e, mot2_n, exp_t):
+    print(f"{label} running")
+    for key, value in roi_positions.items():
+        print(f"{key=}\t{value=}")
+        yield from bps.mov(eval(key), value) #recover positions
+        print(f"{key} moved to {value :.3f}")
+    
+    print(f"mot1_s={mot1_s}")
+    print(f"mot1_e={mot1_e}")
+    print(f"mot1_n={mot1_n}")
+    print(f"mot2_s={mot2_s}")
+    print(f"mot2_e={mot2_e}")
+    print(f"mot2_n={mot2_n}")
+    print(f"exp_t={exp_t}")
+    # yield from nano_scan_and_fly(mot1_s, mot1_e, mot1_n, mot2_s, mot2_e, mot2_n, exp_t,extra_dets = [eval(extra_dets)])
+    yield from nano_scan_and_fly(mot1_s, mot1_e, mot1_n, mot2_s, mot2_e, mot2_n, exp_t)
 
-	print(f"{label} running")
-	for key, value in roi_positions.items():
-		print(f"{key=}\t{value=}")
-		yield from bps.mov(eval(key), value) #recover positions
-		print(f"{key} moved to {value :.3f}")
-	
-	# yield from nano_scan_and_fly(mot1_s, mot1_e, mot1_n, mot2_s, mot2_e, mot2_n, exp_t,extra_dets = [eval(extra_dets)])
-	yield from nano_scan_and_fly(mot1_s, mot1_e, mot1_n, mot2_s, mot2_e, mot2_n, exp_t)
 
 def recover_and_scan_coarse(label, roi_positions, mot1_s, mot1_e, mot1_n, mot2_s, mot2_e, mot2_n, exp_t):
 

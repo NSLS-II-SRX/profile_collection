@@ -331,12 +331,14 @@ def plot_knife_edge(scanid=-1, fluor_key='xs_fluor', use_trans=False, normalize=
 
     C = 2 * np.sqrt(2 * np.log(2))
     cent_position = (popt[2]+popt[6])/2
+    feature_size = np.abs(popt[2] - popt[6])
     print(f'The beam size is {C * popt[1]:.4f} um')
     print(f'The beam size is {C * popt[5]:.4f} um')
 
     #print(f'\nThe left edge is at\t{popt[2]:.4f}.')
     #print(f'The right edge is at\t{popt[6]:.4f}.')
-    print(f'The center is at\t{(popt[2]+popt[6])/2:.4f}.')
+    print(f'The center is at\t{cent_position:.4f}.')
+    print(f'Feature size is\t\t{feature_size:.4f} um')
 
     # Plot variables
     x_plot = np.linspace(np.amin(x), np.amax(x), num=100)

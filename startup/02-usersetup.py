@@ -46,3 +46,6 @@ cycle = "2024_cycle1"
 
 RE.md["proposal"] = md_proposal
 RE.md["cycle"] = proposal["cycles"][-1]
+
+RE.md["cycle"] = "2024-1"
+RE.md["proposal"]["cycle"] = "2024_cycle1"

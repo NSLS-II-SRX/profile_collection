@@ -551,7 +551,8 @@ def fast_shutter_per_step(detectors, motor, step):
     # Open the shutter
     # yield from mv(shut_d, 0)
     yield from mv(shut_d.request_open, 1)
-    yield from bps.sleep(1.0)
+    yield from bps.sleep(0.010)
+    # yield from bps.sleep(1.0)
     # Step? trigger xspress3
     yield from trigger_and_read(list(detectors) + [motor])
     # Close the shutter
@@ -775,7 +776,7 @@ class FlyerIDMono(Device):
 
     def kickoff(self, *args, **kwargs):
 
-        # print('In kickoff...')
+        print('In kickoff...')
         # Reset zebra to clear the data entries.
         self.zebra.pc.block_state_reset.put(1)
 
