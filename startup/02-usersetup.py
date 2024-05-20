@@ -16,7 +16,7 @@ proposal_num = data_session.split("-")[-1]
 
 nslsii_api_client = httpx.Client(base_url="https://api.nsls2.bnl.gov")
 
-proposal_response = nslsii_api_client.get(f"/proposal/{proposal_num}")
+proposal_response = nslsii_api_client.get(f"/v1/proposal/{proposal_num}")
 proposal_response.raise_for_status()
 proposal = proposal_response.json()
 

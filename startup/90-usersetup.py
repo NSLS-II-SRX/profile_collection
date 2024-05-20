@@ -24,7 +24,7 @@ import shutil
 # )
 
 # proposal_response = nslsii_api_client.get(
-#     f"/proposal/{proposal_num}"
+#     f"/v1/proposal/{proposal_num}"
 # )
 # proposal_response.raise_for_status()
 # proposal = proposal_response.json()
