@@ -18,7 +18,7 @@ nslsii_api_client = httpx.Client(base_url="https://api.nsls2.bnl.gov")
 
 proposal_response = nslsii_api_client.get(f"/v1/proposal/{proposal_num}")
 proposal_response.raise_for_status()
-proposal = proposal_response.json()
+proposal = proposal_response.json()["proposal"]
 
 PI_lastname = "whoami"
 for user in proposal["users"]:
@@ -42,10 +42,13 @@ md_proposal = {
 # saf_num = 312779
 
 
-cycle = "2024_cycle1"
+cycle = "2024_cycle2"
+
 
 RE.md["proposal"] = md_proposal
 RE.md["cycle"] = proposal["cycles"][-1]
+# RE.md["cycle"] = "2024-2"
 
-RE.md["cycle"] = "2024-1"
-RE.md["proposal"]["cycle"] = "2024_cycle1"
+cycle = RE.md["cycle"]
+cycle = cycle.replace("-", "_cycle")
+RE.md["proposal"]["cycle"] = "2024_cycle2"
