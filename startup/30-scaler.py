@@ -122,36 +122,54 @@ def export_sis_data(ion, filepath, zebra):
     # size2 = (len(i),)
     # size3 = (len(im),)
     # size4 = (len(it),)
-    with h5py.File(filepath, "w") as f:
-        if len(t) != correct_length:
-            correction_factor = correct_length - len(t)
-            print(f"Adding {correction_factor} points to scaler!")
-            print(f"t is not the correct length. {t} != {correct_length}")
-            correction_list = [1e10 for _ in range(0, int(correction_factor))]
-            new_t = [k for k in t] + correction_list
-            new_i = [k for k in i] + correction_list
-            new_im = [k for k in im] + correction_list
-            new_it = [k for k in it] + correction_list
-        else:
-            correction_factor = 0
-            new_t = t
-            new_i = i
-            new_im = im
-            new_it = it
+    if len(t) != correct_length:
+        correction_factor = correct_length - len(t)
+        print(f"Adding {correction_factor} points to scaler!")
+        print(f"t is not the correct length. {t} != {correct_length}")
+        correction_list = [1e10 for _ in range(0, int(correction_factor))]
+        new_t = [k for k in t] + correction_list
+        new_i = [k for k in i] + correction_list
+        new_im = [k for k in im] + correction_list
+        new_it = [k for k in it] + correction_list
+    else:
+        correction_factor = 0
+        new_t = t
+        new_i = i
+        new_im = im
+        new_it = it
         # I want to define the "zero" somewhere
         # Then if that "zero" is defined based on a 1 second count, ion chambers can be zero'ed better
         # new = old - (zero_val * (new_t / 50_000_000))
         # might be good to throw a np.amax(new, 0) in there to prevent negative values
         # it would be good to save the "zero" value in the scan metadata as well
-        dset0 = f.create_dataset("sis_time", (correct_length,), dtype="f")
-        dset0[...] = np.array(new_t)
-        dset1 = f.create_dataset("i0", (correct_length,), dtype="f")
-        dset1[...] = np.array(new_i)
-        dset2 = f.create_dataset("im", (correct_length,), dtype="f")
-        dset2[...] = np.array(new_im)
-        dset3 = f.create_dataset("it", (correct_length,), dtype="f")
-        dset3[...] = np.array(new_it)
-        f.close()
+    # with h5py.File(filepath, "w") as f:
+    #     dset0 = f.create_dataset("sis_time", (correct_length,), dtype="f")
+    #     dset0[...] = np.array(new_t)
+    #     dset1 = f.create_dataset("i0", (correct_length,), dtype="f")
+    #     dset1[...] = np.array(new_i)
+    #     dset2 = f.create_dataset("im", (correct_length,), dtype="f")
+    #     dset2[...] = np.array(new_im)
+    #     dset3 = f.create_dataset("it", (correct_length,), dtype="f")
+    #     dset3[...] = np.array(new_it)
+    #     f.close()
+
+    zs.i0.put(new_i)
+    zs.im.put(new_im)
+    zs.it.put(new_it)
+    zs.sis_time.put(new_t)
+
+    write_dir = os.path.dirname(filepath)
+    file_name = os.path.basename(filepath)
+    
+    zs.dev_type.put("scaler")
+    zs.write_dir.put(write_dir)
+    zs.file_name.put(file_name)
+
+    zs.file_stage.put("staged")
+    zs.acquire.put(1)
+    ttime.sleep(0.5)
+    # TODO: add a SubscriptionStatus callback to wait until zs.acquire is done (=0)
+    zs.file_stage.put("unstaged")
 
 
 class SISHDF5Handler(HandlerBase):
