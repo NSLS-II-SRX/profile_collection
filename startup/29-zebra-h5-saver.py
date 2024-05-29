@@ -7,7 +7,7 @@ class ZebraSaver(Device):
     file_name = Cpt(EpicsSignal, "file_name", string=True)
     full_file_path = Cpt(EpicsSignalRO, "full_file_path")
 
-    acquire = Cpt(EpicsSignal, "acquire")
+    acquire = Cpt(EpicsSignal, "acquire", string=True)
     file_stage = Cpt(EpicsSignal, "stage")
 
 

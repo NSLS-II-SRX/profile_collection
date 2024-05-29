@@ -6,6 +6,7 @@ import numpy as np
 from ophyd import Device, EpicsScaler, EpicsSignal, EpicsSignalRO
 from ophyd import Component as Cpt
 from ophyd.device import DynamicDeviceComponent as DDC
+from ophyd.status import SubscriptionStatus
 from collections import OrderedDict
 from databroker.assets.handlers import HandlerBase
 
@@ -166,9 +167,17 @@ def export_sis_data(ion, filepath, zebra):
     zs.file_name.put(file_name)
 
     zs.file_stage.put("staged")
+
+    def cb(value, old_value, **kwargs):
+        import datetime
+        # print(f"export_sis_data: {datetime.datetime.now().isoformat()} {old_value = } --> {value = }")
+        if old_value in ["acquiring", 1] and value in ["idle", 0]:
+            return True
+        else:
+            return False
+    st = SubscriptionStatus(zs.acquire, callback=cb, run=False)
     zs.acquire.put(1)
-    ttime.sleep(0.5)
-    # TODO: add a SubscriptionStatus callback to wait until zs.acquire is done (=0)
+    st.wait()
     zs.file_stage.put("unstaged")
 
 

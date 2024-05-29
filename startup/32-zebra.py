@@ -10,6 +10,7 @@ import time as ttime
 from ophyd import Device, EpicsSignal, EpicsSignalRO
 from ophyd import Component as Cpt
 from ophyd import FormattedComponent as FC
+from ophyd.status import SubscriptionStatus
 from ophyd.areadetector.filestore_mixins import FileStorePluginBase, FileStoreHDF5
 # from hxntools.detectors.zebra import Zebra, EpicsSignalWithRBV
 from nslsii.detectors.zebra import Zebra, EpicsSignalWithRBV
@@ -1160,9 +1161,18 @@ def export_nano_zebra_data(zebra, filepath, fastaxis):
     zs.file_name.put(file_name)
 
     zs.file_stage.put("staged")
+
+    def cb(value, old_value, **kwargs):
+        import datetime
+        # print(f"export_nano_zebra_data: {datetime.datetime.now().isoformat()} {old_value = } --> {value = }")
+        if old_value in ["acquiring", 1] and value in ["idle", 0]:
+            return True
+        else:
+            return False
+    st = SubscriptionStatus(zs.acquire, callback=cb, run=False)
     zs.acquire.put(1)
-    ttime.sleep(0.5)
-    # TODO: add a SubscriptionStatus callback to wait until zs.acquire is done (=0)
+    st.wait()
+
     zs.file_stage.put("unstaged")
 
 
