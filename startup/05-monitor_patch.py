@@ -158,7 +158,7 @@ def ts_monitor_during_wrapper(plan, signals):
     --------
     :func:`bluesky.plans.fly_during_wrapper`
     """
-    monitor_msgs = [Msg("ts_monitor", sig, name=sig.name + "_monitor") for sig in signals]
+    monitor_msgs = [Msg("ts_monitor", sig, name="DONOTSAVE_" + sig.name + "_monitor") for sig in signals]
     unmonitor_msgs = [Msg("unmonitor", sig) for sig in signals]
 
     def insert_after_open(msg):

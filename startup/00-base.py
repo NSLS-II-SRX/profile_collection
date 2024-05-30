@@ -87,11 +87,21 @@ RE.unsubscribe(0)
 c = from_profile("srx")
 srx_raw = from_profile("nsls2", api_key=os.environ["TILED_BLUESKY_WRITING_API_KEY_SRX"])["srx"]["raw"]
 
+discard_liveplot_data = True
+descriptor_uids = []
 
 def post_document(name, doc):
     if name == "start":
         doc = copy.deepcopy(doc)
-    # print(f"==================  doc={doc} type(doc)={type(doc)}")
+        descriptor_uids.clear()
+
+    if name == "descriptor":
+        if discard_liveplot_data and doc["name"].startswith("DONOTSAVE_"):
+            descriptor_uids.append(doc["uid"])
+            return
+    elif name == "event_page" and doc["descriptor"] in descriptor_uids:
+        return
+    #print(f"==================  name={name!r} doc={doc} type(doc)={type(doc)}")
     srx_raw.post_document(name, doc)
 
 

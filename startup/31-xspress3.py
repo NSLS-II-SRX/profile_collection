@@ -6,6 +6,8 @@ import sys
 import numpy as np
 import time as ttime
 import itertools
+from uuid import uuid4
+from event_model import compose_resource
 
 from ophyd.areadetector.plugins import PluginBase
 from ophyd import Signal, EpicsSignal, DeviceStatus
@@ -77,7 +79,7 @@ class CommunityXspress3FileStoreFlyable(Xspress3FileStore):
 
     @property
     def filestore_res(self):
-        raise Exception("don't want to be here")
+        raise Exception("don't wanCommunitySRXXspressTriggert to be here")
         return self._filestore_res
 
     @property
@@ -86,7 +88,7 @@ class CommunityXspress3FileStoreFlyable(Xspress3FileStore):
             return BulkXspress.HANDLER_NAME
         return Xspress3HDF5Handler.HANDLER_NAME
 
-    def generate_datum(self, key, timestamp, datum_kwargs):
+    def generate_datum(self, key, CommunitySRXXspressTriggertimestamp, datum_kwargs):
         if self.parent._mode is SRXMode.step:
             return super().generate_datum(key, timestamp, datum_kwargs)
         elif self.parent._mode is SRXMode.fly:
@@ -157,29 +159,65 @@ class CommunityXspress3FileStoreFlyable(Xspress3FileStore):
 
 
 class CommunitySRXXspressTrigger(Xspress3Trigger):
-    def trigger(self):
-        if self._staged != Staged.yes:
-            raise RuntimeError("not staged")
+    # def trigger(self):
+    #     print(f"  triggering xs3...")
+    #     if self._staged != Staged.yes:
+    #         raise RuntimeError("not staged")
 
-        self._status = DeviceStatus(self)
-        # the next line causes a ~3s delay in the community IOC
-        #self.cam.erase.put(1)
+    #     self._status = DeviceStatus(self)
+    #     # the next line cauCommunitySRXXspressTriggerses a ~3s delay in the community IOC
+    #     #self.cam.erase.put(1)
+    #     print(f"  put acquire...")
+    #     self.cam.acquire.put(1, wait=False)
+    #     trigger_time = ttime.time()
+    #     if self._mode is SRXMode.step:
+    #         # community IOC ophyd xspress3
+    #         print(f"  generate datum...")
+    #         self.generate_datum(None, trigger_time, {})
+    #         # quantum IOC ophyd xspress3
+    #         #for sn in self.read_attrs:
+    #         #    if sn.startswith("channel") and "." not in sn:
+    #         #        ch = getattr(self, sn)
+    #         #        self.dCommunitySRXXspressTriggerispatch(ch.name, trigger_time)
+    #     elif self._mode is SRXMode.fly:
+    #         self.generate_datum(self._f_key, trigger_time)
+    #     else:
+    #         raise Exception(f"unexpected mode {self._mode}")
+    #     print(f"  increment trigger count...")
+    #     self._abs_trigger_count += 1
+    #     print(f"  return")
+    #     return self._status
+
+    def trigger(self):
+        logger.debug("trigger")
+        #print(f"  trigger xs3...")
+        if self._staged != Staged.yes:
+            raise RuntimeError(
+                "tried to trigger Xspress3 with prefix {self.prefix} but it is not staged"
+            )
+
+        #print(f"  new acquire status...")
+        self._acquire_status = self.new_acquire_status()
+        #print(f"  put acquire")
         self.cam.acquire.put(1, wait=False)
+        t0 = ttime.monotonic()
+        while ("Acquiring Data" not in self.cam.status_message.get()):
+            ttime.sleep(0.010)
+            if (ttime.monotonic() - t0 > 10):
+                raise TimeoutError
         trigger_time = ttime.time()
-        if self._mode is SRXMode.step:
-            # community IOC ophyd xspress3
-            self.generate_datum(None, trigger_time, {})
-            # quantum IOC ophyd xspress3
-            #for sn in self.read_attrs:
-            #    if sn.startswith("channel") and "." not in sn:
-            #        ch = getattr(self, sn)
-            #        self.dispatch(ch.name, trigger_time)
-        elif self._mode is SRXMode.fly:
-            self.generate_datum(self._f_key, trigger_time)
-        else:
-            raise Exception(f"unexpected mode {self._mode}")
+
+        # call generate_datum on all plugins
+        #print(f"  generate datum...")
+        self.generate_datum(
+            key=None,
+            timestamp=trigger_time,
+            datum_kwargs={"frame": self._abs_trigger_count},
+        )
         self._abs_trigger_count += 1
-        return self._status
+
+        #print(f"  return...")
+        return self._acquire_status
 
 
 class SrxXSP3Handler:
@@ -221,13 +259,123 @@ class Xspress3HDF5PluginWithRedis(Xspress3HDF5Plugin):
         path_template = "%Y/%m/%d"
         return path_template
 
+    # def stage(self):
+    #     """
+    #     TEMPORARY INCLUDED
+    #     """
+    #     logger.debug("staging '%s' of '%s'", self.name, self.parent.name)
+    #     staged_devices = super().stage()
+
+    #     self.array_counter.set(0).wait()
+
+    #     # 1. fill in path_template with date as AreaDetector would do
+    #     # 2. concatenate result with root_path
+    #     the_full_data_dir_path = self._build_data_dir_path(
+    #         the_datetime=datetime.datetime.now(),
+    #         root_path=self.root_path.get(),
+    #         path_template=self.path_template.get()
+    #     )
+    #     self.file_path.set(the_full_data_dir_path).wait()
+    #     # 3. set file_name to a uuid
+    #     #   remove the last stanza because of AD length restrictions
+    #     the_real_file_name = "-".join(str(uuid4()).split("-")[:-1])
+    #     self.file_name.set(the_real_file_name).wait()
+    #     # 4. set file_number to 0
+    #     self.file_number.set(0).wait()
+    #     # 5. ask IOC what are file_path, file_name, file_number and use them to fill in the file_template on this side
+    #     file_path = self.file_path.get()
+    #     file_name = self.file_name.get()
+    #     file_number = self.file_number.get()
+    #     # the next line assembles file_path, file_name, and file_number
+    #     #   in the same way as AreaDetector
+    #     full_file_path = Path(
+    #         self.stage_sigs[self.file_template] % (file_path, file_name, file_number)
+    #     )
+    #     # 6. strip root_path from the full file path to produce the resource_path needed by compose_resource
+    #     # for example, if
+    #     #   full_file_path is /a/b/c/d_0.h5
+    #     #   root_path is /a/b
+    #     # then
+    #     #   resource_path is c/d_0.h5
+    #     resource_path = full_file_path.relative_to(self.root_path.get())
+
+    #     self._asset_docs_cache = deque()
+
+    #     self._bulk_data_resource, self._bulk_data_datum_factory, _ = compose_resource(
+    #         # a UID is _required_ here, so we provide a fake and then remove it from
+    #         #   the resource document; later a RunEngine will provide a real id
+    #         start={"uid": "to be replaced"},
+    #         spec=self.bulk_data_spec,
+    #         root=self.root_path.get(),
+    #         resource_path=str(resource_path),
+    #         resource_kwargs=self.bulk_data_resource_kwargs,
+    #     )
+    #     # remove the fake id specified above from the resource document; later
+    #     #   a RunEngine will provide a real one
+    #     self._bulk_data_resource.pop("run_start")
+    #     self._asset_docs_cache.append(("resource", self._bulk_data_resource))
+
+    #     self._resource, self._datum_factory, _ = compose_resource(
+    #         # a UID is _required_ here, so we provide a fake and then remove it from
+    #         #   the resource document; later a RunEngine will provide a real id
+    #         start={"uid": "to be replaced"},
+    #         spec=self.spec,
+    #         root=self.root_path.get(),
+    #         resource_path=str(resource_path),
+    #         resource_kwargs=self.resource_kwargs,
+    #     )
+    #     # remove the fake id specified above from the resource document; later
+    #     #   a RunEngine will provide a real one
+    #     self._resource.pop("run_start")
+    #     self._asset_docs_cache.append(("resource", self._resource))
+
+    #     # this should be the last thing we do here
+    #     #self.capture.set(1).wait()     ##=========================================================== CHANGED
+
+    #     return staged_devices
+
+
+# class Xspress3Trigger_TEMP(Xspress3Trigger):
+
+#     def trigger(self):
+#         logger.debug("trigger")
+#         if self._staged != Staged.yes:
+#             raise RuntimeError(
+#                 "tried to trigger Xspress3 with prefix {self.prefix} but it is not staged"
+#             )
+
+#         self._acquire_status = self.new_acquire_status()
+#         self.cam.acquire.put(1, wait=False)  ## CHANGED
+
+#         # ttime.sleep(5)
+#         t0 = ttime.monotonic()
+#         while (self.cam.detector_state.get() != 1):
+#             ttime.sleep(0.02)
+#             if (ttime.monotonic() - t0 > 30):
+#                 raise TimeoutError
+#         print(f"Waited for {ttime.monotonic() - t0:.1f} seconds for stage")
+
+#         self.hdf5.capture.set(1).wait()  ## CHANGED
+#         trigger_time = ttime.time()
+
+#         # call generate_datum on all plugins
+#         self.generate_datum(
+#             key=None,
+#             timestamp=trigger_time,
+#             datum_kwargs={"frame": self._abs_trigger_count},
+#         )
+#         self._abs_trigger_count += 1
+
+#         return self._acquire_status
+
+
 
 # build a community IOC xspress3 class with 8 channels
 CommunityXspress3_8Channel = build_xspress3_class(
     channel_numbers=(1, 2, 3, 4, 5, 6, 7, 8),
     mcaroi_numbers=(1, 2, 3, 4),
     image_data_key="fluor",
-    xspress3_parent_classes=(Xspress3Detector, Xspress3Trigger),
+    xspress3_parent_classes=(Xspress3Detector, CommunitySRXXspressTrigger),
     extra_class_members={
         "hdf5": Cpt(
             Xspress3HDF5PluginWithRedis,
@@ -345,6 +493,7 @@ class CommunitySrxXspress3Detector(CommunityXspress3_8Channel):
             self.stage_sigs[self.cam.num_images] = spec_per_point
             # Failed attempt to fix expected shape in tiled
             self.fluor.shape = (
+                total_capture,
                 self.hdf5.array_size_all.array_size1.get(),
                 self.hdf5.array_size_all.array_size0.get(),
             )
