@@ -10,6 +10,7 @@ import time as ttime
 from ophyd import Device, EpicsSignal, EpicsSignalRO
 from ophyd import Component as Cpt
 from ophyd import FormattedComponent as FC
+from ophyd.status import SubscriptionStatus
 from ophyd.areadetector.filestore_mixins import FileStorePluginBase, FileStoreHDF5
 # from hxntools.detectors.zebra import Zebra, EpicsSignalWithRBV
 from nslsii.detectors.zebra import Zebra, EpicsSignalWithRBV
@@ -1136,16 +1137,43 @@ def export_nano_zebra_data(zebra, filepath, fastaxis):
         # Add half pixelsize to correct encoder
         enc3_d = enc3_d + (px / 2)
 
-    size = (len(time_d),)
-    with h5py.File(filepath, "w") as f:
-        dset0 = f.create_dataset("zebra_time", size, dtype="f")
-        dset0[...] = np.array(time_d)
-        dset1 = f.create_dataset("enc1", size, dtype="f")
-        dset1[...] = np.array(enc1_d)
-        dset2 = f.create_dataset("enc2", size, dtype="f")
-        dset2[...] = np.array(enc2_d)
-        dset3 = f.create_dataset("enc3", size, dtype="f")
-        dset3[...] = np.array(enc3_d)
+    # size = (len(time_d),)
+    # with h5py.File(filepath, "w") as f:
+    #     dset0 = f.create_dataset("zebra_time", size, dtype="f")
+    #     dset0[...] = np.array(time_d)
+    #     dset1 = f.create_dataset("enc1", size, dtype="f")
+    #     dset1[...] = np.array(enc1_d)
+    #     dset2 = f.create_dataset("enc2", size, dtype="f")
+    #     dset2[...] = np.array(enc2_d)
+    #     dset3 = f.create_dataset("enc3", size, dtype="f")
+    #     dset3[...] = np.array(enc3_d)
+
+    zs.enc1.put(enc1_d)
+    zs.enc2.put(enc2_d)
+    zs.enc3.put(enc3_d)
+    zs.zebra_time.put(time_d)
+
+    write_dir = os.path.dirname(filepath)
+    file_name = os.path.basename(filepath)
+    
+    zs.dev_type.put("zebra")
+    zs.write_dir.put(write_dir)
+    zs.file_name.put(file_name)
+
+    zs.file_stage.put("staged")
+
+    def cb(value, old_value, **kwargs):
+        import datetime
+        # print(f"export_nano_zebra_data: {datetime.datetime.now().isoformat()} {old_value = } --> {value = }")
+        if old_value in ["acquiring", 1] and value in ["idle", 0]:
+            return True
+        else:
+            return False
+    st = SubscriptionStatus(zs.acquire, callback=cb, run=False)
+    zs.acquire.put(1)
+    st.wait()
+
+    zs.file_stage.put("unstaged")
 
 
 def export_zebra_data(zebra, filepath, fast_axis):

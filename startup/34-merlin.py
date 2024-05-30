@@ -245,6 +245,7 @@ try:
         print("done")
 except TimeoutError:
     print('\nCannot connect to Merlin. Continuing without device.\n')
+    merlin = None
 except Exception:
     print('\nUnexpected error connecting to Merlin.\n',
           sys.exc_info()[0],

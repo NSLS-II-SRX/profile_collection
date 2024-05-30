@@ -20,11 +20,11 @@ import shutil
 # # saf_num = 311284
 
 # nslsii_api_client = httpx.Client(
-#     base_url="https://api-staging.nsls2.bnl.gov"
+#     base_url="https://api.nsls2.bnl.gov"
 # )
 
 # proposal_response = nslsii_api_client.get(
-#     f"/proposal/{proposal_num}"
+#     f"/v1/proposal/{proposal_num}"
 # )
 # proposal_response.raise_for_status()
 # proposal = proposal_response.json()

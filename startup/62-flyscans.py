@@ -200,14 +200,17 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Setup dexela
     if ('dexela' in dets_by_name):
         xrd = dets_by_name['dexela']
+        # If the dexela is acquiring, stop
+        if xrd.cam.detector_state.get() == 1:
+            xrd.cam.acquire.set(0)
         xrd.cam.stage_sigs['acquire_time'] = dwell
-        # Evan edit
-        # xrd.cam.stage_sigs['acquire_period'] = dwell
         del xrd
 
     # If delta is None, set delta based on time for acceleration
+    #MIN_DELTA = 0.200  # default value
+    # EJM edit
+    MIN_DELTA = 1.00  # default value
     if (delta is None):
-        MIN_DELTA = 0.100  # default value
         v = ((xstop - xstart) / (xnum - 1)) / dwell  # compute "stage speed"
         t_acc = xmotor.acceleration.get()  # acceleration time
         delta = 0.5 * t_acc * v  # distance the stage will travel in t_acc
@@ -267,6 +270,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     @stage_decorator(flying_zebra.detectors)
     def fly_each_step(motor, step, row_start, row_stop):
         if verbose:
+            print("In fly_each_step...")
             toc(0, str='timing stage', log_file=log_file)
         def move_to_start_fly():
             row_str = short_uid('row')
@@ -332,12 +336,19 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 _row_start = xstop
                 _row_stop = xstart
 
+            accel_time = xmotor.acceleration.get()  # acceleration time
+            if delta == MIN_DELTA:
+                # Calculate time from starting point to first data point
+                delta_acc = v*accel_time / 2
+                delta_const = (delta - delta_acc) / v
+                accel_time += delta_const
+
             st = yield from kickoff(flying_zebra,
                                    xstart=_row_start,
                                    xstop=_row_stop,
                                    xnum=xnum,
                                    dwell=dwell,
-                                   tacc=xmotor.acceleration.get(),
+                                   tacc=accel_time,
                                    wait=True)
             st.wait(timeout=10)
         try:
@@ -675,7 +686,6 @@ def nano_scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *, extra_
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
-
     if center:
         yield from mv(nano_stage.sx, 0, nano_stage.sy, 0, nano_stage.sz, 0)
     yield from scan_and_fly_base(dets, xstart, xstop, xnum, ystart, ystop, ynum, dwell, **kwargs)

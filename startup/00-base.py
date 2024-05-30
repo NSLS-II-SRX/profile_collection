@@ -78,10 +78,8 @@ ip = get_ipython()
 nslsii.configure_base(
     ip.user_ns,
     "srx",
-    publish_documents_with_kafka=False,
+    publish_documents_with_kafka=True,
 )
-# NOTE: As of 2024-02-16, the docs submitted to Kafka are not serializable, until the fix to Bluesky is deployed.
-# See the https://github.com/NSLS2/redis-json-dict/pull/6 and the future PR in https://github.com/bluesky/bluesky/pulls by @danielballan.
 
 RE.unsubscribe(0)
 
@@ -89,10 +87,21 @@ RE.unsubscribe(0)
 c = from_profile("srx")
 srx_raw = from_profile("nsls2", api_key=os.environ["TILED_BLUESKY_WRITING_API_KEY_SRX"])["srx"]["raw"]
 
+discard_liveplot_data = True
+descriptor_uids = []
 
 def post_document(name, doc):
     if name == "start":
         doc = copy.deepcopy(doc)
+        descriptor_uids.clear()
+
+    if name == "descriptor":
+        if discard_liveplot_data and doc["name"].startswith("DONOTSAVE_"):
+            descriptor_uids.append(doc["uid"])
+            return
+    elif name == "event_page" and doc["descriptor"] in descriptor_uids:
+        return
+    #print(f"==================  name={name!r} doc={doc} type(doc)={type(doc)}")
     srx_raw.post_document(name, doc)
 
 

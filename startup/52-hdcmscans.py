@@ -527,7 +527,9 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
         E = E * 1000
 
     # Define the detector
-    det = [sclr1, bpm4, bpm5, xbpm1, xbpm2, dcm.c1_roll, dcm.c2_pitch]
+    ## YY hack to remove xbpm1 (disconnection error in bsui)
+    ## det = [sclr1, bpm4, bpm5, xbpm1, xbpm2, dcm.c1_roll, dcm.c2_pitch]
+    det = [sclr1, bpm4, bpm5, xbpm2, dcm.c1_roll, dcm.c2_pitch]
     det_names = [d.name for d in det]
 
     # Set dwell for scaler
