@@ -103,6 +103,8 @@ def get_stock_md(scan_md):
     if 'scan' not in scan_md:
         scan_md['scan'] = {}
     scan_md['scan']['energy'] = np.round(energy.energy.readback.get(), decimals=4)
+    scan_md["beamline_id"] = "SRX"
+    scan_md["md_version"] = "1.2"
 
     return scan_md
 

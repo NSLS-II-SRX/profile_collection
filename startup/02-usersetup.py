@@ -42,12 +42,8 @@ md_proposal = {
 # saf_num = 312779
 
 
-cycle = "2024_cycle2"
-
-
 RE.md["proposal"] = md_proposal
 RE.md["cycle"] = proposal["cycles"][-1]
-# RE.md["cycle"] = "2024-2"
 
 cycle = RE.md["cycle"]
 cycle = cycle.replace("-", "_cycle")

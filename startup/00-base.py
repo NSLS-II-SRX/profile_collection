@@ -122,11 +122,11 @@ bec.disable_table()
 # Disable BestEffortCallback to plot ring current
 bec.disable_plots()
 
-RE.md = RedisJSONDict(redis.Redis("info.srx.nsls2.bnl.gov"), prefix="bsui")
+RE.md = RedisJSONDict(redis.Redis("info.srx.nsls2.bnl.gov"), prefix="")
 
 # Optional: set any metadata that rarely changes.
-RE.md["beamline_id"] = "SRX"
-RE.md["md_version"] = "1.1"
+# RE.md["beamline_id"] = "SRX"
+# RE.md["md_version"] = "1.1"
 
 
 class SRXPrompt(Prompts):
