@@ -73,89 +73,91 @@ class BulkXspress(HandlerBase):
 db.reg.register_handler(BulkXspress.HANDLER_NAME, BulkXspress, overwrite=True)
 
 
-class CommunityXspress3FileStoreFlyable(Xspress3FileStore):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+# class CommunityXspress3FileStoreFlyable(Xspress3FileStore):
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
 
-    @property
-    def filestore_res(self):
-        raise Exception("don't wanCommunitySRXXspressTriggert to be here")
-        return self._filestore_res
+#     @property
+#     def filestore_res(self):
+#         raise Exception("don't wanCommunitySRXXspressTriggert to be here")
+#         return self._filestore_res
 
-    @property
-    def filestore_spec(self):
-        if self.parent._mode is SRXMode.fly:
-            return BulkXspress.HANDLER_NAME
-        return Xspress3HDF5Handler.HANDLER_NAME
+#     @property
+#     def filestore_spec(self):
+#         if self.parent._mode is SRXMode.fly:
+#             return BulkXspress.HANDLER_NAME
+#         return Xspress3HDF5Handler.HANDLER_NAME
 
-    def generate_datum(self, key, CommunitySRXXspressTriggertimestamp, datum_kwargs):
-        if self.parent._mode is SRXMode.step:
-            return super().generate_datum(key, timestamp, datum_kwargs)
-        elif self.parent._mode is SRXMode.fly:
-            # we are doing something _very_ dirty here to skip a level
-            # of the inheritance
-            # this is brittle is if the MRO changes we may not hit all
-            # the level we expect to
-            return FileStorePluginBase.generate_datum(
-                self, key, timestamp, datum_kwargs
-            )
+#     def generate_datum(self, key, CommunitySRXXspressTriggertimestamp, datum_kwargs):
+#         if self.parent._mode is SRXMode.step:
+#             print("Datum: STEP mode")
+#             return super().generate_datum(key, timestamp, datum_kwargs)
+#         elif self.parent._mode is SRXMode.fly:
+#             print("Datum: FLY mode")
+#             # we are doing something _very_ dirty here to skip a level
+#             # of the inheritance
+#             # this is brittle is if the MRO changes we may not hit all
+#             # the level we expect to
+#             return FileStorePluginBase.generate_datum(
+#                 self, key, timestamp, datum_kwargs
+#             )
 
-    def warmup(self):
-        """
-        A convenience method for 'priming' the plugin.
-        The plugin has to 'see' one acquisition before it is ready to capture.
-        This sets the array size, etc.
+#     def warmup(self):
+#         """
+#         A convenience method for 'priming' the plugin.
+#         The plugin has to 'see' one acquisition before it is ready to capture.
+#         This sets the array size, etc.
 
-        NOTE : this comes from:
-            https://github.com/NSLS-II/ophyd/blob/master/ophyd/areadetector/plugins.py
-        We had to replace "cam" with "settings" here.
-        Also modified the stage sigs.
+#         NOTE : this comes from:
+#             https://github.com/NSLS-II/ophyd/blob/master/ophyd/areadetector/plugins.py
+#         We had to replace "cam" with "settings" here.
+#         Also modified the stage sigs.
 
-        """
-        print("  Warming up the hdf5 plugin...", end="", flush=True)
-        # set_and_wait(self.enable, 1)  // deprecated
-        self.enable.set(1).wait()
-        sigs = OrderedDict(
-            [
-                (self.parent.cam.array_callbacks, 1),
-                (self.parent.cam.image_mode, "Single"),
-                (self.parent.cam.trigger_mode, "Internal"),
-                # In case the acquisition time is set very long
-                (self.parent.cam.acquire_time, 1),
-                # (self.parent.cam.acquire_period, 1),
-                (self.parent.cam.acquire, 1),
-            ]
-        )
+#         """
+#         print("  Warming up the hdf5 plugin...", end="", flush=True)
+#         # set_and_wait(self.enable, 1)  // deprecated
+#         self.enable.set(1).wait()
+#         sigs = OrderedDict(
+#             [
+#                 (self.parent.cam.array_callbacks, 1),
+#                 (self.parent.cam.image_mode, "Single"),
+#                 (self.parent.cam.trigger_mode, "Internal"),
+#                 # In case the acquisition time is set very long
+#                 (self.parent.cam.acquire_time, 1),
+#                 # (self.parent.cam.acquire_period, 1),
+#                 (self.parent.cam.acquire, 1),
+#             ]
+#         )
 
-        original_vals = {sig: sig.get() for sig in sigs}
+#         original_vals = {sig: sig.get() for sig in sigs}
 
-        for sig, val in sigs.items():
-            ttime.sleep(0.1)  # abundance of caution
-            # set_and_wait(sig, val)  // deprecated
-            sig.set(val).wait()
+#         for sig, val in sigs.items():
+#             ttime.sleep(0.1)  # abundance of caution
+#             # set_and_wait(sig, val)  // deprecated
+#             sig.set(val).wait()
 
-        ttime.sleep(2)  # wait for acquisition
+#         ttime.sleep(2)  # wait for acquisition
 
-        for sig, val in reversed(list(original_vals.items())):
-            ttime.sleep(0.1)
-            # set_and_wait(sig, val)  // deprecated
-            sig.set(val).wait()
-        print("done")
+#         for sig, val in reversed(list(original_vals.items())):
+#             ttime.sleep(0.1)
+#             # set_and_wait(sig, val)  // deprecated
+#             sig.set(val).wait()
+#         print("done")
 
-    def describe(self):
-        desc = super().describe()
+#     def describe(self):
+#         desc = super().describe()
 
-        if self.parent._mode is SRXMode.fly:
-            spec = {
-                "external": "FileStore:",
-                "dtype": "array",
-                # TODO do not hard code
-                "shape": (self.parent.cam.num_images.get(), 4, 4096),
-                "source": self.prefix,
-            }
-            return {self.parent._f_key: spec}
-        else:
-            return super().describe()
+#         if self.parent._mode is SRXMode.fly:
+#             spec = {
+#                 "external": "FileStore:",
+#                 "dtype": "array",
+#                 # TODO do not hard code
+#                 "shape": (self.parent.cam.num_images.get(), 4, 4096),
+#                 "source": self.prefix,
+#             }
+#             return {self.parent._f_key: spec}
+#         else:
+#             return super().describe()
 
 
 class CommunitySRXXspressTrigger(Xspress3Trigger):
@@ -188,6 +190,13 @@ class CommunitySRXXspressTrigger(Xspress3Trigger):
     #     print(f"  return")
     #     return self._status
 
+    # @property
+    # def filestore_spec(self):
+    #     fss = BulkXspress.HANDLER_NAME if self.parent._mode is SRXMode.fly else Xspress3HDF5Handler.HANDLER_NAME
+    #     print(f"filestore_spec: {fss!r}")
+    #     return fss
+
+
     def trigger(self):
         logger.debug("trigger")
         #print(f"  trigger xs3...")
@@ -208,7 +217,7 @@ class CommunitySRXXspressTrigger(Xspress3Trigger):
         trigger_time = ttime.time()
 
         # call generate_datum on all plugins
-        #print(f"  generate datum...")
+        print(f"  generate datum... frame={self._abs_trigger_count}")
         self.generate_datum(
             key=None,
             timestamp=trigger_time,
@@ -241,6 +250,10 @@ class Xspress3HDF5PluginWithRedis(Xspress3HDF5Plugin):
             self.root_path.put(self.root_path_str)
         if kwargs["path_template"] is None:
             self.path_template.put(self.path_template_str)
+    
+    def stage(self, *args, **kwargs):
+        self.root_path = self.root_path_str
+        return super().stage()
 
     @property
     def root_path_str(self):
@@ -248,7 +261,7 @@ class Xspress3HDF5PluginWithRedis(Xspress3HDF5Plugin):
         # cycle = self._redis_dict["cycle"]
         data_session = RE.md["data_session"]
         cycle = RE.md["cycle"]
-        if "Commissioning" in proposal['type']:
+        if "Commissioning" in get_proposal_type():
             root_path = f"/nsls2/data/srx/proposals/commissioning/{data_session}/assets/xspress3/"
         else:
             root_path = f"/nsls2/data/srx/proposals/{cycle}/{data_session}/assets/xspress3/"
@@ -258,115 +271,6 @@ class Xspress3HDF5PluginWithRedis(Xspress3HDF5Plugin):
     def path_template_str(self):
         path_template = "%Y/%m/%d"
         return path_template
-
-    # def stage(self):
-    #     """
-    #     TEMPORARY INCLUDED
-    #     """
-    #     logger.debug("staging '%s' of '%s'", self.name, self.parent.name)
-    #     staged_devices = super().stage()
-
-    #     self.array_counter.set(0).wait()
-
-    #     # 1. fill in path_template with date as AreaDetector would do
-    #     # 2. concatenate result with root_path
-    #     the_full_data_dir_path = self._build_data_dir_path(
-    #         the_datetime=datetime.datetime.now(),
-    #         root_path=self.root_path.get(),
-    #         path_template=self.path_template.get()
-    #     )
-    #     self.file_path.set(the_full_data_dir_path).wait()
-    #     # 3. set file_name to a uuid
-    #     #   remove the last stanza because of AD length restrictions
-    #     the_real_file_name = "-".join(str(uuid4()).split("-")[:-1])
-    #     self.file_name.set(the_real_file_name).wait()
-    #     # 4. set file_number to 0
-    #     self.file_number.set(0).wait()
-    #     # 5. ask IOC what are file_path, file_name, file_number and use them to fill in the file_template on this side
-    #     file_path = self.file_path.get()
-    #     file_name = self.file_name.get()
-    #     file_number = self.file_number.get()
-    #     # the next line assembles file_path, file_name, and file_number
-    #     #   in the same way as AreaDetector
-    #     full_file_path = Path(
-    #         self.stage_sigs[self.file_template] % (file_path, file_name, file_number)
-    #     )
-    #     # 6. strip root_path from the full file path to produce the resource_path needed by compose_resource
-    #     # for example, if
-    #     #   full_file_path is /a/b/c/d_0.h5
-    #     #   root_path is /a/b
-    #     # then
-    #     #   resource_path is c/d_0.h5
-    #     resource_path = full_file_path.relative_to(self.root_path.get())
-
-    #     self._asset_docs_cache = deque()
-
-    #     self._bulk_data_resource, self._bulk_data_datum_factory, _ = compose_resource(
-    #         # a UID is _required_ here, so we provide a fake and then remove it from
-    #         #   the resource document; later a RunEngine will provide a real id
-    #         start={"uid": "to be replaced"},
-    #         spec=self.bulk_data_spec,
-    #         root=self.root_path.get(),
-    #         resource_path=str(resource_path),
-    #         resource_kwargs=self.bulk_data_resource_kwargs,
-    #     )
-    #     # remove the fake id specified above from the resource document; later
-    #     #   a RunEngine will provide a real one
-    #     self._bulk_data_resource.pop("run_start")
-    #     self._asset_docs_cache.append(("resource", self._bulk_data_resource))
-
-    #     self._resource, self._datum_factory, _ = compose_resource(
-    #         # a UID is _required_ here, so we provide a fake and then remove it from
-    #         #   the resource document; later a RunEngine will provide a real id
-    #         start={"uid": "to be replaced"},
-    #         spec=self.spec,
-    #         root=self.root_path.get(),
-    #         resource_path=str(resource_path),
-    #         resource_kwargs=self.resource_kwargs,
-    #     )
-    #     # remove the fake id specified above from the resource document; later
-    #     #   a RunEngine will provide a real one
-    #     self._resource.pop("run_start")
-    #     self._asset_docs_cache.append(("resource", self._resource))
-
-    #     # this should be the last thing we do here
-    #     #self.capture.set(1).wait()     ##=========================================================== CHANGED
-
-    #     return staged_devices
-
-
-# class Xspress3Trigger_TEMP(Xspress3Trigger):
-
-#     def trigger(self):
-#         logger.debug("trigger")
-#         if self._staged != Staged.yes:
-#             raise RuntimeError(
-#                 "tried to trigger Xspress3 with prefix {self.prefix} but it is not staged"
-#             )
-
-#         self._acquire_status = self.new_acquire_status()
-#         self.cam.acquire.put(1, wait=False)  ## CHANGED
-
-#         # ttime.sleep(5)
-#         t0 = ttime.monotonic()
-#         while (self.cam.detector_state.get() != 1):
-#             ttime.sleep(0.02)
-#             if (ttime.monotonic() - t0 > 30):
-#                 raise TimeoutError
-#         print(f"Waited for {ttime.monotonic() - t0:.1f} seconds for stage")
-
-#         self.hdf5.capture.set(1).wait()  ## CHANGED
-#         trigger_time = ttime.time()
-
-#         # call generate_datum on all plugins
-#         self.generate_datum(
-#             key=None,
-#             timestamp=trigger_time,
-#             datum_kwargs={"frame": self._abs_trigger_count},
-#         )
-#         self._abs_trigger_count += 1
-
-#         return self._acquire_status
 
 
 

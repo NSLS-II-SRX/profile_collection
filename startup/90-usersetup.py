@@ -52,7 +52,7 @@ import shutil
 
 
 
-cycle = '2024_cycle1'
+# cycle = '2024_cycle1'
 
 # # Set user data in bluesky
 # # RE.md['data_session'] = data_session
@@ -63,34 +63,34 @@ if if_touch_beamline():
     scanrecord.update_metadata()
 
 # User data directory and simple scripts
-userdatadir = '/nsls2/data/srx/legacy/xf05id1/experiments/' + str(cycle) + '/' + str(saf_num) + '_' + str(PI_lastname) + '/'
-scriptdir = '/nsls2/data/srx/legacy/xf05id1/shared/src/bluesky_scripts/'
+# userdatadir = '/nsls2/data/srx/legacy/xf05id1/experiments/' + str(cycle) + '/' + str(saf_num) + '_' + str(PI_lastname) + '/'
+# scriptdir = '/nsls2/data/srx/legacy/xf05id1/shared/src/bluesky_scripts/'
 
 # Create the user directory
-try:
-    os.makedirs(userdatadir, exist_ok=True)
-except Exception as e:
-    print(e)
-    raise OSError('Cannot create directory: ' + userdatadir)
+# try:
+#     os.makedirs(userdatadir, exist_ok=True)
+# except Exception as e:
+#     print(e)
+#     raise OSError('Cannot create directory: ' + userdatadir)
 
 # Create the log file
-userlogfile = userdatadir + 'logfile' + str(saf_num) + '.txt'
-if not os.path.exists(userlogfile):
-    with open(userlogfile, 'w'):
-        ...
+# userlogfile = userdatadir + 'logfile' + str(saf_num) + '.txt'
+# if not os.path.exists(userlogfile):
+#     with open(userlogfile, 'w'):
+#         ...
 
 # Copy over the example scripts
-for f in ['simple_batch.py','fly_batch.py']:
-    if (not os.path.exists(userdatadir + f)):
-        shutil.copyfile(scriptdir + f, userdatadir + f)
+# for f in ['simple_batch.py','fly_batch.py']:
+#     if (not os.path.exists(userdatadir + f)):
+#         shutil.copyfile(scriptdir + f, userdatadir + f)
 
 # Update the symbolic link to the data
-try:
-    os.unlink('/nsls2/data/srx/legacy/xf05id1/shared/current_user_data')
-except FileNotFoundError:
-    print("[W] Previous user data directory link did not exist!")
+# try:
+#     os.unlink('/nsls2/data/srx/legacy/xf05id1/shared/current_user_data')
+# except FileNotFoundError:
+#     print("[W] Previous user data directory link did not exist!")
 
-os.symlink(userdatadir, '/nsls2/data/srx/legacy/xf05id1/shared/current_user_data')
+# os.symlink(userdatadir, '/nsls2/data/srx/legacy/xf05id1/shared/current_user_data')
 
 def get_stock_md(scan_md):
     md = RE.md["proposal"]

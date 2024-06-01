@@ -115,11 +115,11 @@ class SRXScanRecord(Device):
         # print(self.cycle.connected)
         # if (self.cycle.connected is True):
         if True:
-            self.proposal_num.put(str(md['proposal_num']))
-            self.proposal_title.put(str(md['proposal_title']))
-            self.SAF.put(str(md['saf_num']))
-            self.PI.put(str(md['PI_lastname']))
-            self.cycle.put(str(md['cycle']))
+            self.proposal_num.put(str(md['proposal_id']))
+            self.proposal_title.put(str(md['title']))
+            # self.SAF.put(str(md['saf_num']))
+            self.PI.put(str(md['pi_name']))
+            self.cycle.put(str(RE.md['cycle']))
             print('Scanrecord updated.')
         else:
             print('Scanrecord NOT updated...')

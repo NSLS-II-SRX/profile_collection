@@ -134,7 +134,7 @@ class SRXPrompt(Prompts):
         return [
             (
                 Token.Prompt,
-                f"BlueSky@SRX | Proposal #{RE.md.get('proposal', {}).get('proposal_num', 'N/A')} [",
+                f"BlueSky@SRX | Proposal #{RE.md.get('proposal', {}).get('proposal_id', 'N/A')} [",
             ),
             (Token.PromptNum, str(self.shell.execution_count)),
             (Token.Prompt, "]: "),

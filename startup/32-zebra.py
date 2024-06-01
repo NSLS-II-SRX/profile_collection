@@ -463,10 +463,24 @@ class SRXFlyer1Axis(Device):
     This is the position based flyer.
     """
 
-    root_path='/nsls2/data/srx/assets/' 
+    # root_path='/nsls2/data/srx/assets/'
+    # root_path = root_path_str()
     write_path_template=f'zebra/%Y/%m/%d/'
     read_path_template=f'zebra/%Y/%m/%d/'
     reg_root=f'zebra/'
+
+    def root_path_str():
+        data_session = RE.md["data_session"]
+        cycle = RE.md["cycle"]
+        if "Commissioning" in get_proposal_type():
+            root_path = f"/nsls2/data/srx/proposals/commissioning/{data_session}/assets/"
+        else:
+            root_path = f"/nsls2/data/srx/proposals/{cycle}/{data_session}/assets/"
+        return root_path
+    
+
+    root_path = root_path_str()
+
 
     def make_filename(self):
         """Make a filename.
@@ -562,6 +576,9 @@ class SRXFlyer1Axis(Device):
             self.stage_sigs[self._encoder.pc.dir] = "Positive"
 
         self._stage_with_delay()
+
+        self.root_path = self.root_path_str
+
 
     def _stage_with_delay(self):
         # Staging taken from https://github.com/bluesky/ophyd/blob/master/ophyd/device.py
