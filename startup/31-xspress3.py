@@ -217,7 +217,6 @@ class CommunitySRXXspressTrigger(Xspress3Trigger):
         trigger_time = ttime.time()
 
         # call generate_datum on all plugins
-        print(f"  generate datum... frame={self._abs_trigger_count}")
         self.generate_datum(
             key=None,
             timestamp=trigger_time,
