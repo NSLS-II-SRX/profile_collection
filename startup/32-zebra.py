@@ -463,13 +463,7 @@ class SRXFlyer1Axis(Device):
     This is the position based flyer.
     """
 
-    # root_path='/nsls2/data/srx/assets/'
-    # root_path = root_path_str()
-    write_path_template=f'zebra/%Y/%m/%d/'
-    read_path_template=f'zebra/%Y/%m/%d/'
-    reg_root=f'zebra/'
-
-    def root_path_str():
+    def root_path_str(self):
         data_session = RE.md["data_session"]
         cycle = RE.md["cycle"]
         if "Commissioning" in get_proposal_type():
@@ -478,9 +472,6 @@ class SRXFlyer1Axis(Device):
             root_path = f"/nsls2/data/srx/proposals/{cycle}/{data_session}/assets/"
         return root_path
     
-
-    root_path = root_path_str()
-
 
     def make_filename(self):
         """Make a filename.
@@ -540,6 +531,11 @@ class SRXFlyer1Axis(Device):
         self._filestore_resource = None
         self._encoder = zebra
 
+        self.root_path = self.root_path_str()
+        self.write_path_template=f'zebra/%Y/%m/%d/'
+        self.read_path_template=f'zebra/%Y/%m/%d/'
+        self.reg_root=f'zebra/'
+
         # Put SIS3820 into single count (not autocount) mode
         self.stage_sigs[self._sis.count_mode] = 0
 
@@ -577,7 +573,7 @@ class SRXFlyer1Axis(Device):
 
         self._stage_with_delay()
 
-        self.root_path = self.root_path_str
+        self.root_path = self.root_path_str()
 
 
     def _stage_with_delay(self):
