@@ -252,7 +252,7 @@ class Xspress3HDF5PluginWithRedis(Xspress3HDF5Plugin):
             self.path_template.put(self.path_template_str)
     
     def stage(self, *args, **kwargs):
-        self.root_path = self.root_path_str
+        self.root_path.put(self.root_path_str)
         return super().stage()
 
     @property
