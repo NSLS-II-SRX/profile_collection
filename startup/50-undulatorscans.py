@@ -28,7 +28,7 @@ def bpmAD_exposuretime_adjust():
 
 def undulator_calibration(
     outfile=None,
-    UCalibDir='/home/xf05id1/current_user_data/',
+    UCalibDir='/home/xf05id1/',
     u_gap_start=6500,
     u_gap_end=12000,
     u_gap_step=500,
@@ -77,6 +77,8 @@ def undulator_calibration(
         yield from mov(energy, energy_setpoint)
         yield from mov(energy.move_u_gap, False)
 
+        yield from peakup(target_fields=['bpm4_total_current'])
+
         # Setup LiveCallbacks
         # liveplotfig1 = plt.figure()
         liveplotx = energy.energy.name
@@ -90,7 +92,7 @@ def undulator_calibration(
         # Setup the scan
         @subs_decorator(livecallbacks)
         def braggscan():
-            yield from scan([xbpm1, bpm4, ring_current],
+            yield from scan([bpm3, bpm4, ring_current],
                             energy,
                             energy_setpoint - bragg_scanwidth,
                             energy_setpoint + bragg_scanwidth,
