@@ -79,7 +79,7 @@ def tomo_fullfield(thetastart = -90, thetastop = 90, numproj = 361, ffwait = 2,
     fftomo_df_plan = count(det, num = num_darkfield)
     fftomo_df_plan = bp.subs_wrapper(fftomo_df_plan, livecallbacks)
     fftomo_df_gen = yield from fftomo_df_plan
-    logscan_event0info('full_field_tomo_dark_field', event0info = eventlog_list)
+    # logscan_event0info('full_field_tomo_dark_field', event0info = eventlog_list)
     #logscan('full_field_tomo_dark_field')     
     print('darkfield collection done')
     
@@ -102,7 +102,7 @@ def tomo_fullfield(thetastart = -90, thetastop = 90, numproj = 361, ffwait = 2,
     fftomo_wf_plan = count(det, num = num_whitefield)
     fftomo_wf_plan = bp.subs_wrapper(fftomo_wf_plan, livecallbacks)
     fftomo_wf_gen = yield from fftomo_wf_plan
-    logscan_event0info('full_field_tomo_white_field_prescan', event0info = eventlog_list)
+    # logscan_event0info('full_field_tomo_white_field_prescan', event0info = eventlog_list)
     #logscan('full_field_tomo_white_field_prescan')      
 
     #move sample back after white field collection
@@ -121,7 +121,7 @@ def tomo_fullfield(thetastart = -90, thetastop = 90, numproj = 361, ffwait = 2,
     fftomo_plan = scan(det, tomo_stage.theta, thetastart, thetastop, numproj)        
     fftomo_plan = bp.subs_wrapper(fftomo_plan, livecallbacks)
     fftomo_gen = yield from fftomo_plan
-    logscan_event0info('full_field_tomo_projections', event0info = eventlog_list)
+    # logscan_event0info('full_field_tomo_projections', event0info = eventlog_list)
     #logscan('full_field_tomo_projections')          
     
     #move sample out prior to white field collection
@@ -136,7 +136,7 @@ def tomo_fullfield(thetastart = -90, thetastop = 90, numproj = 361, ffwait = 2,
     fftomo_wf_plan = count(det, num = num_whitefield)
     fftomo_wf_plan = bp.subs_wrapper(fftomo_wf_plan, livecallbacks)
     fftomo_wf_gen = yield from fftomo_wf_plan
-    logscan_event0info('full_field_tomo_white_field_postscan', event0info = eventlog_list)
+    # logscan_event0info('full_field_tomo_white_field_postscan', event0info = eventlog_list)
     #logscan('full_field_tomo_white_field_postscan')          
 
     #move sample back after white field collection
@@ -256,7 +256,7 @@ def pco_zscan(acqtime = 0.0005, record_preamp = True, preamp_acqtime = None,
         imgplan = count(det, num = num_img)
         imgplan = bp.subs_wrapper(imgplan, livecallbacks)
         imgplan_gen = yield from imgplan
-        logscan_event0info('pcoedge_image', event0info = eventlog_list)
+        # logscan_event0info('pcoedge_image', event0info = eventlog_list)
         #logscan('full_field_tomo_dark_field')     
         print('collection done at pcoedge z', pcoedg_pos_ztar)
     
@@ -382,7 +382,7 @@ def pco_xanes(erange = [], estep = [],
     #output the datafile
     xanes_afterscan_pco(scaninfo[0], roinum, filename, i0scale, itscale, roi_key)
 
-    logscan_event0info('pco_xanes', event0info = eventlog_list) 
+    # logscan_event0info('pco_xanes', event0info = eventlog_list) 
 
     #clean up when the scan is done    
     energy.move_c2_x.put(True)

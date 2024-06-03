@@ -190,11 +190,11 @@ def hf2dxrf(*, xstart, xnumstep, xstepsize,
 
     # Write to scan log
     if ('merlin' in dets_by_name):
-        logscan_event0info('2dxrf_withdpc')
+        # logscan_event0info('2dxrf_withdpc')
         # Should this be here?
         merlin.hdf5.stage_sigs['num_capture'] = 0
-    else:
-        logscan_detailed('2dxrf')
+    # else:
+    #     logscan_detailed('2dxrf')
 
     return scaninfo
 

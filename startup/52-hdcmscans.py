@@ -631,7 +631,7 @@ def peakup_fine(scaler='sclr_i0', plot=True, shutter=True, use_calib=True,
     yield from check_shutters(shutter, 'Close')
 
     # Add scan to scanlog
-    logscan('peakup_fine_pitch')
+    # logscan('peakup_fine_pitch')
 
     # Display results of livefit
     print(paired_callback.lf.result.values)

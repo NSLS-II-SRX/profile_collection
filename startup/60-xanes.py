@@ -397,7 +397,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
             print("You must export this scan data manually: xanes_afterscan_plan(doc[-1], <filename>, <roinum>)")
             return
         xanes_afterscan_plan(doc['run_start'], filename, roinum)
-        logscan_detailed('XAS_STEP')
+        # logscan_detailed('XAS_STEP')
 
 
     def at_scan(name, doc):

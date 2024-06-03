@@ -55,7 +55,7 @@ def collect_xrd(pos=[], empty_pos=[], acqtime=1, N=1,
         update_scan_id()
 
         # Write to logfile
-        logscan('xrd_count')
+        # logscan('xrd_count')
 
     if (empty_pos != []):
         # Move into position
@@ -80,7 +80,7 @@ def collect_xrd(pos=[], empty_pos=[], acqtime=1, N=1,
             yield from bps.mov(shut_b, 'Close')
 
         # Write to logfile
-        logscan('xrd_count')
+        # logscan('xrd_count')
 
     # Loop through positions
     if (pos == []):
@@ -128,7 +128,7 @@ def collect_xrd(pos=[], empty_pos=[], acqtime=1, N=1,
             yield from bps.mov(shut_b, 'Close')
 
         # Write to logfile
-        logscan('xrd_count')
+        # logscan('xrd_count')
 
 
 def collect_xrd_map(xstart, xstop, xnum,
@@ -164,7 +164,7 @@ def collect_xrd_map(xstart, xstop, xnum,
         update_scan_id()
 
         # Write to logfile
-        logscan('xrd_count')
+        # logscan('xrd_count')
 
     if shutter:
         yield from mv(shut_b, 'Open')
@@ -182,7 +182,7 @@ def collect_xrd_map(xstart, xstop, xnum,
         yield from mv(shut_b, 'Close')
 
     # Write to logfile
-    logscan('xrd_count')
+    # logscan('xrd_count')
     update_scan_id()
 
 
