@@ -156,4 +156,5 @@ def mv_along_axis(z_end):
 def reset_scanner_velocity():
     for d in [nano_stage.sx, nano_stage.sy, nano_stage.sz]:
         d.velocity.set(100)
+    nano_stage.th.velocity.set(10000)  # mdeg / sec
 
