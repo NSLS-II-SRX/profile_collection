@@ -93,13 +93,7 @@ if if_touch_beamline():
 # os.symlink(userdatadir, '/nsls2/data/srx/legacy/xf05id1/shared/current_user_data')
 
 def get_stock_md(scan_md):
-    md = RE.md["proposal"]
     scan_md['time_str'] =  ttime.ctime(ttime.time())
-    # scan_md['proposal'] = {'proposal_num': md["proposal_num"],
-    #                        'proposal_title': md["proposal_title"],
-    #                        'PI_lastname': md["PI_lastname"],
-    #                        'saf_num': md["saf_num"],
-    #                        'cycle': md["cycle"]}
     if 'scan' not in scan_md:
         scan_md['scan'] = {}
     scan_md['scan']['energy'] = np.round(energy.energy.readback.get(), decimals=4)

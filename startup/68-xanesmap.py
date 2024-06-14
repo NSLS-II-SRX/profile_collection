@@ -19,21 +19,7 @@ def xanes_map(erange=[], estep=[],
     get_stock_md(scan_md)
     scan_md['scan']['type'] = 'XAS_MAP'
     scan_md['scan']['ROI'] = 1
-    scan_md['scan']['dwell'] = dwell
     scan_md['scan']['energy_input'] = str(np.around(erange, 2)) + ', ' + str(np.around(estep, 2))
-    # scan_md['scan']['energy'] = ept
-    scan_md['scan']['map_input'] = [xstart, xstop, xnum, ystart, ystop, ynum, dwell]
-    scan_md['scan']['detectors'] = [d.name for d in detectors]
-    scan_md['scan']['fast_axis'] = {'motor_name' : xmotor.name,
-                                    'units' : xmotor.motor_egu.get()}
-    scan_md['scan']['slow_axis'] = {'motor_name' : ymotor.name,
-                                    'units' : ymotor.motor_egu.get()}
-    scan_md['scan']['theta'] = {'val' : nano_stage.th.user_readback.get(),
-                                'units' : nano_stage.th.motor_egu.get()}
-    scan_md['scan']['delta'] = {'val' : delta,
-                                'units' : xmotor.motor_egu.get()}
-    scan_md['scan']['snake'] = snake
-    scan_md['scan']['shape'] = (xnum, ynum)
 
 
     # Setup DCM/energy options
@@ -64,7 +50,7 @@ def xanes_map(erange=[], estep=[],
         print(f"  Running map...")
         yield from nano_scan_and_fly(xstart, xstop, xnum,
                                      ystart, ystop, ynum, dwell,
-                                     shutter=shutter)
+                                     shutter=shutter, md=scan_md)
 
 
 
