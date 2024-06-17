@@ -113,9 +113,39 @@ class SRXNanoStageInterferometer(Device):
 nano_stage_interferometer = SRXNanoStageInterferometer('XF:05IDD-ES:1{PICOSCALE:1}', name='nano_stage_interferometer')
 
 
-# Center scanner
-# Move the coarse stages and center the nPoint scanner
+def move_to_scanner_center(timeout=10):
+    """
+    Move the scanner stages to the center (zero).
+
+    Parameters
+    ----------
+    timeout : integer
+        Amount of time in seconds to wait
+
+    Yields
+    ------
+    msg : Msg to move motors to zero
+    """
+    return (yield from mv(nano_stage.sx, 0,
+                          nano_stage.sy, 0,
+                          nano_stage.sz, 0,
+                          timeout=timeout))
+
+
+def reset_scanner_velocity():
+    """
+    Reset the scanner stages to their nominal speeds
+    """
+    for d in [nano_stage.sx, nano_stage.sy, nano_stage.sz]:
+        d.velocity.set(100)  # um/s
+    nano_stage.th.velocity.set(10_000)  # mdeg/s
+
+
 def center_scanner():
+    """
+    Move the coarse and scanner stages such that the scanner is set to
+    zero and the coarse stages translate to keep the sample in position
+    """
     del_sx = nano_stage.sx.user_readback.get()
     del_sy = nano_stage.sy.user_readback.get()
     del_sz = nano_stage.sz.user_readback.get()
@@ -129,32 +159,29 @@ def center_scanner():
     yield from mv(nano_stage.sz, 0)
     yield from mvr(nano_stage.z, del_sz)
 
+
 def mv_along_axis(z_end):
-    ## move along the focused beam axis
+    """
+    Move the sample along the focused beam axis
+    """
     cur_x = nano_stage.topx.user_readback.get()
     cur_y = nano_stage.y.user_readback.get()
     cur_z = nano_stage.z.user_readback.get()
-    print(f'current locations are: {cur_x}, {cur_y}, {cur_z}')
+    print(f'Current locations are: {cur_x}, {cur_y}, {cur_z}')
 
     ratio_xz = 0.004875
     ratio_yz = 0.0067874
 
-    delta_z = z_end-cur_z
-    print(f'Will move z to {z_end}')
+    delta_z = z_end - cur_z
+    print(f'Move z to {z_end}')
 
-    delta_x = ratio_xz*delta_z
-    print(f'moving x by {delta_x}')
+    delta_x = ratio_xz * delta_z
+    print(f'Move x by {delta_x}')
 
-    delta_y = ratio_yz*delta_z
-    print(f'moving y by {delta_y}')
+    delta_y = ratio_yz * delta_z
+    print(f'Move y by {delta_y}')
 
     yield from mvr(nano_stage.topx, delta_x)
     yield from mvr(nano_stage.y, delta_y)
     yield from mv(nano_stage.z, z_end)
-
-
-def reset_scanner_velocity():
-    for d in [nano_stage.sx, nano_stage.sy, nano_stage.sz]:
-        d.velocity.set(100)
-    nano_stage.th.velocity.set(10000)  # mdeg / sec
 
