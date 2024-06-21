@@ -396,7 +396,6 @@ class CommunitySrxXspress3Detector(CommunityXspress3_8Channel):
             self.stage_sigs[self.cam.num_images] = spec_per_point
             # Failed attempt to fix expected shape in tiled
             self.fluor.shape = (
-                total_capture,
                 self.hdf5.array_size_all.array_size1.get(),
                 self.hdf5.array_size_all.array_size0.get(),
             )
@@ -525,7 +524,8 @@ try:
     read_channel_attrs.append("hdf5")
     # print(f"read_channel_attrs: {read_channel_attrs}")
     xs_id_mono_fly.read_attrs = read_channel_attrs
-    xs_id_mono_fly.fluor.dtype_str = "<f8"
+    xs_id_mono_fly.fluor.dtype_str = "<u4"
+    #xs_id_mono_fly.fluor.dtype_str = "<f8"
     # print(f"xs_id_mono_fly.read_attrs: {xs_id_mono_fly.read_attrs}")
 
     # add all mcarois.mcaroiNN.total_rbv to each channelMM.read_attrs
@@ -597,7 +597,8 @@ try:
     read_channel_attrs.append("hdf5")
     # print(f"read_channel_attrs: {read_channel_attrs}")
     xs.read_attrs = read_channel_attrs
-    xs.fluor.dtype_str = "<f8"
+    xs.fluor.dtype_str = "<u4"
+    #xs.fluor.dtype_str = "<f8"
     # print(f"xs.read_attrs: {xs.read_attrs}")
 
     # add all mcarois.mcaroiNN.total_rbv to each channelMM.read_attrs

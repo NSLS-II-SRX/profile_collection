@@ -192,8 +192,6 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     def at_scan(name, doc):
         scanrecord.current_scan.put(doc['uid'][:6])
         scanrecord.current_scan_id.put(str(doc['scan_id']))
-        # Not sure if RE should be here, but not sure what to make it
-        # scanrecord.current_type.put(RE.md['scaninfo']['type'])
         scanrecord.current_type.put(scan_md['scan']['type'])
         scanrecord.scanning.put(True)
 
@@ -213,9 +211,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
     myscan = list_scan(det, energy, list(ept), per_step=per_step, md=scan_md)
     myscan = finalize_wrapper(myscan, finalize_scan)
 
-    # Open b shutter
-    # if (shutter is True):
-    #     yield from mv(shut_b, 'Open')
+    # Open B shutter
     yield from check_shutters(shutter, 'Open')
 
     return (yield from subs_wrapper(myscan, {'all' : livecallbacks,

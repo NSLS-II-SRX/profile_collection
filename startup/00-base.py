@@ -13,7 +13,7 @@ from bluesky_queueserver import is_re_worker_active, parameter_annotation_decora
 from IPython.terminal.prompts import Prompts, Token
 from ophyd.signal import DEFAULT_CONNECTION_TIMEOUT, EpicsSignal, EpicsSignalBase
 from redis_json_dict import RedisJSONDict
-from tiled.client import from_profile
+from tiled.client import from_profile, from_uri
 
 
 def if_touch_beamline(envvar="TOUCHBEAMLINE"):
@@ -84,7 +84,7 @@ nslsii.configure_base(
 RE.unsubscribe(0)
 
 # Define tiled catalog
-c = from_profile("srx")
+# c = from_profile("srx")       # , api_key=os.environ["TILED_BLUESKY_WRITING_API_KEY_SRX"]
 srx_raw = from_profile("nsls2", api_key=os.environ["TILED_BLUESKY_WRITING_API_KEY_SRX"])["srx"]["raw"]
 
 discard_liveplot_data = True

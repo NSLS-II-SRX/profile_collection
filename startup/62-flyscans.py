@@ -687,10 +687,10 @@ def nano_scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *, extra_
         extra_dets = []
     dets = [_xs] + extra_dets
     if center:
-        move_to_scanner_center(timeout=10):
+        move_to_scanner_center(timeout=10)
     yield from scan_and_fly_base(dets, xstart, xstop, xnum, ystart, ystop, ynum, dwell, **kwargs)
     if center:
-        move_to_scanner_center(timeout=10):
+        move_to_scanner_center(timeout=10)
 
 
 def nano_y_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
@@ -706,10 +706,10 @@ def nano_y_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
     dets = [_xs] + extra_dets
 
     if center:
-        move_to_scanner_center(timeout=10):
+        move_to_scanner_center(timeout=10)
     yield from scan_and_fly_base(dets, *args, **kwargs)
     if center:
-        move_to_scanner_center(timeout=10):
+        move_to_scanner_center(timeout=10)
 
 
 
@@ -725,10 +725,10 @@ def nano_z_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
     dets = [_xs] + extra_dets
 
     if center:
-        move_to_scanner_center(timeout=10):
+        move_to_scanner_center(timeout=10)
     yield from scan_and_fly_base(dets, *args, **kwargs)
     if center:
-        move_to_scanner_center(timeout=10):
+        move_to_scanner_center(timeout=10)
 
 
 def coarse_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
@@ -744,10 +744,10 @@ def coarse_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
     dets = [_xs] + extra_dets
 
     if center:
-        move_to_scanner_center(timeout=10):
+        move_to_scanner_center(timeout=10)
     yield from scan_and_fly_base(dets, *args, **kwargs)
     if center:
-        move_to_scanner_center(timeout=10):
+        move_to_scanner_center(timeout=10)
 
 
 def coarse_y_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
@@ -770,10 +770,10 @@ def coarse_y_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
     dets = [_xs] + extra_dets
 
     if center:
-        move_to_scanner_center(timeout=10):
+        move_to_scanner_center(timeout=10)
     yield from scan_and_fly_base(dets, *args, **kwargs)
     if center:
-        move_to_scanner_center(timeout=10):
+        move_to_scanner_center(timeout=10)
 
 
 # This class is not used in this file
