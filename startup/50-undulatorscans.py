@@ -141,4 +141,4 @@ def max_Ugap(set_offset=True, shutter=True):
     yield from mov(energy.u_gap, new_gap)
 
     if set_offset:
-        energy._u_gap_offset = offset
+        energy._u_gap_offset = round(offset, 1)
