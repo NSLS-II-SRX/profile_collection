@@ -84,8 +84,8 @@ nslsii.configure_base(
 RE.unsubscribe(0)
 
 # Define tiled catalog
-# c = from_profile("srx")       # , api_key=os.environ["TILED_BLUESKY_WRITING_API_KEY_SRX"]
 srx_raw = from_profile("nsls2", api_key=os.environ["TILED_BLUESKY_WRITING_API_KEY_SRX"])["srx"]["raw"]
+c = srx_raw
 
 discard_liveplot_data = True
 descriptor_uids = []
