@@ -5,6 +5,7 @@ from ophyd import EpicsMotor, EpicsSignal, EpicsSignalRO
 from ophyd import Device
 from ophyd import Component as Cpt
 from ophyd import PVPositionerPC
+from ophyd.status import WaitTimeoutError
 from nslsii.devices import TwoButtonShutter
 
 
@@ -68,16 +69,23 @@ def check_shutters(check, status):
         if status == 'Open':
             if shut_b.status.get() == 'Not Open':
                 print('Opening B-hutch shutter..')
-                yield from mov(shut_b, "Open")
+                # yield from mov(shut_b, "Open", timeout=10)
+                yield from abs_set(shut_b, "Open", wait=True, timeout=10)
+                # yield from abs_set(shut_b, "Open", wait=True)
             print('Opening D-hutch shutter...')
             yield from abs_set(shut_d.request_open, 1)
-            i = 0
+            yield from bps.sleep(0.050)
+            i = 1
             while (shut_d.read()['shut_d_request_open']['value'] == 0):
                 yield from bps.sleep(1)
-                yield from abs_set(shut_d.request_open, 1)
+                try:
+                    yield from abs_set(shut_d.request_open, 1, wait=True, timeout=1)
+                except WaitTimeoutError:
+                    print(f"Timeout opening D-shutter ({i+1}/10) ...")
+                except e:
+                    raise e
                 i = i + 1
                 if (i > 10):
-                    # print('Error opening D-shutter!')
                     raise ShutterOpeningException(f'Error opening D-shutter after {i} attempts!')
         else:
             print('Closing D-hutch shutter...')
