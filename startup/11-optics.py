@@ -70,8 +70,8 @@ def check_shutters(check, status):
             if shut_b.status.get() == 'Not Open':
                 print('Opening B-hutch shutter..')
                 # yield from mov(shut_b, "Open", timeout=10)
-                yield from abs_set(shut_b, "Open", wait=True, timeout=10)
-                # yield from abs_set(shut_b, "Open", wait=True)
+                # yield from abs_set(shut_b, "Open", wait=True, timeout=10)
+                yield from abs_set(shut_b, "Open", wait=True)
             print('Opening D-hutch shutter...')
             yield from abs_set(shut_d.request_open, 1)
             yield from bps.sleep(0.050)
