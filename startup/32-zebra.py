@@ -762,6 +762,7 @@ class SRXFlyer1Axis(Device):
         if mode == 'position':
             if 'dexela' in [d.name for d in self.detectors]:
                 decrement = (pxsize / dwell) * 0.001
+                decrement = np.max([decrement, 0.001])
             else:
                 if dwell > 0.099:
                     decrement = (pxsize / dwell) * 0.001
