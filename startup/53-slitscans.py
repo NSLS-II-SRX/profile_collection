@@ -1,8 +1,7 @@
 print(f'Loading {__file__}...')
-import warnings
 import pandas as pd
 
-warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+# warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
 
 def ssa_hcen_scan(start, stop, num,

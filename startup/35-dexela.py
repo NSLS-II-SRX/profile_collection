@@ -40,8 +40,8 @@ class BulkDexela(HandlerBase):
         super().close()
 
 
-db.reg.register_handler(BulkDexela.HANDLER_NAME, BulkDexela,
-                        overwrite=True)
+# db.reg.register_handler(BulkDexela.HANDLER_NAME, BulkDexela,
+#                         overwrite=True)
 
 
 class DexelaFileStoreHDF5(FileStoreBase):

@@ -5,6 +5,8 @@ import os
 import time as ttime
 from datetime import datetime
 from pathlib import Path
+import pandas as pd
+import warnings
 
 import matplotlib as mpl
 import nslsii
@@ -14,6 +16,20 @@ from IPython.terminal.prompts import Prompts, Token
 from ophyd.signal import DEFAULT_CONNECTION_TIMEOUT, EpicsSignal, EpicsSignalBase
 from redis_json_dict import RedisJSONDict
 from tiled.client import from_profile, from_uri
+
+
+# Start to list warnings that we don't want to see - or just hide them from users
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)  # For 53-slitscans
+warnings.filterwarnings(action="ignore", message="MSG_SIZE_TOO_LARGE")  # Kafka messages
+# Removes Qt: Session management error
+if "SESSION_MANAGER" in os.environ:
+    del os.environ["SESSION_MANAGER"]
+# Set bluesky log file locations to DEFAULT locations
+#   Removes text that it is setting these locations
+#   Just kidding, doesn't remove text
+os.environ["BLUESKY_LOG_FILE"] = '/home/xf05id1/.cache/bluesky/log/bluesky.log'
+os.environ["BLUESKY_IPYTHON_LOG_FILE"] = '/home/xf05id1/.cache/bluesky/log/bluesky_ipython.log'
 
 
 def if_touch_beamline(envvar="TOUCHBEAMLINE"):
@@ -68,7 +84,7 @@ else:
     timeout = 10  # seconds
     going = "NOT going"
 
-print(f"\nEpicsSignalBase timeout is {timeout} [seconds]. {going} to touch beamline hardware.\n")
+# print(f"\nEpicsSignalBase timeout is {timeout} [seconds]. {going} to touch beamline hardware.\n")
 
 # EpicsSignalBase.set_default_timeout(timeout=timeout, connection_timeout=timeout)  # old style
 EpicsSignalBase.set_defaults(timeout=timeout, connection_timeout=timeout)  # new style

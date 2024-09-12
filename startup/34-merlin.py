@@ -47,10 +47,10 @@ class BulkMerlinDebug(BulkXspress):
 
 
 # needed to get at some debugging data
-db.reg.register_handler('MERLIN_FLY', BulkMerlinDebug,
-                        overwrite=True)
-db.reg.register_handler(BulkMerlin.HANDLER_NAME, BulkMerlin,
-                        overwrite=True)
+# db.reg.register_handler('MERLIN_FLY', BulkMerlinDebug,
+#                         overwrite=True)
+# db.reg.register_handler(BulkMerlin.HANDLER_NAME, BulkMerlin,
+#                         overwrite=True)
 
 
 class MerlinFileStoreHDF5(FileStoreBase):

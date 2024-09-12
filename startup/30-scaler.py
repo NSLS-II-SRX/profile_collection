@@ -196,4 +196,4 @@ class SISHDF5Handler(HandlerBase):
         super().close()
 
 
-db.reg.register_handler("SIS_HDF51", SISHDF5Handler, overwrite=True)
+# db.reg.register_handler("SIS_HDF51", SISHDF5Handler, overwrite=True)

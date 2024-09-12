@@ -70,7 +70,7 @@ class BulkXspress(HandlerBase):
         return self._handle["entry/instrument/detector/data"][:]
 
 
-db.reg.register_handler(BulkXspress.HANDLER_NAME, BulkXspress, overwrite=True)
+# db.reg.register_handler(BulkXspress.HANDLER_NAME, BulkXspress, overwrite=True)
 
 
 # class CommunityXspress3FileStoreFlyable(Xspress3FileStore):

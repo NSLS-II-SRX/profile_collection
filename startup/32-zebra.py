@@ -1249,4 +1249,4 @@ class ZebraHDF5Handler(HandlerBase):
         super().close()
 
 
-db.reg.register_handler("ZEBRA_HDF51", ZebraHDF5Handler, overwrite=True)
+# db.reg.register_handler("ZEBRA_HDF51", ZebraHDF5Handler, overwrite=True)

@@ -25,7 +25,7 @@ from ophyd.sim import NullStatus
 
 # Kafka can throw a warning if the document is too large
 # Adding this is an attempt to prevent the document (really long) being output to screen
-warnings.filterwarnings(action="ignore", message="MSG_SIZE_TOO_LARGE")
+# warnings.filterwarnings(action="ignore", message="MSG_SIZE_TOO_LARGE")
 
 
 @parameter_annotation_decorator({
