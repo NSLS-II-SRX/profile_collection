@@ -18,7 +18,7 @@ from epics import PV
 # from databroker import DataBroker as db
 
 # From flying-undulator branch
-from databroker import get_events
+# from databroker import get_events
 from numpy.lib.stride_tricks import as_strided
 from ophyd.status import SubscriptionStatus
 from ophyd.sim import NullStatus
