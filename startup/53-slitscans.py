@@ -109,8 +109,10 @@ def ssa_hcen_scan_fit_data(scanuid,
 
 def measure_SSA_FWHM():
     # TODO: Make the plots correctly
-    uid = yield from scan([xbpm2], slt_ssa.h_gap, 0, 0.2, 41),
-                          LivePlot('xbpm2_sumX', x='slt_ssa_h_gap_readback')
+    # Currently, it will make the plot, but non-interactive
+    # Also, try to fit intersection of 0.5 and normalized data, dd
+    uid = yield from subs_wrapper(scan([xbpm2], slt_ssa.h_gap, 0, 0.2, 41),
+                                  LivePlot('xbpm2_sumX', x='slt_ssa_h_gap_readback'))
 
     tbl = c[uid]["primary"]["data"]
     x = tbl["slt_ssa_h_gap_readback"].read()
