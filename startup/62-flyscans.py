@@ -153,10 +153,10 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
     # Get the scan speed
     v = ((xstop - xstart) / (xnum - 1)) / dwell  # compute "stage speed"
-    if (v > xmotor.velocity.high_limit):
+    if (np.abs(v) > xmotor.velocity.high_limit):
         raise ValueError(f'Desired motor velocity too high\n' \
                          f'Max velocity: {xmotor.velocity.high_limit}')
-    elif (v < xmotor.velocity.low_limit):
+    elif (np.abs(v) < xmotor.velocity.low_limit):
         raise ValueError(f'Desired motor velocity too low\n' \
                          f'Min velocity: {xmotor.velocity.low_limit}')
     else:
