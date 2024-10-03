@@ -419,7 +419,8 @@ def nano_xrf(xstart, xstop, xstep,
     # Setup detectors
     if extra_dets is None:
         extra_dets = []
-    dets = [sclr1, xs, xmotor, ymotor] + extra_dets
+    dets = [xs]
+    #dets = [sclr1, xs, xmotor, ymotor] + extra_dets
 
     # Record relevant metadata in the Start document, defined in 90-usersetup.py
     scan_md = {}
@@ -443,7 +444,7 @@ def nano_xrf(xstart, xstop, xstep,
 
     # Set counting time
     sclr1.preset_time.put(dwell)
-    #xs.hdf5.bulk_data_spec = 'XSP3'
+    xs.hdf5.bulk_data_spec = 'XSP3'
     xs.external_trig.put(False)
     xs.cam.acquire_time.put(dwell)
     xs.total_points.put(xnum * ynum)
