@@ -167,6 +167,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         md = {}
     md = get_stock_md(md)
 
+    # Set xs.mode to fly.
+    for det in detectors:
+        if isinstance(det, CommunitySrxXspress3Detector):
+            det.mode = SRXMode.fly
+
     # Assign detectors to flying_zebra, this may fail
     flying_zebra.detectors = detectors
     # Setup detectors, combine the zebra, sclr, and the just set detector list
@@ -688,6 +693,7 @@ def nano_scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *, extra_
     dets = [_xs] + extra_dets
     if center:
         move_to_scanner_center(timeout=10)
+
     yield from scan_and_fly_base(dets, xstart, xstop, xnum, ystart, ystop, ynum, dwell, **kwargs)
     if center:
         move_to_scanner_center(timeout=10)

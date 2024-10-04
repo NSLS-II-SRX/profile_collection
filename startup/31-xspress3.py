@@ -61,7 +61,7 @@ class SRXMode(Enum):
 
 
 class BulkXspress(HandlerBase):
-    HANDLER_NAME = "XPS3_FLY"
+    HANDLER_NAME = "XSP3_FLY"
 
     def __init__(self, resource_fn):
         self._handle = h5py.File(resource_fn, "r")
@@ -217,7 +217,6 @@ class CommunitySRXXspressTrigger(Xspress3Trigger):
         trigger_time = ttime.time()
 
         # call generate_datum on all plugins
-        print("GENERATE DATUM CALL")
         self.generate_datum(
             key=None,
             timestamp=trigger_time,
@@ -353,10 +352,11 @@ class CommunitySrxXspress3Detector(CommunityXspress3_8Channel):
     def mode(self):
         return self._mode
 
-    @property.setter
+    @mode.setter
     def mode(self, mode):
         if not isinstance(mode, SRXMode):
             raise ValueError("mode must be of type SRXMode")
+        chans = list(self.iterate_channels())
         if mode == SRXMode.step:
             self.hdf5.bulk_data_spec = 'XSP3'
             self.external_trig.put(False)
@@ -368,10 +368,9 @@ class CommunitySrxXspress3Detector(CommunityXspress3_8Channel):
             chans[5].get_external_file_ref().kind = 1
             chans[6].get_external_file_ref().kind = 1
             chans[7].get_external_file_ref().kind = 1
-            chans[8].get_external_file_ref().kind = 1
             self.get_external_file_ref().kind = 0
         if mode == SRXMode.fly:
-            self.hdf5.bulk_data_spec = 'XPS3_FLY'
+            self.hdf5.bulk_data_spec = 'XSP3_FLY'
             self.external_trig.put(True)
             chans[0].get_external_file_ref().kind = 0
             chans[1].get_external_file_ref().kind = 0
@@ -381,9 +380,8 @@ class CommunitySrxXspress3Detector(CommunityXspress3_8Channel):
             chans[5].get_external_file_ref().kind = 0
             chans[6].get_external_file_ref().kind = 0
             chans[7].get_external_file_ref().kind = 0
-            chans[8].get_external_file_ref().kind = 0
             self.get_external_file_ref().kind = 1
-        self._mode = SRXMode.step
+        self._mode = mode
 
 
     def stop(self, *, success=False):
