@@ -101,7 +101,11 @@ RE.unsubscribe(0)
 
 # Define tiled catalog
 srx_raw = from_profile("nsls2", api_key=os.environ["TILED_BLUESKY_WRITING_API_KEY_SRX"])["srx"]["raw"]
-c = srx_raw
+
+c = tiled_reading_client = from_uri(
+        "https://tiled.nsls2.bnl.gov/api/v1/metadata/srx/raw",
+        include_data_sources=True,
+)
 
 discard_liveplot_data = True
 descriptor_uids = []

@@ -153,10 +153,10 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
     # Get the scan speed
     v = ((xstop - xstart) / (xnum - 1)) / dwell  # compute "stage speed"
-    if (v > xmotor.velocity.high_limit):
+    if (np.abs(v) > xmotor.velocity.high_limit):
         raise ValueError(f'Desired motor velocity too high\n' \
                          f'Max velocity: {xmotor.velocity.high_limit}')
-    elif (v < xmotor.velocity.low_limit):
+    elif (np.abs(v) < xmotor.velocity.low_limit):
         raise ValueError(f'Desired motor velocity too low\n' \
                          f'Min velocity: {xmotor.velocity.low_limit}')
     else:
@@ -166,6 +166,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     if md is None:
         md = {}
     md = get_stock_md(md)
+
+    # Set xs.mode to fly.
+    for det in detectors:
+        if isinstance(det, CommunitySrxXspress3Detector):
+            det.mode = SRXMode.fly
 
     # Assign detectors to flying_zebra, this may fail
     flying_zebra.detectors = detectors
@@ -688,6 +693,7 @@ def nano_scan_and_fly(xstart, xstop, xnum, ystart, ystop, ynum, dwell, *, extra_
     dets = [_xs] + extra_dets
     if center:
         move_to_scanner_center(timeout=10)
+
     yield from scan_and_fly_base(dets, xstart, xstop, xnum, ystart, ystop, ynum, dwell, **kwargs)
     if center:
         move_to_scanner_center(timeout=10)

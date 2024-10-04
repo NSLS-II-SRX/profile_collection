@@ -61,7 +61,7 @@ class SRXMode(Enum):
 
 
 class BulkXspress(HandlerBase):
-    HANDLER_NAME = "XPS3_FLY"
+    HANDLER_NAME = "XSP3_FLY"
 
     def __init__(self, resource_fn):
         self._handle = h5py.File(resource_fn, "r")
@@ -220,7 +220,8 @@ class CommunitySRXXspressTrigger(Xspress3Trigger):
         self.generate_datum(
             key=None,
             timestamp=trigger_time,
-            datum_kwargs={"frame": self._abs_trigger_count},
+            datum_kwargs={"frame": self._abs_trigger_count,
+                          "channel": 1},
         )
         self._abs_trigger_count += 1
 
@@ -249,7 +250,7 @@ class Xspress3HDF5PluginWithRedis(Xspress3HDF5Plugin):
             self.root_path.put(self.root_path_str)
         if kwargs["path_template"] is None:
             self.path_template.put(self.path_template_str)
-    
+
     def stage(self, *args, **kwargs):
         self.root_path.put(self.root_path_str)
         return super().stage()
@@ -342,11 +343,46 @@ class CommunitySrxXspress3Detector(CommunityXspress3_8Channel):
             #print(f"read_attrs: {read_attrs}")
         # this is possiblely one too many places to store this
         # in the parent class it looks at if the extrenal_trig signal is high
-        self._mode = SRXMode.step
+        self.mode = SRXMode.fly
 
         # 2020-01-24
         # Commented out by AMK for using the xs3-server-IOC from TES
         # self.create_dir.put(-3)
+    @property
+    def mode(self):
+        return self._mode
+
+    @mode.setter
+    def mode(self, mode):
+        if not isinstance(mode, SRXMode):
+            raise ValueError("mode must be of type SRXMode")
+        chans = list(self.iterate_channels())
+        if mode == SRXMode.step:
+            self.hdf5.bulk_data_spec = 'XSP3'
+            self.external_trig.put(False)
+            chans[0].get_external_file_ref().kind = 1
+            chans[1].get_external_file_ref().kind = 1
+            chans[2].get_external_file_ref().kind = 1
+            chans[3].get_external_file_ref().kind = 1
+            chans[4].get_external_file_ref().kind = 1
+            chans[5].get_external_file_ref().kind = 1
+            chans[6].get_external_file_ref().kind = 1
+            chans[7].get_external_file_ref().kind = 1
+            self.get_external_file_ref().kind = 0
+        if mode == SRXMode.fly:
+            self.hdf5.bulk_data_spec = 'XSP3_FLY'
+            self.external_trig.put(True)
+            chans[0].get_external_file_ref().kind = 0
+            chans[1].get_external_file_ref().kind = 0
+            chans[2].get_external_file_ref().kind = 0
+            chans[3].get_external_file_ref().kind = 0
+            chans[4].get_external_file_ref().kind = 0
+            chans[5].get_external_file_ref().kind = 0
+            chans[6].get_external_file_ref().kind = 0
+            chans[7].get_external_file_ref().kind = 0
+            self.get_external_file_ref().kind = 1
+        self._mode = mode
+
 
     def stop(self, *, success=False):
         ret = super().stop()
