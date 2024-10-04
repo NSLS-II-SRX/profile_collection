@@ -344,7 +344,7 @@ class CommunitySrxXspress3Detector(CommunityXspress3_8Channel):
             #print(f"read_attrs: {read_attrs}")
         # this is possiblely one too many places to store this
         # in the parent class it looks at if the extrenal_trig signal is high
-        self._mode = SRXMode.step
+        self.mode = SRXMode.fly
 
         # 2020-01-24
         # Commented out by AMK for using the xs3-server-IOC from TES
@@ -383,6 +383,8 @@ class CommunitySrxXspress3Detector(CommunityXspress3_8Channel):
             chans[7].get_external_file_ref().kind = 0
             chans[8].get_external_file_ref().kind = 0
             self.get_external_file_ref().kind = 1
+        self._mode = SRXMode.step
+
 
     def stop(self, *, success=False):
         ret = super().stop()
