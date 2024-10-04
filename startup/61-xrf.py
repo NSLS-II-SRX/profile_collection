@@ -442,10 +442,11 @@ def nano_xrf(xstart, xstop, xstep,
     scan_md['scan']['snake'] = 1 if flag_snake else 0
     scan_md['scan']['shape'] = (xnum, ynum)
 
+    # Set xs mode to step.
+    xs.mode = SRXMode.step
+
     # Set counting time
     sclr1.preset_time.put(dwell)
-    xs.hdf5.bulk_data_spec = 'XSP3'
-    xs.external_trig.put(False)
     xs.cam.acquire_time.put(dwell)
     xs.total_points.put(xnum * ynum)
     if (merlin in dets):
