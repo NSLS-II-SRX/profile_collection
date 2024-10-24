@@ -419,8 +419,7 @@ def nano_xrf(xstart, xstop, xstep,
     # Setup detectors
     if extra_dets is None:
         extra_dets = []
-    dets = [xs]
-    #dets = [sclr1, xs, xmotor, ymotor] + extra_dets
+    dets = [sclr1, xs, xmotor, ymotor] + extra_dets
 
     # Record relevant metadata in the Start document, defined in 90-usersetup.py
     scan_md = {}
@@ -479,16 +478,12 @@ def nano_xrf(xstart, xstop, xstep,
                           {'all': livecallbacks})
 
     # Open shutter
-    # if (shutter):
-    #     yield from mv(shut_b,'Open')
     yield from check_shutters(shutter, 'Open')
 
     # grid scan
     uid = yield from myplan
 
     # Close shutter
-    # if (shutter):
-    #     yield from mv(shut_b,'Close')
     yield from check_shutters(shutter, 'Close')
 
     return uid

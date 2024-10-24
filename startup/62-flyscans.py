@@ -139,7 +139,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     # Check if logging directory exists
     log_file = None
     if (verbose):
-        log_path = os.path.join(userdatadir, 'timing_logs')
+        log_path = os.path.join("/home/xf05id1", 'timing_logs')
         os.makedirs(os.path.join(log_path), exist_ok=True)
         # We do not have the updated scan id yet because we haven't run the run_decorator
         # We are assuming we can just take the previous scan ID and add one

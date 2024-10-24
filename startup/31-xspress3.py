@@ -685,3 +685,40 @@ except Exception as ex:
     xs = None
     print("\nUnexpected error connecting to xs.\n")
     print(ex, end="\n\n")
+
+
+def rechunk_fluor(uid):
+    """
+    Improve the fluor chunk shapes.
+    Running this will greatly improve the data loading time.
+    """
+    STREAM_NAME='stream0'
+    FIELD_NAME='xs_fluor'
+
+    # Find the shape of the fluor data.
+    run = tiled_reading_client[uid]
+    fluor_shape = run[STREAM_NAME]["data"][FIELD_NAME].shape
+
+    # Find which descriptors have the fluor key in them.
+    descriptor_indexes = [
+        index
+        for index, descriptor in enumerate(run[STREAM_NAME].descriptors)
+        if FIELD_NAME in descriptor["data_keys"]
+    ]
+
+    # Override the default chunking.
+    for index in descriptor_indexes:
+        srx_raw[uid][STREAM_NAME].patch_metadata(
+            [
+                {
+                    "op": "add",
+                    "path": f"/descriptors/{index}/data_keys/{FIELD_NAME}/chunks",
+                    "value": [
+                        [1] * fluor_shape[0],
+                        [fluor_shape[1]],
+                        [fluor_shape[2]],
+                        [fluor_shape[3]],
+                    ],
+                }
+            ]
+        )
