@@ -429,7 +429,18 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             toc(t_datacollect, str='  move start', log_file=log_file)
         @stage_decorator([xmotor])
         def move_row():
-            yield from abs_set(xmotor, row_stop, wait=True)
+            # Calculate time to move from start to end
+            MV_DELAY = 10  # Extra time for move
+            t_mv = (xnum * dwell) + (2 * accel_time) + MV_DELAY
+            # Move from start to finish for the row
+            try:
+                yield from abs_set(xmotor, row_stop, wait=True, timeout=t_mv)
+            except WaitTimeoutError as e:
+                print(f"{ttime.ctime()} Move did not complete!")
+                print(f"  Current position: {xmotor.user_readback.get()}")
+                print(f"  Desired position: {row_stop}")
+                print(f"  Move status:      {xmotor.moving}")
+                print("Continuing...")
         if verbose:
             yield from timer_wrapper(move_row, log_file=log_file)
         else:
