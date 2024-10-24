@@ -73,8 +73,11 @@ def check_shutters(check, status):
                 # yield from abs_set(shut_b, "Open", wait=True, timeout=10)
                 yield from abs_set(shut_b, "Open", wait=True)
             print('Opening D-hutch shutter...')
-            yield from abs_set(shut_d.request_open, 1)
-            yield from bps.sleep(0.050)
+            try:
+                yield from abs_set(shut_d.request_open, 1, wait=True, timeout=1)
+            except WaitTimeoutError:
+                print("Timeout opening D-shutter (1/10) ...") 
+            yield from bps.sleep(1)
             i = 1
             while (shut_d.read()['shut_d_request_open']['value'] == 0):
                 yield from bps.sleep(1)
