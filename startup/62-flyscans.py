@@ -431,11 +431,14 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         def move_row():
             # Calculate time to move from start to end
             MV_DELAY = 10  # Extra time for move
+            accel_time = xmotor.acceleration.get()  # acceleration time
             t_mv = (xnum * dwell) + (2 * accel_time) + MV_DELAY
             # Move from start to finish for the row
             try:
-                yield from abs_set(xmotor, row_stop, wait=True, timeout=t_mv)
+                st_mv = yield from abs_set(xmotor, row_stop)
+                st_mv.wait(timeout=t_mv)
             except WaitTimeoutError as e:
+                # print(e)
                 print(f"{ttime.ctime()} Move did not complete!")
                 print(f"  Current position: {xmotor.user_readback.get()}")
                 print(f"  Desired position: {row_stop}")
