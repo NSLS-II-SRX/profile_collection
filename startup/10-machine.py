@@ -370,8 +370,8 @@ class Energy(PseudoPositioner):
 
 
 cal_data_2024cycle3 = {
-    "d_111": 3.1290832338991033,
-    "delta_bragg": 0.22339927366708265,
+    "d_111": 3.129134855941129,
+    "delta_bragg": 0.22197113304330732,
     "C2Xcal": 3.6,
     "T2cal": 15.0347755916,
     "xoffset": 24.65,

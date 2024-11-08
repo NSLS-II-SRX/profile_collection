@@ -219,7 +219,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
 
 
 def xanes_batch_plan(xypos=[], erange=[], estep=[], acqtime=1.0,
-                     waittime=10, peakup_N=2, peakup_E=None):
+                     repeat_point=1, waittime=10, peakup_N=2, peakup_E=None):
     """
     Setup a batch XANES scan at multiple points.
     This scan can also run peakup_fine() between points.
@@ -228,6 +228,7 @@ def xanes_batch_plan(xypos=[], erange=[], estep=[], acqtime=1.0,
     erange      <list>  A list of energy points to send to the XANES plan
     estep       <list>  A list of energy steps to send to the XANES plan
     acqtime     <float> Acquisition time for each data point.
+    repeat_point<int>   Repeat a particular point N times
     peakup_N    <int>   Run a peakup every peakup_N scans. Default is no peakup
     peakup_E    <float> The energy to run peakup at. Default is current energy
 
@@ -272,7 +273,9 @@ def xanes_batch_plan(xypos=[], erange=[], estep=[], acqtime=1.0,
             yield from peakup()
 
         # Run the energy scan
-        yield from xanes_plan(erange=erange, estep=estep, acqtime=acqtime)
+        for j in range(repeat_point):
+            print(f"Scan {i+1}/{repeat_point}...")
+            yield from xanes_plan(erange=erange, estep=estep, acqtime=acqtime)
 
         # Wait
         if (i != (N-1)):

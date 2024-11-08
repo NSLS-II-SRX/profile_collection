@@ -352,6 +352,11 @@ class CommunitySrxXspress3Detector(CommunityXspress3_8Channel):
     def mode(self):
         return self._mode
 
+    def describe(self):
+        res = super().describe()
+        res['xs_fluor']["chunks"] = (1, "auto", -1, -1)
+        return res
+
     @mode.setter
     def mode(self, mode):
         if not isinstance(mode, SRXMode):
