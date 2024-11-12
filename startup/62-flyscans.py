@@ -91,7 +91,7 @@ def toc(t0, str='', log_file=None):
     if log_file is not None:
         with open(log_file, 'a') as f:
             f.write(s)
-    
+
 
 
 # changed the flyer device to be aware of fast vs slow axis in a 2D scan
@@ -608,7 +608,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
         # Set TimeSeries to collect correct number of points
         yield from abs_set(xs.channel01.mcaroi.ts_num_points, xnum, wait=True, timeout=10)
-        
+
         ystep = 0
         for step in np.linspace(ystart, ystop, ynum):
             yield from abs_set(scanrecord.time_remaining,
