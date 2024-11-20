@@ -333,6 +333,36 @@ def check_fermat_plan(xrange, yrange, dr, factor):
     print(f'The scan will have {len(line.get_xdata())} points.')
 
 
+import h5py
+from skimage.io import imsave
+
+def export_merlin_from_tiled(scanid=-1, wd=None):
+    if wd is None:
+        wd = "."
+
+    # Get all documents for a run
+    run = c[int(scanid)]
+    scanid = int(run.start["scan_id"])
+
+    docs = [doc for doc in run.documents() if "resource" in doc[0]]
+    merlin_docs = [doc for doc in docs if "MERLIN" in doc[1]["spec"]]
+    merlin_files = [doc[1]["resource_path"] for doc in merlin_docs]
+
+    N_files = len(merlin_files)
+    idx = 0
+    for fn in merlin_files:
+        print(f"Opening file {fn.split('/')[-1]} ({(idx // N_files)+1:3d}/{N_files:3d})...")
+        with h5py.File(fn, 'r') as f:
+            d = f["entry/data/data"]
+            N, _, _ = d.shape
+            for i in range(N):
+                # print(f"  Writing frame ({i+1:3d}/{N:3d})...")
+                img = d[i, :, :]
+                img_fn = os.path.join(wd, f"scan{scanid}_{idx:08d}.tif")
+                imsave(img_fn, img)
+                idx += 1
+
+
 def export_flying_merlin2tiff(scanid=-1, wd=None):
     if wd is None:
         wd = '/home/xf05id1/current_user_data/'
