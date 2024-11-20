@@ -136,6 +136,8 @@ def reset_scanner_velocity():
     """
     Reset the scanner stages to their nominal speeds
     """
+    for d in [nano_stage.topx, nano_stage.topz, nano_stage.y, nano_stage.z]:
+        d.velocity.set(500)  # um/s
     for d in [nano_stage.sx, nano_stage.sy, nano_stage.sz]:
         d.velocity.set(100)  # um/s
     nano_stage.th.velocity.set(10_000)  # mdeg/s
