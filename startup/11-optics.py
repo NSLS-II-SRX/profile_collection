@@ -129,10 +129,15 @@ slt_pb = SRXSlitsPB("XF:05IDA-OP:1{Slt:2-Ax:", name="slt_pb")
 
 
 # Setup HFM Mirror
+class SRXHFMFinePitch(PVPositionerPC):
+    setpoint = Cpt(EpicsSignal, "E-SP")  # XF:05IDA-OP:1{Mir:1-Ax:PF}E-SP
+    readback = Cpt(EpicsSignalRO, "E-I")   # XF:05IDA-OP:1{Mir:1-Ax:PF}E-I
+
 class SRXHFM(Device):
     x = Cpt(EpicsMotor, "X}Mtr")
     y = Cpt(EpicsMotor, "Y}Mtr")
     pitch = Cpt(EpicsMotor, "P}Mtr")
+    fine_pitch = Cpt(SRXHFMFinePitch, "XF:05IDA-OP:1{Mir:1-Ax:PF}", name="fine_pitch", add_prefix=())
     bend = Cpt(EpicsMotor, "Bend}Mtr")
 
 
