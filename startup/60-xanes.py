@@ -106,6 +106,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
         exgap = np.append(exgap, ex)
 
     # Register the detectors
+    det_xs.mode = SRXMode.step
     det = [ring_current, sclr1, xbpm2, det_xs]
     # Setup xspress3
     yield from abs_set(det_xs.external_trig, False)

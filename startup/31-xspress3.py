@@ -354,7 +354,15 @@ class CommunitySrxXspress3Detector(CommunityXspress3_8Channel):
 
     def describe(self):
         res = super().describe()
-        res['xs_fluor']["chunks"] = (1, "auto", -1, -1)
+        if self.mode == SRXMode.fly:
+            res['xs_fluor']["chunks"] = (1, "auto", -1, -1)
+            # Is this a "better", more future-proof way to do it?
+            # This way it should automatically update the key for xs or xs2
+            # and if we change the fluorescence key name, _f_key?
+            # Maybe unnecessary, but I'll leave the comment in case this is helpful
+            # in the future
+            # res[f'{self.name}_{self._f_key}']["chunks"] = (1, "auto", -1, -1)
+
         return res
 
     @mode.setter
