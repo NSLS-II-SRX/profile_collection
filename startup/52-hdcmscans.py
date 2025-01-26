@@ -98,27 +98,35 @@ def scan_all_foils(el_list = ['V', 'Cr', 'Fe', 'Cu', 'Zn', 'Se']):
        
 
 
-def scanderive(xaxis, yaxis, ax, xlabel='', ylabel='', title=''):
+def scanderive(xaxis, yaxis, ax, xlabel='', ylabel='', title='', edge_ind=None):
     dyaxis = np.gradient(yaxis, xaxis)
-    edge = xaxis[dyaxis.argmin()]
+
+    if edge_ind is None:
+        edge_ind = dyaxis.argmin()
+
+    edge = xaxis[edge_ind]
+    # if xaxis[-1] < 1000:
+    #     edge = xaxis[dyaxis.argmin()]
+    # else:
+    #     edge = xaxis[dyaxis.argmax()]
 
     # fig, ax = plt.subplots()
     # p = plt.plot(xaxis, dyaxis, '-')
     ax.plot(xaxis, dyaxis, '-')
     # ax = plt.gca()
     ax.ticklabel_format(useOffset=False)
-    p = ax.plot(edge, dyaxis[dyaxis.argmin()], '*r', markersize=25)
+    p = ax.plot(edge, dyaxis[edge_ind], '*r', markersize=25)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(title)
 
-    return p, xaxis, dyaxis, edge
+    return p, xaxis, dyaxis, edge_ind
 
 
-def find_edge(scanid=-1, use_xrf=True, element=''):
-    tbl = db.get_table(db[scanid], stream_name='primary')
-    braggpoints = np.array(tbl['energy_bragg'])
-    energypoints = np.array(tbl['energy_energy_setpoint'])
+def find_edge(scanid, use_xrf=True, element='', sclr_key="sclr_i0"):
+    tbl = c[scanid]["primary"]["data"]
+    braggpoints = tbl["energy_bragg"].read()
+    energypoints = tbl["energy_energy_setpoint"].read()
 
     if use_xrf is False:
         it = np.array(tbl['sclr_it'])
@@ -128,53 +136,31 @@ def find_edge(scanid=-1, use_xrf=True, element=''):
         mu = -1 * np.log(np.abs(norm_tau))
     else:
         if (element == ''):
-            print('Please send the element name')
+            raise ValueError('Please send the element name')
         else:
-            try:
-                ch_name = 'Det1_' + element + '_ka1'
-                mu = tbl[ch_name]
-                ch_name = 'Det2_' + element + '_ka1'
-                mu = mu + tbl[ch_name]
-                ch_name = 'Det3_' + element + '_ka1'
-                mu = mu + tbl[ch_name]
-                ch_name = 'Det4_' + element + '_ka1'
-                mu = mu + tbl[ch_name]
-                mu = np.array(mu)
-            except Exception:
-                ch_name = 'xs_channel01_mcaroi01_total_rbv'
-                mu = tbl[ch_name]
-                ch_name = 'xs_channel02_mcaroi01_total_rbv'
-                mu = mu + tbl[ch_name]
-                ch_name = 'xs_channel03_mcaroi01_total_rbv'
-                mu = mu + tbl[ch_name]
-                ch_name = 'xs_channel04_mcaroi01_total_rbv'
-                mu = mu + tbl[ch_name]
-                ch_name = 'xs_channel05_mcaroi01_total_rbv'
-                mu = mu + tbl[ch_name]
-                ch_name = 'xs_channel06_mcaroi01_total_rbv'
-                mu = mu + tbl[ch_name]
-                ch_name = 'xs_channel07_mcaroi01_total_rbv'
-                mu = mu + tbl[ch_name]
-                
-                mu = np.array(mu)
+            mu = np.zeros((tbl["xs_channel01_mcaroi01_total_rbv"].shape))
+            for i in range(1, 8):
+                ch_name = f"xs_channel{i:02}_mcaroi01_total_rbv"
+                mu += tbl[ch_name].read()
+
+            # get scaler data
+            I0 = tbl[sclr_key].read()
+
+            mu /= I0
 
     fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
     fig.suptitle(element)
-    p, xaxis, yaxis, edge = scanderive(braggpoints, mu, ax1, xlabel='Bragg [deg]', ylabel='Gradient')
-    Ep, Exaxis, Eyaxis, Eedge = scanderive(energypoints, mu, ax2, xlabel='Energy [eV]')
+    p, xaxis, yaxis, edge_ind = scanderive(braggpoints, mu, ax1, xlabel='Bragg [deg]', ylabel='Gradient')
+    edge = braggpoints[edge_ind]
+    Ep, Exaxis, Eyaxis, edge_ind = scanderive(energypoints, mu, ax2, xlabel='Energy [eV]', edge_ind=edge_ind)
+    Eedge = energypoints[edge_ind]
 
     return p, xaxis, yaxis, edge, Eedge
 
 
 def braggcalib(scanlogDic={}, use_xrf=True, man_correction={}):
-    # If scanlogDic is empty, we will use this hard coded dictionary
-    # 2019-1 Apr 23
-
-    if (scanlogDic == {}):
-        scanlogDic = {'V':  26058,
-                      'Cr': 26059,
-                      'Se': 26060,
-                      'Zr': 26061}
+    if scanlogDic == {}:
+        raise ValueError("scanlogDic cannot be empty!")
 
     fitfunc = lambda pa, x: (12.3984 /
                              (2 * pa[0] * np.sin((x + pa[1]) * np.pi / 180)))
@@ -183,18 +169,19 @@ def braggcalib(scanlogDic={}, use_xrf=True, man_correction={}):
     energyDic = {'Cu': 8.979, 'Se': 12.658, 'Zr': 17.998, 'Nb': 18.986,
                  'Ti': 4.966, 'Cr': 5.989, 'Co': 7.709, 'V': 5.465,
                  'Ni': 8.333, 'Fe': 7.112, 'Mn': 6.539, 'Zn': 9.659}
+
     BraggRBVDic = {}
     EnergyRBVDic = {}
     fitBragg = []
     fitEnergy = []
 
     for element in scanlogDic:
-        print(scanlogDic[element])
+        print(f"{element}: {scanlogDic[element]}")
         current_scanid = scanlogDic[element]
 
         p, xaxis, yaxis, edge, Eedge = find_edge(scanid=current_scanid,
-                                          use_xrf=use_xrf,
-                                          element=element)
+                                                 use_xrf=use_xrf,
+                                                 element=element)
 
         BraggRBVDic[element] = round(edge, 6)
         EnergyRBVDic[element] = round(Eedge, 6)
