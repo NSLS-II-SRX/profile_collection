@@ -182,12 +182,33 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
     total_points = Cpt(Signal,
                        value=1,
                        doc="The total number of points to be taken")
+    path_write_start = "W:\\"
+    path_read_start = "/nsls2/data/srx/"
+
+    def root_path_str():
+        # data_session = self._redis_dict["data_session"]
+        # cycle = self._redis_dict["cycle"]
+        data_session = RE.md["data_session"]
+        cycle = RE.md["cycle"]
+        if "Commissioning" in get_proposal_type():
+            root_path = f"proposals/commissioning/{data_session}/assets/dexela/"
+        else:
+            root_path = f"proposals/{cycle}/{data_session}/assets/dexela/"
+        return root_path
+
+    def path_template_str(root_path):
+        path_template = "%Y/%m/%d/"
+        return root_path + path_template
+
     hdf5 = Cpt(DexelaHDFWithFileStore, 'HDF1:',
                read_attrs=[],
                configuration_attrs=[],
-               write_path_template='W:\\assets\\dexela\\%Y\\%m\\%d\\',
-               read_path_template='/nsls2/data/srx/assets/dexela/%Y/%m/%d/',
-               root='/nsls2/data/srx/assets/dexela/')
+            #    write_path_template='W:\\assets\\dexela\\%Y\\%m\\%d\\',
+            #    read_path_template='/nsls2/data/srx/assets/dexela/%Y/%m/%d/',
+            #    root='/nsls2/data/srx/assets/dexela/',
+               write_path_template=path_write_start + path_template_str(root_path_str()).replace("/", "\\"),
+               read_path_template=path_read_start + path_template_str(root_path_str()),
+               root=path_read_start+root_path_str())
     # this is used as a latch to put the xspress3 into 'bulk' mode
     # for fly scanning.  Do this is a signal (rather than as a local variable
     # or as a method so we can modify this as part of a plan
@@ -230,7 +251,8 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
 
 try:
     dexela = SRXDexelaDetector('XF:05IDD-ES{Dexela:1}', name='dexela')
-    dexela.read_attrs = ['hdf5', 'stats1', 'stats2']
+    dexela.read_attrs = ['hdf5']
+    # dexela.read_attrs = ['hdf5', 'stats1', 'stats2']
     # Automatically warmup if necessary
     if np.array(dexela.cam.array_size.get()).sum() == 0:
         print("  Warmup...", end="", flush=True)
