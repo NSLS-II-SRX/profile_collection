@@ -157,11 +157,17 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
             roi_key.append(getattr(det_xs.channel4.rois, roi_name).value.name)
         except NameError:
             pass
-    # the following code will fail if det_xs is not a new xspress3 IOC ophyd object
-    print(f"roi_key: {roi_key}")
+
+
+    def time_per_point(name, doc, st=ttime.time()):
+        if (doc[0] == "event_page"):
+            if ('seq_num' in doc.keys()):
+                scanrecord.time_remaining.put((doc['time'] - st) / doc['seq_num'] *
+                                          (len(ept) - doc['seq_num']) / 3600)
 
     livetableitem.append(roi_key[0])
     livecallbacks.append(LiveTable(livetableitem))
+    livecallbacks.append(time_per_point)
     liveploty = roi_key[0]
     liveplotx = energy.energy.name
 
