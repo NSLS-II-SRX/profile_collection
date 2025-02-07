@@ -257,8 +257,10 @@ class Energy(PseudoPositioner):
             elistIn = []
             for line in f:
                 num = [float(x) for x in line.split()]
-                uposlistIn.append(num[0])
-                elistIn.append(num[1])
+                # Check in case there is an extra line at the end of the calibration file
+                if len(num) == 2:
+                    uposlistIn.append(num[0])
+                    elistIn.append(num[1])
 
         self.etoulookup = InterpolatedUnivariateSpline(elistIn, uposlistIn)
         self.utoelookup = InterpolatedUnivariateSpline(uposlistIn, elistIn)
