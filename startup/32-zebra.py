@@ -498,7 +498,7 @@ class SRXFlyer1Axis(Device):
     slow_axis = Cpt(Signal, value="VER", kind="config")
     mode = Cpt(Signal, value='position', kind='config')
 
-    _staging_delay = 0.010
+    _staging_delay = 0.100  # used to be 10 ms, brute force this to work
 
     @property
     def encoder(self):
@@ -639,6 +639,14 @@ class SRXFlyer1Axis(Device):
                 ttime.sleep(self._staging_delay)
                 # It worked -- now add it to this list of sigs to unstage.
                 self._original_vals[sig] = original_vals[sig]
+            ## TODO: THIS IS BAD
+            ## We should fix the underlying cause, and not resend all the commands
+            for sig, val in stage_sigs.items():
+                self.log.debug("Setting %s to %r (original value: %r)",
+                               self.name,
+                               val, original_vals[sig])
+                sig.set(val, timeout=10).wait()
+                ttime.sleep(self._staging_delay)
             devices_staged.append(self)
 
             # Call stage() on child devices.

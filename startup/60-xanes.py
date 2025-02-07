@@ -160,10 +160,14 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
 
 
     def time_per_point(name, doc, st=ttime.time()):
-        if (doc[0] == "event_page"):
-            if ('seq_num' in doc.keys()):
-                scanrecord.time_remaining.put((doc['time'] - st) / doc['seq_num'] *
-                                          (len(ept) - doc['seq_num']) / 3600)
+        ## Don't do this. Make a proper fix.
+        try:
+            if (doc[0] == "event_page"):
+                if ('seq_num' in doc.keys()):
+                    scanrecord.time_remaining.put((doc['time'] - st) / doc['seq_num'] *
+                                              (len(ept) - doc['seq_num']) / 3600)
+        except Exception:
+            pass
 
     livetableitem.append(roi_key[0])
     livecallbacks.append(LiveTable(livetableitem))
