@@ -22,6 +22,7 @@ from tiled.client import from_profile, from_uri
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)  # For 53-slitscans
 warnings.filterwarnings(action="ignore", message="MSG_SIZE_TOO_LARGE")  # Kafka messages
+warnings.filterwarnings(action="ignore", message="About to call kickoff()")  #  Future deprecation warning for kickoff
 # Removes Qt: Session management error
 if "SESSION_MANAGER" in os.environ:
     del os.environ["SESSION_MANAGER"]

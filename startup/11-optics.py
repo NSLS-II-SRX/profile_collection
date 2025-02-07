@@ -257,6 +257,18 @@ class SRXSSACalc(Device):
 slt_ssa = SRXSSACalc("XF:05IDB-OP:1{Slt:SSA-Ax:", name="slt_ssa")
 
 
+class SRXSSABLADEO(PVPositionerPC):
+    setpoint = Cpt(EpicsSignal, "xp")  # XF:05IDB-OP:1{Slt:SSA-Ax:X}xp.VAL
+    readback = Cpt(EpicsSignalRO, "t2.A")  # XF:05IDB-OP:1{Slt:SSA-Ax:X}t2.A
+
+class SRXSSABLADEI(PVPositionerPC):
+    setpoint = Cpt(EpicsSignal, "xn")
+    readback = Cpt(EpicsSignalRO, "t2.B")
+
+ssa_ob = SRXSSABLADEO("XF:05IDB-OP:1{Slt:SSA-Ax:X}", name="ssa_ob")
+ssa_ib = SRXSSABLADEI("XF:05IDB-OP:1{Slt:SSA-Ax:X}", name="ssa_ib")
+
+
 # Setup fast shutter
 # This is not currently installed at SRX and is commented out
 # class SRXSOFTINP(Device):
