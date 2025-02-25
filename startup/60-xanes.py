@@ -134,7 +134,7 @@ def xanes_plan(erange=[], estep=[], acqtime=1., samplename='', filename='',
 
     # Peak up DCM at first scan point
     if (align is True):
-        yield from peakup_fine(shutter=shutter)
+        yield from peakup(shutter=shutter)
 
     # Setup the live callbacks
     livecallbacks = []
