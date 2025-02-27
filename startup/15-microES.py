@@ -20,13 +20,15 @@ jjslits = SRXJJSlits('XF:05IDD-OP:1{Slt:KB-Ax:', name='jjslits')
 
 # Attenuator box
 class SRXAttenuators(Device):
-    Fe_shutter = Cpt(EpicsSignal, '1-Cmd')
-    Cu_shutter = Cpt(EpicsSignal, '2-Cmd')
-    Si_shutter = Cpt(EpicsSignal, '3-Cmd')
-    Mo_shutter = Cpt(EpicsSignal, '4-Cmd')
+    Al_050um = Cpt(EpicsSignal, '8-Cmd')  # XF:05IDD-ES{IO:4}DO:8-Cmd
+    Al_100um = Cpt(EpicsSignal, '7-Cmd')  # XF:05IDD-ES{IO:4}DO:7-Cmd
+    Al_250um = Cpt(EpicsSignal, '6-Cmd')  # XF:05IDD-ES{IO:4}DO:6-Cmd
+    Al_500um = Cpt(EpicsSignal, '5-Cmd')  # XF:05IDD-ES{IO:4}DO:5-Cmd
+    Si_250um = Cpt(EpicsSignal, '2-Cmd')  # XF:05IDD-ES{IO:4}DO:2-Cmd
+    Si_650um = Cpt(EpicsSignal, '1-Cmd')  # XF:05IDD-ES{IO:4}DO:1-Cmd
 
-attenuators = SRXAttenuators('XF:05IDD-ES{IO:2}DO:', name='attenuators')
-# shut_d = attenuators.Mo_shutter
+
+attenuators = SRXAttenuators('XF:05IDD-ES{IO:4}DO:', name='attenuators')
 
 
 # micro-KB mirrors from XFM
