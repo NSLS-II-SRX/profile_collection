@@ -161,12 +161,18 @@ class SRXMerlin(SingleTrigger, MerlinDetector):
                read_attrs=[],
                # read_path_template='/nsls2/xf05id1/XF05ID1/MERLIN/%Y/%m/%d/',
                # read_path_template='/nsls2/xf05id1/XF05ID1/MERLIN/2021/02/11/',
-               read_path_template='/nsls2/data/srx/assets/merlin/%Y/%m/%d/',
+               ## TODO: Andy doesn't like this
+               # This needs to look at the currently posted proposal and use that to set the path
+               # See the dexela for one way - not the best - to do this
+               # read_path_template='/nsls2/data3/srx/proposals/2025-1/pass-317247/assets/merlin/%Y/%m/%d/',
+               read_path_template="/this/does/not/exist/",
                configuration_attrs=[],
                # write_path_template='/epicsdata/merlin/%Y/%m/%d/',
                # write_path_template='/epicsdata/merlin/2021/02/11/',
-               write_path_template='/nsls2/data/srx/assets/merlin/%Y/%m/%d/',
-               root='/nsls2/data/srx/assets/merlin')
+               # write_path_template='/nsls2/data/srx/assets/merlin/%Y/%m/%d/',
+               # write_path_template='/nsls2/data3/srx/proposals/2025-1/pass-317247/assets/merlin/%Y/%m/%d/',
+               write_path_template="/this/does/not/exist/",
+               root='/nsls2/data3/srx/proposals/2025-1/pass-317247/assets/merlin')
 
     stats1 = Cpt(StatsPlugin, 'Stats1:')
     stats2 = Cpt(StatsPlugin, 'Stats2:')
