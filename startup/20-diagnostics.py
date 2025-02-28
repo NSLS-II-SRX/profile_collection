@@ -2,17 +2,21 @@ print(f'Loading {__file__}...')
 
 
 from ophyd import EpicsSignal, EpicsSignalRO, Device, TetrAMM, Kind
-from ophyd import Component as Cpt
+from ophyd import Component as Cpt, FC
 from ophyd.status import StatusBase, wait
 from ophyd.quadem import NSLS_EM, QuadEM, QuadEMPort
 
 
 # BPM1 Statistics
 class BPMStats(Device):
-    tot1 = Cpt(EpicsSignal, 'Stats1:Total_RBV')
-    tot2 = Cpt(EpicsSignal, 'Stats2:Total_RBV')
-    tot3 = Cpt(EpicsSignal, 'Stats3:Total_RBV')
-    tot4 = Cpt(EpicsSignal, 'Stats4:Total_RBV')
+    # tot1 = Cpt(EpicsSignal, 'Stats1:Total_RBV')
+    # tot2 = Cpt(EpicsSignal, 'Stats2:Total_RBV')
+    # tot3 = Cpt(EpicsSignal, 'Stats3:Total_RBV')
+    # tot4 = Cpt(EpicsSignal, 'Stats4:Total_RBV')
+    tot1 = Cpt(EpicsSignalRO, 'Stats1:Total_RBV')
+    tot2 = Cpt(EpicsSignalRO, 'Stats2:Total_RBV')
+    tot3 = Cpt(EpicsSignalRO, 'Stats3:Total_RBV')
+    tot4 = Cpt(EpicsSignalRO, 'Stats4:Total_RBV')
 
 
 bpm1_stats = BPMStats('XF:05IDA-BI:1{BPM:1-Cam:1}', name='bpm1_stats')
@@ -188,3 +192,49 @@ xbpm1 = HACK_SRX_NSLS_EM('XF:05ID-BI{EM:BPM1}', name='xbpm1')
 xbpm2 = HACK_SRX_NSLS_EM('XF:05ID-BI{EM:BPM2}', name='xbpm2')
 
 
+# EJM addition
+class ScalerPreAmp(Device):
+    sens_num = Cpt(EpicsSignal, 'sens_num') # XF:05IDD-CT{SR570:N}sens_num
+    sens_unit = Cpt(EpicsSignal, 'sens_unit') # XF:05IDD-CT{SR570:N}sens_unit
+    offset_on = Cpt(EpicsSignal, 'offset_on') # XF:05IDD-CT{SR570:N}offset_on
+    offset_sign = Cpt(EpicsSignal, 'offset_sign') # XF:05IDD-CT{SR570:N}offset_sign
+    offset_num = Cpt(EpicsSignal, 'offset_num') # XF:05IDD-CT{SR570:N}offset_num
+    offset_unit = Cpt(EpicsSignal, 'offset_unit') # XF:05IDD-CT{SR570:N}offset_unit
+    off_u_put = Cpt(EpicsSignal, 'off_u_put') # XF:05IDD-CT{SR570:N}off_u_put
+    offset_u_tweak = Cpt(EpicsSignal, 'offset_u_tweak') # XF:05IDD-CT{SR570:N}offset_u_tweak
+    offset_cal = Cpt(EpicsSignal, 'offset_cal') # XF:05IDD-CT{SR570:N}offset_cal
+
+    # sens_num_real = FC(EpicsSignal, '{self.prefix}sens_num_real')
+
+    # Multiplier values
+    _mult_real = {
+        0 : 1,
+        1 : 2, 
+        2 : 5,
+        3 : 10,
+        4 : 20,
+        5 : 50,
+        6 : 100,
+        7 : 200,
+        8 : 500
+    }
+
+    # Unit multipliers into Amps
+    _unit_mult_real = {
+        0 : 1E-12,
+        1 : 1E-9,
+        2 : 1E-6,
+        3 : 1E-3
+    }
+
+    # Unit strings
+    _unit_str_real = {
+        0 : 'pA',
+        1 : 'nA',
+        2 : 'μA',
+        3 : 'mA'
+    }
+
+i0_preamp = ScalerPreAmp('XF:05IDD-CT{SR570:1}', name='i0_preamp')
+im_preamp = ScalerPreAmp('XF:05IDD-CT{SR570:2}', name='im_preamp')
+it_preamp = ScalerPreAmp('XF:05IDD-CT{SR570:3}', name='it_preamp')

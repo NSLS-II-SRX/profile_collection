@@ -252,8 +252,14 @@ def nano_knife_edge(motor, start, stop, stepsize, acqtime,
 
 
 # Written quickly
-def plot_knife_edge(scanid=-1, fluor_key='xs_fluor', use_trans=False, normalize=True, plot_guess=False,
-                    bin_low=None, bin_high=None, plotme=None):
+def plot_knife_edge(scanid=-1,
+                    fluor_key='xs_fluor',
+                    use_trans=False,
+                    normalize=True,
+                    plot_guess=False,
+                    bin_low=934,
+                    bin_high=954,
+                    plotme=None):
     # Get the scanid
     bs_run = c[int(scanid)]
     id_str = bs_run.start['scan_id']
@@ -281,10 +287,13 @@ def plot_knife_edge(scanid=-1, fluor_key='xs_fluor', use_trans=False, normalize=
     if (use_trans == True):
         y = ds['it'].read() / ds['im'].read()
     else:
-        if bin_low is None:
-            bin_low = xs.channel01.mcaroi01.min_x.get()
-        if bin_high is None:
-            bin_high = xs.channel01.mcaroi01.min_x.get() + xs.channel01.mcaroi01.size_x.get()
+        if bin_low is None or bin_high is None:
+            if xs.channel01.mcaroi01.size_x.get() != 0:
+                bin_low = xs.channel01.mcaroi01.min_x.get()
+                bin_high = bin_low + xs.channel01.mcaroi01.size_x.get()
+            else:
+                raise ValueError('Must define bin_high and bin_low or set roi on Xpress3.')
+            
         d = ds[fluor_key][..., bin_low:bin_high].sum(axis=(-2, -1)).squeeze()
         if 'i0' in ds_keys:
             I0 = ds['i0'].read().squeeze()
@@ -314,17 +323,17 @@ def plot_knife_edge(scanid=-1, fluor_key='xs_fluor', use_trans=False, normalize=
     # def f_offset_erf(x, A, sigma, x0, y0):
     # def f_two_erfs(x, A1, sigma1, x1, y1,
     #                   A2, sigma2, x2, y2):
-    p_guess = [0.5*np.amax(y),
+
+    p_guess = [0.5 * np.amax(y),
                0.500,
-               x[np.argmax(y)] - 1.0,
-               np.amin(y),
-               -0.5*np.amax(y),
+               x[np.argmax(dydx)],
+               -0.5 * np.amax(y),
                0.500,
-               x[np.argmax(y)] + 1.0,
+               x[np.argmin(dydx)],
                np.amin(y)]
     try:
         # popt, _ = curve_fit(f_offset_erf, x, y, p0=p_guess)
-        popt, _ = curve_fit(f_two_erfs, x, y, p0=p_guess)
+        popt, _ = curve_fit(f_two_erfs_one_off, x, y, p0=p_guess)
     except:
         print('Raw fit failed.')
         popt = p_guess
@@ -342,9 +351,7 @@ def plot_knife_edge(scanid=-1, fluor_key='xs_fluor', use_trans=False, normalize=
 
     # Plot variables
     x_plot = np.linspace(np.amin(x), np.amax(x), num=100)
-    y_plot = f_two_erfs(x_plot, *popt)
-    # y_plot = f_offset_erf(x_plot, *popt)
-    dydx_plot = np.gradient(y_plot, x_plot)
+    y_plot = f_two_erfs_one_off(x_plot, *popt)
 
     # Display fit of raw data
     if (plotme is None):
@@ -355,7 +362,7 @@ def plot_knife_edge(scanid=-1, fluor_key='xs_fluor', use_trans=False, normalize=
     ax.cla()
     ax.plot(x, y, '*', label='Raw Data')
     if (plot_guess):
-        ax.plot(x_plot, f_two_erfs(x_plot, *p_guess), '--', label='Guess fit')
+        ax.plot(x_plot, f_two_erfs_one_off(x_plot, *p_guess), '--', label='Guess fit')
     ax.plot(x_plot, y_plot, '-', label='Final fit')
     ax.set_title(f'Scan {id_str}')
     ax.set_xlabel(fast_axis)

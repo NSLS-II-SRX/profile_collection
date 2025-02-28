@@ -169,21 +169,148 @@ def mv_along_axis(z_end):
     cur_x = nano_stage.topx.user_readback.get()
     cur_y = nano_stage.y.user_readback.get()
     cur_z = nano_stage.z.user_readback.get()
-    print(f'Current locations are: {cur_x}, {cur_y}, {cur_z}')
+    print('Moving z along axis.')
+    print(f'\tCurrent locations are: {cur_x}, {cur_y}, {cur_z}')
 
     ratio_xz = 0.004875
     ratio_yz = 0.0067874
 
     delta_z = z_end - cur_z
-    print(f'Move z to {z_end}')
+    print(f'\tMove z to {z_end}')
 
     delta_x = ratio_xz * delta_z
-    print(f'Move x by {delta_x}')
+    print(f'\tMove x by {delta_x}')
 
     delta_y = ratio_yz * delta_z
-    print(f'Move y by {delta_y}')
+    print(f'\tMove y by {delta_y}')
 
     yield from mvr(nano_stage.topx, delta_x)
     yield from mvr(nano_stage.y, delta_y)
     yield from mv(nano_stage.z, z_end)
 
+
+def get_defocused_beam_parameters(hor_size=None,
+                                  ver_size=None,
+                                  z_end=None):
+    """
+    Determine the new sample position and horizontal and vertical beam
+    size given one of the parameters in microns.
+    """
+    
+    # Nominal constants for defocus math in um
+    n_ver_focus = 0.5
+    n_ver_focal_length = 310000
+    n_ver_acceptance = 600
+    n_hor_focus = 0.5
+    n_hor_focal_length = 130000
+    n_hor_acceptance = 300
+
+    def get_delta_z(size, focus, focal_length, acceptance):
+        return focal_length * ((size - focus) / (acceptance - focus))
+
+    def get_new_size(delta_z, focus, focal_length, acceptance):
+        return focus + ((delta_z / focal_length) * (acceptance - focus))
+
+    # Defocus math
+    if z_end is None:
+        curr_z = nano_stage.z.user_readback.get()
+        # curr_z = 0
+        if hor_size is not None:
+            if hor_size < n_hor_focus:
+                warn_str = ('WARNING: Requested horizontal size of '
+                            + f'{hor_size} μm is less than nominal '
+                            + f'horizontal focus of {n_hor_focus} μm.')
+                print(warn_str)
+            delta_z = get_delta_z(hor_size, n_hor_focus, n_hor_focal_length, n_hor_acceptance)
+            ver_size = get_new_size(delta_z, n_ver_focus, n_ver_focal_length, n_ver_acceptance)
+        elif ver_size is not None:
+            if ver_size < n_ver_focus:
+                warn_str = ('WARNING: Requested vertical size of '
+                            + f'{ver_size} μm is less than nominal '
+                            + f'vertical focus of {n_ver_focus} μm.')
+                print(warn_str)
+            delta_z = get_delta_z(ver_size, n_ver_focus, n_ver_focal_length, n_ver_acceptance)
+            hor_size = get_new_size(delta_z, n_hor_focus, n_hor_focal_length, n_hor_acceptance)
+        else:
+            raise ValueError('Must define hor_size, ver_size, or z_end.')
+        z_end = curr_z + delta_z
+    else:
+        curr_z = nano_stage.z.user_readback.get()
+        # curr_z = 0
+        delta_z = z_end - curr_z
+        ver_size = get_new_size(delta_z, n_ver_focus, n_ver_focal_length, n_ver_acceptance)
+        hor_size = get_new_size(delta_z, n_hor_focus, n_hor_focal_length, n_hor_acceptance)
+
+    print((f'Move the sample from z = {curr_z:.0f} μm by {delta_z:.0f}'
+           + f' μm to a new z = {curr_z + delta_z:.0f} μm'))
+    print(('The new focal size will be approximately:'
+           + f'\n\tV = {ver_size:.2f} μm\n\tH = {hor_size:.2f} μm'))
+    intensity_factor = (n_ver_focus * n_hor_focus) / (ver_size * hor_size) 
+    print(('Defocused intensity will be about '
+           + f'{intensity_factor * 100:.1f} % of focused intensity.'))
+
+    return curr_z, delta_z, z_end, ver_size, hor_size
+
+
+def defocus_beam(hor_size=None,
+                 ver_size=None,
+                 z_end=None,
+                 follow_with_vlm=True,
+                 follow_with_sdd=True):
+    """
+    Move the sample, VLM, and SDD to new positions for a specified
+    defocused X-ray beam.
+    """
+    
+    # Get defocus parameters
+    (curr_z,
+     delta_z,
+     z_end,
+     ver_size,
+     hor_size) = get_defocused_beam_parameters(hor_size=hor_size,
+                                               ver_size=ver_size,
+                                               z_end=z_end)
+
+    # Move sample
+    print('Moving sample to defocus X-ray beam...')
+    yield from mv_along_axis(np.round(z_end))
+    
+    # Move VLM
+    if follow_with_vlm:
+        print('Moving VLM to new position...')
+        curr_vlm_z = nano_vlm_stage.z.user_readback.get()
+        print(f'\tCurrent VLM location is z = {curr_vlm_z:.3f} mm')
+        # yield from mvr did not work???
+        yield from mov(nano_vlm_stage.z,
+                       np.round(curr_vlm_z + (delta_z / 1000), 3)) # in mm
+        print(f'\tMove VLM by {delta_z / 1000:.3f} mm')
+
+    # Move SDD along projected z axis
+    if follow_with_sdd:
+        print('Moving SDD to new position...')
+        curr_det_x = nano_det.x.user_readback.get()
+        curr_det_z = nano_det.z.user_readback.get()
+        print(f'\tCurrent locations are: x = {curr_det_x:.3f} mm, z = {curr_det_z:.3f} mm')
+
+        sdd_rot = 30 # deg
+        R = np.array([[np.cos(np.radians(sdd_rot)), np.sin(np.radians(sdd_rot))],
+                      [-np.sin(np.radians(sdd_rot)), np.cos(np.radians(sdd_rot))]])
+        
+        # Determine deltas in um. delta_x is 0
+        delta_sdd_x, delta_sdd_z = R @ [0, delta_z]
+
+        print(f'\tMove z by {delta_sdd_z / 1000:.3f} mm')
+        print(f'\tMove x by {delta_sdd_x / 1000:.3f} mm.')
+
+        # Cautious move. Always move sdd inboard first
+        if delta_sdd_x < 0:
+            # yield from mvr did not work???
+            yield from mov(nano_det.x,
+                           np.round(curr_det_x + (delta_sdd_x / 1000), 3)) # in mm
+            yield from mov(nano_det.z,
+                           np.round(curr_det_z + (delta_sdd_z / 1000), 3)) # in mm
+        else:
+            yield from mov(nano_det.z,
+                           np.round(curr_det_z + (delta_sdd_z / 1000), 3)) # in mm
+            yield from mov(nano_det.x,
+                           np.round(curr_det_x + (delta_sdd_x / 1000), 3)) # in mm

@@ -230,37 +230,3 @@ class ProjectedTopStage(PseudoPositioner):
 
 projx = ProjectedTopStage(name='projected_top_x', projected_axis='x')
 projz = ProjectedTopStage(name='projected_top_z', projected_axis='z')
-
-
-# def projected_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
-#     kwargs.setdefault('xmotor', projx)
-#     kwargs.setdefault('ymotor', nano_stage.y)
-#     kwargs.setdefault('flying_zebra', nano_flying_zebra_coarse)
-#     yield from abs_set(kwargs['flying_zebra'].fast_axis, 'NANOHOR')
-#     yield from abs_set(kwargs['flying_zebra'].slow_axis, 'NANOVER')
-
-#     _xs = kwargs.pop('xs', xs)
-#     if extra_dets is None:
-#         extra_dets = []
-#     dets = [_xs] + extra_dets
-
-#     if center:
-#         yield from move_to_map_center(*args, **kwargs)
-#     yield from scan_and_fly_base(dets, *args, **kwargs)
-#     if center:
-#         yield from move_to_map_center(*args, **kwargs)
-
-
-# def move_to_map_center(*args, **kwargs):
-#     xmotor = kwargs['xmotor']
-#     ymotor = kwargs['ymotor']
-
-#     xstart, xend, xnum, ystart, yend, ynum, dwell = args
-
-#     xcen = xstart + ((xend - xstart) / 2)
-#     ycen = ystart + ((yend - ystart) / 2)
-
-#     # print(f'Move to {xcen} xcen')
-#     # print(f'Move to {ycen} ycen.')
-#     yield from mv(xmotor, xcen,
-#                   ymotor, ycen)

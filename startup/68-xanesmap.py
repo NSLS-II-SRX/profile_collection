@@ -1,3 +1,5 @@
+print(f'Loading {__file__}...')
+
 def xanes_map(erange=[], estep=[],
               xstart=-5, xstop=5, xnum=21,
               ystart=-5, ystop=5, ynum=21, dwell=0.050,

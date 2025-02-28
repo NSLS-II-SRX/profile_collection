@@ -44,6 +44,14 @@ def f_two_erfs(x, A1, sigma1, x1, y1,
     return f_combo
 
 
+# EJM: Let's fit two error functions with only one vertical offset
+def f_two_erfs_one_off(x, A1, sigma1, x1,
+                          A2, sigma2, x2, y):
+    f_combo = (f_offset_erf(x, A1, sigma1, x1, 0) +
+               f_offset_erf(x, A2, sigma2, x2, y))
+    return f_combo
+
+
 def mv_position(pos=[]):
     """
     Move to predefined positions of diving board(pos1,default),
