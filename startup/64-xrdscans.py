@@ -6,11 +6,10 @@ import time as ttime
 
 from bluesky.plans import count, list_scan
 
-def setup_xrd_dets(dets,
-                   dwell,
-                   N_images):
+def _setup_xrd_dets(dets,
+                    dwell,
+                    N_images):
     # Convenience function for setting up xrd detectors
-
     dets_by_name = {d.name : d for d in dets}
 
     # Setup merlin
@@ -23,19 +22,155 @@ def setup_xrd_dets(dets,
             dwell = 0.007
         # According to Ken's comments in hxntools, this is a de-bounce time
         # when in external trigger mode
-        xrd.cam.stage_sigs['acquire_time'] = 0.75 * dwell  # - 0.0016392
-        xrd.cam.stage_sigs['acquire_period'] = 0.75 * dwell + 0.0016392
-        xrd.cam.stage_sigs['num_images'] = 1
+        # xrd.cam.stage_sigs['acquire_time'] = 0.75 * dwell  # - 0.0016392
+        # xrd.cam.stage_sigs['acquire_period'] = 0.75 * dwell + 0.0016392
+        xrd.cam.stage_sigs['acquire_time'] = 0.9 * dwell - 0.002
+        xrd.cam.stage_sigs['acquire_period'] = 0.9 * dwell
         xrd.stage_sigs['total_points'] = N_images
+        xrd.cam.stage_sigs['num_images'] = N_images
         xrd.hdf5.stage_sigs['num_capture'] = N_images
         del xrd
 
     # Setup dexela
     if 'dexela' in dets_by_name:
         xrd = dets_by_name['dexela']
+        # If the dexela is acquiring, stop
+        if xrd.cam.detector_state.get() == 1:
+            xrd.cam.acquire.set(0)
         xrd.cam.stage_sigs['acquire_time'] = dwell
         xrd.cam.stage_sigs['acquire_period'] = dwell
+        xrd.cam.stage_sigs['num_images'] = N_images
+        xrd.hdf5.stage_sigs['num_capture'] = N_images
         del xrd
+
+
+
+# Assumes detector stage sigs are already set
+def _acquire_dark_fields(dets,
+                         N_dark=10,
+                         shutter=True):                
+
+    dets_by_name = {d.name : d for d in dets}
+    xrd_dets = []
+    reset_sigs = dict()
+
+    if 'merlin' in dets_by_name:
+        xrd = dets_by_name['merlin']
+        sigs = OrderedDict(
+            [
+                (xrd.cam.trigger_mode, 0),
+                (xrd.total_points, N_dark),
+                (xrd.cam.num_images, N_dark)
+                (xrd.hdf5.num_capture, N_dark),
+            ]
+        )
+        if 'acquire_time' in xrd.cam.stage_sigs:
+            sigs[xrd.cam.acquire_time] = xrd.cam.stage_sigs['acquire_time']
+        if 'acquire_period' in xrd.cam.stage_sigs:
+            sigs[xrd.cam.acquire_period] = xrd.cam.stage_sigs['acquire_period']
+
+        original_vals = {sig: sig.get() for sig in sigs}
+        for sig, val in sigs.items():
+            yield from abs_set(sig, val)
+        xrd_dets.append(xrd)
+        reset_sigs.update(orignal_vals)
+
+    if 'dexela' in dets_by_name:
+        xrd = dets_by_name['dexela']
+        sigs = OrderedDict(
+            [
+                (xrd.cam.trigger_mode, 'Int. Fixed Rate'),
+                (xrd.cam.num_images, N_dark),
+                (xrd.hdf5.num_capture, N_dark),
+            ]
+        )
+        if 'acquire_time' in xrd.cam.stage_sigs:
+            sigs[xrd.cam.acquire_time] = xrd.cam.stage_sigs['acquire_time']
+        if 'acquire_period' in xrd.cam.stage_sigs:
+            sigs[xrd.cam.acquire_period] = xrd.cam.stage_sigs['acquire_period']
+        
+        original_vals = {sig: sig.get() for sig in sigs}
+        for sig, val in sigs.items():
+            yield from abs_set(sig, val)
+        xrd_dets.append(xrd)
+        reset_sigs.update(orignal_vals)
+
+    d_status = shut_d.read()['shut_d_request_open']['value'] == 1 # is open
+    yield from check_shutters(shutter, 'Close')
+    print('Acquiring dark-field...')
+    yield from bps.trigger_and_read(dets, name='dark')
+    if d_status:
+        yield from check_shutters(shutter, 'Open')
+    
+    for sig, val in reset_sigs.items():
+        yield from abs_set(sig, val)
+
+
+def test_energy_rocking_curve(e_low,
+                         e_high,
+                         e_num,
+                         dwell,
+                         xrd_dets,
+                         shutter=True,
+                         peakup_flag=True,
+                         plotme=False,
+                         return_to_start=True):
+
+    start_energy = energy.energy.position
+
+    # Convert to keV
+    if e_low > 1000:
+        e_low /= 1000
+    if e_high > 1000:
+        e_high /= 1000
+
+    # Define some useful variables
+    e_cen = (e_high + e_low) / 2
+    e_range = np.linspace(e_low, e_high, e_num)
+
+    # Define detectors
+    dets = [xs, sclr1] + xrd_dets
+    _setup_xrd_dets(dets, dwell, e_num)
+
+    # Defining scan metadata
+    scan_md = {}
+    get_stock_md(scan_md)
+    scan_md['scan']['type'] = 'ENERGY_RC'
+    scan_md['scan']['scan_input'] = [e_low, e_high, e_num, dwell]
+    scan_md['scan']['dwell'] = dwell
+    scan_md['scan']['detectors'] = [d.name for d in dets]
+    scan_md['scan']['energy'] = e_range                                   
+    scan_md['scan']['start_time'] = ttime.ctime(ttime.time())
+
+    # Live Callbacks
+    livecallbacks = [LiveTable(['energy_energy', 'dexela_stats2_total'])]
+    
+    if plotme:
+        livecallbacks.append(LivePlot('dexela_stats2_total', x='energy_energy'))
+
+    # Move to center energy and perform peakup
+    if peakup_flag:  # Find optimal c2_fine position
+        print('Performing center energy peakup.')
+        yield from mov(energy, e_cen)
+        yield from peakup(shutter=shutter)
+    
+    @bpp.stage_decorator(list(dets) + [energy])
+    @bpp.run_dectorator(md=scan_md)
+    @bpp.subs_wrapper(livecallbacks)
+    def inner_plan():
+        yield from _acquire_dark_fields(dets,
+                                        N_dark=10,
+                                        shutter=shutter)
+        yield from check_sutters(shutter, 'Open')
+        yield from list_scan(dets, energy, e_range)
+        yield from check_sutters(shutter, 'Close')
+
+        if return_to_start:
+            yield from mov(energy, start_energy)
+    
+    return (yield from inner_plan())
+    
+
 
 
 def energy_rocking_curve(e_low,
@@ -62,7 +197,7 @@ def energy_rocking_curve(e_low,
 
     # Define detectors
     dets = [xs, sclr1] + xrd_dets
-    setup_xrd_dets(dets, dwell, e_num)
+    _setup_xrd_dets(dets, dwell, e_num)
 
     # Defining scan metadata
     scan_md = {}
@@ -168,6 +303,57 @@ def extended_energy_rocking_curve(e_low,
                                         return_to_start=False)
 
 
+def test_angle_rocking_curve(th_low,
+                        th_high,
+                        th_num,
+                        dwell,
+                        xrd_dets,
+                        shutter=True,
+                        plotme=False,
+                        return_to_start=True):
+    # th in mdeg!!!
+    start_th = nano_stage.th.user_readback.get()
+
+    # Define some useful variables
+    th_range = np.linspace(th_low, th_high, th_num)
+
+    # Defining scan metadata
+    scan_md = {}
+    get_stock_md(scan_md)
+    scan_md['scan']['type'] = 'ANGLE_RC'
+    scan_md['scan']['scan_input'] = [th_low, th_high, th_num, dwell]
+    scan_md['scan']['dwell'] = dwell
+    scan_md['scan']['detectors'] = [sclr1.name] + [d.name for d in xrd_dets]
+    scan_md['scan']['angles'] = th_range                                   
+    scan_md['scan']['start_time'] = ttime.ctime(ttime.time())
+
+    # Live Callbacks
+    livecallbacks = [LiveTable(['nano_stage_th_user_setpoint', 'dexela_stats2_total'])]
+    
+    if plotme:
+        livecallbacks.append(LivePlot('dexela_stats2_total', x='nano_stage_th_user_setpoint'))
+
+    # Define detectors
+    dets = [xs, sclr1] + xrd_dets
+    _setup_xrd_dets(dets, dwell, th_num)
+
+    @bpp.stage_decorator(list(dets) + [nano_stage.th])
+    @bpp.run_dectorator(md=scan_md)
+    @bpp.subs_wrapper(livecallbacks)
+    def inner_plan():
+        yield from _acquire_dark_fields(dets,
+                                        N_dark=10,
+                                        shutter=shutter)
+        yield from check_sutters(shutter, 'Open')
+        yield from list_scan(dets, nano_stage.th, th_range)
+        yield from check_sutters(shutter, 'Close')
+
+        if return_to_start:
+            yield from mov(nano_stage.th, start_th)
+    
+    return (yield from inner_plan())
+
+
 def angle_rocking_curve(th_low,
                         th_high,
                         th_num,
@@ -201,7 +387,7 @@ def angle_rocking_curve(th_low,
 
     # Define detectors
     dets = [xs, sclr1] + xrd_dets
-    setup_xrd_dets(dets, dwell, th_num)
+    _setup_xrd_dets(dets, dwell, th_num)
     
     # yield from list_scan(dets, energy, e_range, md=scan_md)
     yield from check_shutters(shutter, 'Open')
@@ -252,7 +438,6 @@ def flying_angle_rocking_curve(th_low,
     _xs = kwargs.pop('xs', xs)
     if xrd_dets is None:
         xrd_dets = []
-    #dets = [_xs] + extra_dets
     dets = [_xs] + xrd_dets
 
     yield from scan_and_fly_base(dets,
@@ -289,6 +474,51 @@ def relative_flying_angle_rocking_curve(th_range,
 
 
 # A static xrd measurement without changing energy or moving stages
+def test_static_xrd(xrd_dets,
+               num,
+               dwell,
+               shutter=True,
+               plotme=False):
+
+    # Defining scan metadata
+    scan_md = {}
+    get_stock_md(scan_md)
+    scan_md['scan']['type'] = 'STATIC_XRD'
+    scan_md['scan']['scan_input'] = [num, dwell]
+    scan_md['scan']['dwell'] = dwell
+    scan_md['scan']['detectors'] = [sclr1.name] + [d.name for d in xrd_dets]
+    scan_md['scan']['energy'] = f'{energy.energy.position:.5f}'                                 
+    scan_md['scan']['start_time'] = ttime.ctime(ttime.time())
+
+    # Live Callbacks
+    # What does energy_energy read??
+    livecallbacks = [LiveTable(['energy_energy', 'dexela_stats2_total'])]
+    
+    if plotme:
+        livecallbacks.append(LivePlot('dexela_stats2_total', x='energy_energy'))
+
+    # Define detectors
+    dets = [xs, sclr1] + xrd_dets
+    _setup_xrd_dets(dets, dwell, num)
+
+    @bpp.stage_decorator(list(dets) + [energy])
+    @bpp.run_dectorator(md=scan_md)
+    @bpp.subs_wrapper(livecallbacks)
+    def inner_plan():
+        yield from _acquire_dark_fields(dets,
+                                        N_dark=10,
+                                        shutter=shutter)
+        yield from check_sutters(shutter, 'Open')
+        yield from count(dets, num)
+        yield from check_sutters(shutter, 'Close')
+
+        if return_to_start:
+            yield from mov(energy, start_energy)
+    
+    return (yield from inner_plan())
+
+
+# A static xrd measurement without changing energy or moving stages
 def static_xrd(xrd_dets,
                num,
                dwell,
@@ -314,7 +544,7 @@ def static_xrd(xrd_dets,
 
     # Define detectors
     dets = [xs, sclr1] + xrd_dets
-    setup_xrd_dets(dets, dwell, num)
+    _setup_xrd_dets(dets, dwell, num)
 
     yield from check_shutters(shutter, 'Open')
     yield from subs_wrapper(count(dets, num, md=scan_md), # I guess dwell info is carried by the detector

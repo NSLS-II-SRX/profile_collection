@@ -147,8 +147,6 @@ class DexelaHDFWithFileStore(HDF5Plugin, DexelaFileStoreHDF5):
 
         The plugin has to 'see' one acquisition before it is ready to capture.
         This sets the array size, etc.
-
-        This needs to be redefined because there is no trigger_mode = Internal
         """
         self.enable.set(1).wait()
         sigs = OrderedDict(

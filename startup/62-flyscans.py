@@ -179,37 +179,38 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
 
     dets_by_name = {d.name : d
                     for d in detectors}
+    _setup_xrd_dets(detectors, dwell, xnum)
 
-    # Set up the merlin
-    if 'merlin' in dets_by_name:
-        dpc = dets_by_name['merlin']
-        # TODO use stage sigs
-        # Set trigger mode
-        # dpc.cam.trigger_mode.put(2)
-        # Make sure we respect whatever the exposure time is set to
-        if (dwell < 0.0066392):
-            print('The Merlin should not operate faster than 7 ms.')
-            print('Changing the scan dwell time to 7 ms.')
-            dwell = 0.007
-        # According to Ken's comments in hxntools, this is a de-bounce time
-        # when in external trigger mode
-        # dpc.cam.stage_sigs['acquire_time'] = 0.001
-        # dpc.cam.stage_sigs['acquire_period'] = 0.003
-        dpc.cam.stage_sigs['acquire_time'] = 0.9*dwell - 0.002
-        dpc.cam.stage_sigs['acquire_period'] = 0.9*dwell
-        dpc.cam.stage_sigs['num_images'] = 1
-        dpc.stage_sigs['total_points'] = xnum
-        dpc.hdf5.stage_sigs['num_capture'] = xnum
-        del dpc
+    # # Set up the merlin
+    # if 'merlin' in dets_by_name:
+    #     dpc = dets_by_name['merlin']
+    #     # TODO use stage sigs
+    #     # Set trigger mode
+    #     # dpc.cam.trigger_mode.put(2)
+    #     # Make sure we respect whatever the exposure time is set to
+    #     if (dwell < 0.0066392):
+    #         print('The Merlin should not operate faster than 7 ms.')
+    #         print('Changing the scan dwell time to 7 ms.')
+    #         dwell = 0.007
+    #     # According to Ken's comments in hxntools, this is a de-bounce time
+    #     # when in external trigger mode
+    #     # dpc.cam.stage_sigs['acquire_time'] = 0.001
+    #     # dpc.cam.stage_sigs['acquire_period'] = 0.003
+    #     dpc.cam.stage_sigs['acquire_time'] = 0.9*dwell - 0.002
+    #     dpc.cam.stage_sigs['acquire_period'] = 0.9*dwell
+    #     dpc.cam.stage_sigs['num_images'] = 1
+    #     dpc.stage_sigs['total_points'] = xnum
+    #     dpc.hdf5.stage_sigs['num_capture'] = xnum
+    #     del dpc
 
-    # Setup dexela
-    if ('dexela' in dets_by_name):
-        xrd = dets_by_name['dexela']
-        # If the dexela is acquiring, stop
-        if xrd.cam.detector_state.get() == 1:
-            xrd.cam.acquire.set(0)
-        xrd.cam.stage_sigs['acquire_time'] = dwell
-        del xrd
+    # # Setup dexela
+    # if ('dexela' in dets_by_name):
+    #     xrd = dets_by_name['dexela']
+    #     # If the dexela is acquiring, stop
+    #     if xrd.cam.detector_state.get() == 1:
+    #         xrd.cam.acquire.set(0)
+    #     xrd.cam.stage_sigs['acquire_time'] = dwell
+    #     del xrd
 
     # If delta is None, set delta based on time for acceleration
     #MIN_DELTA = 0.200  # default value
@@ -317,16 +318,17 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 xs2.cam.num_images, xnum   # JL changed settings to cam
             )
 
-        if ('merlin' in dets_by_name):
-            merlin = dets_by_name['merlin']
-            yield from abs_set(merlin.hdf5.num_capture, xnum, wait=True)
-            yield from abs_set(merlin.cam.num_images, xnum, wait=True)
+        # EJM: Trying to remove redundancies
+        # if ('merlin' in dets_by_name):
+        #     merlin = dets_by_name['merlin']
+        #     yield from abs_set(merlin.hdf5.num_capture, xnum, wait=True)
+        #     yield from abs_set(merlin.cam.num_images, xnum, wait=True)
 
-        if ('dexela' in dets_by_name):
-            dexela = dets_by_name['dexela']
-            yield from abs_set(dexela.hdf5.num_capture, xnum, wait=True)
-            # yield from abs_set(dexela.hdf5.num_frames_chunks, xnum, wait=True)
-            yield from abs_set(dexela.cam.num_images, xnum, wait=True)
+        # if ('dexela' in dets_by_name):
+        #     dexela = dets_by_name['dexela']
+        #     yield from abs_set(dexela.hdf5.num_capture, xnum, wait=True)
+        #     # yield from abs_set(dexela.hdf5.num_frames_chunks, xnum, wait=True)
+        #     yield from abs_set(dexela.cam.num_images, xnum, wait=True)
 
         ion = flying_zebra.sclr
         # TODO Can this be done just once per scan instead of each line?
@@ -344,7 +346,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
             accel_time = xmotor.acceleration.get()  # acceleration time
             if delta == MIN_DELTA:
                 # Calculate time from starting point to first data point
-                delta_acc = v*accel_time / 2
+                delta_acc = v * accel_time / 2
                 delta_const = (delta - delta_acc) / v
                 accel_time += delta_const
 
@@ -592,6 +594,18 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     @stage_decorator([flying_zebra])  # Below, 'scan' stage ymotor.
     @run_decorator(md=md)
     def plan():
+        
+        # Acquire dark field before shutters, but after setting up scan data
+        yield from _acquire_dark_fields(detectors,
+                                        N_dark=10,
+                                        shutter=True)
+        
+        # Open the shutter
+        if verbose:
+            yield from timer_wrapper(check_shutters, shutter, 'Open', log_file=log_file)
+        else:
+            yield from check_shutters(shutter, 'Open')
+
         if verbose:
             # open file
             # log_file = os.path.join(log_path, f"scan2D_{db[-1].start['scan_id']}.log")
@@ -676,11 +690,11 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
     if verbose:
         toc(t_setup, str='Setup time', log_file=log_file)
 
-    # Open the shutter
-    if verbose:
-        yield from timer_wrapper(check_shutters, shutter, 'Open', log_file=log_file)
-    else:
-        yield from check_shutters(shutter, 'Open')
+    # # Open the shutter
+    # if verbose:
+    #     yield from timer_wrapper(check_shutters, shutter, 'Open', log_file=log_file)
+    # else:
+    #     yield from check_shutters(shutter, 'Open')
 
     # Run the scan
     uid = yield from final_plan
@@ -751,7 +765,7 @@ def nano_z_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
         move_to_scanner_center(timeout=10)
 
 
-def coarse_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
+def coarse_scan_and_fly(*args, extra_dets=None, center=True, backlash=None, **kwargs):
     kwargs.setdefault('xmotor', nano_stage.topx)
     kwargs.setdefault('ymotor', nano_stage.y)
     kwargs.setdefault('flying_zebra', nano_flying_zebra_coarse)
@@ -763,6 +777,10 @@ def coarse_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
         extra_dets = []
     dets = [_xs] + extra_dets
 
+    if backlash is not None:
+        yield from mov(kwargs['xmotor'], args[0] - backlash,
+                       kwargs['ymotor'], args[3] - backlash)
+
     if center:
         move_to_scanner_center(timeout=10)
     yield from scan_and_fly_base(dets, *args, **kwargs)
@@ -770,7 +788,7 @@ def coarse_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
         move_to_scanner_center(timeout=10)
 
 
-def coarse_y_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
+def coarse_y_scan_and_fly(*args, extra_dets=None, center=True, backlash=None, **kwargs):
     '''
     Convenience wrapper for scanning Y as the fast axis.
     Call scan_and_fly_base, forcing slow and fast axes to be X and Y.
@@ -788,6 +806,10 @@ def coarse_y_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
     if extra_dets is None:
         extra_dets = []
     dets = [_xs] + extra_dets
+
+    if backlash is not None:
+        yield from mov(kwargs['xmotor'], args[0] - backlash,
+                       kwargs['ymotor'], args[3] - backlash)
 
     if center:
         move_to_scanner_center(timeout=10)

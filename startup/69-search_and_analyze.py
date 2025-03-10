@@ -9,12 +9,15 @@ from matplotlib import patches
 from matplotlib.collections import PatchCollection
 
 
+# Assumption of [start, stop, num] for function arguments is built into several places.
+
 def search_and_analyze_base(search_args=[],
                             search_kwargs={},
                             search_function=None,
-                            search_defocus_distance=0,
-                            search_prep_function=None,
+                            search_motors=None,
                             search_scan_id=None,
+                            search_prep_function=None,
+                            defocus_distances=None,
                             data_key='xs_fluor',
                             data_slice=None,
                             data_cutoff=None,
@@ -22,14 +25,15 @@ def search_and_analyze_base(search_args=[],
                             data_processing_function=None,
                             integrating_function=np.sum,
                             feature_type='points',
-                            attempt_edges=False,
+                            point_method='com',
+                            fix_edges=False,
+                            max_num_rois=None,
                             plot_analysis_rois=True,
-                            move_for_analysis=True,
-                            analysis_prep_function=None,
-                            analysis_motors=None,
-                            analysis_function=None,
                             analysis_args=[],
                             analysis_kwargs={},
+                            analysis_function=None,
+                            analysis_motors=None,
+                            analysis_prep_function=None,
                             wait_time=0,
                             ):
     """
@@ -39,28 +43,38 @@ def search_and_analyze_base(search_args=[],
     Parameters
     ----------
     search_args : iterable, optional
-        Arguments given to search function. Default is an empty list.
+        Arguments given to search function. For motion along an axis,
+        arguments should be [start, stop, end] repeated for each new
+        axis of motion corresponding to the order of search_motors.
+        Default is an empty list.
     search_kwargs : dictionary, optional
         Keyword arguments given to search function. Default is an empty
         dictionary.
     search_function : function, optional
-        Function called to search area. This function should be some
-        sort of mapping function which acquires a signal useful for
-        discriminating features (e.g., coarse_scan_and_fly). This
-        parameter is only optional if the search_scan_id parameter is
-        specified.
-    search_defocus_distance : float, optional
-        Relative distance in μm to move the sample to defocus the X-ray
-        beam for searching. Defualt is 0 or no defocusing.
-    search_prep_function : function, optional
-        Function called prior to the search function to adjust any
-        parameters outside the search function itself. This function 
-        cannot have any inputs. Default is to not call any function.
+        Function called to search along a set of motors. Data should be
+        acquired to discriminate features (e.g., coarse_scan_and_fly).
+        This parameter is only optional if the search_scan_id parameter
+        is specified.
+    search_motors : iterable, optional
+        Iterable of motors used for search (e.g., [nano_stage.sx,
+        nano_stage.sy]) matching the order of the search arguments.
+        This should only be set to None if search_scan_id is specified.
+        Default is None.
     search_scan_id : int, optional
         Scan ID of previously acquired function to use as the search
         function. If given, only the search function and search prep
         function are disabled. Default is None and search function will
         be called instead.
+    search_prep_function : function, optional
+        Function called prior to the search function to adjust any
+        parameters outside the search function itself. This function 
+        cannot have any inputs. Default is to not call any function.    
+    defocus_distances : iterable of length 2, optional
+        Relative distances in μm to move the sample from the current 
+        position to defocus the X-ray beam. If only one value is given,
+        it will be used for only the analysis defocus distance. Default
+        is None which will be changed to (0, 0) or no defocusing for
+        both search and analysis.
     data_key : str, optional
         Key used in tiled to retrieve data
         (e.g., bs_run['stream0']['data']['xs_fluor']). Default is
@@ -95,45 +109,56 @@ def search_and_analyze_base(search_args=[],
         the skimage.features.peak_local_max on significant regions.
         'regions' will identify contiguous significant pixels by
         calling skimage.measure.label on the data. Default is 'points'.
-    attempt_edges : bool, optional
+    point_method : {'multiple', 'center', 'com', 'max'}, optional
+        Method used for determine single points from regions. This is
+        used for both determining points when feaure_type is set to
+        'points' and is used to determine the static position to move
+        the motors if feature_type is 'regions' and the search and
+        analysis motors are not the same. If 'mulitple' is chosen with
+        a feature_type of 'regions', the value will defualt to
+        'center'. 'com' is center of mass. Default value is 'center'.
+    fix_edges : bool, optional
         Flag to adjust regions of interest to within analysis motor
         limits. If False, out of bounds regions of interest will be
-        ignored instead. Default is False. 
+        ignored instead. Default is False.
+    max_num_rois : int, optional
+        Maximum number of ROIs to be analyzed from the search data.
+        Default is None or no limit.
     plot_analysis_rois : bool, optional
         Flag to plot regions of interest over data.
-    move_for_analysis : bool, optional
-        Flag to indicate if search motors should be moved to regions of
-        interest before calling the analysis function. Default is True.
+    analysis_function :
+        Function called to analyze ROIs in the dataset. 
+    analysis_args : iterable, optional
+        Arguments given to analysis function. For motion along an axis
+        used during search, arguments should be [start, stop, num]
+        repeated for each new axis of motion corresponding to the order
+        of the analysis motors. Default is an empty list.
+    analysis_kwargs : dict, optional
+        Keyword arguments given to analysis function. Default is an empty
+        dictionary.
+    analysis_motors : iterable, optional
+        Iterable of motors used for analysis (e.g., [nano_stage.sx,
+        nano_stage.sy]) matching the order of the analysis arguments.
+        This should be set to None for analysis functions that do not
+        use any motors along the same dimensions as the search motors.
+        Default is None.
     analysis_prep_function : function, optional
         Function called prior to the analysis functions to adjust any
         parameters outside the analysis function itself. This function 
         cannot have any inputs and should probably revert any changes
         made in the search prep function. Default is to not call any
         function.
-    analysis_motors : iterable, optional
-        Iterable of motors used for analysis (e.g., [nano_stage.sx,
-        nano_stage.sy]). This should be set to None for analysis
-        functions that do not use any motors along the same dimensions
-        as the search motors. Default is None.
-    analysis_args : iterable, optional
-        Arguments given to analysis function. If analysis motors is not
-        None, the first six values might be adjusted to follow regions
-        of interest following the standard SRX input (i.e., [xstart,
-        xend, xnum, ystart, yend, ynum]). Default is an empty list.
-    analysis_kwargs : dict, optional
-        Keyword arguments given to analysis function. Default is an empty
-        dictionary.
     wait_time : float, optional
         Time in seconds to wait after the search function and after
         each analysis function call. Default is 0.
-
 
     Raises
     ------
     """
 
-    # Temp
-    move_backlash = 25
+    # Hard-coded but easily changed parameters
+    move_backlash = 50
+    motors_with_backlash = [nano_stage.topx, nano_stage.y]
 
     # Check for functions
     if ((search_function is None and search_scan_id is None)
@@ -141,22 +166,22 @@ def search_and_analyze_base(search_args=[],
         err_str = 'Must provide function for both search and analysis.'
         raise ValueError(err_str)
 
-    # Catch weird analysis
-    if not move_for_analysis and analysis_motors is None:
-        err_str = ('Applying a static analysis method without moving '
-                   + 'there seems silly. Maybe consider moving to the '
-                   + 'ROI by setting move_for_analysis to True?')
-        raise RuntimeError(err_str)
+    # # Catch weird analysis
+    if search_motors is None and search_scan_id is None:
+        err_str('Search motors must be provided unless call a '
+                + 'previously used search scan.')
+        raise ValueError(err_str)
 
-    # Integrated range of data
+    # Adjusting slicing
     if data_slice is None:
-        if 'xs' in globals() and hasattr(xs, 'channel01'):
-            min_x = xs.channel01.mcaroi01.min_x.get()
-            size_x = xs.channel01.mcaroi01.size_x.get()
-            data_slice = slice(min_x, min_x + size_x)
-        else:
-            err_str = ('Data slice not provided and one could not be '
-                       + 'constructed from XRF roi infomation.')
+        if data_key == 'xs_fluor':
+            if 'xs' in globals() and hasattr(xs, 'channel01'):
+                min_x = xs.channel01.mcaroi01.min_x.get()
+                size_x = xs.channel01.mcaroi01.size_x.get()
+                data_slice = slice(min_x, min_x + size_x)
+            else:
+                err_str = ('Data slice not provided and one could not'
+                        + ' be constructed from XRF roi infomation.')
             raise RuntimeError(err_str)
     elif (not isinstance(data_slice, slice)
           and not all([isinstance(x, slice) for x in data_slice])):
@@ -168,11 +193,24 @@ def search_and_analyze_base(search_args=[],
     if data_cutoff is None:
         err_str = 'Must define search cutoff value.'
         raise ValueError(err_str)
-    elif data_cutoff <=1:
-        err_str = 'Search cutoff value must be greater than zero.'
-        raise ValueError(err_str)
+    
+    # Adjusting defocus distances
+    start_z = nano_stage.z.user_readback.get()
+    if defocus_distances is None:
+        defocus_distances = (0, 0)
+    elif isinstance(defocus_distances, (int, float)):
+        defocus_distances = (defocus_distances, 0)
+    elif (hasattr(defocus_distances, '__len__')
+          and len(defocus_distances) == 2
+          and not isinstance(defocus_distances, (str, dict))):
+        pass
+    else:
+        err_str = ('Cannot handle defocuses distances of type '
+                   + f'{type(defocus_distances)}. Should be iterable '
+                   + 'of length 2.')
+        raise TypeError(err_str)
 
-    # Ensuring correction feature type
+    # Ensuring correct feature type
     if (not isinstance(feature_type, str)
         or feature_type.lower() not in ['points', 'regions']):
         err_str = ("Feature type must be either 'points' or 'regions'"
@@ -180,11 +218,62 @@ def search_and_analyze_base(search_args=[],
         raise TypeError(err_str)
     else:
         feature_type = feature_type.lower()
+    
+    # Ensure correct point method
+    if (not(isinstance(point_method), str)
+        or feature_type.lower not in ['multiple', 'center', 'com', 'max']):
+        err_str = ("Point method must be either 'multiple', 'center', "
+                   + f"'com', or 'max' not {feature_type}.")
+        raise TypeError(err_str)
+    else:
+        point_method = point_method.lower()
+        if feature_type == 'regions' and point_method == 'multiple':
+            warn_str = ("WARNING: 'multiple' point method cannot be
+                        + "used simultaneously with 'regions' feature "
+                        + "type. 'center' point method will be used "
+                        + "instead.")
+            print(warn_str)
+            point_method = 'center'
+    
+    # Check max_roi_num
+    if max_num_rois is not None and not isinstance(max_num_rois, int):
+        if isinstance(max_num_rois, float) and max_num_rois == int(max_num_rois):
+            max_num_rois = int(max_num_rois)
+        else:
+            raise TypeError("'max_num_rois' must be integer.")
+
+    # Sort axes
+    search_axes, analysis_axes = None, None
+    if search_motors is not None:
+        search_axes = [_get_motor_axis(motor)
+                       for motor in search_motors]
+    if analysis_motors is not None:
+        analysis_axes = [_get_motor_axis(motor)
+                         for motor in analysis_motors]
+
+    # Or get search motors from previous scan
+    if search_scan_id is not None:
+        search_bs_run = c[search_scan_id]
+        search_uid = search_bs_run.start['uid']
+        # Attempt to get search motors and args from start
+        if search_motors or len(search_args) is None:
+            search_motors = _get_motors_from_tiled(search_bs_run)
+            search_axes = [_get_motor_axis(motor)
+                           for motor in search_motors]
+            search_args = search_bs_run.start['scan']['scan_input']
+    
+    # Must have search motors by this point
+    if search_motors is None:
+        err_str = ('Search motors not provided or cannot be determined.'
+                   + 'These must be provided or consider a different '
+                   + 'type of scan.')
+        raise ValueError(err_str)
 
     # Defocus X-ray beam!
-    starting_z = nano_stage.z.user_readback.get()
-    if search_defocus_distance != 0:
-        if search_defocus_distance < 0:
+    start_x = nano_stage.topx.user_readback.get()
+    start_y = nano_stage.y.user_readback.get()
+    if defocus_distances[0] != 0:
+        if defocus_distances[0] < 0:
             err_str = ('Negative defocus would bringing the sample '
                        + 'closer for a convergent beam. This is not '
                        + 'advised.')
@@ -192,79 +281,108 @@ def search_and_analyze_base(search_args=[],
 
         # Move motors
         print('Defocusing X-ray beam for search...')
-        yield from defocus_beam(
-                z_end=starting_z + search_defocus_distance)
-
+        yield from defocus_beam(z_end=start_z + defocus_distances[0])
+        
     # Actually search!
+    search_x = nano_stage.topx.user_readback.get()
+    search_y = nano_stage.y.user_readback.get()
     if search_scan_id is None:
         # Additional search preparation
         if search_prep_function is not None:
             print('Preparing for search...')
             yield from search_prep_function()
 
+        # Adjust search arguments
+        offset_x = start_x - search_x
+        offset_y = start_y - search_y
+        if search_axes is not None:
+            for i in range(len(search_axes)):
+                args = np.asarray(search_args[3 * i : 3 * i + 2])
+                if search_axes[i] == 'x':
+                    search_args[3 * i : 3 * i + 2] = np.round(args + offset_x, 3)
+                elif search_axes[i] == 'y':
+                    search_args[3 * i : 3 * i + 2] = np.round(args + offset_y, 3)
+
         # Actually search!
-        yield from search_function(*search_args,
-                                   **search_kwargs)
-        bs_run = c[-1]
-    # print(f'Running search function:')
-    # print(f'\tWith args in {search_args}')
-    # print(f'\tWith kwargs in {search_kwargs}')
-    else:
-        bs_run = c[search_scan_id]
+        search_uid = yield from search_function(*search_args,
+                                                **search_kwargs)
+        search_bs_run = c[search_uid]
     
     # Retrieve data from tiled
-    data = _get_processed_data(bs_run,
+    data = _get_processed_data(search_bs_run,
                                data_key=data_key,
                                data_slice=data_slice,
                                normalize=normalize,
                                data_processing_function=data_processing_function,
                                integrating_function=integrating_function)
     
+    # Check and fix data shape
+    if len(search_motors) > data.ndim:
+        err_str = ('More search motors were called there are seach axes'
+                   + ' in the data. Either too many search motors have'
+                   + ' been indicated or something went very wrong.')
+        raise RuntimeError(err_str)
+    elif data.ndim > len(search_motors):
+        if 1 in data.shape:
+            data = data.squeeze()
+        else:
+            err_str = ('More search dimensions were found in the data '
+                       + 'than search motors have been given. Either a'
+                       + ' search motor is missing or something went '
+                       + 'very wrong.')
+            raise RuntimeError(err_str)
+    else: # data.ndim matches search motors (majority of cases)
+        remove_search_index, remove_search_args_index = [], []
+        for s_ind in range(len(search_motors)):
+            # Are there any motors that do not move?
+            if data.shape[::-1][s_ind] == 1: # Reversed to match XRF_FLY data indices (Slow X Fast)
+                print(s_ind)
+                data_ndims = data.ndim
+                # Is that motor called during analysis?
+                if search_motors[s_ind] not in analysis_motors:
+                    print('Search_motor not in analysis!')
+                    # If not, associated values can be removed from search dimensions
+                    remove_search_index.append(s_ind)
+                    remove_search_args_index.extend(
+                            list(range(3 * s_ind, 3 * (s_ind + 1))))
+
+        # Remove search values that do not move and are not required for analysis
+        if len(remove_search_index) > 0:
+            for ind in sorted(remove_search_index, reverse=True):
+                del search_motors[ind]
+                del search_axes[ind]
+                data = data.squeeze(axis=data_ndims - ind - 1) # Reversed to match XRF_FLY data indices (Slow X Fast)
+            for ind in sorted(remove_search_args_index, reverse=True):
+                del search_args[ind]
+            
     # Construct ROIs
     roi_mask = data >= data_cutoff
-    rois = _get_rois(data,
-                     roi_mask,
-                     feature_type=feature_type)
+    rois, roi_ints = _get_rois(data,
+                        roi_mask,
+                        feature_type=feature_type)
 
-    # Find motors
-    (fast_motor,
-     slow_motor,
-     fast_values,
-     slow_values) = _generate_positions_and_motors(bs_run)
-
-    if search_defocus_distance != 0:
-        # Save parameters for offset corrections
-        defocused_x = nano_stage.topx.user_readback.get()
-        defocused_y = nano_stage.y.user_readback.get()
-        
+    # Refocus and update positions
+    if defocus_distances[0] != defocus_distances[1]:
         print('Refocusing X-ray beam for analysis...')
-        yield from defocus_beam(z_end=starting_z)
-        
-        # New parameters for offset corrections
-        focused_x = nano_stage.topx.user_readback.get()
-        focused_y = nano_stage.y.user_readback.get()
+        yield from defocus_beam(z_end=start_z + defocus_distances[1])
 
-        # Adjust offsets in positions
-        offset_x = focused_x - defocused_x
-        offset_y = focused_y - defocused_y
-        fast_offset, slow_offset = 0, 0
-        # if fast_motor in [nano_stage.topx, nano_stage.sx]:
-        if fast_motor == nano_stage.topx:
-            fast_offset = offset_x
-        #elif fast_motor in [nano_stage.y, nano_stage.sy]:
-        elif fast_motor == nano_stage.y:
-            fast_offset = offset_y
-        # if slow_motor in [nano_stage.topx, nano_stage.sx]:
-        if slow_motor == nano_stage.topx:
-            slow_offset = offset_x
-        # elif slow_motor in [nano_stage.y, nano_stage.sy]:
-        elif slow_motor == nano_stage.y:
-            slow_offset = offset_y
-
-        fast_values += fast_offset
-        slow_values += slow_offset
-        # fast_values -= fast_offset
-        # slow_values -= slow_offset
+    analysis_x = nano_stage.topx.user_readback.get()
+    analysis_y = nano_stage.y.user_readback.get()
+    
+    position_values = []
+    if search_axes is not None:
+        offset_x = analysis_x - search_x
+        offset_y = analysis_y - searcj_y
+        for i in range(len(search_axes)):
+            if search_axes[i] is not None:
+                vals = np.linspace(*search_args[3 * i : 3 * i + 2],
+                                   int(search_args[3 * i + 3]))
+                if search_axes[i] == 'x':
+                    position_values[i] = vals + offset_x
+                elif search_axes[i] == 'y':
+                    position_values[i] = vals + offset_y
+            else:
+                position_values[i] = None
 
     # Iterate through and adjust rois
     analysis_args_list = []
@@ -273,25 +391,43 @@ def search_and_analyze_base(search_args=[],
     fixed_rois = []
     for roi_index, roi in enumerate(rois):
         output = _generate_analysis_args(roi,
+                                         data,
                                          analysis_args,
-                                         fast_values,
-                                         slow_values,
-                                         analysis_motors,
-                                         move_for_analysis,
-                                         attempt_edges,
-                                         feature_type)
+                                         search_motors,
+                                         search_axes,
+                                         analsysis_motors,
+                                         analysis_axes,
+                                         position_values,
+                                         fix_edges,
+                                         feature_type,
+                                         point_method)
         analysis_args_list.append(output[0])
-        new_positions_list.append(output[1])
+        move_positions_list.append(output[1])
         valid_rois.append(output[2])
         fixed_rois.append(output[3])
     
-    # Reset new_positions for easier tracking
-    if not move_for_analysis:
-        new_positions_list = None
+    # Trim rois
+    if (max_num_rois is not None
+        and sum(valid_rois) > max_num_rois):
+        ostr = (f'Number of ROIs {sum(valid_rois)} is greater than '
+                + f'requested maximum {max_num_rois}. Trimming ROIs to'
+                + ' only the greatest intensity.')
+        print(ostr)
+
+        # sorted_ints = sorted(rois_int[valid_rois])
+        sorted_ints = sorted([val for (val, cond)
+                              in zip(rois_int, valid_rois) if cond],
+                             reverse=True)
+
+        for roi_ind in range(len(rois)):
+            if not valid_rois[roi_ind]:
+                continue
+            if rois_int[roi_ind] not in sorted_ints[:max_num_rois]:
+                valid_rois[roi_ind] = False
 
     # Plot found regions and areas for analysis
     if plot_analysis_rois:
-        _plot_analysis_args(bs_run.start['scan_id'],
+        _plot_analysis_args(search_bs_run.start['scan_id'],
                             data,
                             rois,
                             analysis_args_list,
@@ -299,13 +435,13 @@ def search_and_analyze_base(search_args=[],
                             fixed_rois,
                             fast_values,
                             slow_values,
-                            new_positions_list,
+                            move_positions_list,
                             feature_type=feature_type,
                             analysis_motors=analysis_motors)
     
     if wait_time > 0:
         print(f'Waiting {wait_time} sec before starting ROI analysis...')
-        ttime.sleep(wait_time)
+        bps.sleep(wait_time)
 
     # Additional analysis preparation
     if analysis_prep_function is not None:
@@ -313,6 +449,7 @@ def search_and_analyze_base(search_args=[],
         yield from analysis_prep_function()
     
     # Go through found and valid rois
+    analysis_uids = []
     if len(rois) > 0:
         print(f'Starting ROI analysis for {len(rois)} ROIs!')
         for roi_index, roi in enumerate(rois):
@@ -327,43 +464,63 @@ def search_and_analyze_base(search_args=[],
                             + 'tuncated to fit within motor limits.')
                 print(warn_str)
 
-            # Move to new location with search motors, if called
-            if move_for_analysis:
-                (fast_position,
-                slow_position) = new_positions_list[roi_index]
+            # Setup move call
+            move_positions = move_positions_list[roi_index]
+            if any([pos is not None for pos in move_positions]):
+                mv_str = f'Moving to new position for ROI {roi_index}:'
+                move_args = []
+                backlash_args = []
 
+                for p_ind, pos in enumerate(move_positions):
+                    # Check if move is actually called
+                    if pos is None:
+                        continue
+                    
+                    # Add to move call
+                    s_motor = search_motors[p_ind]
+                    mv_str += f'\n\t{s_motor.name} = {pos}'
+                    move_args += [s_motors, pos]
+
+                    # Determine backlash
+                    if s_motor in motors_with_backlash:
+                        backlash_args += [s_motor, pos - move_backlash]
+                
                 # Actually move!
-                print((f'Moving to new position for ROI {roi_index}:'
-                    + f'\n\t{fast_motor.name} = {fast_position}'
-                    + f'\n\t{slow_motor.name} = {slow_position}'))
-                # Backlash
-                if move_backlash > 0:
-                    yield from mov(fast_motor,
-                                fast_position - move_backlash,
-                                slow_motor,
-                                slow_position - move_backlash
-                                )
-                # Move
-                yield from mov(fast_motor, fast_position,
-                            slow_motor, slow_position
-                            )
-                # print((f'Moving to new position for ROI {roi_index}:'
-                #       + f'\n\tx={fast_position}'
-                #       + f'\n\ty={slow_position}'))  
+                print(mv_str)
+                if len(backlash_args) > 0:
+                    yield from mov(*backlash_args)
+                yield from mov(*move_args)
 
             # Actually search!
             print(f'Starting analysis of ROI {roi_index}!')
-            yield from analysis_function(*analysis_args_list[roi_index],
-                                        **analysis_kwargs)
-            # print(f'Running analysis of ROI {roi_index}:')
-            # print(f'\tWith args in {analysis_args_list[roi_index]}')
-            # print(f'\tWith kwargs in {analysis_kwargs}')
+            uid = yield from analysis_function(*analysis_args_list[roi_index],
+                                               **analysis_kwargs)
+            analysis_uids.append(uid)
             
             if wait_time > 0 and roi_index != len(rois) - 1:
                 print(f'Waiting {wait_time} sec before proceeding...')
-                ttime.sleep(wait_time)
+                bps.sleep(wait_time)
     else:
         print('No ROIs found in search area!')
+    
+    return search_uid, tuple(analysis_uids)
+
+
+def _get_motor_axis(motor):
+        if motor in [nano_stage.topx, nano_stage.sx]:
+            axis = 'x'
+        elif motor in [nano_stage.y, nano_stage.sy]:
+            axis = 'y'
+        elif motor in [nano_stage.z, nano_stage.topz]:
+            axis = 'z'
+        elif motor in [nano_stage.th]:
+            axis = 'theta'
+        elif motor in [energy]:
+            axis = 'energy'
+        elif motor is None:
+            axis = None
+        else:
+            raise ValueError(f'Unknown motor {motor.name}.')
 
 
 def _get_processed_data(bs_run,
@@ -376,15 +533,62 @@ def _get_processed_data(bs_run,
     
     print((f"Retrieving {data_key} data from scan "
            + f"{bs_run.start['scan_id']}."))
-    
+
+    # Determine data path
+    # TODO: Is there a better way of determining this pathway?
+    if bs_run.start['scan']['type'] in ['XRF_FLY']:
+        ds = bs_run['stream0']['data']
+    elif bs_run.start['scan']['type'] in ['ENERGY_RC', 'ANGLE_RC', 'XAS_STEP']:
+        ds = bs_run['primary']['data']
+    else:
+        err_str = f"Scan type of {bs_run.start['scan']['type']} is not currently supported."
+        raise RuntimeError(err_str)
+
+    # Applies to all xs_fluor, hence not adjusted when generating from roi
     if data_key == 'xs_fluor' and isinstance(data_slice, slice):
         data_slice = (slice(None), data_slice)
+    
+    # Data dimensionality
+    # TODO: Is there a better way of handling this???
+    if ('fluor' in data_key
+        or 'image' in data_key):
+        data_dims = 2
+    else:
+        data_dims = 0
 
-    data = bs_run['stream0']['data'][data_key][:, :, (data_slice)] # I would normally unpack this, but apparently that is only for python 3.11
+    if data_slice is None:
+        data = ds[data_key][:]
+    else:
+        try:
+            # Python 3.11 implmentation
+            data = ds[data_key][..., *data_slice] 
+        except TypeError:
+            # Previous versions
+            data = ds[data_key][..., (data_slice)]
+        except Exception as e:
+            print('Error slicing data.')
+            raise e
+    
+    # # Get scaler to use as search shape of the data
+    # # Not a great way to do it, but this info is not recorded explicitly
+    # normalized = False
+    # for sclr_key in ['i0', 'im', 'sclr_i0', 'sclr_im']
+    #     if sclr_key in ds:
+    #         search_shape = ds[sclr_key].shape
+    #         if normalize:
+    #             data /= ds[sclr_key][:]
+    #             normalized=True
+    #         break
+    # if normalize and not normalized:
+    #     warn_str = ("WARNING: Could not find expected scaler value"
+    #                     + " with key 'i0' or 'im'.\n"
+    #                     + "Proceeding without changes.")
+    #         print(warn_str)
+
     if normalize:
-        for sclr_key in ['i0', 'im']:
-            if sclr_key in bs_run['stream0']['data']:
-                data /= bs_run['stream0']['data'][sclr_key][:]
+        for sclr_key in ['i0', 'im', 'sclr_i0', 'sclr_im']:
+            if sclr_key in ds:
+                data /= ds[sclr_key][:]
                 normalized = True
                 break
         if not normalized:
@@ -396,13 +600,13 @@ def _get_processed_data(bs_run,
     # User-defined data processing
     if data_processing_function is not None:
         # e.g., median_filter, and/or subtract dark-field from XRD
-        data = data_processing_function(data) 
+        start_data_ndim = data.ndim
+        data = np.asarray(data_processing_function(data))
+        proc_data_ndim = data.ndim
+        # Track if data dimensionality has been reduced
+        data_dims -= (start_data_ndim - proc_data_ndim)
 
-    if hasattr(data_slice, '__len__'):
-        axis = tuple(-np.arange(1, len(data_slice) + 1, 1)[::-1])
-    else:
-        axis = -1
-
+    axis = tuple(range(data_dims - data.ndim, 0, 1))
     data = integrating_function(data, axis=axis) # e.g., numpy.sum or numpy.max
 
     return data
@@ -410,173 +614,242 @@ def _get_processed_data(bs_run,
 
 def _get_rois(data,
               roi_mask,
-              feature_type='points'):
+              feature_type='points',
+              point_method='multiple'):
 
     if feature_type == 'points':
-        rois = peak_local_max(data,
-                              labels=roi_mask,
-                              min_distance=2, # At least some padding
-                              num_peaks_per_label=np.inf)
+        
+        if point_method == 'multiple':
+            labels = label(roi_mask.squeeze())
+            rois = peak_local_max(data.squeeze(),
+                                  labels=labels,
+                                  min_distance=2) # Some padding
+            rois_int = [data[tuple(roi)] for roi in rois]                      
+        else:
+            labels = label(roi_mask)
+            if point_method == 'max':
+                rois = peak_local_max(data.squeeze(),
+                                      labels=label(roi_mask.squeeze()),
+                                      min_distance=2, # Some padding
+                                      num_peaks_per_label=1)
+            elif point_method == 'center':
+                coords = [r.coords for r in regionprops(labels)]
+                rois = [np.mean([c.min(axis=0), c.max(axis=0)], axis=0) for c in coords]
+            elif point_method == 'com':
+                rois = center_of_mass(data, labels=labels, index=range(1, np.max(labels))) 
 
+            rois_int = [np.sum(data[labels == num])
+                        for num in np.unique(labels) if num != 0]      
+        
+        # Expand along zero dimensions
+        if data.shape != data.squeeze().shape:
+            flat_dims = np.array([d == 1 for d in data.shape])
+            exp_rois = []
+            for roi in rois:
+                new_roi = np.zeros(data.ndim, dtype=int)
+                new_roi[~flat_dims] = roi
+                exp_rois.append(new_roi)
+            rois = np.asarray(exp_rois)
+        
     elif feature_type == 'regions':
-        rois = regionprops(label(roi_mask))
+        if roi_mask.ndim > 1:
+            labels = label(roi_mask)
+            rois = regionprops(labels, intensity_image=data)
+            rois_int = [np.sum(data[labels == num])
+                    for num in np.unique(labels) if num != 0]
+        else:
+            labels = label(roi_mask.reshape(-1, 1))
+            rois = regionprops(labels, intensity_image=data)
+            for roi in rois:
+                # Hack to get back to 1D
+                roi.slice = tuple([roi.slice[0]])
+            rois_int = [np.sum(data.reshape(-1, 1)[labels == num])
+                    for num in np.unique(labels) if num != 0]
     
-    return rois
+    return rois, rois_int
     
 
-def _generate_positions_and_motors(bs_run):
+def _get_motors_from_tiled(bs_run):
     
     # Get motors
     if bs_run.start['scan']['type'] != 'XRF_FLY':
-        err_str = ("Only XRF_Fly scans are currently implemented not "
+        err_str = ("Only XRF_Fly scans are currently implemented, not "
                    + f"{bs_run.start['scan']['type']}")
         raise NotImplementedError(err_str)
 
     # Get motors
     motor_names = [getattr(nano_stage, cpt).name
                     for cpt in nano_stage.component_names]
-    fast_motor = getattr(nano_stage,
+    first_motor = getattr(nano_stage,
             nano_stage.component_names[
                 motor_names.index(
                     bs_run.start['scan']['fast_axis']['motor_name'])])
-    slow_motor = getattr(nano_stage,
+    second_motor = getattr(nano_stage,
             nano_stage.component_names[
                 motor_names.index(
                     bs_run.start['scan']['slow_axis']['motor_name'])])
-        
-    # Get values
-    # Assume standard SRX input
-    scan_input = bs_run.start['scan']['scan_input']
-    fast_values = np.linspace(*scan_input[:2], int(scan_input[2]))
-    slow_values = np.linspace(*scan_input[3:5], int(scan_input[5]))
 
-    return fast_motor, slow_motor, fast_values, slow_values
+    return [first_motor, second_motor]
 
 
 def _generate_analysis_args(roi,
                             analysis_args,
-                            fast_values,
-                            slow_values,
+                            search_motors,
+                            search_axes,
                             analysis_motors,
-                            move_for_analysis,
-                            attempt_edges,
-                            feature_type):
+                            analysis_axes,
+                            position_values,
+                            fix_edges,
+                            feature_type,
+                            point_method,
+                            ):
 
     # Get ROIs in real values
     if feature_type == 'points':
-        roi_fast = fast_values[roi[1]]
-        # roi_slow = slow_values[::-1][roi[0]]
-        roi_slow = slow_values[roi[0]]
+        roi_values = [positions[roi_i] for roi_i, positions
+                      in zip(roi[::-1], position_values)]
     elif feature_type == 'regions':
-        roi_fast = fast_values[roi.slice[1]]
-        # roi_slow = slow_values[::-1][roi.slice[0]]
-        roi_slow = slow_values[roi.slice[0]]
+        roi_values = [positions[slice_i] for slice_i, positions
+                      in zip(roi.slice[::-1], position_values)]
+    roi_steps = [np.mean(np.diff(vals)) if len(vals) > 1 else 0 for vals in position_values]
+    # print(roi_steps)
 
-    # Modify analysis_args
+    # Setup useful values
+    new_analysis_args = []
+    move_positions = []
     VALID_ROI_RANGE = True
     FIXED_ROI_RANGE = False
+
+    # Iterate though search motors to determine moves
+    for s_ind in range(len(search_motors)):
+        # Check if search motor is called for analysis
+        if search_motors[s_ind] not in analysis_motors:
+            # print('Search motor is not in analysis motors. Must move.')
+            # Record locations to move motor
+            if feature_type == 'points':
+                val = roi_values[s_ind]
+                move_positions.append(np.round(val, 3))
+            elif feature_type == 'regions':
+                # TODO: Add different methods of finding val (center, max, COM)
+                
+                if point_method == 'max':
+                    val = roi_values[s_ind][np.argmax(np.max(roi.intensity_image, axis=s_ind))]
+                elif point_method == 'com':
+                    val = np.sum(np.sum(roi.intensity_image, axis=s_ind)
+                                        * roi_values[s_ind]
+                                 / np.sum(roi.intensity_image))
+                elif point_method == 'center':
+                    val = np.mean(roi_values[s_ind])
+                
+                move_positions.append(np.round(val, 3))
+
+        else: # Search motor is used for analysis
+            # Update arguments will be determined later
+            move_positions.append(None)
+    
+    # Iterate through analysis motors
     if analysis_motors is not None:
-        fstart, fend, fnum, sstart, send, snum = analysis_args[:6]
-        other_args = analysis_args[6:]
+        for a_ind in range(len(analysis_motors)):
+            a_motor = analysis_motors[a_ind]
+            # Ignore blank inputs
+            if a_motor is None:
+                continue
 
-        new_analysis_args = []
-        new_positions = [] # Will be [None, None] if not move_for_analysis
-        for i, (start, end, num, roi_vals) in enumerate(
-                                ((fstart, fend, fnum, roi_fast),
-                                 (sstart, send, snum, roi_slow))):
-            ext = end - start
-            step = ext / (num - 1)
-            roi_start = np.min(roi_vals)
-            roi_end = np.max(roi_vals)
-                
-            # Handle move differences
-            if move_for_analysis:
-                roi_ext = roi_end - roi_start
-                roi_cen = roi_start + (roi_ext / 2)
-                new_positions.append(np.round(roi_cen, 3))
+            # Parse agrument inputs
+            start, end, num = analysis_args[3 * a_ind : 3 * (a_ind + 1)]
 
-                new_ext = ext + roi_ext
-                new_start = -new_ext / 2
-                new_end = new_ext / 2
-                
+            # Check if axis is supposed to move?
+            if num == 1:
+                # print('Only one step, should be moving on!')
+                new_analysis_args += [start, end, int(num)]
+                continue
+            
+            # Was the analysis axis also used in search?
+            if analysis_axes[a_ind] in search_axes:
+                # Arguments must be altered.
+                # Determine corresponding search axis
+                # s_ind = np.nonzero(np.array(search_axes) == analysis_axes[a_ind])[0][0]
+                s_ind = [s == analysis_axes[a_ind] for s in search_axes].index(True)
+
+                # Get some values
+                ext = end - start
+                cen = start + (ext / 2) # Should always be zero???
+                step = ext / (num - 1) # TODO: how to handle zero-division
+                roi_start = np.min(roi_values[s_ind]) - (roi_steps[s_ind] / 2)
+                roi_end = np.max(roi_values[s_ind]) + (roi_steps[s_ind] / 2)
+                # print(f'ROI start at {roi_start}')
+                # print(f'ROI end at {roi_end}')
+
+                # Did they use the same motors?
+                if a_motor in search_motors:
+                    # print(f'Analysis motor {a_motor} [{a_ind}] in search motors!')
+                    # Directly alter motor arguments
+                    new_start = roi_start - (ext / 2)
+                    new_end = roi_end + (ext / 2)
+                    # print(f'ROI start at {roi_start}')
+                    # print(f'ROI end at {roi_end}')
+
+                else:
+                    # print(f'Analysis motor {a_motor} [{a_ind}] not in search motors!')
+                    # Expand regions around roi
+                    roi_ext = roi_end - roi_start
+                    # print(roi_ext)
+                    new_ext = ext + roi_ext
+                    new_start = cen - (new_ext / 2)
+                    new_end = cen + (new_ext / 2)
+
+                # Check if new scan arguments are within range
+                safety_factor = 0.025 # Fraction of full scan range
+                if a_motor.low_limit != a_motor.high_limit: # Equal limits means no limits
+                    safe_range = safety_factor * (a_motor.high_limit - a_motor.low_limit)
+
+                    if (new_end < a_motor.low_limit + safe_range
+                        or new_start > a_motor.high_limit - safe_range):
+                        # Cannot be fixed and should never happen
+                        VALID_ROI_RANGE = False
+                    elif new_start < a_motor.low_limit + safe_range:
+                        if fix_edges:
+                            new_start = a_motor.low_limit + safe_range
+                            FIXED_ROI_RANGE = True
+                        else:
+                            VALID_ROI_RANGE = False
+                    elif new_end > a_motor.high_limit - safe_range:
+                        if fix_edges:
+                            new_end = a_motor.high_limit - safe_range
+                            FIXED_ROI_RANGE= True
+                        else:
+                            VALID_ROI_RANGE = False
+
+                # Interpolate scan grid around center
+                # This may contract scan area within new_start and new_end
+                # print(new_start, new_end)
+                new_ext = new_end - new_start
+                # print(f'Unrounded center at {new_start + (new_ext / 2)}')
+                new_cen = np.round(new_start + (new_ext / 2), 3)
+                # print(f'Rounded center at {new_cen}')
+                new_int = new_ext // step
+                new_new_start = new_cen - (new_int / 2 * step)
+                new_new_end = new_cen + (new_int / 2 * step)
+                new_num = int(new_int) + 1
+                # print(new_new_start, new_new_end, new_num)
+
+                # Record new values
+                new_analysis_args += [new_new_start, new_new_end, new_num]
+
             else:
-                new_start = roi_start - (ext / 2)
-                new_end = roi_end + (ext / 2)
-                new_positions.append(None)
+                # Arguments can be used as is.
+                new_analysis_args += [start, end, int(num)]
 
-            # Check args are within scan limits                
-            motor = analysis_motors[i]
-            _safety_factor = 0.95
-            if motor.low_limit != motor.high_limit:
-                # print(f'Start {new_start} and End {new_end}')
-                if new_end < motor.low_limit * _safety_factor:
-                    # Cannot fix this situation. Should be very rare.
-                    VALID_ROI_RANGE = False
-                elif new_start < motor.low_limit * _safety_factor:
-                    if attempt_edges:
-                        # Closest value within limit maintaining step
-                        # print('Fixing ROI')
-                        # print(f'Old start is {new_start}')
-                        new_start = -np.arange(
-                                    -new_end,
-                                    -motor.low_limit * _safety_factor,
-                                    step)[-1]
-                        FIXED_ROI_RANGE = True
-                        # print(f'New start is {new_start}')
-                    else:
-                        VALID_ROI_RANGE = False
-
-                if new_start > motor.high_limit * _safety_factor:
-                    # Cannot fix this situation. Should be very rare.
-                    VALID_ROI_RANGE = False
-                elif new_end > motor.high_limit * _safety_factor:
-                    if attempt_edges:
-                        # Closest value within limit maintaining step
-                        # print('Fixing ROI')
-                        # print(f'Old end is {new_end}')
-                        new_end = np.arange(
-                                    new_start,
-                                    motor.high_limit * _safety_factor,
-                                    step)[-1]
-                        FIXED_ROI_RANGE = True
-                        # print(f'New end is {new_end}')
-                    else:
-                        VALID_ROI_RANGE = False
-
-            # Get new number of points
-            new_start = np.round(new_start, 3)
-            new_end = np.round(new_end, 3)
-            new_num = (new_end - new_start) / step + 1
-            # Paranoid check
-            if new_num - np.round(new_num) > 0.001:
-                warn_str = ('WARNING: Something funny happened with '
-                            + 'the new step number')
-                print(f'{new_start=}')
-                print(f'{new_end=}')
-                print(f'{step=}')
-                print(f'{new_num=}')
-                print(warn_str)
-            new_num = int(new_num)
-
-            # Update the new args
-            new_analysis_args += [new_start,
-                                  new_end,
-                                  new_num]
-        
-        # Update to full new_analysis_args
-        new_analysis_args += other_args
+        # Finish filling up args
+        other_args = analysis_args[len(new_analysis_args):] 
+        new_analysis_args += other_args    
     
-    else: # Static analysis
+    else:
+        # Verbatim analysis arguments
         new_analysis_args = analysis_args
-        if feature_type == 'points':
-            new_positions = [np.round(roi_fast, 3),
-                             np.round(roi_slow, 3)]
-        elif feature_type == 'regions':
-            new_positions = [np.round(np.mean(roi_fast), 3),
-                             np.round(np.mean(roi_slow), 3)]
-    
+
     return (new_analysis_args,
-            new_positions,
+            move_positions,
             VALID_ROI_RANGE,
             FIXED_ROI_RANGE)
 
@@ -587,118 +860,174 @@ def _plot_analysis_args(scan_id,
                         analysis_args_list,
                         valid_rois,
                         fixed_rois,
-                        x_vals,
-                        y_vals,
-                        new_positions_list=None,
-                        feature_type='points',
-                        analysis_motors=None):
+                        position_values,
+                        move_positions_list,
+                        search_motors,
+                        search_axes,
+                        analysis_motors,
+                        analysis_axes,
+                        feature_type):
 
+    # Setup useful values
+    # Andy will love all this list comprehension
+    pos_steps = [np.mean(np.diff(vals)) if len(vals) > 1 else 0 for vals in position_values]
+    colors = ['red' if not valid else 'yellow' if fixed else 'lime' for valid, fixed in zip(valid_rois, fixed_rois)]
     fig, ax = plt.subplots()
-    x_step = np.median(np.diff(x_vals))
-    y_step = np.median(np.diff(y_vals))
-    # extent = [np.min(x_vals) - (x_step / 2),
-    #           np.max(x_vals) + (x_step / 2),
-    #           np.min(y_vals) - (y_step / 2),
-    #           np.max(y_vals) + (y_step / 2)]
-    # Invert y axis
-    extent = [np.min(x_vals) - (x_step / 2),
-              np.max(x_vals) + (x_step / 2),
-              np.max(y_vals) + (y_step / 2),
-              np.min(y_vals) - (y_step / 2)]
-    im = ax.imshow(data, extent=extent)
-    fig.colorbar(im, ax=ax)
-    
-    ax.set_aspect('equal')
-    ax.set_xlabel('Fast Axis [μm]')
-    ax.set_ylabel('Slow Axis [μm]')
     ax.set_title(f'scan{scan_id}: Found ROIs')
 
-    colors = []
-    for valid, fixed in zip(valid_rois, fixed_rois):
-        if valid:
-            if fixed:
-                colors.append('yellow')
-            else:
-                colors.append('lime')
+    # Convert to 1D if necessary
+    data_ind = 0
+    data_ndim = data.ndim
+    if data.squeeze().ndim != data.ndim:
+        flat_dims = [d == 1 for d in data.shape]
+        flat_ind = flat_dims.index(True)
+        data_ind = flat_dims.index(False)
+        data = data.squeeze(axis=flat_ind)
+        pos_ind = [step != 0 for step in pos_steps].index(True)
+    plot_dims = data.ndim
+
+    # 2D search
+    if plot_dims == 2:
+        # Inverts y-axis
+        extent = [np.min(position_values[0]) - (pos_steps[0] / 2),
+                  np.max(position_values[0]) + (pos_steps[0] / 2),
+                  np.max(position_values[1]) + (pos_steps[1] / 2),
+                  np.min(position_values[1]) - (pos_steps[1] / 2)]
+        im = ax.imshow(data, extent=extent)
+        fig.colorbar(im, ax=ax)
+        ax.set_aspect('equal')
+        ax.set_xlabel(f'{search_motors[0].name} [{search_motors[0].motor_egu}]')
+        ax.set_ylabel(f'{search_motors[1].name} [{search_motors[1].motor_egu}]')
+
+        # Add found ROIs
+        if feature_type == 'points':
+            xplot = position_values[rois[:, 1]]
+            yplot = position_values[rois[:, 0]]
+            
+            ax.scatter(xplot,
+                       yplot,
+                       c=colors,
+                       marker='+',
+                       s=100,
+                       label='ROIs')
         else:
-            colors.append('red')
+            rect_list = []
+            for ind, roi in enumerate(rois):
+                xplot = position_values[0][roi.slice[1]]
+                yplot = position_values[1][roi.slice[0]]
 
-    # Plot found ROIs
-    if feature_type == 'points':
-        x_plot = x_vals[rois[:, 1]]
-        # y_plot = y_vals[::-1][rois[:, 0]]
-        y_plot = y_vals[rois[:, 0]]
-
-        ax.scatter(x_plot,
-                   y_plot,
-                   c=colors,
-                   marker='+',
-                   s=100,
-                   label='ROIs')
-    
-    elif feature_type == 'regions':
-        rect_list = []
-        for ind, roi in enumerate(rois):
-            x_plot = x_vals[roi.slice[1]]
-            # y_plot = y_vals[::-1][roi.slice[0]]
-            y_plot = y_vals[roi.slice[0]]
-
-            rect = patches.Rectangle(
-                        (np.min(x_plot) - (x_step / 2),
-                         np.min(y_plot) - (y_step / 2)),
-                        np.max(x_plot) - np.min(x_plot) + x_step,
-                        np.max(y_plot) - np.min(y_plot) + y_step,
-                        linewidth=1.5,
-                        linestyle='--',
-                        edgecolor=colors[ind],
-                        facecolor='none')
-            rect_list.append(rect)
-        pc = PatchCollection(rect_list,
-                             match_original=True,
-                             label='ROIs')
-        ax.add_collection(pc)
-
-    # Plot mapped regions around ROIs
-    if analysis_motors is not None:
-        rect_list = []
-        for ind, args in enumerate(analysis_args_list):
-            fast_step = (args[1] - args[0] - 1) / args[2]
-            slow_step = (args[4] - args[3] - 1) / args[5]
-
-            if new_positions_list is not None:
-                fast_move, slow_move = new_positions_list[ind]
+                rect = patches.Rectangle(
+                            (np.min(xplot) - (pos_steps[0] / 2),
+                             np.min(yplot) - (pos_steps[1] / 2)),
+                             np.max(xplot) - np.min(xplot) + pos_steps[0],
+                             np.max(yplot) - np.min(yplot) + pos_steps[1],
+                            linewidth=1.5,
+                            linestyle='--',
+                            edgecolor=colors[ind],
+                            facecolor='none')
+                rect_list.append(rect)
+            pc = PatchCollection(rect_list,
+                                match_original=True,
+                                label='ROIs')
+            ax.add_collection(pc)
+        
+        # Add new mapped ROIs if matching axes
+        if all([s_axis in analysis_axes for s_axis in search_axes]):
+            # Check if tranposed
+            if analysis_axes[0] == search_axes[0]:
+                order = slice(None, None, 1)
             else:
-                fast_move, slow_move = 0, 0
+                order = slice(None, None, -1)
+            
+            rect_list = []
+            for ind, args in enumerate(analysis_args_list):
+                sorted_args = [args[:3], args[3:6]][order]
+                xstart, xend, xnum = sorted_args[0]
+                xstep = (xend - xstart) / (xnum - 1)
+                ystart, yend, ynum = sorted_args[1]
+                ystep = (yend - ystart) / (ynum - 1)
 
-            rect = patches.Rectangle(
-                        (args[0] - (fast_step / 2) + fast_move,
-                         args[3] - (slow_step / 2) + slow_move),
-                        args[1] - args[0] + fast_step,
-                        args[4] - args[3] + slow_step,
-                        linewidth=2,
-                        linestyle='-',
-                        edgecolor=colors[ind],
-                        facecolor='none')
-            rect_list.append(rect)
-        pc = PatchCollection(rect_list,
-                             match_original=True,
-                             label='Analysis')
-        ax.add_collection(pc)
-
-    # Plot static center of regions. Should be uncommon
-    elif feature_type == 'regions':
-        ax.scatter(np.asarray(new_positions_list)[:, 0],
-                   np.asarray(new_positions_list)[:, 1],
-                   c=colors,
-                   marker='+',
-                   s=100,
-                   label='Analysis')
+                if move_positions_list[ind][0] is not None:
+                    xmove = move_positions_list[ind][0]
+                else:
+                    xmove = 0
+                if move_positions_list[ind][1] is not None:
+                    ymove = move_positions_list[ind][1]
+                else:
+                    ymove = 0
+                
+                rect = patches.Rectangle(
+                            (xstart - (xstep / 2) + xmove,
+                             ystart - (ystep / 2) + ymove),
+                            xend - xstart + xstep,
+                            yend - ystart + ystep,
+                            linewidth=2,
+                            linestyle='-',
+                            edgecolor=colors[ind],
+                            facecolor='none')
+                rect_list.append(rect)
+            pc = PatchCollection(rect_list,
+                                match_original=True,
+                                label='Analysis')
+            ax.add_collection(pc)
+        
+        # Regions, but without matching analysis axes (i.e., point analysis)
+        elif feature_type == 'regions':
+            xpos = np.asarray(move_positions_list)[:, 0]
+            ypos = np.asarray(move_positions_list)[:, 1]
+            ax.scatter(xpos,
+                       ypos,
+                       c=colors,
+                       marker='+',
+                       s=100,
+                       label='Analysis')
     
-    # ax.legend()
+    # 1D search
+    if plot_dims == 1:
+        ax.plot(position_values[pos_ind],
+                data,
+                '.-',
+                c='k')
+        ax.set_xlabel(f'{search_motors[pos_ind].name} [{search_motors[pos_ind].motor_egu}]')
+
+        if feature_type == 'points':
+            xplot = position_values[pos_ind][rois[:, data_ind]]
+            
+            ax.scatter(xplot,
+                       data.squeeze()[rois[:, data_ind]],
+                       c=colors,
+                       marker='+',
+                       s=100,
+                       label='ROIs')
+
+        else:
+            for ind, roi in enumerate(rois):
+                xplot = position_values[pos_ind][roi.slice[data_ind]]
+                ax.axvline(xplot[0], linestyle='--', c=colors[ind])
+                ax.axvline(xplot[-1], linestyle='--', c=colors[ind])
+
+        # Add new mapped ROIs if matching axes
+        if all([s_axis in analysis_axes for s_axis in search_axes]):
+
+            for ind, args in enumerate(analysis_args_list):
+                # xstart, xend, xnum = args[:3]
+                xstart, xend, xnum = args[3 * pos_ind : 3 * (pos_ind + 1)]
+
+                ax.axvline(xstart, c=colors[ind])
+                ax.axvline(xend, c=colors[ind])
+        
+        # Regions, but without matching analysis axes (i.e., point analysis)
+        elif feature_type == 'regions':
+            xpos = np.asarray(move_positions_list)[:, pos_ind]
+            ax.scatter(xpos,
+                       data.squeeze()[xpos],
+                       c=colors,
+                       marker='+',
+                       s=100,
+                       label='Analysis')
+    
+    # Finally finished!
     fig.show()
-
-
-
 
 
 # Convenience Wrappers
@@ -707,6 +1036,7 @@ def coarse_xrf_search_and_analyze(**kwargs):
     yield from search_and_analyze_base(
                 **kwargs,
                 search_function=coarse_scan_and_fly,
+                search_motors=[nano_stage.topx, nano_stage.y],
                 data_key='xs_fluor',
                 move_for_analysis=False,
                 analysis_motors=[nano_stage.topx, nano_stage.y],
@@ -717,6 +1047,7 @@ def coarse_xrf_search_and_nano_analyze(**kwargs):
     yield from search_and_analyze_base(
                 **kwargs,
                 search_function=coarse_scan_and_fly,
+                search_motors=[nano_stage.topx, nano_stage.y],
                 data_key='xs_fluor',
                 move_for_analysis=True,
                 analysis_motors=[nano_stage.sx, nano_stage.sy],
@@ -727,6 +1058,7 @@ def coarse_xrf_search_and_xanes_analyze(**kwargs):
     yield from search_and_analyze_base(
                 **kwargs,
                 search_function=coarse_scan_and_fly,
+                search_motors=[nano_stage.topx, nano_stage.y],
                 data_key='xs_fluor',
                 move_for_analysis=True,
                 analysis_motors=None,
@@ -737,6 +1069,7 @@ def nano_xrf_search_and_analyze(**kwargs):
     yield from search_and_analyze_base(
                 **kwargs,
                 search_function=nano_scan_and_fly,
+                search_motors=[nano_stage.sx, nano_stage.sy],
                 data_key='xs_fluor',
                 move_for_analysis=False,
                 analysis_motors=[nano_stage.sx, nano_stage.sy],
@@ -747,6 +1080,7 @@ def nano_xrf_search_and_xanes_analyze(**kwargs):
     yield from search_and_analyze_base(
                 **kwargs,
                 search_function=nano_scan_and_fly,
+                search_motors=[nano_stage.sx, nano_stage.sy],
                 data_key='xs_fluor',
                 move_for_analysis=True,
                 analysis_motors=None,
@@ -773,6 +1107,7 @@ def nano_xrf_search_and_xanes_analyze(**kwargs):
 
 #     yield from search_and_analyze_base(search_args=[-1160, -1100, 21, 1900, 1960, 21, 0.05],
 #                                        search_function=coarse_scan_and_fly,
+#                                        search_motors=[nano_stage.topx, nano_stage.y],
 #                                        data_cutoff=200,
 #                                        data_key='xs_fluor',
 #                                        search_defocus_distance=1200,
