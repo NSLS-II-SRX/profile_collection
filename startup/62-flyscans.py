@@ -351,12 +351,12 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 accel_time += delta_const
 
             st = yield from kickoff(flying_zebra,
-                                   xstart=_row_start,
-                                   xstop=_row_stop,
-                                   xnum=xnum,
-                                   dwell=dwell,
-                                   tacc=accel_time,
-                                   wait=True)
+                                    xstart=_row_start,
+                                    xstop=_row_stop,
+                                    xnum=xnum,
+                                    dwell=dwell,
+                                    tacc=accel_time,
+                                    wait=True)
             st.wait(timeout=10)
         try:
             if verbose:
@@ -396,9 +396,9 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
                 if verbose:
                     print("    sleeping for dexela...")
                 state = 0
-                while (state == 0):
+                while (state == 0):  # EJM: If the dexela gets stuck is this not infinite??
                     yield from bps.sleep(0.1)
-                    state = d.cam.detector_state.get()
+                    state = d.cam.detector_state.get() 
                 yield from bps.sleep(1)
 
         # AMK paranoid check
@@ -465,7 +465,7 @@ def scan_and_fly_base(detectors, xstart, xstop, xnum, ystart, ystop, ynum, dwell
         # wait for the motor and detectors to all agree they are done
         try:
             # print('Waiting for x3x...\n')
-            st.wait(timeout=xnum*dwell + 20)
+            st.wait(timeout=xnum * dwell + 20)
             # print('Waiting done.\n')
             # yield from bps.wait(group=row_str)
         except WaitTimeoutError as e:

@@ -122,8 +122,13 @@ class DexelaFileStoreHDF5(FileStoreBase):
         if self.parent._mode is SRXMode.fly:
             res_kwargs = {}
         else:
-            self.parent.cam.num_images.set(1, timeout=timeout).wait()
-            res_kwargs = {'frame_per_point': 1}
+            # EJM: Hard coding this to 1 point for any possible variation of not
+            # fly mode seems silly. I am guessing this was for step scans, but
+            # maybe chaning the stage_sigs there is more appropriate.
+            # self.parent.cam.num_images.set(1, timeout=timeout).wait()
+            # res_kwargs = {'frame_per_point': 1}
+
+            res_kwargs = {'frame_per_point': self.parent.cam.num_images.get()}
 
             self._point_counter = itertools.count()
 
@@ -206,7 +211,7 @@ class SRXDexelaDetector(SingleTrigger, DexelaDetector):
             #    root='/nsls2/data/srx/assets/dexela/',
                write_path_template=path_write_start + path_template_str(root_path_str()).replace("/", "\\"),
                read_path_template=path_read_start + path_template_str(root_path_str()),
-               root=path_read_start+root_path_str())
+               root=path_read_start + root_path_str())
     # this is used as a latch to put the xspress3 into 'bulk' mode
     # for fly scanning.  Do this is a signal (rather than as a local variable
     # or as a method so we can modify this as part of a plan

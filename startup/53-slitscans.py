@@ -332,27 +332,20 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
        
         numpts = x.shape
         
+        # EJM: These functions are defined in 49-utils. Why are they defined again??
         # Error function with offset
-        def f_offset_erf(x, A, sigma, x0, y0):
-            x_star = (x - x0) / sigma
-            return A * erf(x_star / np.sqrt(2)) + y0
+        # def f_offset_erf(x, A, sigma, x0, y0):
+        #     x_star = (x - x0) / sigma
+        #     return A * erf(x_star / np.sqrt(2)) + y0
         
-        def f_two_erfs(x, A1, sigma1, x1, y1, A2, sigma2, x2, y2):
-            x1_star = (x - x1) / sigma1
-            x2_star = (x - x2) / sigma2
+        # def f_two_erfs(x, A1, sigma1, x1, y1, A2, sigma2, x2, y2):
+        #     x1_star = (x - x1) / sigma1
+        #     x2_star = (x - x2) / sigma2
         
-            f_combo = f_offset_erf(x, A1, sigma1, x1, y1) + f_offset_erf(x, A2, sigma2, x2, y2)
-            return f_combo
+        #     f_combo = f_offset_erf(x, A1, sigma1, x1, y1) + f_offset_erf(x, A2, sigma2, x2, y2)
+        #     return f_combo
         
-        def line_fit(x, y):
-            # p_guess = [0.5 * np.amax(y),
-            #            1.000,
-            #            0.5 * (x[0] + x[-1]) - 2.5,
-            #            np.amin(y) + 0.5 * np.amax(y),
-            #            -0.5 * np.amax(y),
-            #            1.000,
-            #            0.5 * (x[0] + x[-1]) + 2.5,
-            #            np.amin(y) + 0.5 * np.amax(y)]       
+        def line_fit(x, y):     
             p_guess = [0.5 * np.amax(y),
                        .25,
                        0.5 * (x[0] + x[-1]) - 1.0,
@@ -574,18 +567,19 @@ def orth_slit_nanoflyscan_cal(scan_id_list=[], slit_range=[], from_RE=[], orthog
         x = ds[pos].read().squeeze().astype(np.float64)
        
         numpts = x.shape
-       
-        # Error function with offset
-        def f_offset_erf(x, A, sigma, x0, y0):
-            x_star = (x - x0) / sigma
-            return A * erf(x_star / np.sqrt(2)) + y0
+
+        # EJM: Same thing here. These functions are already defined in 49-utils.
+        # # Error function with offset
+        # def f_offset_erf(x, A, sigma, x0, y0):
+        #     x_star = (x - x0) / sigma
+        #     return A * erf(x_star / np.sqrt(2)) + y0
         
-        def f_two_erfs(x, A1, sigma1, x1, y1, A2, sigma2, x2, y2):
-            x1_star = (x - x1) / sigma1
-            x2_star = (x - x2) / sigma2
+        # def f_two_erfs(x, A1, sigma1, x1, y1, A2, sigma2, x2, y2):
+        #     x1_star = (x - x1) / sigma1
+        #     x2_star = (x - x2) / sigma2
         
-            f_combo = f_offset_erf(x, A1, sigma1, x1, y1) + f_offset_erf(x, A2, sigma2, x2, y2)
-            return f_combo
+        #     f_combo = f_offset_erf(x, A1, sigma1, x1, y1) + f_offset_erf(x, A2, sigma2, x2, y2)
+        #     return f_combo
         
         def line_fit(x,y):
             p_guess = [0.5*np.amax(y),1.000,0.5*(x[0] + x[-1]) - 2.5,np.amin(y) + 0.5*np.amax(y),-0.5*np.amax(y),1.000,0.5*(x[0] + x[-1]) + 2.5,np.amin(y) + 0.5*np.amax(y)]       

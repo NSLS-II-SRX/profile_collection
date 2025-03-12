@@ -228,7 +228,7 @@ def search_and_analyze_base(search_args=[],
     else:
         point_method = point_method.lower()
         if feature_type == 'regions' and point_method == 'multiple':
-            warn_str = ("WARNING: 'multiple' point method cannot be
+            warn_str = ("WARNING: 'multiple' point method cannot be "
                         + "used simultaneously with 'regions' feature "
                         + "type. 'center' point method will be used "
                         + "instead.")

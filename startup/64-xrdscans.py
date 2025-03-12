@@ -5,6 +5,8 @@ import numpy as np
 import time as ttime
 
 from bluesky.plans import count, list_scan
+from bluesky.utils import short_uid as _short_uid
+
 
 def _setup_xrd_dets(dets,
                     dwell,
@@ -38,11 +40,10 @@ def _setup_xrd_dets(dets,
         if xrd.cam.detector_state.get() == 1:
             xrd.cam.acquire.set(0)
         xrd.cam.stage_sigs['acquire_time'] = dwell
-        xrd.cam.stage_sigs['acquire_period'] = dwell
+        xrd.cam.stage_sigs['acquire_period'] = dwell * 0.9
         xrd.cam.stage_sigs['num_images'] = N_images
         xrd.hdf5.stage_sigs['num_capture'] = N_images
         del xrd
-
 
 
 # Assumes detector stage sigs are already set
@@ -52,69 +53,435 @@ def _acquire_dark_fields(dets,
 
     dets_by_name = {d.name : d for d in dets}
     xrd_dets = []
-    reset_sigs = dict()
+    reset_sigs = []
 
     if 'merlin' in dets_by_name:
         xrd = dets_by_name['merlin']
         sigs = OrderedDict(
-            [
-                (xrd.cam.trigger_mode, 0),
-                (xrd.total_points, N_dark),
-                (xrd.cam.num_images, N_dark)
-                (xrd.hdf5.num_capture, N_dark),
+            [   
+            (xrd.cam, 'trigger_mode', 0),
+            (xrd, 'total_points', 1),
+            (xrd.cam, 'num_images', 1),
+            (xrd.hdf5, 'num_capture', N_dark)
             ]
         )
-        if 'acquire_time' in xrd.cam.stage_sigs:
-            sigs[xrd.cam.acquire_time] = xrd.cam.stage_sigs['acquire_time']
-        if 'acquire_period' in xrd.cam.stage_sigs:
-            sigs[xrd.cam.acquire_period] = xrd.cam.stage_sigs['acquire_period']
 
-        original_vals = {sig: sig.get() for sig in sigs}
-        for sig, val in sigs.items():
-            yield from abs_set(sig, val)
+        original_sigs = []
+        for obj, key, value in sigs:
+            if key in obj.stage_sigs:
+                original_sigs.append((obj, key, obj.stage_sigs[key]))
+            obj.stage_sigs[key] = value
+        
         xrd_dets.append(xrd)
-        reset_sigs.update(orignal_vals)
+        reset_sigs.extend(original_sigs)
 
     if 'dexela' in dets_by_name:
         xrd = dets_by_name['dexela']
+        sigs = [
+                (xrd, 'total_points', 1),
+                (xrd, 'cam.image_mode', 'Single'),
+                (xrd.cam, 'trigger_mode', 'Int. Fixed Rate'),
+                (xrd.cam, 'image_mode', 'Single'),
+                (xrd.cam, 'num_images', 1),
+                (xrd.hdf5, 'num_capture', N_dark),
+                ]
+
+        original_sigs = []
+        for obj, key, value in sigs:
+            if key in obj.stage_sigs:
+                original_sigs.append((obj, key, obj.stage_sigs[key]))
+            obj.stage_sigs[key] = value
+        
+        xrd_dets.append(xrd)
+        reset_sigs.extend(original_sigs)
+    
+    if len(xrd_dets) > 0:
+        d_status = shut_d.read()['shut_d_request_open']['value'] == 1 # is open
+        yield from check_shutters(shutter, 'Close')
+        print('Acquiring dark-field...')
+        staging_list = [det._staged == Staged.yes for det in xrd_dets]
+        for staged, det in zip(staging_list, xrd_dets):
+            if staged:
+                yield from bps.unstage(det)
+            yield from bps.stage(det)
+        
+        # EJM deeply despises this type of acquisition.
+        # Takes 3000% longer than it needs to
+        for _ in range(N_dark):
+            yield from bps.trigger_and_read(xrd_dets, name='dark')
+
+        # Reset to original stage_sigs    
+        for obj, key, value in reset_sigs:
+            obj.stage_sigs[key] = value   
+        
+        for staged, det in zip(staging_list, xrd_dets):
+            yield from bps.unstage(det)
+            if staged:
+                yield from bps.stage(det)
+
+        if d_status:
+            yield from check_shutters(shutter, 'Open')
+
+
+# Assumes detector stage sigs are already set
+def _continuous_dark_fields(dets,
+                            N_dark=10,
+                            shutter=False):                
+
+    dets_by_name = {d.name : d for d in dets}
+    xrd_dets = []
+    reset_sigs = []
+
+    print(f'{dexela.cam.num_images.get()=}')
+    print(f'{dexela.hdf5.capture.get()=}')
+    print(f'{dexela.cam.acquire.get()=}')
+    print(f'{dexela.cam.detector_state.get()=}')
+
+    if 'merlin' in dets_by_name:
+        xrd = dets_by_name['merlin']
         sigs = OrderedDict(
-            [
-                (xrd.cam.trigger_mode, 'Int. Fixed Rate'),
-                (xrd.cam.num_images, N_dark),
-                (xrd.hdf5.num_capture, N_dark),
+            [   
+            (xrd.cam, 'trigger_mode', 0),
+            (xrd, 'total_points', 1),
+            (xrd.cam, 'num_images', 1),
+            (xrd.hdf5, 'num_capture', N_dark)
             ]
         )
-        if 'acquire_time' in xrd.cam.stage_sigs:
-            sigs[xrd.cam.acquire_time] = xrd.cam.stage_sigs['acquire_time']
-        if 'acquire_period' in xrd.cam.stage_sigs:
-            sigs[xrd.cam.acquire_period] = xrd.cam.stage_sigs['acquire_period']
+
+        original_sigs = []
+        for obj, key, value in sigs:
+            if key in obj.stage_sigs:
+                original_sigs.append((obj, key, obj.stage_sigs[key]))
+            obj.stage_sigs[key] = value
         
-        original_vals = {sig: sig.get() for sig in sigs}
-        for sig, val in sigs.items():
-            yield from abs_set(sig, val)
         xrd_dets.append(xrd)
-        reset_sigs.update(orignal_vals)
+        reset_sigs.extend(original_sigs)
 
-    d_status = shut_d.read()['shut_d_request_open']['value'] == 1 # is open
-    yield from check_shutters(shutter, 'Close')
-    print('Acquiring dark-field...')
-    yield from bps.trigger_and_read(dets, name='dark')
-    if d_status:
-        yield from check_shutters(shutter, 'Open')
+    if 'dexela' in dets_by_name:
+        xrd = dets_by_name['dexela']
+        sigs = [
+                (xrd, 'total_points', N_dark),
+                (xrd, 'cam.image_mode', 'Multiple'),
+                (xrd.cam, 'trigger_mode', 'Int. Fixed Rate'),
+                (xrd.cam, 'image_mode', 'Multiple'), # redundant, but already in staging...
+                (xrd.cam, 'num_images', N_dark),
+                (xrd.hdf5, 'num_capture', N_dark),
+                ]
+
+        original_sigs = []
+        for obj, key, value in sigs:
+            if key in obj.stage_sigs:
+                original_sigs.append((obj, key, obj.stage_sigs[key]))
+            obj.stage_sigs[key] = value
+        
+        xrd_dets.append(xrd)
+        reset_sigs.extend(original_sigs)
     
-    for sig, val in reset_sigs.items():
-        yield from abs_set(sig, val)
+    if len(xrd_dets) > 0:
+        d_status = shut_d.read()['shut_d_request_open']['value'] == 1 # is open
+        yield from check_shutters(shutter, 'Close')
+        print('Acquiring dark-field...')
+        staging_list = [det._staged == Staged.yes for det in xrd_dets]
+        print(f'{dexela.cam.num_images.get()=}')
+        print(f'{dexela.hdf5.capture.get()=}')
+        print(f'{dexela.cam.acquire.get()=}')
+        print(f'{dexela.cam.detector_state.get()=}')
+        for staged, det in zip(staging_list, xrd_dets):
+            if staged:
+                print('Unstaging')
+                yield from bps.unstage(det)
+            yield from bps.stage(det)
+        print(f'{dexela.cam.num_images.get()=}')
+        print(f'{dexela.hdf5.capture.get()=}')
+        print(f'{dexela.cam.acquire.get()=}')
+        print(f'{dexela.cam.detector_state.get()=}')
+        yield from bps.sleep(1)
+
+        # Pseudo continous triggering'
+        # print('save')
+        # yield from bps.drop() # Tie up previous stream ('baseline?')
+
+        # print('pseudo-trigger')
+        # for det in xrd_dets:
+        #     yield from det.generate_datum(det._image_name, ttime.time(), {})        
+
+        # print('create')
+        # yield from bps.create('dark')
+        # print(f'{dexela.cam.num_images.get()=}')
+        # print(f'{dexela.hdf5.capture.get()=}')
+        # print(f'{dexela.cam.acquire.get()=}')
+        # print(f'{dexela.cam.detector_state.get()=}')
 
 
-def test_energy_rocking_curve(e_low,
-                         e_high,
-                         e_num,
-                         dwell,
-                         xrd_dets,
-                         shutter=True,
-                         peakup_flag=True,
-                         plotme=False,
-                         return_to_start=True):
+
+        # # print('Move to start saving')
+        # # for det in xrd_dets:
+        # #     yield from mv(det.hdf5.capture, 1)
+        # yield from bps.sleep(1)
+
+
+        print('Moving to acquire images')
+        print(f'{dexela.cam.num_images.get()=}')
+        print(f'{dexela.hdf5.capture.get()=}')
+        print(f'{dexela.cam.acquire.get()=}')
+        print(f'{dexela.cam.detector_state.get()=}')
+        for det in xrd_dets:  
+            yield from mv(det.cam.acquire, 1)
+            yield from det.hdf5._generate_resource({})
+        yield from bps.sleep(1)
+
+        print('create')
+        yield from bps.create('dark')
+        print(f'{dexela.cam.num_images.get()=}')
+        print(f'{dexela.hdf5.capture.get()=}')
+        print(f'{dexela.cam.acquire.get()=}')
+        print(f'{dexela.cam.detector_state.get()=}')     
+        
+        print('Wait for acquisition')
+        print(f'{dexela.cam.num_images.get()=}')
+        print(f'{dexela.hdf5.capture.get()=}')
+        print(f'{dexela.cam.acquire.get()=}')
+        print(f'{dexela.cam.detector_state.get()=}')
+        # yield from bps.sleep(11)
+        MAX_WAIT = 600 # in seconds
+        t0 = ttime.time()
+        for det in xrd_dets:
+            print(f'waiting for {det.name}')
+            print(det.cam.detector_state.get())
+            print(f'{dexela.hdf5.capture.get()=}')
+            print(f'{dexela.cam.acquire.get()=}')
+            print(f'{dexela.cam.detector_state.get()=}')
+            # While detector is still acquiring
+            while det.hdf5.num_captured.get() != det.hdf5.num_capture.get():
+                if det.hdf5.capture.get() == 0:
+                    print('done!')
+                    # Stop acquisition and break if hdf5 has all images
+                    yield from mv(det.cam.acquire, 0)
+                    break
+                elif ttime.time() - t0 > MAX_WAIT:
+                    warn_str = 'WARNING: Max wait time for continous acquistion has been exceeded. Breaking loop.'
+                    print(warn_str)
+                    yield from mv(det.hdf5.capture, 0,
+                                  det.cam.acquire, 0)
+                else:
+                    print('still waiting!')
+                    # Otherwise wait
+                    yield from bps.sleep(0.1)
+        print('after acquisition')
+        
+        # print('create')
+        # yield from bps.create('dark')
+        print('reading')
+        for det in xrd_dets:
+            yield from bps.read(det)
+
+        print('saving?')        
+        yield from bps.save()
+
+        # Reset to original stage_sigs    
+        for obj, key, value in reversed(reset_sigs):
+            obj.stage_sigs[key] = value   
+        
+        for staged, det in zip(staging_list, xrd_dets):
+            yield from bps.unstage(det)
+            if staged:
+                yield from bps.stage(det)
+
+        if d_status:
+            yield from check_shutters(shutter, 'Open')
+
+
+def dark_count():
+
+    scan_md = {}
+    get_stock_md(scan_md)
+    scan_md['scan']['type'] = 'DARK_TEST'
+    scan_md['scan']['detectors'] = [dexela.name]                                  
+    scan_md['scan']['start_time'] = ttime.ctime(ttime.time())
+
+    @bpp.stage_decorator([dexela])
+    @bpp.run_decorator(md=scan_md)
+    def plan():
+        yield from _continuous_dark_fields([dexela])
+    
+    return (yield from plan())
+
+
+
+# WIP: Continous acquisition would be so much better!!!
+# # Assumes detector stage sigs are already set
+# def _acquire_dark_fields(dets,
+#                          N_dark=10,
+#                          shutter=True):                
+
+#     dets_by_name = {d.name : d for d in dets}
+#     xrd_dets = []
+#     reset_sigs = []
+
+#     if 'merlin' in dets_by_name:
+#         xrd = dets_by_name['merlin']
+#         sigs = OrderedDict(
+#             [
+#                 (xrd.cam.trigger_mode, 0),
+#                 (xrd.total_points, N_dark),
+#                 (xrd.cam.num_images, N_dark),
+#                 (xrd.hdf5.num_capture, N_dark),
+#             ]
+#         )
+#         # if 'acquire_time' in xrd.cam.stage_sigs:
+#         #     sigs[xrd.cam.acquire_time] = xrd.cam.stage_sigs['acquire_time']
+#         # if 'acquire_period' in xrd.cam.stage_sigs:
+#         #     sigs[xrd.cam.acquire_period] = xrd.cam.stage_sigs['acquire_period']
+
+#         original_vals = {sig: sig.get() for sig in sigs}
+#         for sig, val in sigs.items():
+#             yield from abs_set(sig, val)
+#         xrd_dets.append(xrd)
+#         reset_sigs.update(original_vals)
+
+#     if 'dexela' in dets_by_name:
+#         xrd = dets_by_name['dexela']
+#         # sigs = OrderedDict(
+#         #     [   
+#         #         (xrd.total_points, N_dark),
+#         #         (xrd.cam.trigger_mode, 'Int. Fixed Rate'),
+#         #         (xrd.cam.image_mode, 'Multiple'),
+#         #         (xrd.cam.num_images, N_dark),
+#         #         (xrd.hdf5.num_capture, N_dark),
+#         #     ]
+#         # )
+
+#         sigs = [
+#                 # (xrd, 'total_points', 1),
+#                 # (xrd, 'cam.image_mode', 'Single'),
+#                 # (xrd.cam, 'trigger_mode', 'Int. Fixed Rate'),
+#                 # (xrd.cam, 'image_mode', 'Single'),
+#                 # (xrd.cam, 'num_images', 1),
+#                 # (xrd.hdf5, 'num_capture', N_dark),
+
+#                 (xrd, 'total_points', N_dark),
+#                 (xrd, 'cam.image_mode', 'Multiple'),
+#                 (xrd.cam, 'trigger_mode', 'Int. Fixed Rate'),
+#                 (xrd.cam, 'image_mode', 'Multiple'),
+#                 (xrd.cam, 'num_images', N_dark),
+#                 (xrd.hdf5, 'num_capture', N_dark),
+#                 ]
+#         # if 'acquire_time' in xrd.cam.stage_sigs:
+#         #     sigs[xrd.cam.acquire_time] = xrd.cam.stage_sigs['acquire_time']
+#         # if 'acquire_period' in xrd.cam.stage_sigs:
+#         #     sigs[xrd.cam.acquire_period] = xrd.cam.stage_sigs['acquire_period']
+
+#         original_sigs = []
+#         for obj, key, value in sigs:
+#             if key in obj.stage_sigs:
+#                 original_sigs.append((obj, key, obj.stage_sigs[key]))
+            
+#             obj.stage_sigs[key] = value
+        
+#         # original_vals = {sig: sig.get() for sig in sigs}
+#         # xrd.stage()
+#         # for sig, val in sigs.items():
+#         #     yield from abs_set(sig, val, wait=True)
+#         xrd_dets.append(xrd)
+#         reset_sigs.extend(original_sigs)
+    
+#     if len(xrd_dets) > 0:
+#         d_status = shut_d.read()['shut_d_request_open']['value'] == 1 # is open
+#         yield from check_shutters(shutter, 'Close')
+#         print('Acquiring dark-field...')
+#         staging_list = [not det._staged for det in xrd_dets]
+#         for stage, det in zip(staging_list, xrd_dets):
+#             if stage:
+#                 yield from bps.stage(det)
+#         print([det.name for det in xrd_dets])
+#         print([det._staged for det in xrd_dets])
+#         print(dexela.cam.stage_sigs)
+#         print(dexela.hdf5.stage_sigs['num_capture'])
+
+#         # yield from bps.trigger_and_read(xrd_dets, name='dark')
+#         # for _ in range(N_dark):
+#         #     yield from bps.trigger_and_read(xrd_dets, name='dark')
+#         # for _ in range(N_dark):
+
+#         # ### COUNT-LIKE
+#         # print('triggering')
+#         # grp = _short_uid('trigger')
+#         # no_wait = True
+#         # for det in xrd_dets:
+#         #     if hasattr(det, 'trigger'):
+#         #         no_wait = False
+#         #         yield from bps.trigger(det, group=grp)
+#         # # Skip 'wait' if none of the devices implemented a trigger method.
+#         # if not no_wait:
+#         #     yield from wait(group=grp)
+#         # print('creating')
+#         # yield from bps.create('dark')
+#         # print('reading')
+#         # ret = {}
+#         # for det in xrd_dets:
+#         #     reading = (yield from bps.read(det))
+#         #     if reading is not None:
+#         #         ret.update(reading)
+#         # print('saving')
+#         # yield from save()
+
+#         ### STREAM-LIKE
+#         # print('creating')
+#         # yield from bps.create('dark')
+#         print('monitor')
+#         for det in xrd_dets:
+#             yield from bps.monitor(det, name='dark')
+        
+#         print('triggering')
+#         for det in xrd_dets:
+#             yield from bps.trigger(det)
+        
+#         print('waiting...')
+#         yield from bps.sleep(5)
+        
+#         # print('reading')
+#         # ret = {}
+#         # for det in xrd_dets:
+#         #     reading = (yield from bps.read(det))
+#         #     if reading is not None:
+#         #         ret.update(reading)
+#         # print('saving')
+#         # yield from save()
+
+#         print('dark-field immediately acquired')
+#         print(dexela.cam.stage_sigs)
+#         print(dexela.hdf5.stage_sigs['num_capture'])
+        
+#         for stage, det in zip(staging_list, xrd_dets):
+#             if stage:
+#                 yield from bps.unstage(det)
+#         if d_status:
+#             yield from check_shutters(shutter, 'Open')
+        
+#         for obj, key, value in reset_sigs:
+#             obj.stage_sigs[key] = value
+        
+#         # for sig, val in reset_sigs.items():
+#         #     if val is None:
+#         #         print(sig.parent.name)
+#         #         del sig.parent.stage_sigs[sig.attr_name]
+#         #     else:
+#         #         sig.parent.stage_sigs[sig.attr_name] = val
+
+
+
+
+
+
+def dark_energy_rocking_curve(e_low,
+                              e_high,
+                              e_num,
+                              dwell,
+                              xrd_dets,
+                              shutter=True,
+                              peakup_flag=True,
+                              plotme=False,
+                              return_to_start=True):
 
     start_energy = energy.energy.position
 
@@ -155,7 +522,7 @@ def test_energy_rocking_curve(e_low,
         yield from peakup(shutter=shutter)
     
     @bpp.stage_decorator(list(dets) + [energy])
-    @bpp.run_dectorator(md=scan_md)
+    @bpp.run_decorator(md=scan_md)
     @bpp.subs_wrapper(livecallbacks)
     def inner_plan():
         yield from _acquire_dark_fields(dets,
@@ -303,14 +670,14 @@ def extended_energy_rocking_curve(e_low,
                                         return_to_start=False)
 
 
-def test_angle_rocking_curve(th_low,
-                        th_high,
-                        th_num,
-                        dwell,
-                        xrd_dets,
-                        shutter=True,
-                        plotme=False,
-                        return_to_start=True):
+def dark_angle_rocking_curve(th_low,
+                             th_high,
+                             th_num,
+                             dwell,
+                             xrd_dets,
+                             shutter=True,
+                             plotme=False,
+                             return_to_start=True):
     # th in mdeg!!!
     start_th = nano_stage.th.user_readback.get()
 
@@ -471,10 +838,58 @@ def relative_flying_angle_rocking_curve(th_range,
                                           dwell,
                                           xrd_dets,
                                           **kwargs)
+    
+
+# def continous_xrd(xrd_dets,
+#                   num,
+#                   dwell,
+#                   shutter,
+#                   plotme=False):
+    
+
+#     # Defining scan metadata
+#     scan_md = {}
+#     get_stock_md(scan_md)
+#     scan_md['scan']['type'] = 'STATIC_XRD'
+#     scan_md['scan']['scan_input'] = [num, dwell]
+#     scan_md['scan']['dwell'] = dwell
+#     scan_md['scan']['detectors'] = [sclr1.name] + [d.name for d in xrd_dets]
+#     scan_md['scan']['energy'] = f'{energy.energy.position:.5f}'                                 
+#     scan_md['scan']['start_time'] = ttime.ctime(ttime.time())
+
+#     # Live Callbacks
+#     # What does energy_energy read??
+#     # livecallbacks = [LiveTable(['energy_energy', 'dexela_stats2_total'])]
+    
+#     # if plotme:
+#     #     livecallbacks.append(LivePlot('dexela_stats2_total', x='energy_energy'))
+
+#     # Define detectors
+#     dets = [xs, sclr1] + xrd_dets
+#     _setup_xrd_dets(dets, dwell, num)
+    
+#     dets_by_name = {det.name : det for det in dets}
+#     if 'dexela' in dets_by_name:
+#         xrd = dets_by_name['dexela']
 
 
+
+#     @bpp.stage_decorator(list(dets) + [energy])
+#     @bpp.run_dectorator(md=scan_md)
+#     # @bpp.subs_wrapper(livecallbacks)
+#     def inner_plan():
+#         yield from check_sutters(shutter, 'Open')
+
+#         for det in dets
+
+#         yield from check_sutters(shutter, 'Close')
+    
+#     return (yield from inner_plan())  
+
+
+# This would be so much better if the data were streamed continously...
 # A static xrd measurement without changing energy or moving stages
-def test_static_xrd(xrd_dets,
+def dark_static_xrd(xrd_dets,
                num,
                dwell,
                shutter=True,
@@ -511,13 +926,11 @@ def test_static_xrd(xrd_dets,
         yield from check_sutters(shutter, 'Open')
         yield from count(dets, num)
         yield from check_sutters(shutter, 'Close')
-
-        if return_to_start:
-            yield from mov(energy, start_energy)
     
     return (yield from inner_plan())
 
 
+# This would be so much better if the data were streamed continously...
 # A static xrd measurement without changing energy or moving stages
 def static_xrd(xrd_dets,
                num,
