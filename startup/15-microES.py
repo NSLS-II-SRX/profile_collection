@@ -31,21 +31,6 @@ class SRXAttenuators(Device):
 attenuators = SRXAttenuators('XF:05IDD-ES{IO:4}DO:', name='attenuators')
 
 
-# micro-KB mirrors from XFM
-class SRXMicroKB(Device):
-    KBv_y = Cpt(EpicsMotor, 'KBv-Ax:TY}Mtr')
-    KBv_pitch = Cpt(EpicsMotor, 'KBv-Ax:Pitch}Mtr')
-    KBv_USB = Cpt(EpicsMotor, 'KBv-Ax:UsB}Mtr')
-    KBv_DSB = Cpt(EpicsMotor, 'KBv-Ax:DsB}Mtr')
-    KBh_x = Cpt(EpicsMotor, 'KBv-Ax:TX}Mtr')
-    KBh_pitch = Cpt(EpicsMotor, 'KBv-Ax:Pitch}Mtr')
-    KBh_USB = Cpt(EpicsMotor, 'KBv-Ax:UsB}Mtr')
-    KBh_DSB = Cpt(EpicsMotor, 'KBv-Ax:DsB}Mtr')
-
-
-microKB = SRXMicroKB('XF:05IDD-OP:1{Mir:', name='microKB')
-
-
 # High flux sample stages
 class HFSampleStage(Device):
     x = Cpt(EpicsMotor, '{Stg:Smpl2-Ax:X}Mtr')
@@ -81,15 +66,6 @@ class HFSampleStage(Device):
 hf_stage = HFSampleStage('XF:05IDD-ES:1', name='hf_stage')
 if 'velocity' not in hf_stage.x.configuration_attrs:
     hf_stage.x.configuration_attrs.append('velocity')
-
-
-# SDD motion
-class SRXUpStreamGantry(Device):
-    x = Cpt(EpicsMotor, 'X}Mtr')
-    z = Cpt(EpicsMotor, 'Z}Mtr')
-
-
-sdd_pos = SRXUpStreamGantry('XF:05IDD-ES:1{Det:1-Ax:', name='sdd_pos')
 
 
 # PCOEdge detector motion
