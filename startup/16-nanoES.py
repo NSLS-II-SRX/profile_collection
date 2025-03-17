@@ -88,7 +88,7 @@ class SRXNanoTemp(Device):
     temp_nanoKB_horz = Cpt(EpicsSignalRO, '2}T:C-I')
     temp_nanoKB_vert = Cpt(EpicsSignalRO, '1}T:C-I')
     temp_nanoKB_base = Cpt(EpicsSignalRO, '4}T:C-I')
-    temp_microKB_base = Cpt(EpicsSignalRO, '3}T:C-I')
+    temp_room = Cpt(EpicsSignalRO, '3}T:C-I')
 
 
 temp_nanoKB = SRXNanoTemp('XF:05IDD-ES{LS:1-Chan:', name='temp_nanoKB')
