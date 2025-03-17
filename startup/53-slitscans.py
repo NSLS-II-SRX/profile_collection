@@ -216,34 +216,49 @@ def slit_nanoflyscan(scan_motor, scan_start, scan_stop, scan_stepsize, acqtime,
     # Open the shutter
     yield from check_shutters(True, 'Open') 
     
-    # Setup the scan
-    plotme = HackLiveFlyerPlot(
-        xs.channel01.mcaroi01.total_rbv.name,
-        # xs4.channel1.rois.roi01.value.name,
-        xstart=scan_start,
-        xstep=(scan_stop-scan_start)/(snum-1),
-        xlabel=scan_motor.name,
-        fig_factory=partial(my_factory, name='Slit Scan')
-    )
+    # Making some assumptions here
+    # Set the ROI pv
+    # Assuming xs is the detector
+    if hasattr(xs, 'channel01'):
+        roi_pv = xs.channel01.mcaroi01.ts_total
+        try:
+            yield from abs_set(xs.cam.acquire, 'Done', timeout=1)
+        except Exception as e:
+            print('Timeout setting X3X to status \"Done\". Continuing...')
+            print(e)
+        try:
+            # This erases the time-series array, otherwise we see the previous scan
+            yield from abs_set(xs.channel01.mcaroi.ts_control, 2, wait=True, timeout=1)  # Stop time series collection
+            yield from abs_set(xs.channel01.mcaroi.ts_control, 0, wait=True, timeout=1)  # Start/erase time series collection
+            yield from abs_set(xs.channel01.mcaroi.ts_control, 2, wait=True, timeout=1)  # Stop time series collection
+        except Exception as e:
+            # Eating the exception
+            print('The time-series did not clear correctly. Continuing...')
+            print(e)
+
+    livepopup = [
+        SRX1DTSFlyerPlot(
+            roi_pv.name,
+            xstart=scan_start,
+            xstep=scan_stepsize,
+            xlabel=scan_motor.name,
+        )
+    ]
 
     if (scan_motor.name == 'nano_stage_sx'):
         y0 = nano_stage.sy.user_readback.get()
-        @subs_decorator(plotme)
-        @monitor_during_decorator([xs.channel01.mcaroi01.total_rbv])
+        @subs_decorator(livepopup)
         def _knife_plan():
            yield from  nano_scan_and_fly(scan_start, scan_stop, snum,
                                          y0, y0, 1, acqtime,
                                          shutter=False, plot=False)
-                                         # shutter=False, plot=False, flying_zebra=nano_flying_zebra_me4, xs=xs4)
     else:
         x0 = nano_stage.sx.user_readback.get()
-        @subs_decorator(plotme)
-        @monitor_during_decorator([xs.channel01.mcaroi01.total_rbv])
+        @subs_decorator(livepopup)
         def _knife_plan():
             yield from nano_y_scan_and_fly(scan_start, scan_stop, snum,
                                            x0, x0, 1, acqtime,
                                            shutter=False, plot=False)
-                                           # shutter=False, plot=False, flying_zebra=nano_flying_zebra_me4, xs=xs4)
 
     def _plan():
         uid = yield from _knife_plan()
@@ -444,13 +459,6 @@ def slit_nanoflyscan_cal(scan_id_list=[], interp_range=None, orthogonality=False
 
 
 def focusKB(direction, **kwargs):
-    """
-    NEEDS TESTING!
-
-    direction   string  direction to scan in
-                        ['hor' or 'ver']
-    """
-
     if 'hor' in direction.lower():
         kwargs.setdefault('scan_motor', nano_stage.sx)
         kwargs.setdefault('slit_motor', jjslits.h_trans)

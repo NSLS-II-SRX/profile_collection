@@ -56,7 +56,7 @@ class SRXNanoStage(Device):
     sz = Cpt(EpicsMotor, 'ssz}Mtr')  # XF:05IDD-ES:1{nKB:Smpl-Ax:ssz}Mtr.RBV
     th = Cpt(EpicsMotor, 'th}Mtr')  # XF:05IDD-ES:1{nKB:Smpl-Ax:th}Mtr.RBV
     topx = Cpt(EpicsMotor, 'xth}Mtr')  # XF:05IDD-ES:1{nKB:Smpl-Ax:xth}Mtr.RBV
-    topz = Cpt(EpicsMotor, 'zth}Mtr')  # XF:05IDD-ES:1{nKB:Smpl-Ax:zth}Mtr.RBV
+    # topz = Cpt(EpicsMotor, 'zth}Mtr')  # XF:05IDD-ES:1{nKB:Smpl-Ax:zth}Mtr.RBV
 
 
 nano_stage = SRXNanoStage('XF:05IDD-ES:1{nKB:Smpl-Ax:', name='nano_stage')
@@ -88,7 +88,7 @@ class SRXNanoTemp(Device):
     temp_nanoKB_horz = Cpt(EpicsSignalRO, '2}T:C-I')
     temp_nanoKB_vert = Cpt(EpicsSignalRO, '1}T:C-I')
     temp_nanoKB_base = Cpt(EpicsSignalRO, '4}T:C-I')
-    temp_microKB_base = Cpt(EpicsSignalRO, '3}T:C-I')
+    temp_room = Cpt(EpicsSignalRO, '3}T:C-I')
 
 
 temp_nanoKB = SRXNanoTemp('XF:05IDD-ES{LS:1-Chan:', name='temp_nanoKB')
@@ -136,7 +136,7 @@ def reset_scanner_velocity():
     """
     Reset the scanner stages to their nominal speeds
     """
-    for d in [nano_stage.topx, nano_stage.topz, nano_stage.y, nano_stage.z]:
+    for d in [nano_stage.topx, nano_stage.y, nano_stage.z]:
         d.velocity.set(500)  # um/s
     for d in [nano_stage.sx, nano_stage.sy, nano_stage.sz]:
         d.velocity.set(100)  # um/s

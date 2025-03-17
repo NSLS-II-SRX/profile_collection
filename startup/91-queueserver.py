@@ -16,7 +16,8 @@ def get_current_position():
 	roi = {
 	"nano_stage.sx": sx, "nano_stage.sy": sy,
 	"nano_stage.topx": x, "nano_stage.y": y, "nano_stage.z": z,
-	"nano_stage.topx": topx, "nano_stage.topz": topz,
+	# "nano_stage.topx": topx, "nano_stage.topz": topz,
+	"nano_stage.topx": topx,
 	"nano_stage.th": th
 	}
 
