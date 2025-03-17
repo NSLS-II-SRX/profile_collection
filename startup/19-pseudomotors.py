@@ -228,8 +228,9 @@ class ProjectedTopStage(PseudoPositioner):
         return self.PseudoPosition(projx=projx, projz=projz)
 
 
-projx = ProjectedTopStage(name='projected_top_x', projected_axis='x')
-projz = ProjectedTopStage(name='projected_top_z', projected_axis='z')
+# Enable these once we have topx and topz again
+# projx = ProjectedTopStage(name='projected_top_x', projected_axis='x')
+# projz = ProjectedTopStage(name='projected_top_z', projected_axis='z')
 
 
 # def projected_scan_and_fly(*args, extra_dets=None, center=True, **kwargs):
