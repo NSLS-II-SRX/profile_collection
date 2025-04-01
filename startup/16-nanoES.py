@@ -191,7 +191,8 @@ def mv_along_axis(z_end):
 
 def get_defocused_beam_parameters(hor_size=None,
                                   ver_size=None,
-                                  z_end=None):
+                                  z_end=None,
+                                  verbose=True):
     """
     Determine the new sample position and horizontal and vertical beam
     size given one of the parameters in microns.
@@ -241,13 +242,14 @@ def get_defocused_beam_parameters(hor_size=None,
         ver_size = get_new_size(delta_z, n_ver_focus, n_ver_focal_length, n_ver_acceptance)
         hor_size = get_new_size(delta_z, n_hor_focus, n_hor_focal_length, n_hor_acceptance)
 
-    print((f'Move the sample from z = {curr_z:.0f} μm by {delta_z:.0f}'
-           + f' μm to a new z = {curr_z + delta_z:.0f} μm'))
-    print(('The new focal size will be approximately:'
-           + f'\n\tV = {ver_size:.2f} μm\n\tH = {hor_size:.2f} μm'))
-    intensity_factor = (n_ver_focus * n_hor_focus) / (ver_size * hor_size) 
-    print(('Defocused intensity will be about '
-           + f'{intensity_factor * 100:.1f} % of focused intensity.'))
+    if verbose:
+        print((f'Move the sample from z = {curr_z:.0f} μm by {delta_z:.0f}'
+            + f' μm to a new z = {curr_z + delta_z:.0f} μm'))
+        print(('The new focal size will be approximately:'
+            + f'\n\tV = {ver_size:.2f} μm\n\tH = {hor_size:.2f} μm'))
+        intensity_factor = (n_ver_focus * n_hor_focus) / (ver_size * hor_size) 
+        print(('Defocused intensity will be about '
+            + f'{intensity_factor * 100:.1f} % of focused intensity.'))
 
     return curr_z, delta_z, z_end, ver_size, hor_size
 
@@ -256,7 +258,8 @@ def defocus_beam(hor_size=None,
                  ver_size=None,
                  z_end=None,
                  follow_with_vlm=True,
-                 follow_with_sdd=True):
+                 follow_with_sdd=True,
+                 verbose=True):
     """
     Move the sample, VLM, and SDD to new positions for a specified
     defocused X-ray beam.
@@ -269,28 +272,33 @@ def defocus_beam(hor_size=None,
      ver_size,
      hor_size) = get_defocused_beam_parameters(hor_size=hor_size,
                                                ver_size=ver_size,
-                                               z_end=z_end)
+                                               z_end=z_end,
+                                               verbose=verbose)
 
     # Move sample
-    print('Moving sample to defocus X-ray beam...')
+    if verbose:
+        print('Moving sample to defocus X-ray beam...')
     yield from mv_along_axis(np.round(z_end))
     
     # Move VLM
     if follow_with_vlm:
-        print('Moving VLM to new position...')
         curr_vlm_z = nano_vlm_stage.z.user_readback.get()
-        print(f'\tCurrent VLM location is z = {curr_vlm_z:.3f} mm')
+        if verbose:
+            print('Moving VLM to new position...')
+            print(f'\tCurrent VLM location is z = {curr_vlm_z:.3f} mm')
         # yield from mvr did not work???
         yield from mov(nano_vlm_stage.z,
                        np.round(curr_vlm_z + (delta_z / 1000), 3)) # in mm
-        print(f'\tMove VLM by {delta_z / 1000:.3f} mm')
+        if verbose:
+            print(f'\tMove VLM by {delta_z / 1000:.3f} mm')
 
     # Move SDD along projected z axis
     if follow_with_sdd:
-        print('Moving SDD to new position...')
         curr_det_x = nano_det.x.user_readback.get()
         curr_det_z = nano_det.z.user_readback.get()
-        print(f'\tCurrent locations are: x = {curr_det_x:.3f} mm, z = {curr_det_z:.3f} mm')
+        if verbose:
+            print('Moving SDD to new position...')
+            print(f'\tCurrent locations are: x = {curr_det_x:.3f} mm, z = {curr_det_z:.3f} mm')
 
         sdd_rot = 30 # deg
         R = np.array([[np.cos(np.radians(sdd_rot)), np.sin(np.radians(sdd_rot))],
@@ -299,8 +307,9 @@ def defocus_beam(hor_size=None,
         # Determine deltas in um. delta_x is 0
         delta_sdd_x, delta_sdd_z = R @ [0, delta_z]
 
-        print(f'\tMove z by {delta_sdd_z / 1000:.3f} mm')
-        print(f'\tMove x by {delta_sdd_x / 1000:.3f} mm.')
+        if verbose:
+            print(f'\tMove z by {delta_sdd_z / 1000:.3f} mm')
+            print(f'\tMove x by {delta_sdd_x / 1000:.3f} mm.')
 
         # Cautious move. Always move sdd inboard first
         if delta_sdd_x < 0:

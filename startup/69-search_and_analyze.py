@@ -72,7 +72,7 @@ def search_and_analyze_base(search_args=[],
     defocus_distances : iterable of length 2, optional
         Relative distances in μm to move the sample from the current 
         position to defocus the X-ray beam. If only one value is given,
-        it will be used for only the analysis defocus distance. Default
+        it will be used for only the search defocus distance. Default
         is None which will be changed to (0, 0) or no defocusing for
         both search and analysis.
     data_key : str, optional
@@ -158,7 +158,9 @@ def search_and_analyze_base(search_args=[],
 
     # Hard-coded but easily changed parameters
     move_backlash = 50
-    motors_with_backlash = [nano_stage.topx, nano_stage.y]
+    motors_with_backlash = [nano_stage.topx, nano_stage.y] # this can include more motors...
+    # Must be given in x, y order.
+    defocus_offset_motors = [nano_stage.topx, nano_stage.y]
 
     # Check for functions
     if ((search_function is None and search_scan_id is None)
@@ -182,7 +184,7 @@ def search_and_analyze_base(search_args=[],
             else:
                 err_str = ('Data slice not provided and one could not'
                         + ' be constructed from XRF roi infomation.')
-            raise RuntimeError(err_str)
+                raise RuntimeError(err_str)
     elif (not isinstance(data_slice, slice)
           and not all([isinstance(x, slice) for x in data_slice])):
         err_str = ('Data slice must be slice object or iterable of '
@@ -220,10 +222,10 @@ def search_and_analyze_base(search_args=[],
         feature_type = feature_type.lower()
     
     # Ensure correct point method
-    if (not(isinstance(point_method), str)
-        or feature_type.lower not in ['multiple', 'center', 'com', 'max']):
+    if (not isinstance(point_method, str)
+        or point_method.lower() not in ['multiple', 'center', 'com', 'max']):
         err_str = ("Point method must be either 'multiple', 'center', "
-                   + f"'com', or 'max' not {feature_type}.")
+                   + f"'com', or 'max' not {point_method}.")
         raise TypeError(err_str)
     else:
         point_method = point_method.lower()
@@ -270,8 +272,12 @@ def search_and_analyze_base(search_args=[],
         raise ValueError(err_str)
 
     # Defocus X-ray beam!
-    start_x = nano_stage.topx.user_readback.get()
-    start_y = nano_stage.y.user_readback.get()
+    # start_x = nano_stage.topx.user_readback.get() # hard-coded from mv_along_axis
+    # start_y = nano_stage.y.user_readback.get() # hard-coded from mv_along_axis
+    start_positions = [motor.user_readback.get() for motor in defocus_offset_motors]
+    print(f'{start_positions=}')
+
+    search_offsets = [0, 0]
     if defocus_distances[0] != 0:
         if defocus_distances[0] < 0:
             err_str = ('Negative defocus would bringing the sample '
@@ -281,11 +287,16 @@ def search_and_analyze_base(search_args=[],
 
         # Move motors
         print('Defocusing X-ray beam for search...')
+        start_positions = [motor.user_readback.get() for motor in defocus_offset_motors]
         yield from defocus_beam(z_end=start_z + defocus_distances[0])
+        search_positions = [motor.user_readback.get() for motor in defocus_offset_motors]
+        search_offsets = [start - search for (start, search) in zip(start_positions, search_positions)]
         
     # Actually search!
-    search_x = nano_stage.topx.user_readback.get()
-    search_y = nano_stage.y.user_readback.get()
+    # search_x = nano_stage.topx.user_readback.get() # hard-coded from mv_along_axis
+    # search_y = nano_stage.y.user_readback.get() # hard-coded from mv_along_axis
+    
+    print(f'{search_positions=}')
     if search_scan_id is None:
         # Additional search preparation
         if search_prep_function is not None:
@@ -293,20 +304,38 @@ def search_and_analyze_base(search_args=[],
             yield from search_prep_function()
 
         # Adjust search arguments
-        offset_x = start_x - search_x
-        offset_y = start_y - search_y
+        # offset_x = start_x - search_x
+        # offset_y = start_y - search_y
+        # Offsets are applied for any motor along the same axis
         if search_axes is not None:
             for i in range(len(search_axes)):
                 args = np.asarray(search_args[3 * i : 3 * i + 2])
                 if search_axes[i] == 'x':
-                    search_args[3 * i : 3 * i + 2] = np.round(args + offset_x, 3)
+                    search_args[3 * i : 3 * i + 2] = np.round(args + search_offsets[0], 3)
                 elif search_axes[i] == 'y':
-                    search_args[3 * i : 3 * i + 2] = np.round(args + offset_y, 3)
+                    search_args[3 * i : 3 * i + 2] = np.round(args + search_offsets[1], 3)
+        
+        # Apply backlash for search
+        search_backlash_args = []
+        search_backlash_str = 'Adding backlash to search motors:'
+        for i, s_motor in enumerate(search_motors):
+            if s_motor in motors_with_backlash:
+                search_backlash_args.extend([s_motor, search_args[3 * i] - move_backlash])
+                search_backlash_str += f'\n\t{s_motor.name} = {search_args[3 * i] - move_backlash}'
+        if len(search_backlash_args) > 0:
+            print(search_backlash_str)
+            yield from mov(*search_backlash_args)
 
         # Actually search!
+        # no guarantee the search function will return a uid...
         search_uid = yield from search_function(*search_args,
                                                 **search_kwargs)
-        search_bs_run = c[search_uid]
+
+        # print(search_uid)
+        # print(type(search_uid))
+
+        # search_bs_run = c[search_uid]
+        search_bs_run = c[-1]
     
     # Retrieve data from tiled
     data = _get_processed_data(search_bs_run,
@@ -362,40 +391,53 @@ def search_and_analyze_base(search_args=[],
                         feature_type=feature_type)
 
     # Refocus and update positions
+    analysis_offsets = [0, 0]
     if defocus_distances[0] != defocus_distances[1]:
         print('Refocusing X-ray beam for analysis...')
+        start_positions = [motor.user_readback.get() for motor in defocus_offset_motors]
         yield from defocus_beam(z_end=start_z + defocus_distances[1])
+        analysis_positions = [motor.user_readback.get() for motor in defocus_offset_motors]
+        # Opposite of search offsets
+        analysis_offsets = [analysis - start for (start, analysis) in zip(start_positions, analysis_positions)]
 
-    analysis_x = nano_stage.topx.user_readback.get()
-    analysis_y = nano_stage.y.user_readback.get()
+    # analysis_x = nano_stage.topx.user_readback.get()  # hard-coded from mv_along_axis
+    # analysis_y = nano_stage.y.user_readback.get() # hard-coded from mv_along_axis
     
-    position_values = []
+    print(f'{analysis_positions=}')
+    position_values = [None,] * len(search_axes)
+    # print(f'{search_axes=}')
+    # print(f'{search_args=}')
     if search_axes is not None:
-        offset_x = analysis_x - search_x
-        offset_y = analysis_y - searcj_y
+        # offset_x = analysis_x - search_x
+        # offset_y = analysis_y - search_y
+        
+        print(f'{analysis_offsets=}')
         for i in range(len(search_axes)):
             if search_axes[i] is not None:
                 vals = np.linspace(*search_args[3 * i : 3 * i + 2],
-                                   int(search_args[3 * i + 3]))
-                if search_axes[i] == 'x':
-                    position_values[i] = vals + offset_x
-                elif search_axes[i] == 'y':
-                    position_values[i] = vals + offset_y
-            else:
-                position_values[i] = None
+                                   int(search_args[3 * i + 2]))
+
+                if search_axes[i] == 'x' and search_motors[i] in defocus_offset_motors:
+                    position_values[i] = vals + analysis_offsets[0]
+                    print('Applying analysis correction in x')
+                elif search_axes[i] == 'y' and search_motors[i] in defocus_offset_motors:
+                    position_values[i] = vals + analysis_offsets[1]
+                    print('Applying analysis correction in y')
+                else:
+                    position_values[i] = vals
 
     # Iterate through and adjust rois
     analysis_args_list = []
-    new_positions_list = []
+    move_positions_list = []
     valid_rois = []
     fixed_rois = []
     for roi_index, roi in enumerate(rois):
         output = _generate_analysis_args(roi,
-                                         data,
+                                         # data,
                                          analysis_args,
                                          search_motors,
                                          search_axes,
-                                         analsysis_motors,
+                                         analysis_motors,
                                          analysis_axes,
                                          position_values,
                                          fix_edges,
@@ -405,7 +447,7 @@ def search_and_analyze_base(search_args=[],
         move_positions_list.append(output[1])
         valid_rois.append(output[2])
         fixed_rois.append(output[3])
-    
+
     # Trim rois
     if (max_num_rois is not None
         and sum(valid_rois) > max_num_rois):
@@ -416,13 +458,13 @@ def search_and_analyze_base(search_args=[],
 
         # sorted_ints = sorted(rois_int[valid_rois])
         sorted_ints = sorted([val for (val, cond)
-                              in zip(rois_int, valid_rois) if cond],
+                              in zip(roi_ints, valid_rois) if cond],
                              reverse=True)
 
         for roi_ind in range(len(rois)):
             if not valid_rois[roi_ind]:
                 continue
-            if rois_int[roi_ind] not in sorted_ints[:max_num_rois]:
+            if roi_ints[roi_ind] not in sorted_ints[:max_num_rois]:
                 valid_rois[roi_ind] = False
 
     # Plot found regions and areas for analysis
@@ -433,11 +475,13 @@ def search_and_analyze_base(search_args=[],
                             analysis_args_list,
                             valid_rois,
                             fixed_rois,
-                            fast_values,
-                            slow_values,
+                            position_values,
                             move_positions_list,
-                            feature_type=feature_type,
-                            analysis_motors=analysis_motors)
+                            search_motors,
+                            search_axes,
+                            analysis_motors,
+                            analysis_axes,
+                            feature_type)
     
     if wait_time > 0:
         print(f'Waiting {wait_time} sec before starting ROI analysis...')
@@ -448,16 +492,22 @@ def search_and_analyze_base(search_args=[],
         print('Preparing for analysis...')
         yield from analysis_prep_function()
     
+    print(f'Position values of 0 range {np.min(position_values[0])}-{np.max(position_values[0])}')
+    print(f'Position values of 1 range {np.min(position_values[1])}-{np.max(position_values[1])}')
+    print(analysis_args_list)
+    print(move_positions_list)
+    
+    # return
+    
     # Go through found and valid rois
     analysis_uids = []
     if len(rois) > 0:
         print(f'Starting ROI analysis for {len(rois)} ROIs!')
         for roi_index, roi in enumerate(rois):
             if not valid_rois[roi_index]:
-                warn_str = (f'WARNING: ROI {roi_index} range is '
-                            + 'outside of analysis motor limits.'
+                note_str = (f'ROI {roi_index} is either outside motor range or exceeds maximum ROI number.'
                             + '\nSkipping this ROI.')
-                print(warn_str)
+                print(note_str)
                 continue
             elif fixed_rois[roi_index]:
                 warn_str = (f'WARNING: ROI {roi_index} range was '
@@ -479,7 +529,7 @@ def search_and_analyze_base(search_args=[],
                     # Add to move call
                     s_motor = search_motors[p_ind]
                     mv_str += f'\n\t{s_motor.name} = {pos}'
-                    move_args += [s_motors, pos]
+                    move_args += [s_motor, pos]
 
                     # Determine backlash
                     if s_motor in motors_with_backlash:
@@ -507,20 +557,25 @@ def search_and_analyze_base(search_args=[],
 
 
 def _get_motor_axis(motor):
-        if motor in [nano_stage.topx, nano_stage.sx]:
-            axis = 'x'
-        elif motor in [nano_stage.y, nano_stage.sy]:
-            axis = 'y'
-        elif motor in [nano_stage.z, nano_stage.topz]:
-            axis = 'z'
-        elif motor in [nano_stage.th]:
-            axis = 'theta'
-        elif motor in [energy]:
-            axis = 'energy'
-        elif motor is None:
-            axis = None
-        else:
-            raise ValueError(f'Unknown motor {motor.name}.')
+
+    if motor is None:
+        axis = None
+    if not hasattr(motor, 'name'):
+        raise AttributeError(f'Motor does not have a name.')
+    if 'x' in motor.name.split('_')[-1]:
+        axis = 'x'
+    elif 'y' in motor.name.split('_')[-1]:
+        axis = 'y'
+    elif 'z' in motor.name.split('_')[-1]:
+        axis = 'z'
+    elif 'th' in motor.name.split('_')[-1]:
+        axis = 'theta'
+    elif 'energy' in motor.name.split('_')[-1]:
+        axis = 'energy'
+    else:
+        raise ValueError(f'Unknown motor {motor.name}.')
+
+    return axis
 
 
 def _get_processed_data(bs_run,
@@ -568,22 +623,6 @@ def _get_processed_data(bs_run,
         except Exception as e:
             print('Error slicing data.')
             raise e
-    
-    # # Get scaler to use as search shape of the data
-    # # Not a great way to do it, but this info is not recorded explicitly
-    # normalized = False
-    # for sclr_key in ['i0', 'im', 'sclr_i0', 'sclr_im']
-    #     if sclr_key in ds:
-    #         search_shape = ds[sclr_key].shape
-    #         if normalize:
-    #             data /= ds[sclr_key][:]
-    #             normalized=True
-    #         break
-    # if normalize and not normalized:
-    #     warn_str = ("WARNING: Could not find expected scaler value"
-    #                     + " with key 'i0' or 'im'.\n"
-    #                     + "Proceeding without changes.")
-    #         print(warn_str)
 
     if normalize:
         for sclr_key in ['i0', 'im', 'sclr_i0', 'sclr_im']:
@@ -896,8 +935,8 @@ def _plot_analysis_args(scan_id,
         im = ax.imshow(data, extent=extent)
         fig.colorbar(im, ax=ax)
         ax.set_aspect('equal')
-        ax.set_xlabel(f'{search_motors[0].name} [{search_motors[0].motor_egu}]')
-        ax.set_ylabel(f'{search_motors[1].name} [{search_motors[1].motor_egu}]')
+        ax.set_xlabel(f'{search_motors[0].name} [{search_motors[0].motor_egu.get()}]')
+        ax.set_ylabel(f'{search_motors[1].name} [{search_motors[1].motor_egu.get()}]')
 
         # Add found ROIs
         if feature_type == 'points':
@@ -988,7 +1027,7 @@ def _plot_analysis_args(scan_id,
                 data,
                 '.-',
                 c='k')
-        ax.set_xlabel(f'{search_motors[pos_ind].name} [{search_motors[pos_ind].motor_egu}]')
+        ax.set_xlabel(f'{search_motors[pos_ind].name} [{search_motors[pos_ind].motor_egu.get()}]')
 
         if feature_type == 'points':
             xplot = position_values[pos_ind][rois[:, data_ind]]
@@ -1027,7 +1066,7 @@ def _plot_analysis_args(scan_id,
                        label='Analysis')
     
     # Finally finished!
-    fig.show()
+    # fig.show()
 
 
 # Convenience Wrappers
@@ -1038,7 +1077,6 @@ def coarse_xrf_search_and_analyze(**kwargs):
                 search_function=coarse_scan_and_fly,
                 search_motors=[nano_stage.topx, nano_stage.y],
                 data_key='xs_fluor',
-                move_for_analysis=False,
                 analysis_motors=[nano_stage.topx, nano_stage.y],
                 analysis_function=coarse_scan_and_fly
                 )
@@ -1049,7 +1087,6 @@ def coarse_xrf_search_and_nano_analyze(**kwargs):
                 search_function=coarse_scan_and_fly,
                 search_motors=[nano_stage.topx, nano_stage.y],
                 data_key='xs_fluor',
-                move_for_analysis=True,
                 analysis_motors=[nano_stage.sx, nano_stage.sy],
                 analysis_function=nano_scan_and_fly
                 )
@@ -1060,7 +1097,6 @@ def coarse_xrf_search_and_xanes_analyze(**kwargs):
                 search_function=coarse_scan_and_fly,
                 search_motors=[nano_stage.topx, nano_stage.y],
                 data_key='xs_fluor',
-                move_for_analysis=True,
                 analysis_motors=None,
                 analysis_function=xanes_plan
                 )
@@ -1071,7 +1107,6 @@ def nano_xrf_search_and_analyze(**kwargs):
                 search_function=nano_scan_and_fly,
                 search_motors=[nano_stage.sx, nano_stage.sy],
                 data_key='xs_fluor',
-                move_for_analysis=False,
                 analysis_motors=[nano_stage.sx, nano_stage.sy],
                 analysis_function=nano_scan_and_fly
                 )
@@ -1082,7 +1117,6 @@ def nano_xrf_search_and_xanes_analyze(**kwargs):
                 search_function=nano_scan_and_fly,
                 search_motors=[nano_stage.sx, nano_stage.sy],
                 data_key='xs_fluor',
-                move_for_analysis=True,
                 analysis_motors=None,
                 analysis_function=xanes_plan
                 )
@@ -1117,6 +1151,3 @@ def nano_xrf_search_and_xanes_analyze(**kwargs):
 #                                        analysis_function=sub_search,
 #                                        analysis_motors=[nano_stage.sx, nano_stage.sy],
 #                                        wait_time=1)
-
-
-
