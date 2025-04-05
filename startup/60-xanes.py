@@ -233,11 +233,16 @@ def xanes_batch_plan(xypos=[], erange=[], estep=[], acqtime=1.0,
                      repeat_point=1, waittime=10, peakup_N=2, peakup_E=None):
     """
     Setup a batch XANES scan at multiple points.
-    This scan can also run peakup_fine() between points.
+    This scan can also run peakup() between points.
 
     xypos       <list>  A list of points to run XANES scans
+                        Each point can be listed as 2 coordinates [x, y]
+                        or 3 coordinates [x, y, z]
+                        e.g. xypos=[[0, 0, 0], [5, -5], [45, 45, -10]]
     erange      <list>  A list of energy points to send to the XANES plan
+                        similar to a typical xanes_plan
     estep       <list>  A list of energy steps to send to the XANES plan
+                        similar to a typical xanes_plan
     acqtime     <float> Acquisition time for each data point.
     repeat_point<int>   Repeat a particular point N times
     peakup_N    <int>   Run a peakup every peakup_N scans. Default is no peakup
